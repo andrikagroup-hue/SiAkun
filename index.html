@@ -1207,8 +1207,189 @@ function deleteRekon(id){
 }
 
 // ================================================================
-//  IMPORT REKENING KORAN BSI — PDF / Excel / CSV
+//  IMPORT MUTASI BSI → AUTO JURNAL
+//  Auto-detect akun lawan berdasarkan keyword, bisa manual edit
 // ================================================================
+
+// Keyword rules — urutan penting (lebih spesifik di atas)
+// Keyword rules — pakai nama akun PERSIS dari CoA + filter tipe akun
+// accKeys: kata kunci nama akun, accType: tipe akun (beban/pendapatan/modal)
+const BSI_AUTO_RULES=[
+  // Bank admin fees → Bank Administration Expense
+  {txKeys:['biaya adm','visa platinum','bank administration'],accKeys:['bank administration'],accType:'beban',flow:'deb'},
+  // Transfer fee / e-banking → Bank Administration Expense
+  {txKeys:['biaya pemindahbukuan','e-banking','pemindahbukuan'],accKeys:['bank administration'],accType:'beban',flow:'deb'},
+  // Sewa/Rent → Rent Expense (BUKAN Rental Income!)
+  {txKeys:['sewa','rent expense','iuran','keamanan ruko','reflector'],accKeys:['rent expense'],accType:'beban',flow:'deb'},
+  // Listrik, air → Electricity & Water Expense
+  {txKeys:['listrik','air','pln','pdam','krt'],accKeys:['electricity','water'],accType:'beban',flow:'deb'},
+  // Internet, telpon → Telephone & Internet Expense
+  {txKeys:['internet','wifi','telkom','telpon','telepon'],accKeys:['telephone','internet'],accType:'beban',flow:'deb'},
+  // Transport → Transportation & Fuel Expense
+  {txKeys:['bensin','bbm','transport','parkir','toll'],accKeys:['transportation','fuel'],accType:'beban',flow:'deb'},
+  // Office supplies → Office Supplies Expense
+  {txKeys:['atk','alat tulis','fotocopy','print','tissue','sandal','meja lipat'],accKeys:['office supplies'],accType:'beban',flow:'deb'},
+  // Office consumption → Office Consumption Expense
+  {txKeys:['air mineral','konsumsi','makan','minum','snack'],accKeys:['consumption','office consumption'],accType:'beban',flow:'deb'},
+  // Gaji → Salary & Wages Expense
+  {txKeys:['gaji','salary','payroll','thr'],accKeys:['salary','wages'],accType:'beban',flow:'deb'},
+  // Pajak bagi hasil BSI → Final Tax Expense (PPh Final) — BUKAN Corporate Tax!
+  {txKeys:['pajak'],accKeys:['final tax','pph final'],accType:'beban',flow:'deb'},
+  // Bagi hasil BSI → Interest & Profit Sharing Income
+  {txKeys:['bagi hasil','bonus'],accKeys:['profit sharing','interest'],accType:'pendapatan',flow:'crd'},
+  // Setoran modal → Modal
+  {txKeys:['setoran modal','trf dari','transfer dari pt'],accKeys:['modal','capital','equity'],accType:'modal',flow:'crd'},
+];
+
+// Kata kunci yang menandakan baris bukan transaksi (header PDF, footer, dll)
+const PDF_SKIP_KEYWORDS=['ft number','description','currency','amount','balance','opening balance','closing balance','total debit','total credit','account statement','page '];
+
+function detectBSIAccount(desc,flow){
+  const d=(desc||'').toLowerCase();
+  for(const rule of BSI_AUTO_RULES){
+    if(!rule.txKeys.some(k=>d.includes(k)))continue;
+    if(flow==='DB'&&rule.flow!=='deb')continue;
+    if(flow==='CR'&&rule.flow!=='crd')continue;
+    // Cari akun di CoA berdasarkan NAMA + TIPE — ini kuncinya!
+    const found=DB.accounts.find(a=>{
+      if(a.type!==rule.accType)return false; // harus tipe yang benar
+      const n=(a.name||'').toLowerCase();
+      return rule.accKeys.some(k=>n.includes(k));
+    });
+    if(found)return{acc:found.id,label:found.name};
+  }
+  return{acc:'',label:'⚠️ Pilih Manual'};
+}
+
+
+async function openBSIJournalImport(input){
+  const isID=_lang==='id';
+  const file=input.files[0];if(!file)return;
+  input.value='';
+
+  const ext=file.name.split('.').pop().toLowerCase();
+  let rows=[];
+  try{
+    if(ext==='pdf') rows=await parseBSIPDF(file);
+    else if(['xlsx','xls'].includes(ext)) rows=await parseBSIExcel(file);
+    else if(ext==='csv') rows=await parseBSICSV(file);
+    else return alert('Format tidak didukung. Gunakan PDF, Excel, atau CSV.');
+  }catch(e){
+    return alert('Gagal baca file: '+e.message);
+  }
+
+  if(!rows.length)return alert('Tidak ada transaksi ditemukan.');
+
+  // Auto-detect akun lawan tiap transaksi
+  window._bsiJournalRows=rows.map((r,i)=>{
+    const detected=detectBSIAccount(r.desc,r.flow);
+    return{...r,id:i,contraAcc:detected.acc,contraLabel:detected.label,ref:'BSI-'+r.date+'-'+(i+1)};
+  });
+
+  renderBSIJournalPreview(file.name);
+}
+
+function renderBSIJournalPreview(fileName){
+  const isID=_lang==='id';
+  const rows=window._bsiJournalRows||[];
+  const bankAccs=DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='lancar'&&
+    (a.name.toLowerCase().includes('bsi')||a.name.toLowerCase().includes('bank syariah')));
+  const bankAccId=bankAccs.length?bankAccs[0].id:'1102'; // default BSI acc
+
+  const needManual=rows.filter(r=>!r.contraAcc).length;
+  const autoDetected=rows.length-needManual;
+
+  // Build akun options for select
+  const accOpts=DB.accounts.map(a=>`<option value="${a.id}">${a.code} — ${a.name}</option>`).join('');
+
+  openModal(isID?`🏦 Preview Import Mutasi BSI → Jurnal (${fileName})`:`🏦 BSI Mutation Import Preview (${fileName})`,`
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+    <div class="stat b"><div class="stat-lbl">Total Transaksi</div><div class="stat-val">${rows.length}</div></div>
+    <div class="stat g"><div class="stat-lbl">✅ Auto Detected</div><div class="stat-val">${autoDetected}</div></div>
+    <div class="stat ${needManual?'r':'g'}"><div class="stat-lbl">⚠️ Perlu Manual</div><div class="stat-val">${needManual}</div></div>
+  </div>
+  ${needManual?`<div class="alert a-warn">⚠️ ${needManual} transaksi perlu dipilih akun lawannya secara manual sebelum import.</div>`:''}
+  <div class="alert a-info" style="font-size:11.5px">
+    💡 Akun Bank BSI yang akan digunakan: <b>${bankAccs.length?bankAccs[0].name:'Bank BSI (1102)'}</b>. 
+    Periksa dan edit akun lawan jika perlu sebelum klik Import.
+  </div>
+  <div class="tbl-wrap" style="max-height:380px;overflow-y:auto">
+    <table style="font-size:11.5px">
+      <thead><tr>
+        <th>Tanggal</th><th>Deskripsi BSI</th><th>DB/CR</th><th>Jumlah</th>
+        <th>Akun Lawan (edit jika perlu)</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map((r,i)=>`
+        <tr style="${!r.contraAcc?'background:#fef2f2':''}">
+          <td style="white-space:nowrap">${r.date}</td>
+          <td style="max-width:180px;font-size:10.5px">${r.desc}</td>
+          <td><span class="badge ${r.flow==='DB'?'b-bad':'b-ok'}">${r.flow}</span></td>
+          <td class="tar fw7">${rp(r.amount)}</td>
+          <td>
+            <select style="font-size:10.5px;width:100%;padding:3px 5px;border:1px solid ${!r.contraAcc?'#dc2626':'var(--bdr)'};border-radius:5px"
+              onchange="window._bsiJournalRows[${i}].contraAcc=this.value;window._bsiJournalRows[${i}].contraLabel=this.options[this.selectedIndex].text">
+              <option value="">-- Pilih Akun --</option>
+              ${accOpts.replace(`value="${r.contraAcc}"`,`value="${r.contraAcc}" selected`)}
+            </select>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+  <div class="modal-ft">
+    <button class="btn btn-out" onclick="closeModal()">Batal</button>
+    <button class="btn btn-pri" onclick="confirmBSIJournalImport('${bankAccId}')">
+      ✅ Import ${rows.length} Transaksi → Buat Jurnal
+    </button>
+  </div>`,`modal-wide`);
+}
+
+function confirmBSIJournalImport(bankAccId){
+  const isID=_lang==='id';
+  const rows=window._bsiJournalRows||[];
+
+  // Cek ada yang belum pilih akun
+  const missing=rows.filter(r=>!r.contraAcc);
+  if(missing.length)return alert(`${missing.length} transaksi belum dipilih akun lawannya!\n\nSilakan pilih akun untuk semua baris terlebih dahulu.`);
+
+  let created=0;
+  rows.forEach(r=>{
+    // DB di bank = kas/bank berkurang = kredit di SiAkun
+    // CR di bank = kas/bank bertambah = debit di SiAkun
+    let entries;
+    if(r.flow==='DB'){
+      // Uang keluar dari bank → debit akun lawan, kredit bank BSI
+      entries=[
+        {acc:r.contraAcc,deb:r.amount,crd:0},
+        {acc:bankAccId,deb:0,crd:r.amount}
+      ];
+    } else {
+      // Uang masuk ke bank → debit bank BSI, kredit akun lawan
+      entries=[
+        {acc:bankAccId,deb:r.amount,crd:0},
+        {acc:r.contraAcc,deb:0,crd:r.amount}
+      ];
+    }
+    DB.transactions.push({
+      id:uid(),
+      date:r.date,
+      ref:'BSI-'+r.date.replace(/-/g,'').substring(2)+'-'+(created+1),
+      desc:r.desc,
+      entries,
+      source:'bsi-import'
+    });
+    logBackdateIfNeeded(r.date,'BSI-import',r.desc);
+    created++;
+  });
+
+  saveDB();
+  logAudit('Import Mutasi BSI → Jurnal',`${created} transaksi dijurnal dari mutasi BSI`);
+  window._bsiJournalRows=null;
+  closeModal();
+  alert(`✅ ${created} transaksi berhasil dijurnal!\n\nSekarang cek:\n• Jurnal Umum\n• Buku Besar BSI\n• Laporan Keuangan`);
+  nav('journal');
+}
 
 // Set PDF.js worker
 if(typeof pdfjsLib !== 'undefined'){
@@ -1313,6 +1494,10 @@ async function parseBSIPDF(file){
 
   visualRows.forEach(row=>{
     const rowText=row.map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
+
+    // Skip baris header/footer PDF — bukan transaksi
+    const rowLow=rowText.toLowerCase();
+    if(PDF_SKIP_KEYWORDS.some(k=>rowLow.includes(k)))return;
 
     // Update tanggal terakhir
     const dateMatch=dateRe.exec(rowText);
@@ -1823,7 +2008,7 @@ function defaultCoA(){
     {id:'4102',code:'4-4102',name:'Service Revenue',type:'pendapatan',sub:'usaha'},
     {id:'4103',code:'4-4103',name:'Sales Returns',type:'pendapatan',sub:'usaha'},
     {id:'4104',code:'4-4104',name:'Sales Discounts',type:'pendapatan',sub:'usaha'},
-    {id:'4201',code:'4-4201',name:'Interest Income',type:'pendapatan',sub:'lain'},
+    {id:'4201',code:'4-4201',name:'Interest & Profit Sharing Income',type:'pendapatan',sub:'lain'},
     {id:'4202',code:'4-4202',name:'Rental Income',type:'pendapatan',sub:'lain'},
     {id:'4203',code:'4-4203',name:'Gain on Asset Disposal',type:'pendapatan',sub:'lain'},
     {id:'4204',code:'4-4204',name:'Other Income',type:'pendapatan',sub:'lain'},
@@ -1916,6 +2101,7 @@ function defaultCoA(){
     {id:'4205',code:'4-4205',name:'Deposit Interest Income',type:'pendapatan',sub:'lain'},
     // ── TAMBAHAN: BEBAN LAIN ──
     {id:'6507',code:'6-6507',name:'PPh 4(2) — Building Rent Expense',type:'beban',sub:'lain'},
+    {id:'6510',code:'6-6510',name:'Final Tax Expense (PPh Final)',type:'beban',sub:'lain'},
     {id:'6508',code:'6-6508',name:'Inventory Adjustment Expense',type:'beban',sub:'lain'},
     {id:'6509',code:'6-6509',name:'Deferred Income Tax Expense',type:'beban',sub:'lain'},
   ];
@@ -4121,6 +4307,10 @@ function renderSettings(c){
           <button class="btn btn-acc" onclick="document.getElementById('import-cr-ams').click()">📊 Import Cash Report (Format AMS)</button>
           <input type="file" id="import-cr-ams" accept=".xlsx,.xls" style="display:none" onchange="importCashReportAMS(this)">
           <p style="font-size:10.5px;color:var(--muted);margin:2px 0 0">For PT. Andrika Mitra Solusi Cash Report format</p>
+          <div style="border-top:1px solid var(--bdr);padding-top:8px;margin-top:4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">🏦 Import Mutasi Bank → Jurnal</div>
+          <button class="btn btn-pri" style="background:var(--ok)" onclick="document.getElementById('import-bsi-journal').click()">🏦 Import Mutasi BSI → Auto Jurnal</button>
+          <input type="file" id="import-bsi-journal" accept=".pdf,.xlsx,.xls,.csv" style="display:none" onchange="openBSIJournalImport(this)">
+          <p style="font-size:10.5px;color:var(--muted);margin:2px 0 0">Upload PDF/Excel mutasi BSI → otomatis buat jurnal + masuk ke laporan keuangan</p>
         </div>
       </div>
       <div class="card"><div class="card-hd">${t('set_export')}</div>
@@ -4218,7 +4408,7 @@ function autoMapAccount(desc,type){
     // pendapatan
     [/penjualan|jual|sales|omset|revenue/,'4101'],
     [/jasa|service|konsultan|consulting|fee jasa|honorarium/,'4102'],
-    [/bunga deposito|bunga tabungan|interest income/,'4201'],
+    [/bunga deposito|bunga tabungan|interest income|profit sharing|bagi hasil/,'4201'],
     [/sewa gedung|sewa aset/,'4202'],
   ];
   for(const [pat,accId] of maps){
@@ -5419,6 +5609,16 @@ async function init(){
   if(!DB.roles||!DB.roles.length)DB.roles=['Admin','Direktur','Manager','Finance','HRD','Staff'];
   if(!DB.lockedPeriods)DB.lockedPeriods=[]; // migrate DB lama yang belum punya field ini
   if(!DB.rekonBank)DB.rekonBank=[];         // migrate DB lama
+  // Migrate: tambah akun baru jika belum ada
+  const newAccounts=[
+    {id:'6510',code:'6-6510',name:'Final Tax Expense (PPh Final)',type:'beban',sub:'lain'},
+  ];
+  newAccounts.forEach(na=>{
+    if(!DB.accounts.find(a=>a.id===na.id))DB.accounts.push(na);
+  });
+  // Update nama akun 4201 jika masih pakai nama lama
+  const acc4201=DB.accounts.find(a=>a.id==='4201');
+  if(acc4201&&acc4201.name==='Interest Income')acc4201.name='Interest & Profit Sharing Income';
   const scn=document.getElementById('sb-coname');if(scn)scn.textContent=DB.company.name;
   updateSidebarLogo();
   setSyncStatus('synced');
