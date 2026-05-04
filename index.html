@@ -2016,7 +2016,7 @@ async function doLogin(){
     sessionStorage.setItem('__role__',found.role); // backup for guard checks
     document.getElementById('login-screen').style.display='none';
     _updateUserBadge(found);
-    _applyRoleNav((found||sess).role);
+    _applyRoleNav(sess.role);
     logAudit('Login','User berhasil login');
   } else {
     const errEl=document.getElementById('lg-err');
