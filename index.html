@@ -7521,15 +7521,27 @@ async function init(){
       DB.accounts=DB.accounts.filter(a=>!bsiAll.includes(a)||a===keep);
     }
 
-    // ── STEP 4: Fix Software & Subscription (legacy random ID → 6209b) ──
-    // Supaya tidak konflik dengan Business Travel (6209)
-    const softwareAcc=DB.accounts.find(a=>a.name&&a.name.toLowerCase().includes('software')&&a.type==='beban');
-    if(softwareAcc&&softwareAcc.id!=='6209b'){
-      softwareAcc.id='6209b';
-      softwareAcc.code='6-6209b';
-      softwareAcc.name='Biaya Software & Langganan / Software & Subscription';
-    } else if(!softwareAcc){
-      DB.accounts.push({id:'6209b',code:'6-6209b',name:'Biaya Software & Langganan / Software & Subscription',type:'beban',sub:'operasional'});
+    // ── STEP 4: Fix Software & Subscription ──
+    // PENTING: jangan ubah ID akun ini karena semua jurnal lama pakai ID asli!
+    // Hanya update code & name. Jika v19.4 sudah salah ubah ID ke '6209b',
+    // rollback ID-nya ke ID asli agar acctBal() bisa baca jurnal lama.
+    const softwareAccNew=DB.accounts.find(a=>a.id==='6209b'&&a.type==='beban');
+    if(softwareAccNew){
+      // Sudah salah di-migrate ke 6209b — rollback ID ke aslinya
+      // Cek apakah ada transaksi yang pakai ID lama
+      const oldId='moinyg082vw52';
+      const hasOldTx=(DB.transactions||[]).some(tx=>(tx.entries||[]).some(e=>e.acc===oldId));
+      if(hasOldTx){
+        // Kembalikan ID supaya acctBal bisa baca jurnal lama
+        softwareAccNew.id=oldId;
+        softwareAccNew.code='6-6209b'; // kode tetap b agar tidak konflik Business Travel
+        softwareAccNew.name='Biaya Software & Langganan / Software & Subscription';
+      }
+    }
+    // Kalau account software belum ada sama sekali, tambah baru
+    const softwareAccFinal=DB.accounts.find(a=>a.name&&a.name.toLowerCase().includes('software')&&a.type==='beban');
+    if(!softwareAccFinal){
+      DB.accounts.push({id:'moinyg082vw52',code:'6-6209b',name:'Biaya Software & Langganan / Software & Subscription',type:'beban',sub:'operasional'});
     }
 
     // ── STEP 5: Rename fixes untuk versi lama ──
