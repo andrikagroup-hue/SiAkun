@@ -2541,20 +2541,27 @@ function nav(page){
 
   // ── Migrasi: pastikan BSI sebelum BCA di urutan akun ──
   if(DB.accounts&&DB.accounts.length){
-    const bsiIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bsi')||a.name&&a.name.toLowerCase().includes('syariah indonesia'));
+    const bsiIdx=DB.accounts.findIndex(a=>a.name&&(a.name.toLowerCase().includes('syariah indonesia')||a.name.toLowerCase().includes(' bsi')));
     const bcaIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bca'));
+    // Normalize BSI id ke '1102' jika masih '1102b'
+    if(bsiIdx>-1&&DB.accounts[bsiIdx].id==='1102b'){
+      // Cek apakah id '1102' sudah dipakai akun lain
+      const conflict=DB.accounts.find(a=>a.id==='1102'&&!a.name.toLowerCase().includes('syariah')&&!a.name.toLowerCase().includes('bsi'));
+      if(!conflict)DB.accounts[bsiIdx].id='1102';
+    }
     // Kalau BSI ada tapi posisinya setelah BCA, pindahkan BSI ke sebelum BCA
-    if(bsiIdx>-1&&bcaIdx>-1&&bsiIdx>bcaIdx){
-      const bsiAcct=DB.accounts.splice(bsiIdx,1)[0];
+    const bsiIdx2=DB.accounts.findIndex(a=>a.name&&(a.name.toLowerCase().includes('syariah indonesia')||a.name.toLowerCase().includes(' bsi')));
+    const bcaIdx2=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bca'));
+    if(bsiIdx2>-1&&bcaIdx2>-1&&bsiIdx2>bcaIdx2){
+      const bsiAcct=DB.accounts.splice(bsiIdx2,1)[0];
       const newBcaIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bca'));
       DB.accounts.splice(newBcaIdx,0,bsiAcct);
       saveDB();
     }
     // Kalau BSI belum ada sama sekali, tambahkan setelah Cash
-    if(bsiIdx===-1){
+    if(DB.accounts.findIndex(a=>a.name&&(a.name.toLowerCase().includes('syariah indonesia')||a.name.toLowerCase().includes(' bsi')))===-1){
       const cashIdx=DB.accounts.findIndex(a=>a.id==='1101'||a.code==='1-1101');
-      const newBsi={id:'1102b',code:'1-1102',name:'Bank Syariah Indonesia (BSI)',type:'aktiva',sub:'lancar'};
-      DB.accounts.splice(cashIdx+1,0,newBsi);
+      DB.accounts.splice(cashIdx+1,0,{id:'1102',code:'1-1102',name:'Bank Syariah Indonesia (BSI)',type:'aktiva',sub:'lancar'});
       saveDB();
     }
   }
@@ -7415,15 +7422,89 @@ async function init(){
       DB.accounts=defaultDB().accounts;
     }
   }
+  // ── Auto-migrate: tambah akun baru ke DB lama yang belum punya ──
   const newAccounts=[
+    // PPh Final
     {id:'6510',code:'6-6510',name:'Final Tax Expense (PPh Final)',type:'beban',sub:'lain'},
+    // Aset Lancar tambahan
+    {id:'1205',code:'1-1205',name:'Penyisihan Piutang Tak Tertagih / Allowance for Doubtful Accounts',type:'aktiva',sub:'lancar'},
+    {id:'1305',code:'1-1305',name:'Uang Muka Pembelian / Purchase Advance',type:'aktiva',sub:'lancar'},
+    {id:'1306',code:'1-1306',name:'Sewa Dibayar Dimuka / Prepaid Lease',type:'aktiva',sub:'lancar'},
+    {id:'1307',code:'1-1307',name:'Biaya Dibayar Dimuka / Prepaid Expenses',type:'aktiva',sub:'lancar'},
+    {id:'1308',code:'1-1308',name:'Uang Muka Lainnya / Other Advance Payments',type:'aktiva',sub:'lancar'},
+    {id:'1309',code:'1-1309',name:'Uang Jaminan / Guarantee Deposit',type:'aktiva',sub:'lancar'},
+    {id:'1310',code:'1-1310',name:'Investasi Jangka Pendek / Short-term Investments',type:'aktiva',sub:'lancar'},
+    {id:'1311',code:'1-1311',name:'Persediaan / Inventory',type:'aktiva',sub:'lancar'},
+    {id:'1312',code:'1-1312',name:'Perlengkapan Kantor / Office Supplies',type:'aktiva',sub:'lancar'},
+    // Akumulasi Penyusutan per aset
+    {id:'1611',code:'1-1611',name:'Akumulasi Penyusutan Gedung / Accum. Depreciation - Building',type:'aktiva',sub:'tetap'},
+    {id:'1612',code:'1-1612',name:'Akumulasi Penyusutan Kendaraan / Accum. Depreciation - Vehicles',type:'aktiva',sub:'tetap'},
+    {id:'1613',code:'1-1613',name:'Akumulasi Penyusutan Peralatan / Accum. Depreciation - Equipment',type:'aktiva',sub:'tetap'},
+    {id:'1614',code:'1-1614',name:'Akumulasi Penyusutan Inventaris / Accum. Depreciation - Inventory',type:'aktiva',sub:'tetap'},
+    {id:'1615',code:'1-1615',name:'Akumulasi Penyusutan Komputer / Accum. Depreciation - Computers',type:'aktiva',sub:'tetap'},
+    {id:'1620',code:'1-1620',name:'Aset Tidak Lancar Lainnya / Other Non-Current Assets',type:'aktiva',sub:'tetap'},
+    // Kewajiban tambahan
+    {id:'2112',code:'2-2112',name:'Utang PPh 4(2) / PPh 4(2) Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2113',code:'2-2113',name:'Utang Lain-lain / Other Payables',type:'kewajiban',sub:'lancar'},
+    {id:'2114',code:'2-2114',name:'Pinjaman Jangka Pendek / Short-term Loans',type:'kewajiban',sub:'lancar'},
+    {id:'2115',code:'2-2115',name:'Biaya yang Masih Harus Dibayar / Accrued Expenses',type:'kewajiban',sub:'lancar'},
+    {id:'2116',code:'2-2116',name:'Pendapatan Diterima Dimuka / Deferred Revenue',type:'kewajiban',sub:'lancar'},
+    // Beban operasional tambahan
+    {id:'6207',code:'6-6207',name:'Biaya Pemeliharaan Kendaraan / Vehicle Maintenance',type:'beban',sub:'operasional'},
+    {id:'6209',code:'6-6209',name:'Biaya Perjalanan Dinas / Business Travel',type:'beban',sub:'operasional'},
+    {id:'6210',code:'6-6210',name:'Biaya Ekspedisi, Pos & Materai / Shipping, Postage & Stamp',type:'beban',sub:'operasional'},
+    {id:'6211',code:'6-6211',name:'Biaya Rumah Tangga Kantor / Office Household',type:'beban',sub:'operasional'},
+    {id:'6212',code:'6-6212',name:'Biaya Transport & Sewa Kendaraan / Transport & Vehicle Rental',type:'beban',sub:'operasional'},
+    {id:'6213',code:'6-6213',name:'Biaya Profesional / Tenaga Ahli / Professional Fees',type:'beban',sub:'operasional'},
+    {id:'6214',code:'6-6214',name:'Biaya Jamuan / Entertainment',type:'beban',sub:'operasional'},
+    {id:'6215',code:'6-6215',name:'Biaya Umum & Administrasi / General & Administrative',type:'beban',sub:'operasional'},
+    // Beban lain-lain
+    {id:'6507',code:'6-6507',name:'Pajak Penghasilan Badan / Corporate Income Tax',type:'beban',sub:'lain'},
+    {id:'6508',code:'6-6508',name:'Pajak Final Bagi Hasil / Final Tax on Profit Sharing',type:'beban',sub:'lain'},
+    {id:'6509',code:'6-6509',name:'Beban Lain-lain / Other Expenses',type:'beban',sub:'lain'},
   ];
   if(DB.accounts&&Array.isArray(DB.accounts)){
+    // Tambah akun yang belum ada (cek by ID dan by code untuk hindari duplikat)
     newAccounts.forEach(na=>{
-      if(!DB.accounts.find(a=>a.id===na.id))DB.accounts.push(na);
+      const byId=DB.accounts.find(a=>a.id===na.id);
+      const byCode=DB.accounts.find(a=>a.code===na.code);
+      // Skip jika sudah ada by ID
+      if(byId)return;
+      // Kalau ada by code (legacy ID berbeda), update ID-nya biar konsisten
+      if(byCode){byCode.id=na.id;byCode.name=na.name;return;}
+      DB.accounts.push(na);
     });
+
+    // ── Fix conflict: 1102b BSI — hapus duplikat, pertahankan satu ──
+    const bsiAll=DB.accounts.filter(a=>a.name&&(a.name.toLowerCase().includes('syariah indonesia')||a.name.toLowerCase().includes(' bsi')));
+    if(bsiAll.length>1){
+      // Pertahankan yang punya id='1102', hapus '1102b' jika keduanya ada
+      const keep=bsiAll.find(a=>a.id==='1102')||bsiAll[0];
+      keep.id='1102'; // normalize ID
+      DB.accounts=DB.accounts.filter(a=>!(a.name&&(a.name.toLowerCase().includes('syariah indonesia')||a.name.toLowerCase().includes(' bsi'))&&a.id!==keep.id));
+    }
+
+    // ── Fix conflict: 6-6209 — backup punya 'Software & Subscription', default punya 'Business Travel' ──
+    // Keduanya valid — pastikan keduanya ada dengan ID berbeda
+    const hasSoftware=DB.accounts.find(a=>a.name&&a.name.toLowerCase().includes('software')&&a.type==='beban');
+    if(!hasSoftware){
+      // Cek apakah ada akun dengan ID random (legacy) yang nama-nya Software
+      const legacySoftware=DB.accounts.find(a=>a.code==='6-6209'&&a.name&&a.name.toLowerCase().includes('software'));
+      if(legacySoftware){
+        // Ganti kode-nya supaya tidak conflict dengan Business Travel (6209)
+        legacySoftware.code='6-6209b';
+        legacySoftware.id='6209b';
+      } else {
+        // Tambah akun Software baru dengan ID unik
+        DB.accounts.push({id:'6209b',code:'6-6209b',name:'Biaya Software & Langganan / Software & Subscription',type:'beban',sub:'operasional'});
+      }
+    }
+
+    // ── Fix nama akun yang berubah di versi sebelumnya ──
     const acc4201=DB.accounts.find(a=>a.id==='4201');
     if(acc4201&&acc4201.name==='Interest Income')acc4201.name='Interest & Profit Sharing Income';
+
+    saveDB();
   }
   const scn=document.getElementById('sb-coname');if(scn)scn.textContent=DB.company.name;
   updateSidebarLogo();
