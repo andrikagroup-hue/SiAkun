@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SiAkun v19.2 — Financial System</title>
+<title>SiAkun v19.5 — Financial System</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -2604,7 +2604,19 @@ function nav(page){
     }
   }
 }
-function destroyCharts(){Object.values(charts).forEach(ch=>{try{ch.destroy();}catch(e){}});charts={};}
+function destroyCharts(){
+  // Destroy tracked chart instances
+  Object.values(charts).forEach(ch=>{try{ch.destroy();}catch(e){}});
+  charts={};
+  // Destroy any orphaned Chart.js instances on DOM canvas elements
+  // (terjadi kalau nav dipanggil sebelum setTimeout chart selesai)
+  if(typeof Chart!=='undefined'&&Chart.getChart){
+    document.querySelectorAll('canvas').forEach(canvas=>{
+      const existing=Chart.getChart(canvas);
+      if(existing){try{existing.destroy();}catch(e){}}
+    });
+  }
+}
 
 // ================================================================
 //  BACKDATE DETECTION — catat jejak, tidak memblokir
@@ -2785,6 +2797,16 @@ function renderDashboard(c){
     </table></div>
   </div>`;
 
+  // Helper: destroy existing Chart.js instance sebelum buat baru
+  const _safeChart=(id,config)=>{
+    const canvas=document.getElementById(id);
+    if(!canvas)return null;
+    if(typeof Chart!=='undefined'&&Chart.getChart){
+      const ex=Chart.getChart(canvas);if(ex)ex.destroy();
+    }
+    return new Chart(canvas,config);
+  };
+
   setTimeout(()=>{
     const lr2=labaRugiCalc();
     const ctx1=document.getElementById('ch-lr');
@@ -2795,7 +2817,7 @@ function renderDashboard(c){
       const plColors  = ['#10b981','#f59e0b','#ef4444', lr2.labaBersih>=0?'#2563eb':'#dc2626'];
       const plBorders = ['#059669','#d97706','#dc2626', lr2.labaBersih>=0?'#1d4ed8':'#b91c1c'];
 
-      charts.lr=new Chart(ctx1,{
+      charts.lr=_safeChart('ch-lr',{
         type:'bar',
         data:{
           labels:plLabels,
@@ -2874,7 +2896,7 @@ function renderDashboard(c){
     const overdue=invs.filter(i=>invStatus(i)==='overdue').length;
     const draft=invs.filter(i=>i.status==='draft').length;
     const ctx2=document.getElementById('ch-inv');
-    if(ctx2)charts.inv=new Chart(ctx2,{type:'doughnut',data:{labels:[t('st_paid'),t('st_unpaid'),t('st_partial'),t('st_overdue'),t('st_draft')],datasets:[{data:[paid,unpaid,partial,overdue,draft],backgroundColor:['#10b981','#ef4444','#f59e0b','#dc2626','#94a3b8'],borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}});
+    if(ctx2)charts.inv=_safeChart('ch-inv',{type:'doughnut',data:{labels:[t('st_paid'),t('st_unpaid'),t('st_partial'),t('st_overdue'),t('st_draft')],datasets:[{data:[paid,unpaid,partial,overdue,draft],backgroundColor:['#10b981','#ef4444','#f59e0b','#dc2626','#94a3b8'],borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}});
     // Trend chart — revenue 6 bulan dari invoice
     const ctx3=document.getElementById('ch-trend');
     if(ctx3){
@@ -2889,7 +2911,7 @@ function renderDashboard(c){
         revData.push(mInv.reduce((s,i)=>s+i.total,0));
         paidData.push(mInv.filter(i=>i.status==='paid').reduce((s,i)=>s+i.total,0));
       }
-      charts.trend=new Chart(ctx3,{type:'bar',data:{labels,datasets:[
+      charts.trend=_safeChart('ch-trend',{type:'bar',data:{labels,datasets:[
         {label:'Total Invoice',data:revData,backgroundColor:'rgba(37,99,235,.25)',borderColor:'#2563eb',borderWidth:1.5,borderRadius:4},
         {label:'Lunas',data:paidData,backgroundColor:'rgba(5,150,105,.3)',borderColor:'#059669',borderWidth:1.5,borderRadius:4},
       ]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{y:{ticks:{callback:v=>'Rp '+Number(v/1000000).toFixed(0)+'jt'},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
@@ -7422,87 +7444,114 @@ async function init(){
       DB.accounts=defaultDB().accounts;
     }
   }
-  // ── Auto-migrate: tambah akun baru ke DB lama yang belum punya ──
-  const newAccounts=[
-    // PPh Final
-    {id:'6510',code:'6-6510',name:'Final Tax Expense (PPh Final)',type:'beban',sub:'lain'},
-    // Aset Lancar tambahan
-    {id:'1205',code:'1-1205',name:'Penyisihan Piutang Tak Tertagih / Allowance for Doubtful Accounts',type:'aktiva',sub:'lancar'},
-    {id:'1305',code:'1-1305',name:'Uang Muka Pembelian / Purchase Advance',type:'aktiva',sub:'lancar'},
-    {id:'1306',code:'1-1306',name:'Sewa Dibayar Dimuka / Prepaid Lease',type:'aktiva',sub:'lancar'},
-    {id:'1307',code:'1-1307',name:'Biaya Dibayar Dimuka / Prepaid Expenses',type:'aktiva',sub:'lancar'},
-    {id:'1308',code:'1-1308',name:'Uang Muka Lainnya / Other Advance Payments',type:'aktiva',sub:'lancar'},
-    {id:'1309',code:'1-1309',name:'Uang Jaminan / Guarantee Deposit',type:'aktiva',sub:'lancar'},
-    {id:'1310',code:'1-1310',name:'Investasi Jangka Pendek / Short-term Investments',type:'aktiva',sub:'lancar'},
-    {id:'1311',code:'1-1311',name:'Persediaan / Inventory',type:'aktiva',sub:'lancar'},
-    {id:'1312',code:'1-1312',name:'Perlengkapan Kantor / Office Supplies',type:'aktiva',sub:'lancar'},
-    // Akumulasi Penyusutan per aset
-    {id:'1611',code:'1-1611',name:'Akumulasi Penyusutan Gedung / Accum. Depreciation - Building',type:'aktiva',sub:'tetap'},
-    {id:'1612',code:'1-1612',name:'Akumulasi Penyusutan Kendaraan / Accum. Depreciation - Vehicles',type:'aktiva',sub:'tetap'},
-    {id:'1613',code:'1-1613',name:'Akumulasi Penyusutan Peralatan / Accum. Depreciation - Equipment',type:'aktiva',sub:'tetap'},
-    {id:'1614',code:'1-1614',name:'Akumulasi Penyusutan Inventaris / Accum. Depreciation - Inventory',type:'aktiva',sub:'tetap'},
-    {id:'1615',code:'1-1615',name:'Akumulasi Penyusutan Komputer / Accum. Depreciation - Computers',type:'aktiva',sub:'tetap'},
-    {id:'1620',code:'1-1620',name:'Aset Tidak Lancar Lainnya / Other Non-Current Assets',type:'aktiva',sub:'tetap'},
-    // Kewajiban tambahan
-    {id:'2112',code:'2-2112',name:'Utang PPh 4(2) / PPh 4(2) Payable',type:'kewajiban',sub:'lancar'},
-    {id:'2113',code:'2-2113',name:'Utang Lain-lain / Other Payables',type:'kewajiban',sub:'lancar'},
-    {id:'2114',code:'2-2114',name:'Pinjaman Jangka Pendek / Short-term Loans',type:'kewajiban',sub:'lancar'},
-    {id:'2115',code:'2-2115',name:'Biaya yang Masih Harus Dibayar / Accrued Expenses',type:'kewajiban',sub:'lancar'},
-    {id:'2116',code:'2-2116',name:'Pendapatan Diterima Dimuka / Deferred Revenue',type:'kewajiban',sub:'lancar'},
-    // Beban operasional tambahan
-    {id:'6207',code:'6-6207',name:'Biaya Pemeliharaan Kendaraan / Vehicle Maintenance',type:'beban',sub:'operasional'},
-    {id:'6209',code:'6-6209',name:'Biaya Perjalanan Dinas / Business Travel',type:'beban',sub:'operasional'},
-    {id:'6210',code:'6-6210',name:'Biaya Ekspedisi, Pos & Materai / Shipping, Postage & Stamp',type:'beban',sub:'operasional'},
-    {id:'6211',code:'6-6211',name:'Biaya Rumah Tangga Kantor / Office Household',type:'beban',sub:'operasional'},
-    {id:'6212',code:'6-6212',name:'Biaya Transport & Sewa Kendaraan / Transport & Vehicle Rental',type:'beban',sub:'operasional'},
-    {id:'6213',code:'6-6213',name:'Biaya Profesional / Tenaga Ahli / Professional Fees',type:'beban',sub:'operasional'},
-    {id:'6214',code:'6-6214',name:'Biaya Jamuan / Entertainment',type:'beban',sub:'operasional'},
-    {id:'6215',code:'6-6215',name:'Biaya Umum & Administrasi / General & Administrative',type:'beban',sub:'operasional'},
-    // Beban lain-lain
-    {id:'6507',code:'6-6507',name:'Pajak Penghasilan Badan / Corporate Income Tax',type:'beban',sub:'lain'},
-    {id:'6508',code:'6-6508',name:'Pajak Final Bagi Hasil / Final Tax on Profit Sharing',type:'beban',sub:'lain'},
-    {id:'6509',code:'6-6509',name:'Beban Lain-lain / Other Expenses',type:'beban',sub:'lain'},
-  ];
+  // ══════════════════════════════════════════════════════════════
+  //  AUTO-MIGRATE CoA — jalankan setiap load, idempotent & aman
+  // ══════════════════════════════════════════════════════════════
   if(DB.accounts&&Array.isArray(DB.accounts)){
-    // Tambah akun yang belum ada (cek by ID dan by code untuk hindari duplikat)
-    newAccounts.forEach(na=>{
-      const byId=DB.accounts.find(a=>a.id===na.id);
-      const byCode=DB.accounts.find(a=>a.code===na.code);
+
+    // ── STEP 1: Hapus duplikat yang terlanjur masuk di v19.4 ──
+    // Akun baru ini punya PADANAN legacy yang sudah ada → buang yang baru,
+    // rename legacy ke bilingual supaya konsisten.
+    const legacyRenames=[
+      // [legacyId, namaBaruBilingual, idDuplikatYangDihapus]
+      ['1204','Penyisihan Piutang Tak Tertagih / Allowance for Doubtful Accounts','1205'],
+      ['1501','Uang Muka Pembelian / Purchase Advance','1305'],
+      ['1502','Biaya Dibayar Dimuka / Prepaid Expenses','1307'],
+      ['1503','Perlengkapan Kantor / Office Supplies','1312'],
+      ['1504','Uang Muka Pajak PPh 25 / Prepaid Tax PPh 25',null],
+      ['1505','Investasi Jangka Pendek / Short-term Investments','1310'],
+    ];
+    legacyRenames.forEach(([legacyId,newName,dupId])=>{
+      const legacy=DB.accounts.find(a=>a.id===legacyId);
+      if(legacy)legacy.name=newName;                         // rename legacy → bilingual
+      if(dupId)DB.accounts=DB.accounts.filter(a=>a.id!==dupId); // hapus duplikat baru
+    });
+    // Hapus 1311 (Persediaan generik) — sudah covered 1301-1304 inventory spesifik
+    DB.accounts=DB.accounts.filter(a=>a.id!=='1311');
+
+    // ── STEP 2: Tambah akun yang benar-benar baru (no legacy equivalent) ──
+    const toAdd=[
+      // Aset Lancar baru
+      {id:'1306',code:'1-1306',name:'Sewa Dibayar Dimuka / Prepaid Lease',type:'aktiva',sub:'lancar'},
+      {id:'1308',code:'1-1308',name:'Uang Muka Lainnya / Other Advance Payments',type:'aktiva',sub:'lancar'},
+      {id:'1309',code:'1-1309',name:'Uang Jaminan / Guarantee Deposit',type:'aktiva',sub:'lancar'},
+      // Akumulasi Penyusutan per-kategori (spesifik, bukan 1699 generik)
+      {id:'1611',code:'1-1611',name:'Akumulasi Penyusutan Gedung / Accum. Depreciation - Building',type:'aktiva',sub:'tetap'},
+      {id:'1612',code:'1-1612',name:'Akumulasi Penyusutan Kendaraan / Accum. Depreciation - Vehicles',type:'aktiva',sub:'tetap'},
+      {id:'1613',code:'1-1613',name:'Akumulasi Penyusutan Peralatan / Accum. Depreciation - Equipment',type:'aktiva',sub:'tetap'},
+      {id:'1614',code:'1-1614',name:'Akumulasi Penyusutan Inventaris / Accum. Depreciation - Inventory',type:'aktiva',sub:'tetap'},
+      {id:'1615',code:'1-1615',name:'Akumulasi Penyusutan Komputer / Accum. Depreciation - Computers',type:'aktiva',sub:'tetap'},
+      {id:'1620',code:'1-1620',name:'Aset Tidak Lancar Lainnya / Other Non-Current Assets',type:'aktiva',sub:'tetap'},
+      // Kewajiban baru (v19 SKK structure)
+      {id:'2112',code:'2-2112',name:'Utang PPh 4(2) / PPh 4(2) Payable',type:'kewajiban',sub:'lancar'},
+      {id:'2113',code:'2-2113',name:'Utang Lain-lain / Other Payables',type:'kewajiban',sub:'lancar'},
+      {id:'2114',code:'2-2114',name:'Pinjaman Jangka Pendek / Short-term Loans',type:'kewajiban',sub:'lancar'},
+      {id:'2115',code:'2-2115',name:'Biaya yang Masih Harus Dibayar / Accrued Expenses',type:'kewajiban',sub:'lancar'},
+      {id:'2116',code:'2-2116',name:'Pendapatan Diterima Dimuka / Deferred Revenue',type:'kewajiban',sub:'lancar'},
+      // Beban operasional baru
+      {id:'6207',code:'6-6207',name:'Biaya Pemeliharaan Kendaraan / Vehicle Maintenance',type:'beban',sub:'operasional'},
+      {id:'6209',code:'6-6209',name:'Biaya Perjalanan Dinas / Business Travel',type:'beban',sub:'operasional'},
+      {id:'6210',code:'6-6210',name:'Biaya Ekspedisi, Pos & Materai / Shipping, Postage & Stamp',type:'beban',sub:'operasional'},
+      {id:'6211',code:'6-6211',name:'Biaya Rumah Tangga Kantor / Office Household',type:'beban',sub:'operasional'},
+      {id:'6212',code:'6-6212',name:'Biaya Transport & Sewa Kendaraan / Transport & Vehicle Rental',type:'beban',sub:'operasional'},
+      {id:'6213',code:'6-6213',name:'Biaya Profesional / Tenaga Ahli / Professional Fees',type:'beban',sub:'operasional'},
+      {id:'6214',code:'6-6214',name:'Biaya Jamuan / Entertainment',type:'beban',sub:'operasional'},
+      {id:'6215',code:'6-6215',name:'Biaya Umum & Administrasi / General & Administrative',type:'beban',sub:'operasional'},
+      // Beban lain
+      {id:'6507',code:'6-6507',name:'Pajak Penghasilan Badan / Corporate Income Tax',type:'beban',sub:'lain'},
+      {id:'6508',code:'6-6508',name:'Pajak Final Bagi Hasil / Final Tax on Profit Sharing',type:'beban',sub:'lain'},
+      {id:'6509',code:'6-6509',name:'Beban Lain-lain / Other Expenses',type:'beban',sub:'lain'},
+      {id:'6510',code:'6-6510',name:'Final Tax Expense (PPh Final)',type:'beban',sub:'lain'},
+    ];
+    toAdd.forEach(na=>{
       // Skip jika sudah ada by ID
-      if(byId)return;
-      // Kalau ada by code (legacy ID berbeda), update ID-nya biar konsisten
+      if(DB.accounts.find(a=>a.id===na.id))return;
+      // Jika ada by code tapi ID random (legacy) → normalize ID & nama
+      const byCode=DB.accounts.find(a=>a.code===na.code);
       if(byCode){byCode.id=na.id;byCode.name=na.name;return;}
       DB.accounts.push(na);
     });
 
-    // ── Fix conflict: 1102b BSI — hapus duplikat, pertahankan satu ──
-    const bsiAll=DB.accounts.filter(a=>a.name&&(a.name.toLowerCase().includes('syariah indonesia')||a.name.toLowerCase().includes(' bsi')));
+    // ── STEP 3: Fix BSI duplicate / ID conflict ──
+    const bsiAll=DB.accounts.filter(a=>a.name&&(a.name.toLowerCase().includes('syariah indonesia')||
+      (a.name.toLowerCase().includes('bsi')&&a.type==='aktiva')));
     if(bsiAll.length>1){
-      // Pertahankan yang punya id='1102', hapus '1102b' jika keduanya ada
       const keep=bsiAll.find(a=>a.id==='1102')||bsiAll[0];
-      keep.id='1102'; // normalize ID
-      DB.accounts=DB.accounts.filter(a=>!(a.name&&(a.name.toLowerCase().includes('syariah indonesia')||a.name.toLowerCase().includes(' bsi'))&&a.id!==keep.id));
+      keep.id='1102';
+      DB.accounts=DB.accounts.filter(a=>!bsiAll.includes(a)||a===keep);
     }
 
-    // ── Fix conflict: 6-6209 — backup punya 'Software & Subscription', default punya 'Business Travel' ──
-    // Keduanya valid — pastikan keduanya ada dengan ID berbeda
-    const hasSoftware=DB.accounts.find(a=>a.name&&a.name.toLowerCase().includes('software')&&a.type==='beban');
-    if(!hasSoftware){
-      // Cek apakah ada akun dengan ID random (legacy) yang nama-nya Software
-      const legacySoftware=DB.accounts.find(a=>a.code==='6-6209'&&a.name&&a.name.toLowerCase().includes('software'));
-      if(legacySoftware){
-        // Ganti kode-nya supaya tidak conflict dengan Business Travel (6209)
-        legacySoftware.code='6-6209b';
-        legacySoftware.id='6209b';
-      } else {
-        // Tambah akun Software baru dengan ID unik
-        DB.accounts.push({id:'6209b',code:'6-6209b',name:'Biaya Software & Langganan / Software & Subscription',type:'beban',sub:'operasional'});
-      }
+    // ── STEP 4: Fix Software & Subscription (legacy random ID → 6209b) ──
+    // Supaya tidak konflik dengan Business Travel (6209)
+    const softwareAcc=DB.accounts.find(a=>a.name&&a.name.toLowerCase().includes('software')&&a.type==='beban');
+    if(softwareAcc&&softwareAcc.id!=='6209b'){
+      softwareAcc.id='6209b';
+      softwareAcc.code='6-6209b';
+      softwareAcc.name='Biaya Software & Langganan / Software & Subscription';
+    } else if(!softwareAcc){
+      DB.accounts.push({id:'6209b',code:'6-6209b',name:'Biaya Software & Langganan / Software & Subscription',type:'beban',sub:'operasional'});
     }
 
-    // ── Fix nama akun yang berubah di versi sebelumnya ──
+    // ── STEP 5: Rename fixes untuk versi lama ──
     const acc4201=DB.accounts.find(a=>a.id==='4201');
     if(acc4201&&acc4201.name==='Interest Income')acc4201.name='Interest & Profit Sharing Income';
+
+    // ── STEP 6: Sort semua akun by kode numerik ──
+    DB.accounts.sort((a,b)=>{
+      // Parse kode: '1-1102' → [1, 1102], '6-6510' → [6, 6510]
+      const parse=code=>{
+        if(!code)return[99,99999];
+        const parts=code.replace(/[^\d-]/g,'').split('-').filter(Boolean);
+        return parts.map(Number);
+      };
+      const [a1,a2]=parse(a.code);
+      const [b1,b2]=parse(b.code);
+      if(a1!==b1)return a1-b1;
+      // Akun dengan kode berakhir huruf (misal 1102b) → urut setelah numeric
+      const an=isNaN(a2)?99999:a2;
+      const bn=isNaN(b2)?99999:b2;
+      return an-bn;
+    });
 
     saveDB();
   }
