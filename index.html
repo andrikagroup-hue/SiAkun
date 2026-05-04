@@ -2533,6 +2533,26 @@ const pageMap={
 };
 function nav(page){
   _currentPage=page;
+  // ── Defensive: ensure all DB fields exist before any render ──
+  if(DB&&typeof DB==='object'){
+    if(!DB.taxSettings)DB.taxSettings={ppnRate:11,pph23Rate:2,pph4Rate:2};
+    if(!DB.calConfig)DB.calConfig={tarifTelat:50000,hkStd:25};
+    if(!DB.calendar)DB.calendar={};
+    if(!DB.lockedPeriods)DB.lockedPeriods=[];
+    if(!DB.rekonBank)DB.rekonBank=[];
+    if(!DB.products)DB.products=[];
+    if(!DB.contacts)DB.contacts=[];
+    if(!DB.invoices)DB.invoices=[];
+    if(!DB.purchases)DB.purchases=[];
+    if(!DB.transactions)DB.transactions=[];
+    if(!DB.employees)DB.employees=[];
+    if(!DB.payroll)DB.payroll=[];
+    if(!DB.assets)DB.assets=[];
+    if(!DB.auditLog)DB.auditLog=[];
+    if(!DB.budgets)DB.budgets=[];
+    if(!DB.receipts)DB.receipts=[];
+    if(!DB.quicktx)DB.quicktx=[];
+  }
   // Auto-close sidebar di mobile setelah pilih menu
   if(window.innerWidth<=768)closeSidebar();
   document.querySelectorAll('.nav-i').forEach(el=>el.classList.toggle('active',el.getAttribute('onclick')===`nav('${page}')`));
@@ -2543,7 +2563,17 @@ function nav(page){
   const c=document.getElementById('content');
   c.innerHTML='';
   const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon};
-  if(pages[page])pages[page](c);
+  if(pages[page]){
+    try{pages[page](c);}catch(e){
+      console.error('[SiAkun]',page,e);
+      c.innerHTML=`<div style="padding:40px;text-align:center">
+        <div style="font-size:40px;margin-bottom:12px">⚠️</div>
+        <div style="font-weight:700;font-size:16px;margin-bottom:8px">Gagal memuat halaman</div>
+        <div style="color:#64748b;font-size:12px;max-width:400px;margin:0 auto 16px">${e.message||String(e)}</div>
+        <button class="btn btn-pri" onclick="location.reload()">🔄 Reload</button>
+      </div>`;
+    }
+  }
 }
 function destroyCharts(){Object.values(charts).forEach(ch=>{try{ch.destroy();}catch(e){}});charts={};}
 
