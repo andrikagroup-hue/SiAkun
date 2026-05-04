@@ -360,6 +360,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
     <div class="nav-i" onclick="nav('transactions')"><span class="ic">💸</span><span data-i18n="nav_transactions">Income & Expenses</span></div>
     <div class="nav-i" onclick="nav('budget')"><span class="ic">🎯</span><span data-i18n="nav_budget">Budget & Planning</span></div>
     <div class="nav-i" onclick="nav('assets')"><span class="ic">🏢</span><span data-i18n="nav_assets">Fixed Assets</span></div>
+    <div class="nav-i" onclick="nav('prepaid')"><span class="ic">📆</span><span>Prepaid & Amortisasi</span></div>
   </div>
 
   <div class="nav-sec">
@@ -2261,6 +2262,7 @@ function defaultDB(){
   ],
     roles:['Admin','Direktur','Manager','Finance','HRD','Staff'],
     lockedPeriods:[], // array of "YYYY-MM" strings — e.g. ["2026-01","2026-02"]
+    prepaidItems:[],  // array of prepaid/amortisation schedules
     calendar:{},       // {YYYY:[{date,name,type}]}
     calConfig:{tarifTelat:50000,tarifAbsenHarian:0},
     taxSettings:{ppnRate:11,pph23Rate:2,pph4Rate:2,defaultTaxType:'ppn'}, // tarif pajak global
@@ -2591,7 +2593,7 @@ function nav(page){
   destroyCharts();
   const c=document.getElementById('content');
   c.innerHTML='';
-  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon};
+  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,prepaid:renderPrepaid,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon};
   if(pages[page]){
     try{pages[page](c);}catch(e){
       console.error('[SiAkun]',page,e);
@@ -4822,6 +4824,270 @@ function exportBudget(){exportXLSX([{name:'Budget',data:DB.budgets.map(b=>{const
 // ================================================================
 //  ASSETS
 // ================================================================
+// ================================================================
+//  PREPAID & AMORTISASI SCHEDULER
+// ================================================================
+function renderPrepaid(c){
+  const ta=document.getElementById('topbar-actions');
+  ta.innerHTML=`<button class="btn btn-pri" onclick="openAddPrepaid()">+ Tambah Prepaid</button>`;
+  const items=DB.prepaidItems||[];
+  const today_=today();
+
+  // Summary stats
+  const totalPrepaid=items.filter(p=>p.status!=='closed').reduce((s,p)=>s+currentPrepaidBalance(p),0);
+  const dueThisMonth=items.filter(p=>p.status!=='closed'&&nextAmortMonth(p)===today_.slice(0,7));
+
+  c.innerHTML=`
+  <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+    <div class="stat b"><div class="stat-lbl">Total Saldo Prepaid</div><div class="stat-val">${rp(totalPrepaid)}</div><div class="stat-sub">${items.filter(p=>p.status!=='closed').length} item aktif</div></div>
+    <div class="stat y"><div class="stat-lbl">Jatuh Tempo Bulan Ini</div><div class="stat-val">${dueThisMonth.length}</div><div class="stat-sub">perlu posting jurnal</div></div>
+    <div class="stat g"><div class="stat-lbl">Sudah Lunas</div><div class="stat-val">${items.filter(p=>p.status==='closed').length}</div><div class="stat-sub">item selesai</div></div>
+  </div>
+
+  ${items.length?items.map(p=>renderPrepaidCard(p)).join(''):`
+  <div class="card" style="text-align:center;padding:40px">
+    <div style="font-size:40px;margin-bottom:12px">📆</div>
+    <div style="font-weight:700;font-size:15px;margin-bottom:6px">Belum ada Prepaid</div>
+    <div style="color:var(--muted);font-size:12.5px;margin-bottom:16px">Tambahkan sewa dibayar dimuka, asuransi, lisensi, atau biaya lain yang perlu diamortisasi.</div>
+    <button class="btn btn-pri" onclick="openAddPrepaid()">+ Tambah Prepaid Pertama</button>
+  </div>`}`;
+}
+
+function renderPrepaidCard(p){
+  const balance=currentPrepaidBalance(p);
+  const posted=(p.schedule||[]).filter(s=>s.posted).length;
+  const total=(p.schedule||[]).length;
+  const pct=total?Math.round(posted/total*100):0;
+  const nextDue=nextAmortMonth(p);
+  const isDone=p.status==='closed'||balance<=0;
+  const nextSch=(p.schedule||[]).find(s=>!s.posted);
+
+  return`<div class="card" style="border-left:4px solid ${isDone?'#10b981':'#2563eb'}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <div>
+        <div style="font-weight:700;font-size:14px">${p.name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${p.prepaidAcc} → ${p.expAcc} · ${fDate(p.startDate)} – ${fDate(p.endDate)}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${isDone?'<span class="badge b-ok">✅ Lunas</span>':nextDue===today().slice(0,7)?'<span class="badge b-warn">⚠️ Due Bulan Ini</span>':'<span class="badge b-info">Aktif</span>'}
+        <button class="btn btn-bad btn-xs" onclick="delPrepaid('${p.id}')">✕</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+      <div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700">Nilai Awal</div><div style="font-weight:700">${rp(p.totalAmount)}</div></div>
+      <div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700">Saldo Prepaid</div><div style="font-weight:700;color:${isDone?'var(--ok)':'#2563eb'}">${rp(balance)}</div></div>
+      <div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700">Amortisasi/bln</div><div style="font-weight:700">${rp(p.monthlyAmount)}</div></div>
+    </div>
+    <div style="background:#f1f5f9;border-radius:6px;height:8px;margin-bottom:10px">
+      <div style="background:${isDone?'#10b981':'#2563eb'};height:8px;border-radius:6px;width:${pct}%;transition:width .3s"></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">${posted}/${total} bulan diamortisasi (${pct}%)</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${!isDone&&nextSch?`<button class="btn btn-ok btn-sm" onclick="postAmort('${p.id}','${nextSch.month}')">▶ Post ${nextSch.month} — ${rp(nextSch.amount)}</button>`:''}
+      <button class="btn btn-out btn-sm" onclick="openPrepaidDetail('${p.id}')">📋 Jadwal Lengkap</button>
+    </div>
+  </div>`;
+}
+
+function currentPrepaidBalance(p){
+  const postedTotal=(p.schedule||[]).filter(s=>s.posted).reduce((s,x)=>s+x.amount,0);
+  return Math.max(0,(p.totalAmount||0)-postedTotal);
+}
+function nextAmortMonth(p){
+  const next=(p.schedule||[]).find(s=>!s.posted);
+  return next?next.month:null;
+}
+
+function openAddPrepaid(){
+  const accOpts=DB.accounts.filter(a=>a.type==='aktiva').map(a=>`<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
+  const expOpts=DB.accounts.filter(a=>a.type==='beban').map(a=>`<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
+
+  openModal('📆 Tambah Prepaid / Amortisasi',`
+  <div class="alert a-info" style="font-size:11.5px">Isi detail prepaid → sistem generate jadwal amortisasi otomatis. Tiap bulan tinggal klik ▶ Post.</div>
+  <div class="fg"><label>Nama / Keterangan</label><input id="pp-name" placeholder="contoh: Sewa Ruko Apr 2026 – Apr 2027"></div>
+  <div class="fr2">
+    <div class="fg"><label>Akun Prepaid (Aset)</label>
+      <select id="pp-acc">${accOpts}</select>
+    </div>
+    <div class="fg"><label>Akun Beban (Amortisasi ke)</label>
+      <select id="pp-exp">${expOpts}</select>
+    </div>
+  </div>
+  <div class="fr3">
+    <div class="fg"><label>Nilai Total (Rp)</label><input type="number" id="pp-total" placeholder="50000000" oninput="calcPrepaidPreview()"></div>
+    <div class="fg"><label>Mulai Amortisasi</label><input type="month" id="pp-start" value="${today().slice(0,7)}" oninput="calcPrepaidPreview()"></div>
+    <div class="fg"><label>Jumlah Bulan</label><input type="number" id="pp-months" value="12" min="1" max="120" oninput="calcPrepaidPreview()"></div>
+  </div>
+  <div class="fg"><label>Ref Jurnal Awal (sudah dicatat di mana)</label><input id="pp-ref" placeholder="contoh: BSI-260420-2"></div>
+  <div id="pp-preview" style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin-top:4px;display:none">
+    <div style="font-weight:700;font-size:12px;margin-bottom:8px;color:#0284c7">📊 Preview Amortisasi</div>
+    <div id="pp-preview-body"></div>
+  </div>
+  <div class="modal-ft">
+    <button class="btn btn-out" onclick="closeModal()">Batal</button>
+    <button class="btn btn-pri" onclick="savePrepaid()">💾 Simpan & Generate Jadwal</button>
+  </div>`,'modal-wide');
+
+  // Auto-select 1306 dan 6201
+  setTimeout(()=>{
+    const accSel=document.getElementById('pp-acc');
+    const expSel=document.getElementById('pp-exp');
+    [...(accSel?.options||[])].forEach((o,i)=>{if(o.value==='1306')accSel.selectedIndex=i;});
+    [...(expSel?.options||[])].forEach((o,i)=>{if(o.value==='6201')expSel.selectedIndex=i;});
+    calcPrepaidPreview();
+  },50);
+}
+
+function calcPrepaidPreview(){
+  const total=parseFloat(document.getElementById('pp-total')?.value)||0;
+  const startMonth=document.getElementById('pp-start')?.value;
+  const months=parseInt(document.getElementById('pp-months')?.value)||12;
+  const prev=document.getElementById('pp-preview');
+  const body=document.getElementById('pp-preview-body');
+  if(!prev||!body)return;
+  if(!total||!startMonth||months<1){prev.style.display='none';return;}
+
+  const monthly=Math.floor(total/months);
+  const lastMonth=total-(monthly*(months-1));
+  const schedule=[];
+  for(let i=0;i<months;i++){
+    const d=new Date(startMonth+'-01');
+    d.setMonth(d.getMonth()+i);
+    const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    schedule.push({month:m,amount:i===months-1?lastMonth:monthly});
+  }
+
+  prev.style.display='block';
+  body.innerHTML=`
+  <div style="display:flex;gap:16px;margin-bottom:8px;font-size:12px">
+    <span>Amortisasi/bulan: <b>${rp(monthly)}</b></span>
+    <span>Total: <b>${rp(total)}</b></span>
+    <span>Periode: <b>${months} bulan</b></span>
+  </div>
+  <div style="max-height:160px;overflow-y:auto">
+  <table style="width:100%;font-size:11px;border-collapse:collapse">
+    <thead><tr><th style="padding:4px 8px;background:#e0f2fe;text-align:left">Bulan</th><th style="padding:4px 8px;background:#e0f2fe;text-align:right">Amortisasi</th><th style="padding:4px 8px;background:#e0f2fe;text-align:right">Sisa Prepaid</th></tr></thead>
+    <tbody>
+      ${schedule.map((s,i)=>{
+        const remaining=total-schedule.slice(0,i+1).reduce((x,y)=>x+y.amount,0);
+        return`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:3px 8px">${s.month}</td><td style="padding:3px 8px;text-align:right">${rp(s.amount)}</td><td style="padding:3px 8px;text-align:right;color:${remaining<=0?'var(--ok)':'inherit'}">${rp(Math.max(0,remaining))}</td></tr>`;
+      }).join('')}
+    </tbody>
+  </table></div>`;
+  window._ppSchedule=schedule;
+}
+
+function savePrepaid(){
+  const name=v('pp-name'),accId=v('pp-acc'),expId=v('pp-exp'),ref=v('pp-ref');
+  const total=parseFloat(document.getElementById('pp-total')?.value)||0;
+  const startMonth=v('pp-start');
+  const months=parseInt(document.getElementById('pp-months')?.value)||12;
+  if(!name||!total||!startMonth||!accId||!expId)return alert('Semua field wajib diisi!');
+  if(!window._ppSchedule)calcPrepaidPreview();
+  const schedule=window._ppSchedule||[];
+  if(!schedule.length)return alert('Gagal generate jadwal. Cek input.');
+
+  const monthly=Math.floor(total/months);
+  const lastAmount=total-(monthly*(months-1));
+
+  // Hitung tanggal mulai & akhir
+  const startDate=startMonth+'-01';
+  const endD=new Date(startMonth+'-01');
+  endD.setMonth(endD.getMonth()+months-1);
+  const endDate=`${endD.getFullYear()}-${String(endD.getMonth()+1).padStart(2,'0')}-${new Date(endD.getFullYear(),endD.getMonth()+1,0).getDate()}`;
+
+  const prepaid={
+    id:uid(),name,prepaidAcc:accId,expAcc:expId,
+    totalAmount:total,monthlyAmount:monthly,lastAmount,
+    startDate,endDate,startMonth,months,ref,
+    status:'active',
+    schedule:schedule.map(s=>({...s,posted:false,txId:null})),
+    createdAt:new Date().toISOString()
+  };
+  if(!DB.prepaidItems)DB.prepaidItems=[];
+  DB.prepaidItems.push(prepaid);
+  saveDB();closeModal();
+  logAudit('Tambah Prepaid',`${name} — ${rp(total)} / ${months} bulan`);
+  nav('prepaid');
+}
+
+function postAmort(prepaidId,month){
+  const p=DB.prepaidItems.find(x=>x.id===prepaidId);if(!p)return;
+  const sch=p.schedule.find(s=>s.month===month&&!s.posted);if(!sch)return alert('Jadwal tidak ditemukan atau sudah diposting.');
+  if(!confirm(`Post amortisasi ${month} — ${rp(sch.amount)}?\n\nJurnal:\nDr ${sch.amount} → Akun Beban\nCr ${sch.amount} → Akun Prepaid`))return;
+
+  // Buat jurnal otomatis
+  const date=`${month}-01`;
+  const txId=uid();
+  const tx={
+    id:txId,
+    date,
+    ref:`AMORT-${p.id.slice(-4)}-${month}`,
+    desc:`Amortisasi ${p.name} — ${month}`,
+    entries:[
+      {acc:p.expAcc,deb:sch.amount,crd:0},
+      {acc:p.prepaidAcc,deb:0,crd:sch.amount}
+    ]
+  };
+  DB.transactions.push(tx);
+  sch.posted=true;
+  sch.txId=txId;
+  sch.postedAt=new Date().toISOString();
+
+  // Cek apakah semua sudah diposting
+  if(p.schedule.every(s=>s.posted))p.status='closed';
+  saveDB();
+  logAudit('Post Amortisasi',`${p.name} ${month} — ${rp(sch.amount)}`);
+  nav('prepaid');
+}
+
+function openPrepaidDetail(id){
+  const p=DB.prepaidItems.find(x=>x.id===id);if(!p)return;
+  const balance=currentPrepaidBalance(p);
+  openModal(`📋 Jadwal Amortisasi — ${p.name}`,`
+  <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap">
+    <div><span style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700">Nilai Awal</span><br><b>${rp(p.totalAmount)}</b></div>
+    <div><span style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700">Saldo Saat Ini</span><br><b style="color:#2563eb">${rp(balance)}</b></div>
+    <div><span style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700">Per Bulan</span><br><b>${rp(p.monthlyAmount)}</b></div>
+    <div><span style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700">Periode</span><br><b>${fDate(p.startDate)} – ${fDate(p.endDate)}</b></div>
+  </div>
+  <div class="tbl-wrap">
+  <table style="width:100%;font-size:12px;border-collapse:collapse">
+    <thead><tr>
+      <th style="padding:7px 10px;background:#f0f4ff;text-align:left">Bulan</th>
+      <th style="padding:7px 10px;background:#f0f4ff;text-align:right">Amortisasi</th>
+      <th style="padding:7px 10px;background:#f0f4ff;text-align:right">Sisa Prepaid</th>
+      <th style="padding:7px 10px;background:#f0f4ff;text-align:center">Status</th>
+      <th style="padding:7px 10px;background:#f0f4ff"></th>
+    </tr></thead>
+    <tbody>
+      ${(()=>{
+        let running=p.totalAmount;
+        return p.schedule.map(s=>{
+          running-=s.amount;
+          const remaining=Math.max(0,running);
+          return`<tr style="border-bottom:1px solid #f1f5f9;background:${s.posted?'#f0fdf4':'#fff'}">
+            <td style="padding:6px 10px;font-weight:${s.posted?'400':'600'}">${s.month}</td>
+            <td style="padding:6px 10px;text-align:right">${rp(s.amount)}</td>
+            <td style="padding:6px 10px;text-align:right;color:${remaining<=0?'var(--ok)':'inherit'}">${rp(remaining)}</td>
+            <td style="padding:6px 10px;text-align:center">${s.posted?'<span class="badge b-ok">✅ Posted</span>':'<span class="badge b-warn">Belum</span>'}</td>
+            <td style="padding:6px 10px;text-align:center">
+              ${!s.posted?`<button class="btn btn-ok btn-xs" onclick="closeModal();postAmort('${p.id}','${s.month}')">▶ Post</button>`:`<a onclick="closeModal();nav('journal')" style="font-size:10.5px;color:var(--pri);cursor:pointer">Lihat Jurnal</a>`}
+            </td>
+          </tr>`;
+        }).join('');
+      })()}
+    </tbody>
+  </table></div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Tutup</button></div>`,'modal-wide');
+}
+
+function delPrepaid(id){
+  if(!confirm('Hapus prepaid ini? Jurnal yang sudah diposting tidak akan dihapus.'))return;
+  DB.prepaidItems=DB.prepaidItems.filter(p=>p.id!==id);
+  saveDB();nav('prepaid');
+}
+
 function renderAssets(c){
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openAsset()">+ Add Asset</button><button class="btn btn-out" onclick="exportAssets()">⬇ Excel</button>`;
   const totVal=DB.assets.reduce((s,a)=>s+a.value,0),totAkum=DB.assets.reduce((s,a)=>s+calcPenyusutan(a).akum,0);
@@ -7585,6 +7851,7 @@ async function init(){
   if(!DB.budgets)DB.budgets=[];
   if(!DB.receipts)DB.receipts=[];
   if(!DB.quicktx)DB.quicktx=[];
+  if(!DB.prepaidItems)DB.prepaidItems=[];
   if(!DB.rekonBank)DB.rekonBank=[];
   if(!DB.lockedPeriods)DB.lockedPeriods=[];
   if(!DB.auditLog)DB.auditLog=[];
