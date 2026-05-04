@@ -3649,6 +3649,20 @@ function renderAP(c){
 //  ACCOUNTS (CoA)
 // ================================================================
 function renderAccounts(c){
+  // Defensive: ensure accounts exists
+  if(!DB.accounts||!DB.accounts.length){
+    // Try to reload from Supabase
+    c.innerHTML=`<div style="padding:40px;text-align:center">
+      <div style="font-size:32px;margin-bottom:12px">⏳</div>
+      <div style="font-weight:700;font-size:16px;margin-bottom:8px">Memuat Chart of Accounts...</div>
+      <div style="color:#64748b;font-size:12px;margin-bottom:16px">Data CoA sedang dimuat dari cloud</div>
+      <button class="btn btn-pri" onclick="location.reload()">🔄 Reload</button>
+    </div>`;
+    document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openAccount()">+ Add Account</button><button class="btn btn-out" onclick="exportAkun()">⬇ Excel</button>`;
+    // Try load from cloud
+    sbGet().then(remote=>{if(remote&&remote.accounts&&remote.accounts.length){DB.accounts=remote.accounts;nav('accounts');}});
+    return;
+  }
   const ta=document.getElementById('topbar-actions');
   ta.innerHTML=`<button class="btn btn-pri" onclick="openAccount()">+ Add Account</button><button class="btn btn-out" onclick="exportAkun()">⬇ Excel</button>`;
   const groups=[
