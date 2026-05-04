@@ -2271,173 +2271,162 @@ function defaultDB(){
 
 function defaultCoA(){
   return [
-    // ── AKTIVA LANCAR ──
-    {id:'1101',code:'1-1101',name:'Cash',type:'aktiva',sub:'lancar'},
-    {id:'1102',code:'1-1102',name:'Bank BCA',type:'aktiva',sub:'lancar'},
-    {id:'1103',code:'1-1103',name:'Bank Mandiri',type:'aktiva',sub:'lancar'},
-    {id:'1104',code:'1-1104',name:'Bank BSI',type:'aktiva',sub:'lancar'},
+    // ═══════════════════════════════════════════════════
+    // ASET LANCAR / CURRENT ASSETS
+    // ═══════════════════════════════════════════════════
+    {id:'1101',code:'1-1101',name:'Kas / Cash on Hand',type:'aktiva',sub:'lancar'},
+    {id:'1102',code:'1-1102',name:'Bank Syariah Indonesia (BSI)',type:'aktiva',sub:'lancar'},
+    {id:'1103',code:'1-1103',name:'Bank BCA',type:'aktiva',sub:'lancar'},
+    {id:'1104',code:'1-1104',name:'Bank Mandiri',type:'aktiva',sub:'lancar'},
     {id:'1105',code:'1-1105',name:'Bank BRI',type:'aktiva',sub:'lancar'},
     {id:'1106',code:'1-1106',name:'Bank BNI',type:'aktiva',sub:'lancar'},
-    {id:'1107',code:'1-1107',name:'Petty Cash',type:'aktiva',sub:'lancar'},
-    {id:'1201',code:'1-1201',name:'Accounts Receivable',type:'aktiva',sub:'lancar'},
-    {id:'1202',code:'1-1202',name:'Employee Receivable',type:'aktiva',sub:'lancar'},
-    {id:'1203',code:'1-1203',name:'Other Receivables',type:'aktiva',sub:'lancar'},
-    {id:'1204',code:'1-1204',name:'Allowance for Doubtful Accounts',type:'aktiva',sub:'lancar'},
-    {id:'1301',code:'1-1301',name:'Merchandise Inventory',type:'aktiva',sub:'lancar'},
-    {id:'1302',code:'1-1302',name:'Raw Material Inventory',type:'aktiva',sub:'lancar'},
-    {id:'1303',code:'1-1303',name:'Finished Goods Inventory',type:'aktiva',sub:'lancar'},
-    {id:'1304',code:'1-1304',name:'Work-in-Progress Inventory',type:'aktiva',sub:'lancar'},
-    {id:'1401',code:'1-1401',name:'VAT Input',type:'aktiva',sub:'lancar'},
-    {id:'1501',code:'1-1501',name:'Purchase Advance',type:'aktiva',sub:'lancar'},
-    {id:'1502',code:'1-1502',name:'Prepaid Expenses',type:'aktiva',sub:'lancar'},
-    {id:'1503',code:'1-1503',name:'Office Supplies',type:'aktiva',sub:'lancar'},
-    {id:'1504',code:'1-1504',name:'Prepaid Tax (PPh 25)',type:'aktiva',sub:'lancar'},
-    {id:'1505',code:'1-1505',name:'Short-term Investments',type:'aktiva',sub:'lancar'},
-    // ── AKTIVA TETAP ──
-    {id:'1601',code:'1-1601',name:'Land',type:'aktiva',sub:'tetap'},
-    {id:'1602',code:'1-1602',name:'Buildings',type:'aktiva',sub:'tetap'},
-    {id:'1603',code:'1-1603',name:'Vehicles',type:'aktiva',sub:'tetap'},
-    {id:'1604',code:'1-1604',name:'Equipment & Machinery',type:'aktiva',sub:'tetap'},
-    {id:'1605',code:'1-1605',name:'Office Fixtures',type:'aktiva',sub:'tetap'},
-    {id:'1606',code:'1-1606',name:'Computers & IT Devices',type:'aktiva',sub:'tetap'},
-    {id:'1607',code:'1-1607',name:'Furniture & Fittings',type:'aktiva',sub:'tetap'},
-    {id:'1699',code:'1-1699',name:'Accumulated Depreciation',type:'aktiva',sub:'tetap'},
-    // ── AKTIVA LAIN ──
-    {id:'1701',code:'1-1701',name:'Equity Investments',type:'aktiva',sub:'lain'},
-    {id:'1702',code:'1-1702',name:'Intangible Assets',type:'aktiva',sub:'lain'},
-    {id:'1703',code:'1-1703',name:'Security Deposit',type:'aktiva',sub:'lain'},
-    // ── KEWAJIBAN LANCAR ──
-    {id:'2101',code:'2-2101',name:'Accounts Payable',type:'kewajiban',sub:'lancar'},
-    {id:'2102',code:'2-2102',name:'Salaries Payable',type:'kewajiban',sub:'lancar'},
-    {id:'2103',code:'2-2103',name:'PPh 21 Payable',type:'kewajiban',sub:'lancar'},
-    {id:'2104',code:'2-2104',name:'Corporate Tax Payable (PPh 25/29)',type:'kewajiban',sub:'lancar'},
-    {id:'2105',code:'2-2105',name:'VAT Output',type:'kewajiban',sub:'lancar'},
-    {id:'2106',code:'2-2106',name:'Customer Deposits',type:'kewajiban',sub:'lancar'},
-    {id:'2107',code:'2-2107',name:'Accrued Expenses',type:'kewajiban',sub:'lancar'},
-    {id:'2108',code:'2-2108',name:'Dividends Payable',type:'kewajiban',sub:'lancar'},
-    {id:'2109',code:'2-2109',name:'BPJS Payable',type:'kewajiban',sub:'lancar'},
-    {id:'2110',code:'2-2110',name:'Short-term Bank Loans',type:'kewajiban',sub:'lancar'},
-    {id:'2111',code:'2-2111',name:'Other Payables',type:'kewajiban',sub:'lancar'},
-    // ── KEWAJIBAN JANGKA PANJANG ──
-    {id:'2201',code:'2-2201',name:'Long-term Bank Loans',type:'kewajiban',sub:'panjang'},
-    {id:'2202',code:'2-2202',name:'Bonds Payable',type:'kewajiban',sub:'panjang'},
-    {id:'2203',code:'2-2203',name:'Finance Lease Payable',type:'kewajiban',sub:'panjang'},
-    {id:'2204',code:'2-2204',name:'Related Party Payable',type:'kewajiban',sub:'panjang'},
-    // ── MODAL ──
-    {id:'3101',code:'3-3101',name:'Paid-in Capital',type:'modal',sub:''},
-    {id:'3102',code:'3-3102',name:'Additional Paid-in Capital',type:'modal',sub:''},
-    {id:'3103',code:'3-3103',name:'Retained Earnings',type:'modal',sub:''},
-    {id:'3104',code:'3-3104',name:'Dividends',type:'modal',sub:''},
-    {id:'3105',code:'3-3105',name:'General Reserve',type:'modal',sub:''},
-    // ── PENDAPATAN ──
-    {id:'4101',code:'4-4101',name:'Sales Revenue',type:'pendapatan',sub:'usaha'},
-    {id:'4102',code:'4-4102',name:'Service Revenue',type:'pendapatan',sub:'usaha'},
-    {id:'4103',code:'4-4103',name:'Sales Returns',type:'pendapatan',sub:'usaha'},
-    {id:'4104',code:'4-4104',name:'Sales Discounts',type:'pendapatan',sub:'usaha'},
-    {id:'4201',code:'4-4201',name:'Interest & Profit Sharing Income',type:'pendapatan',sub:'lain'},
-    {id:'4202',code:'4-4202',name:'Rental Income',type:'pendapatan',sub:'lain'},
-    {id:'4203',code:'4-4203',name:'Gain on Asset Disposal',type:'pendapatan',sub:'lain'},
-    {id:'4204',code:'4-4204',name:'Other Income',type:'pendapatan',sub:'lain'},
-    // ── HPP ──
-    {id:'5101',code:'5-5101',name:'Cost of Goods Sold (COGS)',type:'hpp',sub:''},
-    {id:'5102',code:'5-5102',name:'Direct Production Cost',type:'hpp',sub:''},
-    {id:'5103',code:'5-5103',name:'Manufacturing Overhead',type:'hpp',sub:''},
-    {id:'5104',code:'5-5104',name:'Purchase Returns',type:'hpp',sub:''},
-    {id:'5105',code:'5-5105',name:'Purchase Discounts',type:'hpp',sub:''},
-    // ── BEBAN SDM ──
-    {id:'6101',code:'6-6101',name:'Salary & Wages Expense',type:'beban',sub:'sdm'},
-    {id:'6102',code:'6-6102',name:'Employee Benefits Expense',type:'beban',sub:'sdm'},
-    {id:'6103',code:'6-6103',name:'BPJS Employment Expense',type:'beban',sub:'sdm'},
-    {id:'6104',code:'6-6104',name:'BPJS Health Expense',type:'beban',sub:'sdm'},
-    {id:'6105',code:'6-6105',name:'PPh 21 Borne by Company',type:'beban',sub:'sdm'},
-    {id:'6106',code:'6-6106',name:'Recruitment & Training Expense',type:'beban',sub:'sdm'},
-    {id:'6107',code:'6-6107',name:'Uniform & Equipment Expense',type:'beban',sub:'sdm'},
-    // ── BEBAN OPERASIONAL ──
-    {id:'6201',code:'6-6201',name:'Rent Expense',type:'beban',sub:'operasional'},
-    {id:'6202',code:'6-6202',name:'Electricity & Water Expense',type:'beban',sub:'operasional'},
-    {id:'6203',code:'6-6203',name:'Telephone & Internet Expense',type:'beban',sub:'operasional'},
-    {id:'6204',code:'6-6204',name:'Transportation & Fuel Expense',type:'beban',sub:'operasional'},
-    {id:'6205',code:'6-6205',name:'Office Supplies Expense',type:'beban',sub:'operasional'},
-    {id:'6206',code:'6-6206',name:'Maintenance & Repair Expense',type:'beban',sub:'operasional'},
-    {id:'6207',code:'6-6207',name:'Security & Cleaning Expense',type:'beban',sub:'operasional'},
-    {id:'6208',code:'6-6208',name:'Insurance Expense',type:'beban',sub:'operasional'},
-    // ── BEBAN PENJUALAN ──
-    {id:'6301',code:'6-6301',name:'Marketing & Advertising Expense',type:'beban',sub:'penjualan'},
-    {id:'6302',code:'6-6302',name:'Sales Commission Expense',type:'beban',sub:'penjualan'},
-    {id:'6303',code:'6-6303',name:'Freight & Delivery Expense',type:'beban',sub:'penjualan'},
-    {id:'6304',code:'6-6304',name:'Exhibition & Promotion Expense',type:'beban',sub:'penjualan'},
-    {id:'6305',code:'6-6305',name:'Bad Debt Expense',type:'beban',sub:'penjualan'},
-    // ── BEBAN PENYUSUTAN ──
-    {id:'6401',code:'6-6401',name:'Building Depreciation Expense',type:'beban',sub:'penyusutan'},
-    {id:'6402',code:'6-6402',name:'Vehicle Depreciation Expense',type:'beban',sub:'penyusutan'},
-    {id:'6403',code:'6-6403',name:'Equipment Depreciation Expense',type:'beban',sub:'penyusutan'},
-    {id:'6404',code:'6-6404',name:'Fixtures Depreciation Expense',type:'beban',sub:'penyusutan'},
-    {id:'6405',code:'6-6405',name:'Amortization Expense',type:'beban',sub:'penyusutan'},
-    // ── BEBAN TAMBAHAN (OPERASIONAL) ──
-    {id:'6112',code:'6-6112',name:'Office Consumption Expense',type:'beban',sub:'operasional'},
-    {id:'6113',code:'6-6113',name:'Cleaning & Sanitation Expense',type:'beban',sub:'operasional'},
-    {id:'6114',code:'6-6114',name:'Security & Environment Expense',type:'beban',sub:'operasional'},
-    {id:'6209',code:'6-6209',name:'Software & Subscription Expense',type:'beban',sub:'operasional'},
-    // ── BEBAN LAIN ──
-    {id:'6501',code:'6-6501',name:'Bank Administration Expense',type:'beban',sub:'lain'},
-    {id:'6502',code:'6-6502',name:'Loan Interest Expense',type:'beban',sub:'lain'},
-    {id:'6503',code:'6-6503',name:'Corporate Income Tax Expense',type:'beban',sub:'lain'},
-    {id:'6504',code:'6-6504',name:'Fines & Penalty Expense',type:'beban',sub:'lain'},
-    {id:'6505',code:'6-6505',name:'Loss on Asset Disposal',type:'beban',sub:'lain'},
-    {id:'6506',code:'6-6506',name:'Miscellaneous Expense',type:'beban',sub:'lain'},
-    // ── TAMBAHAN: E-WALLET & KAS DIGITAL ──
-    {id:'1108',code:'1-1108',name:'GoPay',type:'aktiva',sub:'lancar'},
-    {id:'1109',code:'1-1109',name:'OVO',type:'aktiva',sub:'lancar'},
-    {id:'1110',code:'1-1110',name:'Dana',type:'aktiva',sub:'lancar'},
-    {id:'1111',code:'1-1111',name:'LinkAja',type:'aktiva',sub:'lancar'},
-    {id:'1112',code:'1-1112',name:'ShopeePay',type:'aktiva',sub:'lancar'},
-    // ── TAMBAHAN: PAJAK DIBAYAR DIMUKA ──
-    {id:'1505b',code:'1-1506',name:'Prepaid Tax PPh 22',type:'aktiva',sub:'lancar'},
-    {id:'1507',code:'1-1507',name:'Prepaid Tax PPh 23',type:'aktiva',sub:'lancar'},
-    // ── TAMBAHAN: HUTANG PAJAK ──
-    {id:'2112',code:'2-2112',name:'PPh 4(2) Payable — Building Rent',type:'kewajiban',sub:'lancar'},
-    {id:'2113',code:'2-2113',name:'PPh 22 Payable',type:'kewajiban',sub:'lancar'},
-    {id:'2114',code:'2-2114',name:'PPh 23 Payable',type:'kewajiban',sub:'lancar'},
-    {id:'2115',code:'2-2115',name:'PPh 29 Payable',type:'kewajiban',sub:'lancar'},
-    {id:'2116',code:'2-2116',name:'Other Tax Payable',type:'kewajiban',sub:'lancar'},
-    // ── TAMBAHAN: KEWAJIBAN JANGKA PANJANG ──
-    {id:'2205',code:'2-2205',name:'Employee Benefit Liability (PSAK 24)',type:'kewajiban',sub:'panjang'},
-    // ── TAMBAHAN: BEBAN SDM ──
-    {id:'6108',code:'6-6108',name:'Overtime Expense',type:'beban',sub:'sdm'},
-    {id:'6109',code:'6-6109',name:'THR & Bonus Expense',type:'beban',sub:'sdm'},
-    {id:'6110',code:'6-6110',name:'Severance Pay Expense',type:'beban',sub:'sdm'},
-    {id:'6111',code:'6-6111',name:'Other Allowance Expense',type:'beban',sub:'sdm'},
-    // ── TAMBAHAN: BEBAN OPERASIONAL ──
-    {id:'6210',code:'6-6210',name:'Entertainment & Hospitality Expense',type:'beban',sub:'operasional'},
-    {id:'6211',code:'6-6211',name:'Travel Expense',type:'beban',sub:'operasional'},
-    {id:'6212',code:'6-6212',name:'Legal & Professional Fees',type:'beban',sub:'operasional'},
-    {id:'6213',code:'6-6213',name:'Training & Development Expense',type:'beban',sub:'operasional'},
-    {id:'6214',code:'6-6214',name:'Donation & CSR Expense',type:'beban',sub:'operasional'},
-    {id:'6215',code:'6-6215',name:'Stamp Duty Expense',type:'beban',sub:'operasional'},
-    {id:'6216',code:'6-6216',name:'Sub-contractor Expense',type:'beban',sub:'operasional'},
-    {id:'6217',code:'6-6217',name:'Import Cost Expense',type:'beban',sub:'operasional'},
-    // ── TAMBAHAN: BEBAN PENJUALAN ──
-    {id:'6306',code:'6-6306',name:'Sales Travel Expense',type:'beban',sub:'penjualan'},
-    // ── TAMBAHAN: BEBAN PENYUSUTAN ──
-    {id:'6406',code:'6-6406',name:'Leased Asset Depreciation Expense',type:'beban',sub:'penyusutan'},
-    // ── TAMBAHAN: MODAL ──
-    {id:'3106',code:'3-3106',name:'Opening Balance',type:'modal',sub:''},
-    {id:'3107',code:'3-3107',name:'Other Comprehensive Income',type:'modal',sub:''},
-    // ── TAMBAHAN: PENDAPATAN LAIN ──
-    {id:'4205',code:'4-4205',name:'Deposit Interest Income',type:'pendapatan',sub:'lain'},
-    // ── TAMBAHAN: BEBAN LAIN ──
-    {id:'6507',code:'6-6507',name:'PPh 4(2) — Building Rent Expense',type:'beban',sub:'lain'},
-    {id:'6510',code:'6-6510',name:'Final Tax Expense (PPh Final)',type:'beban',sub:'lain'},
-    {id:'6508',code:'6-6508',name:'Inventory Adjustment Expense',type:'beban',sub:'lain'},
-    {id:'6509',code:'6-6509',name:'Deferred Income Tax Expense',type:'beban',sub:'lain'},
+    {id:'1107',code:'1-1107',name:'Kas Kecil / Petty Cash',type:'aktiva',sub:'lancar'},
+
+    // Piutang
+    {id:'1201',code:'1-1201',name:'Piutang Usaha / Accounts Receivable',type:'aktiva',sub:'lancar'},
+    {id:'1202',code:'1-1202',name:'Piutang Karyawan / Employee Receivable',type:'aktiva',sub:'lancar'},
+    {id:'1203',code:'1-1203',name:'Piutang Pemegang Saham / Receivables to Shareholders',type:'aktiva',sub:'lancar'},
+    {id:'1204',code:'1-1204',name:'Piutang Lain-lain / Other Receivables',type:'aktiva',sub:'lancar'},
+    {id:'1205',code:'1-1205',name:'Penyisihan Piutang Tak Tertagih / Allowance for Doubtful Accounts',type:'aktiva',sub:'lancar'},
+
+    // Uang Muka & Pajak Dibayar Dimuka
+    {id:'1301',code:'1-1301',name:'Uang Muka Pajak PPh 25 / Prepaid Tax PPh 25',type:'aktiva',sub:'lancar'},
+    {id:'1302',code:'1-1302',name:'Uang Muka Pajak PPN / Prepaid Tax VAT',type:'aktiva',sub:'lancar'},
+    {id:'1303',code:'1-1303',name:'Uang Muka Pajak PPh 22 / Prepaid Tax PPh 22',type:'aktiva',sub:'lancar'},
+    {id:'1304',code:'1-1304',name:'Uang Muka Pajak PPh 23 / Prepaid Tax PPh 23',type:'aktiva',sub:'lancar'},
+    {id:'1305',code:'1-1305',name:'Uang Muka Pembelian / Purchase Advance',type:'aktiva',sub:'lancar'},
+    {id:'1306',code:'1-1306',name:'Sewa Dibayar Dimuka / Prepaid Lease',type:'aktiva',sub:'lancar'},
+    {id:'1307',code:'1-1307',name:'Biaya Dibayar Dimuka / Prepaid Expenses',type:'aktiva',sub:'lancar'},
+    {id:'1308',code:'1-1308',name:'Uang Muka Lainnya / Other Advance Payments',type:'aktiva',sub:'lancar'},
+    {id:'1309',code:'1-1309',name:'Uang Jaminan / Guarantee Deposit',type:'aktiva',sub:'lancar'},
+    {id:'1310',code:'1-1310',name:'Investasi Jangka Pendek / Short-term Investments',type:'aktiva',sub:'lancar'},
+    {id:'1311',code:'1-1311',name:'Persediaan / Inventory',type:'aktiva',sub:'lancar'},
+    {id:'1312',code:'1-1312',name:'Perlengkapan Kantor / Office Supplies',type:'aktiva',sub:'lancar'},
+
+    // ═══════════════════════════════════════════════════
+    // ASET TIDAK LANCAR / NON-CURRENT ASSETS
+    // ═══════════════════════════════════════════════════
+    {id:'1601',code:'1-1601',name:'Tanah / Land',type:'aktiva',sub:'tetap'},
+    {id:'1602',code:'1-1602',name:'Gedung / Building',type:'aktiva',sub:'tetap'},
+    {id:'1603',code:'1-1603',name:'Kendaraan / Vehicles',type:'aktiva',sub:'tetap'},
+    {id:'1604',code:'1-1604',name:'Peralatan & Mesin / Equipment & Machinery',type:'aktiva',sub:'tetap'},
+    {id:'1605',code:'1-1605',name:'Inventaris Kantor / Office Inventory',type:'aktiva',sub:'tetap'},
+    {id:'1606',code:'1-1606',name:'Komputer & Perangkat IT / Computers & IT Devices',type:'aktiva',sub:'tetap'},
+    {id:'1607',code:'1-1607',name:'Furniture & Perlengkapan / Furniture & Fittings',type:'aktiva',sub:'tetap'},
+    {id:'1611',code:'1-1611',name:'Akumulasi Penyusutan Gedung / Accum. Depreciation - Building',type:'aktiva',sub:'tetap'},
+    {id:'1612',code:'1-1612',name:'Akumulasi Penyusutan Kendaraan / Accum. Depreciation - Vehicles',type:'aktiva',sub:'tetap'},
+    {id:'1613',code:'1-1613',name:'Akumulasi Penyusutan Peralatan / Accum. Depreciation - Equipment',type:'aktiva',sub:'tetap'},
+    {id:'1614',code:'1-1614',name:'Akumulasi Penyusutan Inventaris / Accum. Depreciation - Inventory',type:'aktiva',sub:'tetap'},
+    {id:'1615',code:'1-1615',name:'Akumulasi Penyusutan Komputer / Accum. Depreciation - Computers',type:'aktiva',sub:'tetap'},
+    {id:'1620',code:'1-1620',name:'Aset Tidak Lancar Lainnya / Other Non-Current Assets',type:'aktiva',sub:'tetap'},
+
+    // ═══════════════════════════════════════════════════
+    // KEWAJIBAN JANGKA PENDEK / CURRENT LIABILITIES
+    // ═══════════════════════════════════════════════════
+    {id:'2101',code:'2-2101',name:'Utang Usaha / Accounts Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2102',code:'2-2102',name:'Utang Gaji / Salaries Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2103',code:'2-2103',name:'Utang PPh 21 / PPh 21 Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2104',code:'2-2104',name:'Utang PPh 22 / PPh 22 Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2105',code:'2-2105',name:'Utang PPN / VAT Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2106',code:'2-2106',name:'Utang PPh 23 / PPh 23 Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2107',code:'2-2107',name:'Utang PPh 25 / PPh 25 Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2108',code:'2-2108',name:'Utang PPh 26 / PPh 26 Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2109',code:'2-2109',name:'Utang PPh 29 / PPh 29 Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2110',code:'2-2110',name:'Utang BPJS Kesehatan / BPJS Health Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2111',code:'2-2111',name:'Utang BPJS Ketenagakerjaan / BPJS Manpower Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2112',code:'2-2112',name:'Utang PPh 4(2) / PPh 4(2) Payable',type:'kewajiban',sub:'lancar'},
+    {id:'2113',code:'2-2113',name:'Utang Lain-lain / Other Payables',type:'kewajiban',sub:'lancar'},
+    {id:'2114',code:'2-2114',name:'Pinjaman Jangka Pendek / Short-term Loans',type:'kewajiban',sub:'lancar'},
+    {id:'2115',code:'2-2115',name:'Biaya yang Masih Harus Dibayar / Accrued Expenses',type:'kewajiban',sub:'lancar'},
+    {id:'2116',code:'2-2116',name:'Pendapatan Diterima Dimuka / Deferred Revenue',type:'kewajiban',sub:'lancar'},
+
+    // KEWAJIBAN JANGKA PANJANG / LONG-TERM LIABILITIES
+    {id:'2201',code:'2-2201',name:'Utang Bank Jangka Panjang / Long-term Bank Loans',type:'kewajiban',sub:'panjang'},
+    {id:'2202',code:'2-2202',name:'Utang Leasing / Lease Payable',type:'kewajiban',sub:'panjang'},
+    {id:'2203',code:'2-2203',name:'Kewajiban Imbalan Pasca Kerja / Post-employment Benefit Liability',type:'kewajiban',sub:'panjang'},
+    {id:'2204',code:'2-2204',name:'Kewajiban Jangka Panjang Lainnya / Other Long-term Liabilities',type:'kewajiban',sub:'panjang'},
+
+    // ═══════════════════════════════════════════════════
+    // EKUITAS / EQUITY
+    // ═══════════════════════════════════════════════════
+    {id:'3101',code:'3-3101',name:'Modal Saham Ditempatkan & Disetor / Issued & Paid-up Capital',type:'modal',sub:''},
+    {id:'3102',code:'3-3102',name:'Saldo Laba / Retained Earnings',type:'modal',sub:''},
+    {id:'3103',code:'3-3103',name:'Laba Tahun Berjalan / Current Year Profit',type:'modal',sub:''},
+    {id:'3104',code:'3-3104',name:'Prive / Owner Withdrawal',type:'modal',sub:''},
+
+    // ═══════════════════════════════════════════════════
+    // PENDAPATAN / REVENUE
+    // ═══════════════════════════════════════════════════
+    {id:'4101',code:'4-4101',name:'Pendapatan Penjualan Barang / Sales of Goods',type:'pendapatan',sub:''},
+    {id:'4102',code:'4-4102',name:'Pendapatan Penjualan Jasa / Sales of Services',type:'pendapatan',sub:''},
+    {id:'4103',code:'4-4103',name:'Pendapatan Konsultasi / Consulting Revenue',type:'pendapatan',sub:''},
+    {id:'4104',code:'4-4104',name:'Pendapatan Instalasi / Installation Revenue',type:'pendapatan',sub:''},
+    {id:'4105',code:'4-4105',name:'Pendapatan Maintenance / Maintenance Revenue',type:'pendapatan',sub:''},
+    {id:'4201',code:'4-4201',name:'Pendapatan Bunga & Bagi Hasil / Interest & Profit Sharing Income',type:'pendapatan',sub:''},
+    {id:'4202',code:'4-4202',name:'Pendapatan Selisih Kurs / Foreign Exchange Gain',type:'pendapatan',sub:''},
+    {id:'4203',code:'4-4203',name:'Pendapatan Lain-lain / Other Income',type:'pendapatan',sub:''},
+
+    // ═══════════════════════════════════════════════════
+    // HARGA POKOK PENDAPATAN / COST OF REVENUE
+    // ═══════════════════════════════════════════════════
+    {id:'5101',code:'5-5101',name:'Harga Pokok Penjualan / Cost of Goods Sold',type:'hpp',sub:''},
+    {id:'5102',code:'5-5102',name:'Biaya BBM, Tol & Parkir / Fuel, Toll & Parking',type:'hpp',sub:''},
+    {id:'5103',code:'5-5103',name:'Biaya Akomodasi / Accommodation',type:'hpp',sub:''},
+    {id:'5104',code:'5-5104',name:'Biaya Kurir & Ekspedisi / Courier & Shipping',type:'hpp',sub:''},
+    {id:'5105',code:'5-5105',name:'Biaya Tenaga Kerja Langsung / Direct Labor',type:'hpp',sub:''},
+    {id:'5106',code:'5-5106',name:'Biaya Lain HPP / Other COGS',type:'hpp',sub:''},
+
+    // ═══════════════════════════════════════════════════
+    // BEBAN USAHA / OPERATING EXPENSES
+    // ═══════════════════════════════════════════════════
+    // SDM
+    {id:'6101',code:'6-6101',name:'Biaya Gaji, Lembur & THR / Salaries, Overtime & Holiday Allowance',type:'beban',sub:'sdm'},
+    {id:'6102',code:'6-6102',name:'Biaya Upah & Honorarium / Wages & Honorarium',type:'beban',sub:'sdm'},
+    {id:'6103',code:'6-6103',name:'Biaya BPJS / BPJS Expenses',type:'beban',sub:'sdm'},
+    {id:'6104',code:'6-6104',name:'Biaya Pelatihan / Training Expenses',type:'beban',sub:'sdm'},
+    {id:'6105',code:'6-6105',name:'Biaya Makan Karyawan / Employee Meal Expenses',type:'beban',sub:'sdm'},
+
+    // Operasional
+    {id:'6201',code:'6-6201',name:'Biaya Sewa Gedung / Building Rental Expenses',type:'beban',sub:'operasional'},
+    {id:'6202',code:'6-6202',name:'Biaya Listrik / Electricity Expenses',type:'beban',sub:'operasional'},
+    {id:'6203',code:'6-6203',name:'Biaya Telekomunikasi / Telecommunication Expenses',type:'beban',sub:'operasional'},
+    {id:'6204',code:'6-6204',name:'Biaya Air & Kebersihan / Water & Cleaning Expenses',type:'beban',sub:'operasional'},
+    {id:'6205',code:'6-6205',name:'Biaya Perlengkapan Kantor / Office Supplies Expenses',type:'beban',sub:'operasional'},
+    {id:'6206',code:'6-6206',name:'Biaya Pemeliharaan Gedung / Building Maintenance',type:'beban',sub:'operasional'},
+    {id:'6207',code:'6-6207',name:'Biaya Pemeliharaan Kendaraan / Vehicle Maintenance',type:'beban',sub:'operasional'},
+    {id:'6208',code:'6-6208',name:'Biaya BBM, Tol & Parkir / Fuel, Toll & Parking',type:'beban',sub:'operasional'},
+    {id:'6209',code:'6-6209',name:'Biaya Perjalanan Dinas / Business Travel',type:'beban',sub:'operasional'},
+    {id:'6210',code:'6-6210',name:'Biaya Ekspedisi, Pos & Materai / Shipping, Postage & Stamp',type:'beban',sub:'operasional'},
+    {id:'6211',code:'6-6211',name:'Biaya Rumah Tangga Kantor / Office Household',type:'beban',sub:'operasional'},
+    {id:'6212',code:'6-6212',name:'Biaya Transport & Sewa Kendaraan / Transport & Vehicle Rental',type:'beban',sub:'operasional'},
+    {id:'6213',code:'6-6213',name:'Biaya Profesional / Tenaga Ahli / Professional Fees',type:'beban',sub:'operasional'},
+    {id:'6214',code:'6-6214',name:'Biaya Jamuan / Entertainment',type:'beban',sub:'operasional'},
+    {id:'6215',code:'6-6215',name:'Biaya Umum & Administrasi / General & Administrative',type:'beban',sub:'operasional'},
+
+    // Penjualan & Pemasaran
+    {id:'6301',code:'6-6301',name:'Biaya Pemasaran / Marketing Expenses',type:'beban',sub:'penjualan'},
+    {id:'6302',code:'6-6302',name:'Biaya Iklan & Promosi / Advertising & Promotion',type:'beban',sub:'penjualan'},
+    {id:'6303',code:'6-6303',name:'Biaya Komisi Penjualan / Sales Commission',type:'beban',sub:'penjualan'},
+
+    // Penyusutan & Amortisasi
+    {id:'6401',code:'6-6401',name:'Biaya Penyusutan Gedung / Building Depreciation',type:'beban',sub:'penyusutan'},
+    {id:'6402',code:'6-6402',name:'Biaya Penyusutan Inventaris Kantor / Office Inventory Depreciation',type:'beban',sub:'penyusutan'},
+    {id:'6403',code:'6-6403',name:'Biaya Penyusutan Kendaraan / Vehicle Depreciation',type:'beban',sub:'penyusutan'},
+    {id:'6404',code:'6-6404',name:'Biaya Penyusutan Peralatan / Equipment Depreciation',type:'beban',sub:'penyusutan'},
+    {id:'6405',code:'6-6405',name:'Biaya Amortisasi / Amortization',type:'beban',sub:'penyusutan'},
+
+    // Pajak & Beban Lainnya
+    {id:'6501',code:'6-6501',name:'Biaya Administrasi Bank / Bank Administration Fees',type:'beban',sub:'lain'},
+    {id:'6502',code:'6-6502',name:'Biaya Selisih Kurs / Foreign Exchange Loss',type:'beban',sub:'lain'},
+    {id:'6503',code:'6-6503',name:'Denda Pajak / Tax Penalties',type:'beban',sub:'lain'},
+    {id:'6504',code:'6-6504',name:'Biaya PPh 23 / PPh 23 Expenses',type:'beban',sub:'lain'},
+    {id:'6505',code:'6-6505',name:'Biaya PPh 4(2) / PPh 4(2) Expenses',type:'beban',sub:'lain'},
+    {id:'6506',code:'6-6506',name:'Biaya PPh 26 / PPh 26 Expenses',type:'beban',sub:'lain'},
+    {id:'6507',code:'6-6507',name:'Pajak Penghasilan Badan / Corporate Income Tax',type:'beban',sub:'lain'},
+    {id:'6508',code:'6-6508',name:'Pajak Final Bagi Hasil / Final Tax on Profit Sharing',type:'beban',sub:'lain'},
+    {id:'6509',code:'6-6509',name:'Beban Lain-lain / Other Expenses',type:'beban',sub:'lain'},
   ];
 }
-
-// ================================================================
-//  UTILITIES
-// ================================================================
-// Fix #12: crypto.randomUUID() — no collision risk vs Date.now()+Math.random()
-// Fallback ke method lama untuk browser lama (pre-Chrome 92)
 function uid(){
   return typeof crypto.randomUUID==='function'
     ? crypto.randomUUID().replace(/-/g,'')
