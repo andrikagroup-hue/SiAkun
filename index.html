@@ -2538,6 +2538,26 @@ function nav(page){
   // ── Defensive: ensure all DB fields exist before any render ──
   if(DB&&typeof DB==='object'){
     if(!DB.taxSettings)DB.taxSettings={ppnRate:11,pph23Rate:2,pph4Rate:2};
+
+  // ── Migrasi: pastikan BSI sebelum BCA di urutan akun ──
+  if(DB.accounts&&DB.accounts.length){
+    const bsiIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bsi')||a.name&&a.name.toLowerCase().includes('syariah indonesia'));
+    const bcaIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bca'));
+    // Kalau BSI ada tapi posisinya setelah BCA, pindahkan BSI ke sebelum BCA
+    if(bsiIdx>-1&&bcaIdx>-1&&bsiIdx>bcaIdx){
+      const bsiAcct=DB.accounts.splice(bsiIdx,1)[0];
+      const newBcaIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bca'));
+      DB.accounts.splice(newBcaIdx,0,bsiAcct);
+      saveDB();
+    }
+    // Kalau BSI belum ada sama sekali, tambahkan setelah Cash
+    if(bsiIdx===-1){
+      const cashIdx=DB.accounts.findIndex(a=>a.id==='1101'||a.code==='1-1101');
+      const newBsi={id:'1102b',code:'1-1102',name:'Bank Syariah Indonesia (BSI)',type:'aktiva',sub:'lancar'};
+      DB.accounts.splice(cashIdx+1,0,newBsi);
+      saveDB();
+    }
+  }
     if(!DB.calConfig)DB.calConfig={tarifTelat:50000,hkStd:25};
     if(!DB.calendar)DB.calendar={};
     if(!DB.lockedPeriods)DB.lockedPeriods=[];
