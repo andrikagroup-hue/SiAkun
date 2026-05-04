@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SiAkun v19.1 — Financial System</title>
+<title>SiAkun v19.2 — Financial System</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -2054,7 +2054,7 @@ function checkSession(){
     document.getElementById('login-screen').style.display='none';
     _updateUserBadge(sess);
     // Tampilkan menu Admin kalau role Admin
-    _applyRoleNav((found||sess).role);
+    _applyRoleNav(sess.role);
     return true;
   }
   return false;
@@ -7131,15 +7131,32 @@ async function init(){
   if(!DB.taxSettings)DB.taxSettings={ppnRate:11,pph23Rate:2,pph4Rate:2,defaultTaxType:'ppn'};
   if(!DB.rekonBank)DB.rekonBank=[];         // migrate DB lama
   // Migrate: tambah akun baru jika belum ada
+  if(!DB.accounts||!Array.isArray(DB.accounts)){
+    // Accounts missing from loaded data — try reload from Supabase fresh
+    console.warn('[SiAkun] DB.accounts kosong, coba reload dari Supabase...');
+    try{
+      const fresh=await sbGet();
+      if(fresh&&fresh.accounts&&fresh.accounts.length){
+        DB=fresh;
+        console.info('[SiAkun] Accounts berhasil diload ulang:',fresh.accounts.length,'akun');
+      } else {
+        DB.accounts=defaultDB().accounts;
+        console.warn('[SiAkun] Pakai default accounts');
+      }
+    }catch(e){
+      DB.accounts=defaultDB().accounts;
+    }
+  }
   const newAccounts=[
     {id:'6510',code:'6-6510',name:'Final Tax Expense (PPh Final)',type:'beban',sub:'lain'},
   ];
-  newAccounts.forEach(na=>{
-    if(!DB.accounts.find(a=>a.id===na.id))DB.accounts.push(na);
-  });
-  // Update nama akun 4201 jika masih pakai nama lama
-  const acc4201=DB.accounts.find(a=>a.id==='4201');
-  if(acc4201&&acc4201.name==='Interest Income')acc4201.name='Interest & Profit Sharing Income';
+  if(DB.accounts&&Array.isArray(DB.accounts)){
+    newAccounts.forEach(na=>{
+      if(!DB.accounts.find(a=>a.id===na.id))DB.accounts.push(na);
+    });
+    const acc4201=DB.accounts.find(a=>a.id==='4201');
+    if(acc4201&&acc4201.name==='Interest Income')acc4201.name='Interest & Profit Sharing Income';
+  }
   const scn=document.getElementById('sb-coname');if(scn)scn.textContent=DB.company.name;
   updateSidebarLogo();
   seedAMSProducts();
