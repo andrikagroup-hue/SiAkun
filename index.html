@@ -365,6 +365,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_hr">SDM & Pajak</div>
     <div class="nav-i" onclick="nav('payroll')"><span class="ic">👥</span><span data-i18n="nav_payroll">Payroll</span></div>
+    <div class="nav-i" id="nav-calendar" onclick="nav('calendar')"><span class="ic">📅</span><span>Kalender Kerja</span></div>
     <div class="nav-i" onclick="nav('tax')"><span class="ic">💹</span><span data-i18n="nav_tax">Tax (VAT & PPh)</span></div>
     <div class="nav-i" onclick="nav('receipts')"><span class="ic">🖨️</span><span data-i18n="nav_receipts">Receipt</span></div>
     <div class="nav-i" onclick="nav('rekon')"><span class="ic">🏦</span><span data-i18n="nav_rekon">Rekonsiliasi Bank</span></div>
@@ -2574,7 +2575,7 @@ function nav(page){
   destroyCharts();
   const c=document.getElementById('content');
   c.innerHTML='';
-  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,payroll:renderPayroll,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon};
+  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon};
   if(pages[page]){
     try{pages[page](c);}catch(e){
       console.error('[SiAkun]',page,e);
