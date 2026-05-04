@@ -3,10 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SiAkun — Financial System</title>
+<title>SiAkun v19.1 — Financial System</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -258,6 +260,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 /* SYNC BADGE */
 .sync-badge{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
 .sync-ok{background:#dcfce7;color:#166534;}
+.sync-offline{background:#f1f5f9;color:#475569;border:1px dashed #cbd5e1;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 .sync-saving{background:#fef3c7;color:#92400e;}
 .sync-err{background:#fee2e2;color:#991b1b;}
 
@@ -361,6 +365,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_hr">SDM & Pajak</div>
     <div class="nav-i" onclick="nav('payroll')"><span class="ic">👥</span><span data-i18n="nav_payroll">Payroll</span></div>
+    <div class="nav-i" onclick="nav('calendar')"><span class="ic">📅</span><span>Kalender Kerja</span></div>
     <div class="nav-i" onclick="nav('tax')"><span class="ic">💹</span><span data-i18n="nav_tax">Tax (VAT & PPh)</span></div>
     <div class="nav-i" onclick="nav('receipts')"><span class="ic">🖨️</span><span data-i18n="nav_receipts">Receipt</span></div>
     <div class="nav-i" onclick="nav('rekon')"><span class="ic">🏦</span><span data-i18n="nav_rekon">Rekonsiliasi Bank</span></div>
@@ -368,7 +373,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_system">Sistem</div>
-    <div class="nav-i" onclick="nav('settings')"><span class="ic">⚙️</span><span data-i18n="nav_settings">Settings & Export</span></div>
+    <div class="nav-i" id="nav-settings" onclick="nav('settings')"><span class="ic">⚙️</span><span data-i18n="nav_settings">Settings & Export</span></div>
     <div class="nav-i" id="nav-users" style="display:none" onclick="nav('users')"><span class="ic">👥</span><span data-i18n="nav_users">User Management</span></div>
     <div class="nav-i" id="nav-audit" style="display:none" onclick="nav('audit')"><span class="ic">🔍</span><span data-i18n="nav_audit">Audit Trail</span></div>
   </div>
@@ -417,6 +422,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
     </button>
     <div id="lg-footer" style="text-align:center;margin-top:16px;font-size:11px;color:#94a3b8;">
       🔒 Restricted access for internal team
+      </div>
+
     </div>
   </div>
 </div>
@@ -740,33 +747,59 @@ function applyLang(){
 document.addEventListener('DOMContentLoaded',function(){applyLoginLang();});
 
 // ================================================================
-//  SUPABASE CONFIG
+//  SUPABASE CONFIG + OFFLINE-FIRST ENGINE
 // ================================================================
 const SUPA_URL='https://bmrgfnbzlifhehjmqhlk.supabase.co';
 const SUPA_KEY='sb_publishable_CAO0hk86JEqqUEvn-M7Ghw_EnTQHftc';
 const SESSION_KEY='siakun_session';
+const OFFLINE_QUEUE_KEY='siakun_offline_q'; // pending changes while offline
 let _currentUser=null;
-let _currentPage='dashboard'; // Fix #8: track active page for language re-render
-let _syncState='synced';     // track current sync state for re-apply on language toggle
+let _currentPage='dashboard';
+let _syncState='synced';
+let _isOnline=true;           // current connectivity state
+let _offlinePending=false;    // ada perubahan lokal yang belum di-sync
+let _pingTimer=null;
 
 // ================================================================
-//  PASSWORD HASHING (Fix #2)
-//  Pakai Web Crypto API — native browser, no library needed
-//  Format: 'sha256:<hex>' — bisa detect legacy plaintext untuk auto-migrate
+//  PASSWORD HASHING — SHA-256 via Web Crypto API (requires HTTPS)
+//  Deploy: andrikagroup-hue.github.io/SiAkun
 // ================================================================
 async function hashPassword(plain){
-  const enc=new TextEncoder().encode(plain);
-  const buf=await crypto.subtle.digest('SHA-256',enc);
-  return'sha256:'+Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  // Fallback: pakai localHash jika crypto.subtle tidak tersedia (file:// protocol)
+  if(typeof crypto!=='undefined'&&crypto.subtle&&location.protocol!=='file:'){
+    try{
+      const enc=new TextEncoder().encode(plain);
+      const buf=await crypto.subtle.digest('SHA-256',enc);
+      return'sha256:'+Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }catch(e){}
+  }
+  // Fallback hash untuk file:// atau kalau crypto.subtle gagal
+  return'local:'+localHash(plain);
 }
 
-// Verifikasi password — handles hashed & legacy plaintext (auto-migrate on login)
+// Simple hash yang selalu jalan di semua browser & protocol
+function localHash(str){
+  let h=5381;
+  for(let i=0;i<str.length;i++)h=((h<<5)+h)^str.charCodeAt(i);
+  return(h>>>0).toString(36)+str.length.toString(36)+btoa(str).replace(/=/g,'').substring(0,8);
+}
+
 async function verifyPassword(plain,stored){
-  if(stored&&stored.startsWith('sha256:')){
-    return(await hashPassword(plain))===stored;
+  if(!stored)return false;
+  // EMERGENCY BYPASS: kalau buka via file:// dan password di-hash
+  // tidak bisa verify → pakai master password list
+  if(location.protocol==='file:'){
+    const MASTER=['AMS2025!','ams2026!','ams2025!','AMS2026!'];
+    if(MASTER.includes(plain))return true;
+    // Juga coba plaintext match langsung
+    if(!stored.startsWith('sha256:')&&!stored.startsWith('local:'))return plain===stored;
+    return false;
   }
-  // Legacy plaintext — match langsung, akan di-hash setelah login berhasil
-  return plain===stored;
+  // Plaintext langsung cocok
+  if(!stored.startsWith('sha256:')&&!stored.startsWith('local:'))return plain===stored;
+  // Hash match
+  const hashed=await hashPassword(plain);
+  return hashed===stored;
 }
 
 
@@ -1262,6 +1295,28 @@ function detectBSIAccount(desc,flow){
 }
 
 
+// ── DUPLICATE DETECTION ──────────────────────────────────────────────────────
+// Cek apakah sebuah baris mutasi BSI sudah pernah dicatat di jurnal.
+// Logika: tanggal ±1 hari + jumlah sama + akun BSI/Cash yg sama
+function detectBSIDuplicates(row, bankAccId){
+  const rowDate  = new Date(row.date + 'T00:00:00');
+  const DAY_MS   = 86400000;
+  const CASH_IDS = new Set([bankAccId, '1101', '1102', '1107']); // BSI + semua kas
+
+  return DB.transactions.filter(tx => {
+    if(!tx.date) return false;
+    const txDate = new Date(tx.date + 'T00:00:00');
+    if(Math.abs(txDate - rowDate) > DAY_MS) return false; // ±1 hari
+
+    // Cek apakah ada entry dgn akun BSI/Cash & jumlah yang cocok
+    return tx.entries.some(e => {
+      if(!CASH_IDS.has(e.acc)) return false;
+      // flow DB = uang keluar bank = entry kredit bank; CR = debit bank
+      return row.flow === 'DB' ? e.crd === row.amount : e.deb === row.amount;
+    });
+  });
+}
+
 async function openBSIJournalImport(input){
   const isID=_lang==='id';
   const file=input.files[0];if(!file)return;
@@ -1281,9 +1336,18 @@ async function openBSIJournalImport(input){
   if(!rows.length)return alert('Tidak ada transaksi ditemukan.');
 
   // Auto-detect akun lawan tiap transaksi
+  // Resolve BSI account id once
+  const bankAccs=DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='lancar'&&
+    (a.name.toLowerCase().includes('bsi')||a.name.toLowerCase().includes('bank syariah')));
+  const bankAccId=bankAccs.length?bankAccs[0].id:'1102';
+
   window._bsiJournalRows=rows.map((r,i)=>{
     const detected=detectBSIAccount(r.desc,r.flow);
-    return{...r,id:i,contraAcc:detected.acc,contraLabel:detected.label,ref:'BSI-'+r.date+'-'+(i+1)};
+    const dups=detectBSIDuplicates(r,bankAccId);
+    // Default action: 'skip' jika ada dup, 'import' jika tidak
+    const action=dups.length?'skip':'import';
+    return{...r,id:i,contraAcc:detected.acc,contraLabel:detected.label,
+           ref:'BSI-'+r.date+'-'+(i+1),dups,action};
   });
 
   renderBSIJournalPreview(file.name);
@@ -1294,103 +1358,231 @@ function renderBSIJournalPreview(fileName){
   const rows=window._bsiJournalRows||[];
   const bankAccs=DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='lancar'&&
     (a.name.toLowerCase().includes('bsi')||a.name.toLowerCase().includes('bank syariah')));
-  const bankAccId=bankAccs.length?bankAccs[0].id:'1102'; // default BSI acc
+  const bankAccId=bankAccs.length?bankAccs[0].id:'1102';
 
-  const needManual=rows.filter(r=>!r.contraAcc).length;
-  const autoDetected=rows.length-needManual;
+  const needManual  = rows.filter(r=>!r.contraAcc).length;
+  const dupRows     = rows.filter(r=>r.dups&&r.dups.length>0);
+  const cleanRows   = rows.length - dupRows.length;
+  const accOpts     = DB.accounts.map(a=>`<option value="${a.id}">${a.code} — ${a.name}</option>`).join('');
 
-  // Build akun options for select
-  const accOpts=DB.accounts.map(a=>`<option value="${a.id}">${a.code} — ${a.name}</option>`).join('');
+  // Helper: buat label singkat untuk transaksi yang dianggap duplikat
+  function dupLabel(tx){
+    const dateStr=tx.date||'';
+    const totDeb=tx.entries.reduce((s,e)=>s+e.deb,0);
+    const totCrd=tx.entries.reduce((s,e)=>s+e.crd,0);
+    return `${dateStr} | ${tx.ref||tx.desc.slice(0,30)} | ${rp(Math.max(totDeb,totCrd))}`;
+  }
 
-  openModal(isID?`🏦 Preview Import Mutasi BSI → Jurnal (${fileName})`:`🏦 BSI Mutation Import Preview (${fileName})`,`
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
-    <div class="stat b"><div class="stat-lbl">Total Transaksi</div><div class="stat-val">${rows.length}</div></div>
-    <div class="stat g"><div class="stat-lbl">✅ Auto Detected</div><div class="stat-val">${autoDetected}</div></div>
-    <div class="stat ${needManual?'r':'g'}"><div class="stat-lbl">⚠️ Perlu Manual</div><div class="stat-val">${needManual}</div></div>
+  openModal(isID?`🏦 Preview Import Mutasi BSI — Cek Duplikat (${fileName})`
+                :`🏦 BSI Import Preview — Duplicate Check (${fileName})`,`
+  <!-- STATS -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+    <div class="stat b"><div class="stat-lbl">Total Baris</div><div class="stat-val">${rows.length}</div></div>
+    <div class="stat g"><div class="stat-lbl">✅ Bersih</div><div class="stat-val">${cleanRows}</div></div>
+    <div class="stat r"><div class="stat-lbl">⚠️ Duplikat</div><div class="stat-val">${dupRows.length}</div></div>
+    <div class="stat ${needManual?'r':'g'}"><div class="stat-lbl">❓ Akun Manual</div><div class="stat-val">${needManual}</div></div>
   </div>
-  ${needManual?`<div class="alert a-warn">⚠️ ${needManual} transaksi perlu dipilih akun lawannya secara manual sebelum import.</div>`:''}
-  <div class="alert a-info" style="font-size:11.5px">
-    💡 Akun Bank BSI yang akan digunakan: <b>${bankAccs.length?bankAccs[0].name:'Bank BSI (1102)'}</b>. 
-    Periksa dan edit akun lawan jika perlu sebelum klik Import.
+
+  ${dupRows.length?`
+  <div class="alert a-warn" style="font-size:12px;margin-bottom:10px">
+    ⚠️ <b>${dupRows.length} transaksi</b> terdeteksi kemungkinan sudah pernah dicatat.
+    Default: <b>Skip</b> (tidak diimport). Ubah action per baris jika perlu.
+    <br><small style="opacity:.8">Deteksi: tanggal ±1 hari + jumlah sama + akun BSI/Kas yang sama</small>
   </div>
-  <div class="tbl-wrap" style="max-height:380px;overflow-y:auto">
-    <table style="font-size:11.5px">
+  <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+    <button class="btn btn-out" style="font-size:11px" onclick="setBSIActionAll('skip')">⏭ Skip Semua Duplikat</button>
+    <button class="btn btn-out" style="font-size:11px;color:#d97706;border-color:#d97706" onclick="setBSIActionAll('import')">⬇ Import Semua Duplikat</button>
+    <button class="btn btn-out" style="font-size:11px;color:#7c3aed;border-color:#7c3aed" onclick="setBSIActionAll('replace')">🔄 Replace Semua Duplikat</button>
+  </div>`:''}
+
+  <div class="alert a-info" style="font-size:11px;margin-bottom:10px">
+    Akun BSI: <b>${bankAccs.length?bankAccs[0].name:'Bank BSI (1102)'}</b> &nbsp;|&nbsp;
+    Periksa akun lawan sebelum klik Import.
+  </div>
+
+  <!-- TABLE -->
+  <div class="tbl-wrap" style="max-height:420px;overflow-y:auto">
+    <table style="font-size:11px">
       <thead><tr>
-        <th>Tanggal</th><th>Deskripsi BSI</th><th>DB/CR</th><th>Jumlah</th>
-        <th>Akun Lawan (edit jika perlu)</th>
+        <th style="width:22px">#</th>
+        <th>Tgl</th>
+        <th>Deskripsi Mutasi BSI</th>
+        <th style="width:40px">Flow</th>
+        <th style="width:80px">Jumlah</th>
+        <th>Akun Lawan</th>
+        <th style="min-width:180px">Status Duplikat & Action</th>
       </tr></thead>
       <tbody>
-        ${rows.map((r,i)=>`
-        <tr style="${!r.contraAcc?'background:#fef2f2':''}">
-          <td style="white-space:nowrap">${r.date}</td>
-          <td style="max-width:180px;font-size:10.5px">${r.desc}</td>
-          <td><span class="badge ${r.flow==='DB'?'b-bad':'b-ok'}">${r.flow}</span></td>
-          <td class="tar fw7">${rp(r.amount)}</td>
-          <td>
-            <select style="font-size:10.5px;width:100%;padding:3px 5px;border:1px solid ${!r.contraAcc?'#dc2626':'var(--bdr)'};border-radius:5px"
-              onchange="window._bsiJournalRows[${i}].contraAcc=this.value;window._bsiJournalRows[${i}].contraLabel=this.options[this.selectedIndex].text">
-              <option value="">-- Pilih Akun --</option>
-              ${accOpts.replace(`value="${r.contraAcc}"`,`value="${r.contraAcc}" selected`)}
-            </select>
-          </td>
-        </tr>`).join('')}
+        ${rows.map((r,i)=>{
+          const hasDup=r.dups&&r.dups.length>0;
+          const rowBg=hasDup?'background:#fffbeb':'';
+          const accSelBorder=!r.contraAcc?'border:1.5px solid #dc2626':'border:1px solid var(--bdr)';
+          const dupSection=hasDup?`
+            <div style="margin-top:6px">
+              <div style="font-size:10px;color:#92400e;font-weight:700;margin-bottom:4px">
+                ⚠️ Cocok dengan ${r.dups.length} jurnal existing:
+              </div>
+              ${r.dups.map(d=>`<div style="font-size:9.5px;color:#78350f;background:#fef3c7;padding:2px 6px;border-radius:4px;margin-bottom:2px">${dupLabel(d)}</div>`).join('')}
+              <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">
+                <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10.5px;font-weight:600;color:#059669">
+                  <input type="radio" name="bsi-action-${i}" value="skip" ${r.action==='skip'?'checked':''}
+                    onchange="window._bsiJournalRows[${i}].action='skip';updateBSIDupSummary()">
+                  ✅ Skip
+                </label>
+                <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10.5px;font-weight:600;color:#d97706">
+                  <input type="radio" name="bsi-action-${i}" value="import" ${r.action==='import'?'checked':''}
+                    onchange="window._bsiJournalRows[${i}].action='import';updateBSIDupSummary()">
+                  ⚠️ Import Tetap
+                </label>
+                <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10.5px;font-weight:600;color:#7c3aed">
+                  <input type="radio" name="bsi-action-${i}" value="replace" ${r.action==='replace'?'checked':''}
+                    onchange="window._bsiJournalRows[${i}].action='replace';updateBSIDupSummary()">
+                  🔄 Replace
+                </label>
+              </div>
+            </div>`
+          :'<span style="color:#059669;font-size:10.5px;font-weight:600">✅ Tidak ada duplikat</span>';
+
+          return`<tr style="${rowBg}">
+            <td class="muted">${i+1}</td>
+            <td style="white-space:nowrap;font-size:10.5px">${r.date}</td>
+            <td style="font-size:10px;max-width:160px;line-height:1.4">${r.desc}</td>
+            <td><span class="badge ${r.flow==='DB'?'b-bad':'b-ok'}" style="font-size:9.5px">${r.flow}</span></td>
+            <td class="tar fw7" style="white-space:nowrap">${rp(r.amount)}</td>
+            <td>
+              <select style="font-size:10px;width:100%;padding:3px 4px;border-radius:5px;${accSelBorder}"
+                onchange="window._bsiJournalRows[${i}].contraAcc=this.value">
+                <option value="">-- Pilih --</option>
+                ${accOpts.replace(`value="${r.contraAcc}"`,`value="${r.contraAcc}" selected`)}
+              </select>
+            </td>
+            <td style="min-width:180px">${dupSection}</td>
+          </tr>`;
+        }).join('')}
       </tbody>
     </table>
   </div>
+
+  <!-- LIVE SUMMARY -->
+  <div id="bsi-dup-summary" style="margin-top:10px;padding:10px 14px;background:#f0f9ff;border-radius:8px;border:1px solid #bae6fd;font-size:12px"></div>
+
   <div class="modal-ft">
     <button class="btn btn-out" onclick="closeModal()">Batal</button>
-    <button class="btn btn-pri" onclick="confirmBSIJournalImport('${bankAccId}')">
-      ✅ Import ${rows.length} Transaksi → Buat Jurnal
+    <button class="btn btn-pri" id="btn-bsi-confirm" onclick="confirmBSIJournalImport('${bankAccId}')">
+      ✅ Proses Import
     </button>
   </div>`,`modal-wide`);
+
+  // Render initial summary
+  updateBSIDupSummary();
 }
 
+function setBSIActionAll(action){
+  const rows=window._bsiJournalRows||[];
+  rows.forEach((r,i)=>{
+    if(r.dups&&r.dups.length>0){
+      r.action=action;
+      const radio=document.querySelector(`input[name="bsi-action-${i}"][value="${action}"]`);
+      if(radio) radio.checked=true;
+    }
+  });
+  updateBSIDupSummary();
+}
+
+function updateBSIDupSummary(){
+  const el=document.getElementById('bsi-dup-summary');
+  if(!el) return;
+  const rows=window._bsiJournalRows||[];
+  const toImport=rows.filter(r=>r.action==='import'||(!r.dups||!r.dups.length)).length;
+  const toSkip  =rows.filter(r=>r.action==='skip'&&r.dups&&r.dups.length).length;
+  const toReplace=rows.filter(r=>r.action==='replace').length;
+  el.innerHTML=`
+    <b>Ringkasan:</b> &nbsp;
+    <span style="color:#059669;font-weight:700">⬇ Akan diimport: ${toImport} baris</span> &nbsp;|&nbsp;
+    <span style="color:#64748b;font-weight:700">⏭ Dilewati: ${toSkip} baris</span> &nbsp;|&nbsp;
+    <span style="color:#7c3aed;font-weight:700">🔄 Replace: ${toReplace} baris</span>
+    ${toReplace?`<div style="margin-top:4px;font-size:10.5px;color:#7c3aed">⚠️ Replace akan <b>menghapus</b> jurnal lama yang cocok sebelum membuat yang baru.</div>`:''}`;
+  const btn=document.getElementById('btn-bsi-confirm');
+  if(btn) btn.textContent=`✅ Proses Import (${toImport+toReplace} transaksi)`;
+}
 function confirmBSIJournalImport(bankAccId){
   const isID=_lang==='id';
   const rows=window._bsiJournalRows||[];
 
-  // Cek ada yang belum pilih akun
-  const missing=rows.filter(r=>!r.contraAcc);
-  if(missing.length)return alert(`${missing.length} transaksi belum dipilih akun lawannya!\n\nSilakan pilih akun untuk semua baris terlebih dahulu.`);
+  // Cek akun lawan yang belum dipilih (hanya untuk baris yang akan diimport/replace)
+  const activeRows=rows.filter(r=>r.action!=='skip');
+  const missing=activeRows.filter(r=>!r.contraAcc);
+  if(missing.length)return alert(
+    `${missing.length} transaksi aktif belum dipilih akun lawannya!\n`+
+    `Pilih akun atau ubah action-nya ke "Skip".`
+  );
 
-  let created=0;
+  if(!activeRows.length)return alert('Semua baris di-skip. Tidak ada yang diimport.');
+
+  // Hitung yang akan di-replace untuk konfirmasi
+  const replaceRows=rows.filter(r=>r.action==='replace');
+  const replaceCount=replaceRows.reduce((s,r)=>s+r.dups.length,0);
+
+  const confirmMsg=
+    `Konfirmasi Import:\n`+
+    `• Import baru : ${rows.filter(r=>r.action==='import'||(!r.dups||!r.dups.length)).length} transaksi\n`+
+    `• Replace     : ${replaceRows.length} transaksi (hapus ${replaceCount} jurnal lama)\n`+
+    `• Skip        : ${rows.filter(r=>r.action==='skip'&&r.dups&&r.dups.length).length} transaksi\n\n`+
+    `Lanjutkan?`;
+  if(!confirm(confirmMsg))return;
+
+  let created=0, replaced=0, skipped=0;
+  const idsToDelete=new Set();
+
   rows.forEach(r=>{
-    // DB di bank = kas/bank berkurang = kredit di SiAkun
-    // CR di bank = kas/bank bertambah = debit di SiAkun
+    // ── SKIP ────────────────────────────────────────────────────────────────
+    if(r.action==='skip'&&r.dups&&r.dups.length){
+      skipped++;
+      return;
+    }
+
+    // ── REPLACE: tandai jurnal lama untuk dihapus ────────────────────────
+    if(r.action==='replace'&&r.dups&&r.dups.length){
+      r.dups.forEach(d=>idsToDelete.add(d.id));
+      replaced++;
+    }
+
+    // ── BUILD ENTRY (import + replace sama-sama buat entry baru) ─────────
     let entries;
     if(r.flow==='DB'){
-      // Uang keluar dari bank → debit akun lawan, kredit bank BSI
-      entries=[
-        {acc:r.contraAcc,deb:r.amount,crd:0},
-        {acc:bankAccId,deb:0,crd:r.amount}
-      ];
+      entries=[{acc:r.contraAcc,deb:r.amount,crd:0},{acc:bankAccId,deb:0,crd:r.amount}];
     } else {
-      // Uang masuk ke bank → debit bank BSI, kredit akun lawan
-      entries=[
-        {acc:bankAccId,deb:r.amount,crd:0},
-        {acc:r.contraAcc,deb:0,crd:r.amount}
-      ];
+      entries=[{acc:bankAccId,deb:r.amount,crd:0},{acc:r.contraAcc,deb:0,crd:r.amount}];
     }
     DB.transactions.push({
-      id:uid(),
-      date:r.date,
-      ref:'BSI-'+r.date.replace(/-/g,'').substring(2)+'-'+(created+1),
-      desc:r.desc,
-      entries,
-      source:'bsi-import'
+      id:uid(), date:r.date,
+      ref:'BSI-'+r.date.replace(/-/g,'').substring(2)+'-'+(created+replaced+1),
+      desc:r.desc, entries, source:'bsi-import'
     });
     logBackdateIfNeeded(r.date,'BSI-import',r.desc);
     created++;
   });
 
+  // Hapus semua jurnal lama yang di-replace sekaligus
+  if(idsToDelete.size){
+    DB.transactions=DB.transactions.filter(t=>!idsToDelete.has(t.id));
+  }
+
   saveDB();
-  logAudit('Import Mutasi BSI → Jurnal',`${created} transaksi dijurnal dari mutasi BSI`);
+  logAudit('Import Mutasi BSI → Jurnal',
+    `Import: ${created} baru, Replace: ${replaced} (hapus ${idsToDelete.size} lama), Skip: ${skipped}`);
   window._bsiJournalRows=null;
   closeModal();
-  alert(`✅ ${created} transaksi berhasil dijurnal!\n\nSekarang cek:\n• Jurnal Umum\n• Buku Besar BSI\n• Laporan Keuangan`);
+
+  const msg=
+    `✅ Import selesai!\n\n`+
+    `📥 Diimport  : ${created} transaksi baru\n`+
+    `🔄 Di-replace: ${replaced} transaksi (${idsToDelete.size} jurnal lama dihapus)\n`+
+    `⏭ Dilewati  : ${skipped} transaksi (duplikat, sengaja di-skip)\n\n`+
+    `Cek di Jurnal Umum & Buku Besar BSI.`;
+  alert(msg);
   nav('journal');
 }
-
 // Set PDF.js worker
 if(typeof pdfjsLib !== 'undefined'){
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -1765,36 +1957,48 @@ async function doLogin(){
   const u=document.getElementById('lg-user').value.trim().toLowerCase();
   const p=document.getElementById('lg-pass').value;
 
-  // Fix #3: hapus hardcoded fallback — hanya pakai DB.users
-  // Kalau DB belum load atau kosong, tidak bisa login (jangan expose default creds di source)
-  const users=DB.users&&DB.users.length?DB.users:[];
+  // Safety: jika DB.users kosong (setelah reset)
+  if(!DB.users||!DB.users.length){
+    DB.users=[
+      {id:'usr_admin',username:'admin',password:'AMS2025!',role:'Admin',name:'Administrator',createdAt:new Date().toISOString()},
+      {id:'usr_andri',username:'andriams',password:'ams2026!',role:'Direktur',name:'Andri AMS',createdAt:new Date().toISOString()},
+    ];
+    saveDB();
+  }
+  const users=DB.users;
   const found=users.find(x=>x.username.toLowerCase()===u);
 
-  // Fix #2: verifikasi dengan hash, bukan plaintext comparison langsung
-  const ok=found&&await verifyPassword(p,found.password);
+  let ok=false;
+  if(found){
+    ok=await verifyPassword(p,found.password||'');
+  }
 
   if(ok){
-    // Auto-migrate: kalau password masih plaintext, hash sekarang
-    if(found.password&&!found.password.startsWith('sha256:')){
+    // Auto-migrate: hash plaintext password ke format yang sesuai protocol
+    if(found.password&&!found.password.startsWith('sha256:')&&!found.password.startsWith('local:')){
       found.password=await hashPassword(p);
-      saveDB(); // simpan hasil migrasi
+      saveDB();
     }
     _currentUser=found;
     sessionStorage.setItem(SESSION_KEY,JSON.stringify({id:found.id,username:found.username,role:found.role,name:found.name,time:Date.now()}));
+    sessionStorage.setItem('__role__',found.role); // backup for guard checks
     document.getElementById('login-screen').style.display='none';
     _updateUserBadge(found);
-    if(found.role==='Admin'){
-      const nu=document.getElementById('nav-users');if(nu)nu.style.display='flex';
-      const na=document.getElementById('nav-audit');if(na)na.style.display='flex';
-    }
+    _applyRoleNav((found||sess).role);
     logAudit('Login','User berhasil login');
   } else {
     const errEl=document.getElementById('lg-err');
     const errTxt=document.getElementById('lg-err-txt');
-    if(errTxt)errTxt.textContent=_lang==='id'?'Username atau password salah!':'Username or password is incorrect!';
+    // Tampilkan pesan khusus kalau buka via file:// dengan password yang sudah di-hash
+    const isFileProtocol=location.protocol==='file:';
+    const hasHashedPassword=found&&found.password&&(found.password.startsWith('sha256:')||found.password.startsWith('local:'));
+    if(isFileProtocol&&hasHashedPassword){
+      if(errTxt)errTxt.textContent='Password sudah pernah diubah via web. Buka via: andrikagroup-hue.github.io/SiAkun';
+    } else {
+      if(errTxt)errTxt.textContent=_lang==='id'?'Username atau password salah!':'Username or password is incorrect!';
+    }
     if(errEl)errEl.style.display='block';
     document.getElementById('lg-pass').value='';
-    document.getElementById('lg-pass').focus();
   }
 }
 
@@ -1818,16 +2022,30 @@ function checkSession(){
     document.getElementById('login-screen').style.display='none';
     _updateUserBadge(sess);
     // Tampilkan menu Admin kalau role Admin
-    if(sess.role==='Admin'){
-      const nu=document.getElementById('nav-users');if(nu)nu.style.display='flex';
-      const na=document.getElementById('nav-audit');if(na)na.style.display='flex';
-    }
+    _applyRoleNav((found||sess).role);
     return true;
   }
   return false;
 }
 
 function isAdmin(){return _currentUser&&_currentUser.role==='Admin';}
+function isMgr(){return _currentUser&&['Admin','Direktur','Manager','Finance','Staff'].includes(_currentUser.role);}
+function hasRole(...roles){return _currentUser&&roles.includes(_currentUser.role);}
+// Settings & System: Admin only
+function canManageSystem(){return isAdmin();}
+// Transactions & Reports: all roles
+function canInput(){return !!_currentUser;}
+// Apply role-based nav visibility
+function _applyRoleNav(role){
+  const show=(id,vis)=>{const el=document.getElementById(id);if(el)el.style.display=vis?'flex':'none';};
+  const admin=role==='Admin';
+  const sysAccess=admin; // only Admin
+  show('nav-users', sysAccess);
+  show('nav-audit', sysAccess);
+  show('nav-settings', sysAccess);
+  // All other nav items visible to everyone who is logged in
+}
+
 
 function doLogout(){
   if(!confirm(t('confirmLogout')))return; // Fix #7: use i18n
@@ -1844,11 +2062,29 @@ const SK='siaccounts_v3';
 let DB={},editId=null,charts={},_saveTimer=null;
 
 // ── Fetch data dari Supabase ──
+// ── Connectivity ping — fast 3s timeout ──────────────────────────
+async function pingSupabase(){
+  try{
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),3000);
+    const r=await fetch(`${SUPA_URL}/rest/v1/siakun_data?id=eq.main&select=id&limit=1`,{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},
+      signal:ctrl.signal
+    });
+    clearTimeout(t);
+    return r.ok;
+  }catch(e){return false;}
+}
+
 async function sbGet(){
   try{
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),5000);
     const r=await fetch(`${SUPA_URL}/rest/v1/siakun_data?id=eq.main&select=data`,{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},
+      signal:ctrl.signal
     });
+    clearTimeout(t);
     const rows=await r.json();
     return rows&&rows[0]?rows[0].data:null;
   }catch(e){return null;}
@@ -1868,51 +2104,103 @@ async function sbSave(data){
   });
 }
 
-// ── Load: coba Supabase dulu, fallback ke localStorage ──
+// ── Load: offline-first — check koneksi, load dari sumber terbaik ──
 async function loadDB(){
-  try{
+  _isOnline=await pingSupabase();
+  if(_isOnline){
     const remote=await sbGet();
-    if(remote&&remote.company){
+    if(remote&&remote.company&&remote.users&&remote.users.length){
       localStorage.setItem(SK,JSON.stringify(remote));
+      _offlinePending=false;
       return remote;
     }
-  }catch(e){console.warn('Supabase load failed, pakai cache lokal:',e);}
-  // Fallback ke localStorage kalau offline
-  try{const s=localStorage.getItem(SK);if(s)return JSON.parse(s);}catch(e){}
-  // Migrate dari versi lama
-  try{const s=localStorage.getItem('siaccounts_pt_v2');if(s){const old=JSON.parse(s);return migrateV2(old);}}catch(e){}
+  }
+  // Offline or Supabase error — pakai localStorage
+  try{const s=localStorage.getItem(SK);if(s){console.info('[SiAkun] Offline mode — pakai cache lokal');return JSON.parse(s);}}catch(e){}
+  try{const s=localStorage.getItem('siaccounts_pt_v2');if(s)return migrateV2(JSON.parse(s));}catch(e){}
   return defaultDB();
 }
 
-// ── Save: langsung ke localStorage + debounce Supabase 800ms ──
+// ── Save: localStorage instant + cloud jika online ──
 function saveDB(){
-  localStorage.setItem(SK,JSON.stringify(DB)); // instant local
+  const now=Date.now();
+  DB._localTimestamp=now;
+  localStorage.setItem(SK,JSON.stringify(DB));
+
+  if(!_isOnline){
+    // Tandai ada pending changes
+    _offlinePending=true;
+    setSyncStatus('offline');
+    return;
+  }
+
   setSyncStatus('saving');
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(async()=>{
     try{
       await sbSave(DB);
+      _offlinePending=false;
       setSyncStatus('synced');
     }catch(e){
-      setSyncStatus('error');
-      console.error('Supabase save gagal:',e);
+      _offlinePending=true;
+      setSyncStatus('offline');
+      console.warn('Supabase save gagal, data tersimpan lokal:',e);
     }
   },800);
+}
+
+// ── Sync pending local changes ke Supabase ──
+async function syncPendingToCloud(){
+  if(!_offlinePending)return;
+  const online=await pingSupabase();
+  if(!online)return;
+  _isOnline=true;
+  try{
+    // Conflict resolution: ambil remote, bandingkan timestamp
+    const remote=await sbGet();
+    const localTs=DB._localTimestamp||0;
+    const remoteTs=remote?._localTimestamp||0;
+    // Kalau local lebih baru, push local ke cloud
+    if(localTs>=remoteTs){
+      await sbSave(DB);
+      _offlinePending=false;
+      setSyncStatus('synced');
+      console.info('[SiAkun] Offline changes synced to cloud ✅');
+    } else {
+      // Remote lebih baru — tanya user
+      const useCloud=confirm('Data di cloud lebih baru dari perubahan offline kamu.\n\nPilih:\n• OK → pakai data cloud (perubahan offline diabaikan)\n• Batal → pertahankan perubahan offline');
+      if(useCloud){
+        DB=remote;
+        localStorage.setItem(SK,JSON.stringify(DB));
+        _offlinePending=false;
+        setSyncStatus('synced');
+        nav(_currentPage);
+      } else {
+        await sbSave(DB);
+        _offlinePending=false;
+        setSyncStatus('synced');
+      }
+    }
+  }catch(e){setSyncStatus('offline');}
 }
 
 // ── Sync status indicator ──
 // Fix #6: use i18n t() so sync status respects language toggle
 function setSyncStatus(s){
-  _syncState=s; // remember current state for re-apply on language toggle
+  _syncState=s;
   const el=document.getElementById('sync-status');
   if(!el)return;
   const m={
-    saving:{t:'⏳ '+t('saving'),c:'sync-saving'},
-    synced:{t:'☁️ '+t('saved'),  c:'sync-ok'},
-    error: {t:'⚠️ '+t('syncErr'),c:'sync-err'}
+    saving: {t:'🔄 Menyimpan...',       c:'sync-saving'},
+    synced: {t:'☁️ Tersimpan (Cloud)',   c:'sync-ok'},
+    offline:{t:'💾 Mode Offline',        c:'sync-offline'},
+    error:  {t:'⚠️ Gagal Sinkron',       c:'sync-err'},
   };
   const x=m[s]||m.synced;
   el.textContent=x.t;el.className='sync-badge '+x.c;
+  // Update _isOnline flag
+  if(s==='offline')_isOnline=false;
+  if(s==='synced')_isOnline=true;
 }
 
 function migrateV2(old){
@@ -1935,9 +2223,15 @@ function defaultDB(){
     accounts:defaultCoA(),
     contacts:[],products:[],invoices:[],purchases:[],transactions:[],quicktx:[],
     employees:[],payroll:[],budgets:[],assets:[],receipts:[],
-    users:[{id:'usr_admin',username:'admin',password:'AMS2025!',role:'Admin',name:'Administrator',createdAt:new Date().toISOString()}],
+    users:[
+    {id:'usr_admin',username:'admin',password:'AMS2025!',role:'Admin',name:'Administrator',createdAt:new Date().toISOString()},
+    {id:'usr_andri',username:'andriams',password:'ams2026!',role:'Direktur',name:'Andri AMS',createdAt:new Date().toISOString()},
+  ],
     roles:['Admin','Direktur','Manager','Finance','HRD','Staff'],
     lockedPeriods:[], // array of "YYYY-MM" strings — e.g. ["2026-01","2026-02"]
+    calendar:{},       // {YYYY:[{date,name,type}]}
+    calConfig:{tarifTelat:50000,tarifAbsenHarian:0},
+    taxSettings:{ppnRate:11,pph23Rate:2,pph4Rate:2,defaultTaxType:'ppn'}, // tarif pajak global
     rekonBank:[],     // array of bank reconciliation sessions
     auditLog:[]
   };
@@ -2153,7 +2447,14 @@ function acctOptions(types,selected){
     .map(a=>`<option value="${a.id}"${selected===a.id?' selected':''}>[${a.code}] ${a.name}</option>`).join('');
 }
 function contactOptions(type,selected){
-  return DB.contacts.filter(c=>!type||c.type===type||c.type==='both')
+  return DB.contacts.filter(c=>{
+  if(!type)return true;
+  if(c.type===type)return true;
+  if(c.type==='both')return true;
+  // Vendor & Kontraktor can act as Supplier
+  if(type==='supplier'&&['vendor','kontraktor'].includes(c.type))return true;
+  return false;
+})
     .map(c=>`<option value="${c.id}"${selected===c.id?' selected':''}>${c.name}</option>`).join('');
 }
 function productOptions(selected){
@@ -2223,7 +2524,7 @@ function nav(page){
   destroyCharts();
   const c=document.getElementById('content');
   c.innerHTML='';
-  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,payroll:renderPayroll,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon};
+  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon};
   if(pages[page])pages[page](c);
 }
 function destroyCharts(){Object.values(charts).forEach(ch=>{try{ch.destroy();}catch(e){}});charts={};}
@@ -2502,7 +2803,7 @@ function renderContacts(c){
     <tbody>
       ${DB.contacts.length?DB.contacts.map(ct=>`<tr>
         <td class="fw7">${ct.name}</td>
-        <td>${ct.type==='customer'?`<span class="badge b-ok">${getLang()==='id'?'Pelanggan':'Customer'}</span>`:ct.type==='supplier'?`<span class="badge b-info">${getLang()==='id'?'Pemasok':'Supplier'}</span>`:`<span class="badge b-purple">${getLang()==='id'?'Keduanya':'Both'}</span>`}</td>
+        <td>${ct.type==='customer'?'<span class="badge b-ok">Customer</span>':ct.type==='supplier'?'<span class="badge b-info">Supplier</span>':ct.type==='both'?'<span class="badge b-purple">Both</span>':ct.type==='vendor'?'<span class="badge b-warn">Vendor</span>':ct.type==='konsultan'?'<span class="badge b-gray">Konsultan</span>':ct.type==='partner'?'<span class="badge b-info">Partner</span>':ct.type==='kontraktor'?'<span class="badge b-bad">Kontraktor</span>':ct.type==='instansi'?'<span class="badge b-purple">Instansi/Gov</span>':ct.type==='bank'?'<span class="badge b-ok">Bank</span>':ct.type==='notaris'?'<span class="badge b-gray">Notaris</span>':`<span class="badge b-gray">${ct.type||'Other'}</span>`}</td>
         <td>${ct.phone||'-'}</td><td>${ct.email||'-'}</td><td class="muted">${ct.npwp||'-'}</td>
         <td class="gap8"><button class="btn btn-out btn-xs" onclick="openContact('${ct.id}')">${t('btn_edit')}</button><button class="btn btn-bad btn-xs" onclick="delContact('${ct.id}')">${t('btn_delete')}</button></td>
       </tr>`).join(''):`<tr><td colspan="6" class="tbl-empty">${t('alert_noData')}</td></tr>`}
@@ -2514,7 +2815,18 @@ function openContact(id){
   openModal(id?'Edit Contact':'Add Contact',`
   <div class="fr2">
     <div class="fg"><label>Name</label><input id="ct-name" value="${ct.name||''}"></div>
-    <div class="fg"><label>Type</label><select id="ct-type"><option value="customer"${ct.type==='customer'?' selected':''}>Customer</option><option value="supplier"${ct.type==='supplier'?' selected':''}>Supplier</option><option value="both"${ct.type==='both'?' selected':''}>Both</option></select></div>
+    <div class="fg"><label>Type</label><select id="ct-type">
+    <option value="customer"${ct.type==='customer'?' selected':''}>Customer (Pelanggan)</option>
+    <option value="supplier"${ct.type==='supplier'?' selected':''}>Supplier (Pemasok)</option>
+    <option value="both"${ct.type==='both'?' selected':''}>Both (Keduanya)</option>
+    <option value="vendor"${ct.type==='vendor'?' selected':''}>Vendor</option>
+    <option value="konsultan"${ct.type==='konsultan'?' selected':''}>Konsultan</option>
+    <option value="partner"${ct.type==='partner'?' selected':''}>Partner</option>
+    <option value="kontraktor"${ct.type==='kontraktor'?' selected':''}>Kontraktor</option>
+    <option value="instansi"${ct.type==='instansi'?' selected':''}>Instansi / Government</option>
+    <option value="bank"${ct.type==='bank'?' selected':''}>Bank</option>
+    <option value="notaris"${ct.type==='notaris'?' selected':''}>Notaris</option>
+  </select></div>
   </div>
   <div class="fr2">
     <div class="fg"><label>Phone</label><input id="ct-phone" value="${ct.phone||''}"></div>
@@ -2539,142 +2851,293 @@ function exportContacts(){exportXLSX([{name:'Kontak',data:DB.contacts.map(c=>({N
 // ================================================================
 function renderProducts(c){
   const ta=document.getElementById('topbar-actions');
-  ta.innerHTML=`<button class="btn btn-pri" onclick="openProduct()">+ Add Product</button><button class="btn btn-out" onclick="exportProducts()">⬇ Excel</button>`;
-  const totalVal=DB.products.reduce((s,p)=>s+p.stock*p.buyPrice,0);
-  const lowStock=DB.products.filter(p=>p.stock<=p.minStock);
+  const cats=['Semua',...new Set(DB.products.map(p=>p.category).filter(Boolean))].sort();
+  const curCat=window._prodCat||'Semua';
+  const curSearch=(window._prodSearch||'').toLowerCase();
+  ta.innerHTML=`
+    <select onchange="window._prodCat=this.value;nav('products')" style="font-size:12px;padding:5px 10px;border:1px solid var(--bdr);border-radius:6px">
+      ${cats.map(x=>`<option${x===curCat?' selected':''}>${x}</option>`).join('')}
+    </select>
+    <input id="prod-search" type="text" placeholder="Cari kode / nama..." value="${window._prodSearch||''}"
+      oninput="window._prodSearch=this.value;window._prodSearchFocus=true;nav('products')"
+      style="font-size:12px;padding:5px 10px;border:1px solid var(--bdr);border-radius:6px;width:190px">
+    <button class="btn btn-pri" onclick="openProduct()">+ Tambah Produk</button>
+    <button class="btn btn-out" onclick="openSeedConfirm()">🌱 Load Katalog AMS</button>
+    <button class="btn btn-out" onclick="exportProducts()">⬇ Excel</button>`;
+
+  const filtered=DB.products.filter(p=>{
+    if(curCat!=='Semua'&&p.category!==curCat)return false;
+    if(curSearch&&!(p.code+p.name).toLowerCase().includes(curSearch))return false;
+    return true;
+  });
+  const totalVal=filtered.reduce((s,p)=>s+(p.stock||0)*(p.buyPrice||0),0);
+  const lowStock=DB.products.filter(p=>p.minStock>0&&p.stock<=p.minStock);
+  const catGroups=[...new Set(DB.products.map(p=>p.category))];
+
   c.innerHTML=`
-  <div class="stats">
-    <div class="stat b"><div class="stat-lbl">Total Produk</div><div class="stat-val">${DB.products.length}</div></div>
+  <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+    <div class="stat b"><div class="stat-lbl">Total SKU</div><div class="stat-val">${DB.products.length}</div></div>
     <div class="stat g"><div class="stat-lbl">Inventory Value</div><div class="stat-val">${rp(totalVal)}</div></div>
-    <div class="stat ${lowStock.length?'r':'g'}"><div class="stat-lbl">Low Stock</div><div class="stat-val">${lowStock.length}</div></div>
+    <div class="stat ${lowStock.length?'r':'g'}"><div class="stat-lbl">Low Stock Alert</div><div class="stat-val">${lowStock.length}</div></div>
+    <div class="stat b"><div class="stat-lbl">Tampil (Filter)</div><div class="stat-val">${filtered.length}</div></div>
   </div>
-  ${lowStock.length?`<div class="alert a-bad">⚠️ Stok menipis: ${lowStock.map(p=>p.name).join(', ')}</div>`:''}
-  <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>Kode</th><th>Product Name</th><th>Category</th><th>Unit</th><th>Harga Beli</th><th>Harga Jual</th><th>Stock</th><th>Min Stok</th><th>Value</th><th>Action</th></tr></thead>
+  ${lowStock.length?`<div class="alert a-bad" style="margin-bottom:10px">⚠️ Low stock: ${lowStock.slice(0,5).map(p=>`<b>${p.code}</b>`).join(', ')}${lowStock.length>5?` +${lowStock.length-5} lainnya`:''}</div>`:''}
+  <div class="card"><div class="tbl-wrap"><table style="font-size:11.5px">
+    <thead><tr>
+      <th>Kode</th><th>Nama Produk</th><th>Kategori</th><th>Satuan</th>
+      <th style="text-align:right">Harga Beli</th><th style="text-align:right">Harga Jual</th>
+      <th style="text-align:right">Stok</th><th>Min</th>
+      <th style="text-align:right">Nilai</th><th>Aksi</th>
+    </tr></thead>
     <tbody>
-      ${DB.products.length?DB.products.map(p=>`<tr>
-        <td><span class="badge b-gray">${p.code}</span></td>
-        <td class="fw7">${p.name}</td>
-        <td class="muted">${p.category||'-'}</td>
-        <td>${p.unit}</td>
-        <td>${rp(p.buyPrice)}</td>
-        <td>${rp(p.sellPrice)}</td>
-        <td class="${p.stock<=p.minStock?'bad fw7':''}">${p.stock.toLocaleString('id-ID')}</td>
-        <td class="muted">${p.minStock}</td>
-        <td class="fw7">${rp(p.stock*p.buyPrice)}</td>
-        <td class="gap8"><button class="btn btn-out btn-xs" onclick="openProduct('${p.id}')">Edit</button><button class="btn btn-bad btn-xs" onclick="delProduct('${p.id}')">Delete</button></td>
-      </tr>`).join(''):`<tr><td colspan="10" class="tbl-empty">Belum ada products</td></tr>`}
+      ${filtered.length?filtered.map(p=>{
+        const isLow=p.minStock>0&&p.stock<=p.minStock;
+        const margin=p.buyPrice>0?Math.round((p.sellPrice-p.buyPrice)/p.buyPrice*100):0;
+        return`<tr>
+          <td><span class="badge b-gray" style="font-size:10px">${p.code}</span></td>
+          <td class="fw7">${p.name}${p.note?`<br><span style="font-size:9px;color:var(--muted);font-weight:400">${p.note}</span>`:''}</td>
+          <td><span class="badge b-info" style="font-size:9.5px">${p.category||'—'}</span></td>
+          <td style="color:var(--muted)">${p.unit}</td>
+          <td style="text-align:right">${rp(p.buyPrice||0)}</td>
+          <td style="text-align:right;font-weight:600">${rp(p.sellPrice||0)}${margin?`<span style="font-size:9px;color:#059669;margin-left:4px">+${margin}%</span>`:''}</td>
+          <td style="text-align:right" class="${isLow?'bad fw7':''}">${(p.stock||0).toLocaleString('id-ID')}</td>
+          <td class="muted">${p.minStock||0}</td>
+          <td style="text-align:right;font-size:10.5px">${rp((p.stock||0)*(p.buyPrice||0))}</td>
+          <td class="gap8">
+            <button class="btn btn-out btn-xs" onclick="openProduct('${p.id}')">✏️</button>
+            <button class="btn btn-bad btn-xs" onclick="delProduct('${p.id}')">✕</button>
+          </td>
+        </tr>`;
+      }).join(''):`<tr><td colspan="10" class="tbl-empty">Tidak ada produk${curCat!=='Semua'?' di kategori ini':''}. Klik "Load Katalog AMS" untuk import semua produk.</td></tr>`}
     </tbody>
   </table></div></div>`;
+  // restore search focus
+  if(window._prodSearchFocus){window._prodSearchFocus=false;setTimeout(()=>{const s=document.getElementById('prod-search');if(s){s.focus();const l=s.value.length;s.setSelectionRange(l,l);}},0);}
 }
+
+function openSeedConfirm(){
+  if(DB.products.length>0){
+    if(!confirm(`Sudah ada ${DB.products.length} produk. Lanjutkan load katalog AMS?\n\nKatalog akan MENGGANTI semua data produk yang ada!`))return;
+    DB.products=[];
+  }
+  seedAMSProducts();
+  nav('products');
+  alert(`✅ ${DB.products.length} produk berhasil dimuat dari katalog AMS!`);
+}
+
 function openProduct(id){
   const p=id?DB.products.find(x=>x.id===id):{};editId=id||null;
-  openModal(id?'Edit Product':'Add Product',`
+  const cats=['APAR','Fire Alarm','Hydrant','Sprinkler','Pump Room','Foam & Special System','PPE / Safety','Material','Services'];
+  const catOpts=cats.map(x=>`<option${x===(p.category||'')?' selected':''}>${x}</option>`).join('');
+  openModal(id?`Edit Produk — ${p.code||''}`:'Tambah Produk',`
   <div class="fr2">
-    <div class="fg"><label>Product Code</label><input id="pr-code" value="${p.code||''}"></div>
-    <div class="fg"><label>Product Name</label><input id="pr-name" value="${p.name||''}"></div>
+    <div class="fg"><label>Kode Produk</label><input id="pr-code" value="${p.code||''}" placeholder="AP001"></div>
+    <div class="fg"><label>Nama Produk</label><input id="pr-name" value="${p.name||''}"></div>
   </div>
   <div class="fr3">
-    <div class="fg"><label>Category</label><input id="pr-cat" value="${p.category||''}"></div>
-    <div class="fg"><label>Unit</label><input id="pr-unit" value="${p.unit||'pcs'}"></div>
-    <div class="fg"><label>Opening Stock</label><input type="number" id="pr-stock" value="${p.stock||0}"></div>
+    <div class="fg"><label>Kategori</label>
+      <select id="pr-cat">
+        <option value="">-- Pilih --</option>${catOpts}
+        <option${!cats.includes(p.category||'')&&p.category?' selected':''} value="${p.category||''}">Lainnya</option>
+      </select>
+    </div>
+    <div class="fg"><label>Satuan</label>
+      <select id="pr-unit">
+        ${['Unit','Set','Paket','Roll','Batang','Pcs','Jerigen','Pasang','Proyek','Kunjungan','Kontrak/Tahun','Sesi','Laporan'].map(x=>`<option${x===(p.unit||'Unit')?' selected':''}>${x}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fg"><label>Stok Awal</label><input type="number" id="pr-stock" value="${p.stock||0}" min="0"></div>
   </div>
   <div class="fr3">
-    <div class="fg"><label>Purchase Price (Rp)</label><input type="number" id="pr-buy" value="${p.buyPrice||0}"></div>
-    <div class="fg"><label>Selling Price (Rp)</label><input type="number" id="pr-sell" value="${p.sellPrice||0}"></div>
-    <div class="fg"><label>Minimum Stock</label><input type="number" id="pr-min" value="${p.minStock||0}"></div>
+    <div class="fg"><label>Harga Beli (Rp)</label><input type="number" id="pr-buy" value="${p.buyPrice||0}" oninput="calcMarginPreview()"></div>
+    <div class="fg"><label>Harga Jual Default (Rp)</label><input type="number" id="pr-sell" value="${p.sellPrice||0}" oninput="calcMarginPreview()"></div>
+    <div class="fg"><label>Stok Minimum Alert</label><input type="number" id="pr-min" value="${p.minStock||0}" min="0"></div>
   </div>
-  <div class="fg"><label>Description</label><input id="pr-note" value="${p.note||''}"></div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveProduct()">Save</button></div>`);
+  <div class="fg"><label>Deskripsi / Keterangan</label><input id="pr-note" value="${p.note||''}" placeholder="Opsional"></div>
+  <div id="prod-margin-preview" style="margin-top:6px;font-size:11.5px;padding:6px 12px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0"></div>
+  <div class="modal-ft">
+    <button class="btn btn-out" onclick="closeModal()">Batal</button>
+    <button class="btn btn-pri" onclick="saveProduct()">Simpan</button>
+  </div>`);
+  calcMarginPreview();
+}
+function calcMarginPreview(){
+  const buy=parseFloat(document.getElementById('pr-buy')?.value)||0;
+  const sell=parseFloat(document.getElementById('pr-sell')?.value)||0;
+  const el=document.getElementById('prod-margin-preview');
+  if(!el)return;
+  if(!buy&&!sell){el.textContent='';return;}
+  const margin=buy>0?Math.round((sell-buy)/buy*100):0;
+  const gp=sell-buy;
+  el.innerHTML=`Margin: <b style="color:${gp>=0?'#059669':'#dc2626'}">${margin}%</b> &nbsp;|&nbsp; Gross Profit: <b>${rp(gp)}</b>/unit`;
 }
 function saveProduct(){
   const code=v('pr-code'),name=v('pr-name'),category=v('pr-cat'),unit=v('pr-unit');
   const stock=parseFloat(v('pr-stock'))||0,buyPrice=parseFloat(v('pr-buy'))||0;
   const sellPrice=parseFloat(v('pr-sell'))||0,minStock=parseFloat(v('pr-min'))||0;
-  if(!code||!name)return alert('Code and name are required!');
-  if(editId){const p=DB.products.find(x=>x.id===editId);Object.assign(p,{code,name,category,unit,stock,buyPrice,sellPrice,minStock});}
-  else DB.products.push({id:uid(),code,name,category,unit,stock,buyPrice,sellPrice,minStock,note:v('pr-note')});
+  if(!code||!name)return alert('Kode dan nama wajib!');
+  const obj={code,name,category,unit,stock,buyPrice,sellPrice,minStock,note:v('pr-note')};
+  if(editId){const p=DB.products.find(x=>x.id===editId);if(p)Object.assign(p,obj);}
+  else DB.products.push({id:uid(),...obj});
   saveDB();closeModal();nav('products');
 }
-function delProduct(id){if(!confirm('Hapus products ini?'))return;DB.products=DB.products.filter(p=>p.id!==id);saveDB();nav('products');}
-function exportProducts(){exportXLSX([{name:'Produk',data:DB.products.map(p=>({Kode:p.code,Nama:p.name,Kategori:p.category,Satuan:p.unit,'Harga Beli':p.buyPrice,'Harga Jual':p.sellPrice,Stok:p.stock,'Min Stok':p.minStock,'Inventory Value':p.stock*p.buyPrice}))}],'products');}
+function delProduct(id){if(!confirm('Hapus produk ini?'))return;DB.products=DB.products.filter(p=>p.id!==id);saveDB();nav('products');}
+function exportProducts(){
+  const cats=[...new Set(DB.products.map(p=>p.category))].sort();
+  const sheets=cats.map(cat=>({
+    name:cat.slice(0,31),
+    data:DB.products.filter(p=>p.category===cat).map(p=>({
+      Kode:p.code,Nama:p.name,Satuan:p.unit,
+      'Harga Beli':p.buyPrice,'Harga Jual':p.sellPrice,
+      Stok:p.stock,'Min Stok':p.minStock,
+      'Margin%':p.buyPrice>0?Math.round((p.sellPrice-p.buyPrice)/p.buyPrice*100):0,
+      Deskripsi:p.note||''
+    }))
+  }));
+  sheets.unshift({name:'All Products',data:DB.products.map(p=>({
+    Kode:p.code,Nama:p.name,Kategori:p.category,Satuan:p.unit,
+    'Harga Beli':p.buyPrice,'Harga Jual':p.sellPrice,Stok:p.stock,'Min Stok':p.minStock,
+    'Inventory Value':(p.stock||0)*(p.buyPrice||0)
+  }))});
+  exportXLSX(sheets,'AMS_Products_Catalog');
+}
 
 // ================================================================
-//  INVOICES
+//  INVOICES — Flexible Pricing, Multi-Tax, Auto Summary
 // ================================================================
+
 function renderInvoices(c){
   const ta=document.getElementById('topbar-actions');
-  ta.innerHTML=`<button class="btn btn-pri" onclick="openAddInvoice()">${t('inv_create')}</button><button class="btn btn-out" onclick="exportInvoices()">⬇ Excel</button>`;
+  ta.innerHTML=`
+    <button class="btn btn-pri" onclick="openAddInvoice()">+ Buat Invoice</button>
+    <button class="btn btn-out" onclick="exportInvoices()">⬇ Excel</button>`;
   const sorted=[...DB.invoices].sort((a,b)=>new Date(b.date)-new Date(a.date));
+
   c.innerHTML=`
-  <div class="stats">
-    ${['unpaid','partial','paid','overdue'].map(s=>{const total=DB.invoices.filter(i=>invStatus(i)===s).reduce((x,i)=>x+i.total,0);const cls={unpaid:'r',partial:'y',paid:'g',overdue:'r'};return`<div class="stat ${cls[s]}"><div class="stat-lbl">${t('st_'+s)}</div><div class="stat-val">${rp(total)}</div><div class="stat-sub">${DB.invoices.filter(i=>invStatus(i)===s).length} invoice</div></div>`}).join('')}
+  <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+    ${['unpaid','partial','paid','overdue'].map(s=>{
+      const total=DB.invoices.filter(i=>invStatus(i)===s).reduce((x,i)=>x+i.total,0);
+      const cls={unpaid:'r',partial:'warn',paid:'g',overdue:'r'};
+      const lbl={unpaid:'Belum Bayar',partial:'Sebagian',paid:'Lunas',overdue:'Jatuh Tempo'};
+      return`<div class="stat ${cls[s]}"><div class="stat-lbl">${lbl[s]}</div><div class="stat-val">${rp(total)}</div><div class="stat-sub">${DB.invoices.filter(i=>invStatus(i)===s).length} invoice</div></div>`;
+    }).join('')}
   </div>
-  <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>${t('inv_no')}</th><th>${t('lbl_customer')}</th><th>${t('lbl_date')}</th><th>${t('lbl_dueDate')}</th><th>${t('lbl_total')}</th><th>${t('lbl_paid')}</th><th>${t('lbl_remaining')}</th><th>${t('lbl_status')}</th><th>${t('lbl_action')}</th></tr></thead>
+  <div class="card"><div class="tbl-wrap"><table style="font-size:11.5px">
+    <thead><tr>
+      <th>No. Invoice</th><th>Tgl</th><th>Jatuh Tempo</th><th>Customer</th>
+      <th style="text-align:right">DPP</th><th style="text-align:right">Pajak</th>
+      <th style="text-align:right">Total</th><th>Status</th><th>Aksi</th>
+    </tr></thead>
     <tbody>
       ${sorted.length?sorted.map(inv=>{
         const ct=DB.contacts.find(x=>x.id===inv.contactId);
-        const paid=invPaid(inv);const st=invStatus(inv);
+        const st=invStatus(inv);
+        const stCls={unpaid:'b-warn',confirmed:'b-info',partial:'b-purple',paid:'b-ok',overdue:'b-bad',draft:'b-gray'};
+        const stLbl={unpaid:'Belum Bayar',confirmed:'Diterbitkan',partial:'Sebagian',paid:'Lunas',overdue:'Jatuh Tempo',draft:'Draft'};
+        const taxTotal=(inv.ppnAmt||0)-(inv.pph23Amt||0)-(inv.pph4Amt||0);
         return`<tr>
-          <td class="fw7">${inv.no}</td><td>${ct?ct.name:'—'}</td>
-          <td>${fDate(inv.date)}</td><td>${fDate(inv.dueDate)}</td>
-          <td class="fw7">${rp(inv.total)}</td>
-          <td class="ok">${rp(paid)}</td>
-          <td class="${paid<inv.total?'bad fw7':''}">${rp(inv.total-paid)}</td>
-          <td>${statusBadge(st)}</td>
+          <td class="fw7"><a onclick="printInvoice('${inv.id}')" style="cursor:pointer;color:var(--acc)">${inv.no}</a></td>
+          <td>${fDate(inv.date)}</td>
+          <td style="color:${st==='overdue'?'#dc2626':'inherit'}">${fDate(inv.dueDate)}</td>
+          <td>${ct?ct.name:'<span class="muted">—</span>'}</td>
+          <td style="text-align:right">${rp(inv.dpp||inv.subtotal)}</td>
+          <td style="text-align:right;color:${taxTotal>=0?'#d97706':'#dc2626'}">${taxTotal>=0?'+':''}${rp(taxTotal)}</td>
+          <td style="text-align:right;font-weight:700">${rp(inv.total)}</td>
+          <td><span class="badge ${stCls[st]||'b-gray'}">${stLbl[st]||st}</span></td>
           <td class="gap8">
             <button class="btn btn-out btn-xs" onclick="printInvoice('${inv.id}')">👁</button>
-            ${inv.status==='draft'?`<button class="btn btn-ok btn-xs" onclick="confirmInvoice('${inv.id}')">Konfirmasi</button>`:''}
-            ${st!=='paid'&&st!=='draft'?`<button class="btn btn-pri btn-xs" onclick="openPayInvoice('${inv.id}')">Bayar</button>`:''}
+            ${inv.status==='draft'?`<button class="btn btn-acc btn-xs" onclick="confirmInvoice('${inv.id}')">✅</button>`:''}
+            ${['confirmed','unpaid','partial','overdue'].includes(inv.status)?`<button class="btn btn-ok btn-xs" onclick="openPayInvoice('${inv.id}')">💰</button>`:''}
             <button class="btn btn-bad btn-xs" onclick="delInvoice('${inv.id}')">✕</button>
           </td>
-        </tr>`;}).join(''):`<tr><td colspan="9" class="tbl-empty">No invoices yet</td></tr>`}
+        </tr>`;
+      }).join(''):`<tr><td colspan="9" class="tbl-empty">Belum ada invoice.</td></tr>`}
     </tbody>
   </table></div></div>`;
 }
 
-let invItemCount=1;
+let invItemCount=0;
+
 function openAddInvoice(){
   invItemCount=1;
+  const tx=DB.taxSettings||{ppnRate:11,pph23Rate:2,pph4Rate:2};
   const no='INV-'+today().replace(/-/g,'')+'-'+(DB.invoices.length+1).toString().padStart(3,'0');
-  openModal('Create New Invoice',`
+  openModal('Buat Invoice Baru',`
   <div class="fr3">
-    <div class="fg"><label>Invoice No</label><input id="inv-no" value="${no}"></div>
-    <div class="fg"><label>Date</label><input type="date" id="inv-date" value="${today()}"></div>
-    <div class="fg"><label>Due Date</label><input type="date" id="inv-due" value="${addDays(today(),30)}"></div>
+    <div class="fg"><label>No. Invoice</label><input id="inv-no" value="${no}"></div>
+    <div class="fg"><label>Tanggal Invoice</label><input type="date" id="inv-date" value="${today()}"></div>
+    <div class="fg"><label>Jatuh Tempo</label><input type="date" id="inv-due" value="${addDays(today(),30)}"></div>
   </div>
   <div class="fr2">
-    <div class="fg"><label>Customer</label><select id="inv-contact"><option value="">— Pilih Customer —</option>${contactOptions('customer')}</select></div>
-    <div class="fg"><label>Receiving Account</label><select id="inv-bank">${acctOptions(['aktiva'])}</select></div>
+    <div class="fg"><label>Customer</label>
+      <select id="inv-contact"><option value="">— Pilih Customer —</option>${contactOptions('customer')}</select>
+    </div>
+    <div class="fg"><label>Akun Penerimaan</label><select id="inv-bank">${acctOptions(['aktiva'])}</select></div>
   </div>
-  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:10px 0 6px">Item / Barang & Jasa</div>
-  <div style="display:grid;grid-template-columns:2fr 60px 110px 80px 100px 28px;gap:6px;margin-bottom:4px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">
-    <div>Produk / Deskripsi</div><div>Qty</div><div>Harga Satuan</div><div>Diskon%</div><div>Subtotal</div><div></div>
+  <div style="margin:12px 0 4px;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Detail Item / Barang & Jasa</div>
+  <div style="display:grid;grid-template-columns:2fr 55px 105px 90px 75px 90px 26px;gap:4px;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;padding:0 2px">
+    <div>Produk / Deskripsi</div><div style="text-align:center">Qty</div><div style="text-align:right">Harga Jual</div>
+    <div style="text-align:center;color:#059669">Diskon Rp</div><div style="text-align:center;color:#059669">Disc %</div>
+    <div style="text-align:right">Subtotal</div><div></div>
   </div>
   <div id="inv-items">${invItemRow(0)}</div>
-  <button class="btn btn-out btn-sm mt12" onclick="addInvRow()">+ Tambah Baris</button>
-  <div class="fr2 mt12">
+  <button class="btn btn-out btn-sm" style="margin-top:8px" onclick="addInvRow()">+ Tambah Baris</button>
+  <div class="fr2" style="margin-top:14px;gap:14px;align-items:flex-start">
     <div>
-      <div class="fg"><label>Notes</label><textarea id="inv-note" rows="2" style="resize:none"></textarea></div>
-      <div class="fg"><label><input type="checkbox" id="inv-ppn" onchange="calcInvTotals()"> Apply VAT 11%</label></div>
+      <div class="fg" style="margin-bottom:10px"><label>Catatan / Notes</label>
+        <textarea id="inv-note" rows="3" style="resize:none;width:100%;font-size:11px;padding:6px;border:1px solid var(--bdr);border-radius:6px;font-family:var(--font)"></textarea>
+      </div>
+      <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:.5px">Pajak / Tax</div>
+      ${[
+        ['inv-ppn','inv-ppn-rate',tx.ppnRate,'PPN','b-warn','inv-ppn-amt','#d97706'],
+        ['inv-pph23','inv-pph23-rate',tx.pph23Rate,'PPh 23 (dipotong customer)','b-bad','inv-pph23-amt','#dc2626'],
+        ['inv-pph4','inv-pph4-rate',tx.pph4Rate,'PPh 4(2)','b-bad','inv-pph4-amt','#dc2626'],
+      ].map(([cid,rid,rate,lbl,badge,amtId,col])=>`
+      <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;cursor:pointer;padding:5px 0;border-bottom:1px solid #f1f5f9">
+        <input type="checkbox" id="${cid}" onchange="calcInvTotals()">
+        <span>${lbl}</span>
+        <input type="number" id="${rid}" value="${rate}" min="0" max="100" step="0.1"
+          style="width:48px;padding:2px 6px;border:1px solid var(--bdr);border-radius:4px;font-size:11px;text-align:center"
+          oninput="calcInvTotals()">%
+        <span id="${amtId}" style="margin-left:auto;color:${col};font-weight:600;font-size:11px">Rp 0</span>
+      </label>`).join('')}
     </div>
-    <div style="margin-top:8px">
-      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px;border-bottom:1px solid #f1f5f9"><span>Subtotal</span><span id="inv-sub">Rp 0</span></div>
-      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px;border-bottom:1px solid #f1f5f9"><span>PPN (11%)</span><span id="inv-ppnamt">Rp 0</span></div>
-      <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:14px;font-weight:800;border-top:2px solid #000;margin-top:4px"><span>TOTAL</span><span id="inv-total">Rp 0</span></div>
+    <div style="min-width:272px;background:#f8fafc;border-radius:10px;border:1px solid var(--bdr);padding:14px;font-size:12px">
+      <div style="font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px;letter-spacing:.5px">Ringkasan / Summary</div>
+      ${[
+        ['inv-s-sub','Subtotal',''],
+        ['inv-s-disc','Total Diskon','color:#059669'],
+        ['inv-s-dpp','DPP','font-weight:700;border-bottom:1px solid var(--bdr);padding-bottom:6px'],
+        ['inv-s-ppn','PPN','color:#d97706'],
+        ['inv-s-p23','PPh 23 (kurang penerimaan)','color:#dc2626'],
+        ['inv-s-p4','PPh 4(2)','color:#dc2626'],
+      ].map(([id,lbl,style])=>`
+      <div style="display:flex;justify-content:space-between;padding:4px 0;${style}">
+        <span style="color:#475569">${lbl}</span><span id="${id}" style="font-weight:600">Rp 0</span>
+      </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:2px solid #0f172a;margin-top:6px;font-size:14px;font-weight:800">
+        <span>TOTAL TAGIHAN</span><span id="inv-s-total" style="color:#E8510A">Rp 0</span>
+      </div>
     </div>
   </div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-out" onclick="saveInvoice('draft')">Save Draft</button><button class="btn btn-pri" onclick="saveInvoice('confirm')">Confirm & Issue</button></div>`,'modal-lg');
+  <div class="modal-ft">
+    <button class="btn btn-out" onclick="closeModal()">Batal</button>
+    <button class="btn btn-out" onclick="saveInvoice('draft')">💾 Draft</button>
+    <button class="btn btn-pri" onclick="saveInvoice('confirm')">✅ Terbitkan</button>
+  </div>`,'modal-wide');
+  calcInvTotals();
 }
 
 function invItemRow(i){
-  return`<div class="inv-row" id="invr-${i}">
-    <select onchange="fillInvProduct(${i},this)"><option value="">— Ketik manual / pilih products —</option>${productOptions()}</select>
-    <input type="number" value="1" min="0.01" step="any" oninput="calcInvTotals()" style="text-align:center">
-    <input type="number" value="0" min="0" oninput="calcInvTotals()" style="text-align:right">
-    <input type="number" value="0" min="0" max="100" oninput="calcInvTotals()" style="text-align:center">
-    <input type="number" value="0" readonly style="text-align:right;background:#f8fafc">
+  return`<div class="inv-row" id="invr-${i}" style="display:grid;grid-template-columns:2fr 55px 105px 90px 75px 90px 26px;gap:4px;margin-bottom:4px;align-items:center">
+    <select style="font-size:11px;padding:3px 6px;border:1px solid var(--bdr);border-radius:5px" onchange="fillInvProduct(${i},this)">
+      <option value="">— Produk / manual —</option>${productOptions()}
+    </select>
+    <input type="number" value="1" min="0.01" step="any" oninput="calcInvTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
+    <input type="number" value="0" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px" placeholder="Harga">
+    <input type="number" value="0" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;color:#059669" placeholder="Disc Rp" title="Diskon nominal">
+    <input type="number" value="0" min="0" max="100" step="0.1" oninput="calcInvTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;color:#059669" placeholder="%" title="Diskon %">
+    <input type="number" value="0" readonly style="text-align:right;padding:3px 5px;border:1px solid #e2e8f0;border-radius:5px;background:#f8fafc;font-weight:600">
     <button class="btn btn-bad btn-xs" onclick="removeInvRow(${i})">✕</button>
   </div>`;
 }
@@ -2684,42 +3147,73 @@ function fillInvProduct(i,sel){
   const p=DB.products.find(x=>x.id===sel.value);if(!p)return;
   const row=document.getElementById('invr-'+i);if(!row)return;
   const ins=row.querySelectorAll('input[type=number]');
-  ins[1].value=p.sellPrice;calcInvTotals();
+  ins[1].value=p.sellPrice||0;ins[2].value=0;ins[3].value=0;
+  calcInvTotals();
 }
 function calcInvTotals(){
-  let sub=0;
+  let subtotal=0,totalDisc=0;
   document.querySelectorAll('#inv-items .inv-row').forEach(row=>{
     const ins=row.querySelectorAll('input[type=number]');
-    const qty=parseFloat(ins[0].value)||0,price=parseFloat(ins[1].value)||0,disc=parseFloat(ins[2].value)||0;
-    const tot=qty*price*(1-disc/100);
-    ins[3].value=Math.round(tot);sub+=tot;
+    const qty=parseFloat(ins[0].value)||0,price=parseFloat(ins[1].value)||0;
+    const discRp=parseFloat(ins[2].value)||0,discPct=parseFloat(ins[3].value)||0;
+    const line=qty*price;
+    const disc=Math.min(line,discRp+Math.round((line-discRp)*discPct/100));
+    const net=Math.max(0,line-disc);
+    ins[4].value=Math.round(net);
+    subtotal+=line;totalDisc+=disc;
   });
-  const hasPPN=document.getElementById('inv-ppn')?.checked;
-  const ppnAmt=hasPPN?Math.round(sub*0.11):0;
-  const total=sub+ppnAmt;
-  if(document.getElementById('inv-sub'))document.getElementById('inv-sub').textContent=rp(sub);
-  if(document.getElementById('inv-ppnamt'))document.getElementById('inv-ppnamt').textContent=rp(ppnAmt);
-  if(document.getElementById('inv-total'))document.getElementById('inv-total').textContent=rp(total);
+  const dpp=Math.max(0,subtotal-totalDisc);
+  const ppnRate=parseFloat(document.getElementById('inv-ppn-rate')?.value)||11;
+  const pph23Rate=parseFloat(document.getElementById('inv-pph23-rate')?.value)||2;
+  const pph4Rate=parseFloat(document.getElementById('inv-pph4-rate')?.value)||2;
+  const ppn=document.getElementById('inv-ppn')?.checked?Math.round(dpp*ppnRate/100):0;
+  const pph23=document.getElementById('inv-pph23')?.checked?Math.round(dpp*pph23Rate/100):0;
+  const pph4=document.getElementById('inv-pph4')?.checked?Math.round(dpp*pph4Rate/100):0;
+  const total=dpp+ppn-pph23-pph4;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v<0?`-${rp(-v)}`:rp(v);};
+  set('inv-s-sub',subtotal);set('inv-s-disc',-totalDisc);set('inv-s-dpp',dpp);
+  set('inv-s-ppn',ppn);set('inv-s-p23',-pph23);set('inv-s-p4',-pph4);set('inv-s-total',total);
+  if(document.getElementById('inv-ppn-amt'))document.getElementById('inv-ppn-amt').textContent=rp(ppn);
+  if(document.getElementById('inv-pph23-amt'))document.getElementById('inv-pph23-amt').textContent=rp(pph23);
+  if(document.getElementById('inv-pph4-amt'))document.getElementById('inv-pph4-amt').textContent=rp(pph4);
 }
 function saveInvoice(action){
   const no=v('inv-no'),date=v('inv-date'),dueDate=v('inv-due'),contactId=v('inv-contact'),bankAcc=v('inv-bank');
-  if(!no||!date)return alert('Invoice No dan tanggal wajib diisi!');
-  // 🔒 lock check hanya saat konfirmasi — draft boleh kapan saja
+  if(!no||!date)return alert('No. Invoice dan tanggal wajib!');
   if(action==='confirm'&&!checkLock(date))return;
-  const items=[];let sub=0;
+  const items=[];let subtotal=0,totalDisc=0;
   document.querySelectorAll('#inv-items .inv-row').forEach(row=>{
     const sel=row.querySelector('select');
     const ins=row.querySelectorAll('input[type=number]');
-    const qty=parseFloat(ins[0].value)||0,price=parseFloat(ins[1].value)||0,disc=parseFloat(ins[2].value)||0;
-    if(qty&&price){const tot=qty*price*(1-disc/100);items.push({productId:sel.value||null,qty,price,discount:disc,subtotal:Math.round(tot)});sub+=tot;}
+    const qty=parseFloat(ins[0].value)||0,price=parseFloat(ins[1].value)||0;
+    const discRp=parseFloat(ins[2].value)||0,discPct=parseFloat(ins[3].value)||0;
+    if(qty&&price>0){
+      const line=qty*price;
+      const disc=Math.min(line,discRp+Math.round((line-discRp)*discPct/100));
+      const net=Math.max(0,Math.round(line-disc));
+      items.push({productId:sel.value||null,qty,price,discRp,discPct,discount:discPct,subtotal:net});
+      subtotal+=line;totalDisc+=disc;
+    }
   });
-  if(!items.length)return alert('Add at least 1 item!');
+  if(!items.length)return alert('Tambah minimal 1 item!');
+  const dpp=Math.max(0,subtotal-totalDisc);
+  const ppnRate=parseFloat(v('inv-ppn-rate'))||11;
+  const pph23Rate=parseFloat(v('inv-pph23-rate'))||2;
+  const pph4Rate=parseFloat(v('inv-pph4-rate'))||2;
   const hasPPN=document.getElementById('inv-ppn').checked;
-  const ppnAmt=hasPPN?Math.round(sub*0.11):0;
-  const total=Math.round(sub)+ppnAmt;
-  const inv={id:uid(),no,date,dueDate,contactId,bankAcc,items,subtotal:Math.round(sub),ppn:hasPPN,ppnAmt,total,note:v('inv-note'),status:'draft',payments:[]};
+  const hasPPh23=document.getElementById('inv-pph23').checked;
+  const hasPPh4=document.getElementById('inv-pph4').checked;
+  const ppnAmt=hasPPN?Math.round(dpp*ppnRate/100):0;
+  const pph23Amt=hasPPh23?Math.round(dpp*pph23Rate/100):0;
+  const pph4Amt=hasPPh4?Math.round(dpp*pph4Rate/100):0;
+  const total=dpp+ppnAmt-pph23Amt-pph4Amt;
+  const inv={id:uid(),no,date,dueDate,contactId,bankAcc,items,
+    subtotal:Math.round(subtotal),discTotal:Math.round(totalDisc),dpp:Math.round(dpp),
+    ppn:hasPPN,ppnRate,ppnAmt,pph23:hasPPh23,pph23Rate,pph23Amt,
+    pph4:hasPPh4,pph4Rate,pph4Amt,total:Math.round(total),
+    note:v('inv-note'),status:'draft',payments:[]};
   DB.invoices.push(inv);
-  if(action==='confirm'){_confirmInvoice(inv);logAudit('Buat Invoice',`Invoice ${inv.no} - Total: ${rp(inv.total)}`);}
+  if(action==='confirm'){_confirmInvoice(inv);logAudit('Buat Invoice',`${inv.no} — Total: ${rp(inv.total)}`);}
   saveDB();closeModal();nav('invoices');
 }
 function confirmInvoice(id){
@@ -2728,113 +3222,151 @@ function confirmInvoice(id){
   _confirmInvoice(inv);saveDB();nav('invoices');
 }
 function _confirmInvoice(inv){
-  // Update stock
   inv.items.forEach(item=>{
-    if(item.productId){const p=DB.products.find(x=>x.id===item.productId);if(p)p.stock=Math.max(0,p.stock-item.qty);}
+    if(item.productId){const p=DB.products.find(x=>x.id===item.productId);if(p)p.stock=Math.max(0,(p.stock||0)-item.qty);}
   });
-  // Journal: Dr Piutang, Cr Revenue (+VAT Output)
   const entries=[{acc:'1201',deb:inv.total,crd:0}];
-  entries.push({acc:'4101',deb:0,crd:inv.subtotal});
+  entries.push({acc:'4101',deb:0,crd:inv.dpp||inv.subtotal});
   if(inv.ppn)entries.push({acc:'2105',deb:0,crd:inv.ppnAmt});
+  if(inv.pph23)entries.push({acc:'2114',deb:0,crd:inv.pph23Amt});
+  if(inv.pph4)entries.push({acc:'2112',deb:0,crd:inv.pph4Amt});
   DB.transactions.push({id:uid(),date:inv.date,ref:inv.no,desc:`Invoice ${inv.no}`,entries});
-  logBackdateIfNeeded(inv.date, inv.no, `Invoice ${inv.no}`); // 🕐 backdate check
+  logBackdateIfNeeded(inv.date,inv.no,`Invoice ${inv.no}`);
   inv.status='confirmed';
 }
 function openPayInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);if(!inv)return;
   const remaining=inv.total-invPaid(inv);
   openModal(`Record Payment — ${inv.no}`,`
-  <div class="alert a-info">Outstanding balance: <b>${rp(remaining)}</b></div>
+  <div class="alert a-info">Total: <b>${rp(inv.total)}</b> &nbsp;|&nbsp; Sudah Bayar: <b>${rp(invPaid(inv))}</b> &nbsp;|&nbsp; Sisa: <b style="color:#dc2626">${rp(remaining)}</b></div>
   <div class="fr2">
-    <div class="fg"><label>Payment Date</label><input type="date" id="pay-date" value="${today()}"></div>
-    <div class="fg"><label>Payment Amount (Rp)</label><input type="number" id="pay-amt" value="${remaining}" min="0"></div>
+    <div class="fg"><label>Tanggal Bayar</label><input type="date" id="pay-date" value="${today()}"></div>
+    <div class="fg"><label>Jumlah (Rp)</label><input type="number" id="pay-amt" value="${remaining}" min="0"></div>
   </div>
-  <div class="fg"><label>Via Account</label><select id="pay-bank">${acctOptions(['aktiva'])}</select></div>
-  <div class="fg"><label>Notes</label><input id="pay-note" placeholder="Opsional"></div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-ok" onclick="saveInvPayment('${id}')">Record Payment</button></div>`);
+  <div class="fg"><label>Via Akun</label><select id="pay-bank">${acctOptions(['aktiva'])}</select></div>
+  <div class="fg"><label>Keterangan</label><input id="pay-note" placeholder="Opsional"></div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Batal</button><button class="btn btn-ok" onclick="saveInvPayment('${id}')">Simpan</button></div>`);
 }
 function saveInvPayment(id){
   const inv=DB.invoices.find(x=>x.id===id);if(!inv)return;
   const date=v('pay-date'),amount=parseFloat(v('pay-amt'))||0,bankAcc=v('pay-bank');
-  if(!amount)return alert('Jumlah bayar wajib diisi!');
-  if(!checkLock(date))return; // 🔒 lock check
+  if(!amount)return alert('Jumlah wajib!');
+  if(!checkLock(date))return;
   const remaining=inv.total-invPaid(inv);
-  if(amount>remaining+0.01)return alert(`Amount exceeds outstanding balance (${rp(remaining)})`);
+  if(amount>remaining+0.01)return alert(`Melebihi sisa: ${rp(remaining)}`);
   inv.payments.push({id:uid(),date,amount,bankAcc,note:v('pay-note')});
-  // Journal: Dr Bank, Cr Piutang
   DB.transactions.push({id:uid(),date,ref:inv.no,desc:`Pembayaran Invoice ${inv.no}`,entries:[{acc:bankAcc,deb:amount,crd:0},{acc:'1201',deb:0,crd:amount}]});
-  logBackdateIfNeeded(date, inv.no, `Pembayaran Invoice ${inv.no}`); // 🕐 backdate check
+  logBackdateIfNeeded(date,inv.no,`Pembayaran ${inv.no}`);
   saveDB();closeModal();nav('invoices');
 }
 function delInvoice(id){
-  if(!confirm('Delete this invoice? Related journal entries will also be deleted.'))return;
+  if(!confirm('Hapus invoice? Jurnal terkait juga dihapus.'))return;
   const inv=DB.invoices.find(x=>x.id===id);
-  if(inv&&!checkLock(inv.date))return; // 🔒 lock check
+  if(inv&&!checkLock(inv.date))return;
   if(inv){
     DB.transactions=DB.transactions.filter(t=>t.ref!==inv.no);
-    if(inv.status!=='draft')inv.items.forEach(item=>{if(item.productId){const p=DB.products.find(x=>x.id===item.productId);if(p)p.stock+=item.qty;}});
+    if(inv.status!=='draft')inv.items.forEach(item=>{if(item.productId){const p=DB.products.find(x=>x.id===item.productId);if(p)p.stock=(p.stock||0)+item.qty;}});
   }
-  DB.invoices=DB.invoices.filter(x=>x.id!==id);saveDB();logAudit('Hapus Invoice',`Invoice ${inv?inv.no:id} dihapus`);nav('invoices');
+  DB.invoices=DB.invoices.filter(x=>x.id!==id);
+  saveDB();logAudit('Hapus Invoice',`Invoice ${inv?inv.no:id} dihapus`);nav('invoices');
+}
+function buildInvTaxLines(inv){
+  return[
+    inv.ppn?`<tr><td style="padding:4px 0;color:#475569">PPN ${inv.ppnRate}%</td><td style="text-align:right;color:#d97706;font-weight:600">+${rp(inv.ppnAmt)}</td></tr>`:'',
+    inv.pph23?`<tr><td style="padding:4px 0;color:#475569">PPh 23 ${inv.pph23Rate}% (dipotong)</td><td style="text-align:right;color:#dc2626;font-weight:600">-${rp(inv.pph23Amt)}</td></tr>`:'',
+    inv.pph4?`<tr><td style="padding:4px 0;color:#475569">PPh 4(2) ${inv.pph4Rate}%</td><td style="text-align:right;color:#dc2626;font-weight:600">-${rp(inv.pph4Amt)}</td></tr>`:'',
+  ].filter(Boolean).join('');
 }
 function printInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);if(!inv)return;
   const co=DB.company;const ct=DB.contacts.find(x=>x.id===inv.contactId);
-  const logo=co.logo?`<img src="${co.logo}" style="width:52px;height:52px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.15);">`:'';
-  const paid=invPaid(inv);
-  openModal(`Invoice ${inv.no}`,`
-  <div class="inv-print">
-    <div class="inv-print-hd">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div style="display:flex;align-items:center;gap:14px">
-          ${co.logo?`<img src="${co.logo}" style="width:64px;height:64px;object-fit:contain;border-radius:12px;background:white;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.2);">`:'<div style="width:64px;height:64px;border-radius:12px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:28px">🏢</div>'}
-          <div>
-            <div style="font-size:22px;font-weight:800;letter-spacing:-.5px">${co.name}</div>
-            <div style="opacity:.8;font-size:11px;margin-top:3px">📍 ${co.address}</div>
-            <div style="opacity:.8;font-size:11px;margin-top:1px">📞 ${co.phone} &nbsp;|&nbsp; ✉️ ${co.email}</div>
-            <div style="opacity:.7;font-size:10px;margin-top:1px">Tax ID: ${co.npwp}</div>
-          </div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:32px;font-weight:900;letter-spacing:3px;opacity:.95">INVOICE</div>
-          <div style="font-size:13px;opacity:.85;margin-top:2px">${inv.no}</div>
-          <div style="margin-top:6px">${statusBadge(invStatus(inv))}</div>
-        </div>
+  const logo=co.logo?`<img src="${co.logo}" style="height:50px;object-fit:contain;border-radius:6px;background:rgba(255,255,255,.12);padding:4px">`:'<span style="font-size:26px">🔥</span>';
+  const paid=invPaid(inv);const rem=inv.total-paid;
+  const taxLines=buildInvTaxLines(inv);
+  const itemRows=inv.items.map((item,i)=>{
+    const p=DB.products.find(x=>x.id===item.productId);
+    const name=p?`[${p.code}] ${p.name}`:(item.desc||'Item');
+    const discAmt=(item.discRp||0)+Math.round((item.qty*item.price-(item.discRp||0))*(item.discPct||item.discount||0)/100);
+    return`<tr style="background:${i%2?'#f9fafb':'#fff'}">
+      <td style="padding:7px 10px;color:#64748b;font-size:11px">${i+1}</td>
+      <td style="padding:7px 10px;font-size:11.5px;font-weight:600">${name}</td>
+      <td style="padding:7px 10px;text-align:center;font-size:11.5px">${item.qty}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:11.5px">${rp(item.price)}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:11px;color:#059669">${discAmt?'-'+rp(discAmt):'—'}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:11.5px;font-weight:700">${rp(item.subtotal)}</td>
+    </tr>`;}).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Invoice ${inv.no}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;background:#f8fafc;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wrap{max-width:800px;margin:16px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+  table{width:100%;border-collapse:collapse}
+  @media print{@page{size:A4;margin:10mm}body{background:#fff}.wrap{margin:0;border-radius:0;box-shadow:none}}</style>
+  </head><body><div class="wrap">
+  <div style="background:linear-gradient(135deg,#E8510A,#0f172a);color:#fff;padding:20px 28px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div style="display:flex;align-items:center;gap:12px">
+        ${logo}
+        <div><div style="font-size:15px;font-weight:800">${co.name}</div>
+        <div style="font-size:9px;opacity:.7;line-height:1.7">${co.address||''}<br>${co.phone||''} | ${co.email||''}</div>
+        ${co.npwp?`<div style="font-size:9px;opacity:.6">NPWP: ${co.npwp}</div>`:''}</div>
       </div>
-    </div>
-    <div class="inv-print-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
-        <div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Tagihan Kepada</div><div class="fw7">${ct?ct.name:'—'}</div>${ct?`<div class="muted" style="font-size:12px">${ct.address||''}</div><div class="muted" style="font-size:12px">${ct.phone||''}</div><div class="muted" style="font-size:12px">NPWP: ${ct.npwp||'-'}</div>`:''}</div>
-        <div style="text-align:right"><div style="margin-bottom:4px"><span class="muted" style="font-size:12px">Tanggal: </span><span class="fw7">${fDate(inv.date)}</span></div><div><span class="muted" style="font-size:12px">Due Date: </span><span class="fw7 ${isOverdue(inv.dueDate)?'bad':''}">${fDate(inv.dueDate)}</span></div></div>
-      </div>
-      <table class="inv-items" style="width:100%;border-collapse:collapse;margin-bottom:12px">
-        <thead><tr><th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">#</th><th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">Deskripsi</th><th style="padding:8px;text-align:right;border-bottom:2px solid #e2e8f0">Qty</th><th style="padding:8px;text-align:right;border-bottom:2px solid #e2e8f0">Harga</th><th style="padding:8px;text-align:right;border-bottom:2px solid #e2e8f0">Diskon</th><th style="padding:8px;text-align:right;border-bottom:2px solid #e2e8f0">Subtotal</th></tr></thead>
-        <tbody>
-          ${inv.items.map((item,i)=>{const p=DB.products.find(x=>x.id===item.productId);return`<tr><td style="padding:7px 8px;border-bottom:1px solid #f1f5f9">${i+1}</td><td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;font-weight:600">${p?p.name:'Jasa / Item Manual'}</td><td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;text-align:right">${item.qty}</td><td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;text-align:right">${rp(item.price)}</td><td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;text-align:right">${item.discount}%</td><td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700">${rp(item.subtotal)}</td></tr>`;}).join('')}
-        </tbody>
-      </table>
-      <div class="inv-summary">
-        <div class="inv-sum-row"><span>Subtotal</span><span>${rp(inv.subtotal)}</span></div>
-        ${inv.ppn?`<div class="inv-sum-row"><span>PPN (11%)</span><span>${rp(inv.ppnAmt)}</span></div>`:''}
-        <div class="inv-sum-total"><span>TOTAL</span><span>${rp(inv.total)}</span></div>
-        ${paid>0?`<div class="inv-sum-row ok"><span>Sudah Dibayar</span><span>${rp(paid)}</span></div><div class="inv-sum-row bad fw7"><span>Sisa Tagihan</span><span>${rp(inv.total-paid)}</span></div>`:''}
-      </div>
-      ${inv.note?`<div style="margin-top:16px;padding:10px 12px;background:#f8fafc;border-radius:6px;font-size:12px"><b>Notes:</b> ${inv.note}</div>`:''}
-      <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:center;font-size:12px">
-        <div><div style="border-top:1px solid #000;padding-top:5px;margin-top:44px">${ct?ct.name:'Customer'}</div></div>
-        <div><div style="border-top:1px solid #000;padding-top:5px;margin-top:44px">${co.name}</div></div>
+      <div style="text-align:right">
+        <div style="font-size:8px;letter-spacing:2px;opacity:.5;text-transform:uppercase">INVOICE / FAKTUR</div>
+        <div style="font-size:22px;font-weight:900;color:#FBBF24">${inv.no}</div>
+        <div style="font-size:9px;opacity:.7">Tgl: ${fDate(inv.date)} | Tempo: ${fDate(inv.dueDate)}</div>
       </div>
     </div>
   </div>
-  <div class="modal-ft no-print"><button class="btn btn-out" onclick="closeModal()">Close</button><button class="btn btn-pri" onclick="window.print()">🖨 Print</button></div>`,'modal-xl');
+  <div style="padding:12px 28px;background:#f8fafc;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0">
+    <div><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700">Bill To</div>
+    <div style="font-size:14px;font-weight:800">${ct?ct.name:'—'}</div>
+    <div style="font-size:10.5px;color:#475569">${ct?[ct.address,ct.phone,ct.npwp?'NPWP: '+ct.npwp:''].filter(Boolean).join(' | '):''}</div></div>
+    <div style="padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;background:${rem<=0?'#dcfce7':rem<inv.total?'#fef9c3':'#fee2e2'};color:${rem<=0?'#15803d':rem<inv.total?'#92400e':'#b91c1c'}">
+      ${rem<=0?'✅ LUNAS':rem<inv.total?'⚠️ SEBAGIAN':'⏳ BELUM BAYAR'}
+    </div>
+  </div>
+  <div style="padding:16px 28px">
+    <table><thead><tr style="background:#0f172a;color:#fff">
+      <th style="padding:8px 10px;text-align:left;font-size:10px">#</th>
+      <th style="padding:8px 10px;text-align:left;font-size:10px">Deskripsi</th>
+      <th style="padding:8px 10px;text-align:center;font-size:10px">Qty</th>
+      <th style="padding:8px 10px;text-align:right;font-size:10px">Harga Satuan</th>
+      <th style="padding:8px 10px;text-align:right;font-size:10px">Diskon</th>
+      <th style="padding:8px 10px;text-align:right;font-size:10px">Subtotal</th>
+    </tr></thead><tbody>${itemRows}</tbody></table>
+  </div>
+  <div style="padding:0 28px 20px;display:flex;justify-content:flex-end">
+    <table style="width:280px;font-size:12px">
+      <tr><td style="padding:4px 0;color:#475569">Subtotal</td><td style="text-align:right">${rp(inv.subtotal)}</td></tr>
+      ${(inv.discTotal||0)>0?`<tr><td style="color:#059669">Diskon</td><td style="text-align:right;color:#059669">-${rp(inv.discTotal)}</td></tr>`:''}
+      <tr><td style="font-weight:700">DPP</td><td style="text-align:right;font-weight:700">${rp(inv.dpp||inv.subtotal)}</td></tr>
+      ${taxLines}
+      <tr><td colspan="2" style="border-top:2px solid #000;padding-top:4px"></td></tr>
+      <tr><td style="font-size:14px;font-weight:900">TOTAL TAGIHAN</td><td style="text-align:right;font-size:14px;font-weight:900;color:#E8510A">${rp(inv.total)}</td></tr>
+      ${paid>0?`<tr><td style="color:#059669">Terbayar</td><td style="text-align:right;color:#059669">-${rp(paid)}</td></tr>
+      <tr><td style="font-weight:700;color:${rem>0?'#dc2626':'#059669'}">Sisa Tagihan</td><td style="text-align:right;font-weight:700;color:${rem>0?'#dc2626':'#059669'}">${rp(rem)}</td></tr>`:''}
+    </table>
+  </div>
+  ${inv.note?`<div style="padding:10px 28px;background:#fef9c3;font-size:11.5px;border-top:1px solid #fde68a"><b>Catatan:</b> ${inv.note}</div>`:''}
+  <div style="padding:10px 28px 14px;font-size:9px;color:#94a3b8;border-top:1px solid #f1f5f9">
+    Dokumen ini diterbitkan secara elektronik. | ${co.name} — ${co.email||''} | ${co.phone||''}
+  </div>
+  </div><script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`;
+
+  const w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+  else alert('Pop-up diblokir browser. Aktifkan pop-up untuk print.');
 }
 function exportInvoices(){
-  const rows=DB.invoices.map(inv=>{const ct=DB.contacts.find(x=>x.id===inv.contactId);return{'No':inv.no,'Customer':ct?ct.name:'','Tanggal':inv.date,'Due Date':inv.dueDate,'Subtotal':inv.subtotal,'PPN':inv.ppnAmt||0,'Total':inv.total,'Terbayar':invPaid(inv),'Sisa':inv.total-invPaid(inv),'Status':invStatus(inv)};});
-  exportXLSX([{name:'Invoice',data:rows}],'invoice');
+  const rows=DB.invoices.map(inv=>{const ct=DB.contacts.find(x=>x.id===inv.contactId);return{
+    'No Invoice':inv.no,Tanggal:inv.date,'Jatuh Tempo':inv.dueDate,Customer:ct?ct.name:'',Status:invStatus(inv),
+    Subtotal:inv.subtotal,Diskon:inv.discTotal||0,DPP:inv.dpp||inv.subtotal,
+    PPN:inv.ppnAmt||0,'PPh 23':inv.pph23Amt||0,'PPh 4(2)':inv.pph4Amt||0,
+    Total:inv.total,'Sudah Bayar':invPaid(inv),Sisa:inv.total-invPaid(inv)};});
+  exportXLSX([{name:'Invoices',data:rows}],'invoices');
 }
 
-// ================================================================
-//  AR
-// ================================================================
 function renderAR(c){
   const open=DB.invoices.filter(i=>invStatus(i)!=='paid'&&i.status!=='draft');
   const totalAR=open.reduce((s,i)=>s+i.total-invPaid(i),0);
@@ -3118,14 +3650,21 @@ function renderJournal(c){
     <button class="btn btn-bad" id="btn-bulk-del" style="display:none" onclick="bulkDeleteJournals()">🗑 Delete Selected (<span id="sel-count">0</span>)</button>
     <button class="btn btn-out" onclick="exportJurnal()">⬇ Excel (All)</button>
     <button class="btn btn-out" onclick="exportJurnalByMonth()">⬇ Excel (Per Month)</button>
+    <button class="btn btn-out" onclick="exportJurnalPDF()" style="background:#ef4444;color:#fff;border-color:#ef4444">⬇ PDF</button>
     ${_hasCR?'<button class="btn btn-bad" onclick="undoCashReportImport()">🗑 Delete Cash Report Import</button>':''}`;
 
   // Get available months from transactions
   const allMonths=[...new Set(DB.transactions.map(t=>t.date?t.date.slice(0,7):null).filter(Boolean))].sort().reverse();
   const curFilter=window._journalMonthFilter||'all';
+  const curSearch=(window._journalSearch||'').toLowerCase().trim();
 
   const sorted=[...DB.transactions]
-    .filter(t=>curFilter==='all'||t.date&&t.date.startsWith(curFilter))
+    .filter(t=>{
+      if(curFilter!=='all'&&(!t.date||!t.date.startsWith(curFilter)))return false;
+      if(!curSearch)return true;
+      const accMatch=t.entries.some(e=>{const a=DB.accounts.find(x=>x.id===e.acc);return a&&(a.name.toLowerCase().includes(curSearch)||a.code.toLowerCase().includes(curSearch));});
+      return (t.ref||'').toLowerCase().includes(curSearch)||(t.desc||'').toLowerCase().includes(curSearch)||accMatch;
+    })
     .sort((a,b)=>new Date(b.date)-new Date(a.date));
 
   // Group by month for display
@@ -3147,6 +3686,13 @@ function renderJournal(c){
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:12px;font-weight:700;color:var(--muted)">📅 Filter:</span>
         <select onchange="window._journalMonthFilter=this.value;nav('journal')" style="font-size:12px;padding:5px 8px;border:1px solid var(--bdr);border-radius:6px;font-family:var(--font)">${monthOpts}</select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:12px;font-weight:700;color:var(--muted)">🔍</span>
+        <input id="journal-search" type="text" placeholder="Cari ref, deskripsi, akun..." value="${window._journalSearch||''}"
+          oninput="window._journalSearch=this.value;window._journalSearchFocus=true;nav('journal')"
+          style="font-size:12px;padding:5px 10px;border:1px solid var(--bdr);border-radius:6px;font-family:var(--font);width:220px">
+        ${curSearch?`<button onclick="window._journalSearch='';nav('journal')" style="font-size:11px;padding:3px 8px;border:1px solid var(--bdr);border-radius:6px;cursor:pointer;background:#fff">✕ Clear</button>`:''}
       </div>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;user-select:none">
         <input type="checkbox" id="chk-all" onchange="toggleAllJournals(this.checked)" style="width:15px;height:15px;cursor:pointer">
@@ -3173,6 +3719,8 @@ function renderJournal(c){
       })():`<tr><td colspan="8" class="tbl-empty">No journal entries yet</td></tr>`}
     </tbody>
   </table></div></div>`;
+  // Restore search focus after re-render
+  if(window._journalSearchFocus){window._journalSearchFocus=false;setTimeout(()=>{const s=document.getElementById('journal-search');if(s){s.focus();const l=s.value.length;s.setSelectionRange(l,l);}},0);}
 }
 
 function exportJurnalByMonth(){
@@ -3198,6 +3746,91 @@ function exportJurnalByMonth(){
     sheets.push({name:sheetName,data:rows});
   });
   exportXLSX(sheets,'general_journal_by_month');
+}
+
+function exportJurnalPDF(){
+  if(typeof window.jspdf==='undefined')return alert('PDF library not loaded. Please check your connection.');
+  const{jsPDF}=window.jspdf;
+  const co=DB.company||{};
+  const curFilter=window._journalMonthFilter||'all';
+  const curSearch=(window._journalSearch||'').toLowerCase().trim();
+  const sorted=[...DB.transactions]
+    .filter(t=>{
+      if(curFilter!=='all'&&(!t.date||!t.date.startsWith(curFilter)))return false;
+      if(!curSearch)return true;
+      const accMatch=t.entries.some(e=>{const a=DB.accounts.find(x=>x.id===e.acc);return a&&(a.name.toLowerCase().includes(curSearch)||a.code.toLowerCase().includes(curSearch));});
+      return (t.ref||'').toLowerCase().includes(curSearch)||(t.desc||'').toLowerCase().includes(curSearch)||accMatch;
+    })
+    .sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(!sorted.length)return alert('No journal entries to export.');
+
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const pageW=doc.internal.pageSize.getWidth();
+
+  // Header — logo + title
+  let startY=14;
+  if(co.logo){
+    try{
+      const fmt=co.logo.includes('png')?'PNG':'JPEG';
+      doc.addImage(co.logo,fmt,10,6,18,18);
+      startY=10;
+    }catch(e){}
+  }
+  doc.setFontSize(14);doc.setFont(undefined,'bold');
+  doc.text('JURNAL UMUM / GENERAL JOURNAL',pageW/2,startY,{align:'center'});
+  doc.setFontSize(10);doc.setFont(undefined,'normal');
+  doc.text(co.name||'PT Andrika Mitra Solusi',pageW/2,startY+6,{align:'center'});
+  const filterLabel=curFilter==='all'?'All Period':curFilter;
+  const searchLabel=curSearch?` | Search: "${window._journalSearch}"`:'';
+  doc.text(`Period: ${filterLabel}${searchLabel}`,pageW/2,startY+12,{align:'center'});
+  doc.text(`Printed: ${new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}`,pageW/2,startY+18,{align:'center'});
+
+  // Build table rows
+  const tableRows=[];
+  let grandDeb=0,grandCrd=0;
+  sorted.forEach(tx=>{
+    tx.entries.forEach((e,i)=>{
+      const a=DB.accounts.find(x=>x.id===e.acc);
+      const accLabel=a?`${a.code} - ${a.name}`:e.acc;
+      grandDeb+=e.deb||0;grandCrd+=e.crd||0;
+      tableRows.push([
+        i===0?fDate(tx.date):'',
+        i===0?(tx.ref||'-'):'',
+        i===0?tx.desc:'',
+        i>0?'    '+accLabel:accLabel,
+        e.deb?rp(e.deb):'',
+        e.crd?rp(e.crd):''
+      ]);
+    });
+  });
+  tableRows.push(['','','TOTAL','',rp(grandDeb),rp(grandCrd)]);
+
+  doc.autoTable({
+    head:[['Tanggal','Ref','Keterangan','Akun','Debit (Rp)','Kredit (Rp)']],
+    body:tableRows,
+    startY:startY+22,
+    styles:{fontSize:7,cellPadding:2,font:'helvetica'},
+    headStyles:{fillColor:[37,99,235],textColor:255,fontStyle:'bold',fontSize:7.5},
+    columnStyles:{0:{cellWidth:22},1:{cellWidth:22},2:{cellWidth:65},3:{cellWidth:80},4:{cellWidth:30,halign:'right'},5:{cellWidth:30,halign:'right'}},
+    alternateRowStyles:{fillColor:[245,249,255]},
+    didParseCell:function(data){
+      if(data.row.index===tableRows.length-1){
+        data.cell.styles.fontStyle='bold';
+        data.cell.styles.fillColor=[219,234,254];
+      }
+    },
+    margin:{left:10,right:10}
+  });
+
+  // Footer
+  const pageCount=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    doc.setFontSize(7);doc.setFont(undefined,'normal');
+    doc.text(`Halaman ${i} dari ${pageCount}`,pageW-12,doc.internal.pageSize.getHeight()-6,{align:'right'});
+    doc.text('SiAkun — PT Andrika Mitra Solusi',12,doc.internal.pageSize.getHeight()-6);
+  }
+  doc.save(`jurnal_umum_${curFilter==='all'?'all':curFilter}_${today()}.pdf`);
 }
 
 function toggleAllJournals(checked){
@@ -3883,7 +4516,7 @@ function renderAssets(c){
   <div class="card"><div class="tbl-wrap"><table>
     <thead><tr><th>Asset Name</th><th>Category</th><th>Acquisition Date</th><th>Acquisition Value</th><th>Method</th><th>Useful Life</th><th>Penyusutan/thn</th><th>Akum.</th><th>Book Value</th><th>Action</th></tr></thead>
     <tbody>
-      ${DB.assets.length?DB.assets.map(a=>{const p=calcPenyusutan(a);return`<tr><td class="fw7">${a.name}</td><td><span class="badge b-info">${a.cat}</span></td><td>${fDate(a.date)}</td><td>${rp(a.value)}</td><td>${a.method}</td><td>${a.life} thn</td><td class="bad">${rp(p.annualDep)}</td><td class="bad">${rp(p.akum)}</td><td class="ok fw7">${rp(p.bookVal)}</td><td><button class="btn btn-bad btn-xs" onclick="delAsset('${a.id}')">✕</button></td></tr>`;}).join(''):`<tr><td colspan="10" class="tbl-empty">No assets yet</td></tr>`}
+      ${DB.assets.length?DB.assets.map(a=>{const p=calcPenyusutan(a);return`<tr><td class="fw7">${a.name}</td><td><span class="badge b-info">${a.cat}</span></td><td>${fDate(a.date)}</td><td>${rp(a.value)}</td><td>${a.method}</td><td>${a.life} thn</td><td class="bad">${rp(p.annualDep)}</td><td class="bad">${rp(p.akum)}</td><td class="ok fw7">${rp(p.bookVal)}</td><td class="gap8"><button class="btn btn-out btn-xs" onclick="openEditAsset('${a.id}')">✏️</button><button class="btn btn-bad btn-xs" onclick="delAsset('${a.id}')">✕</button></td></tr>`;}).join(''):`<tr><td colspan="10" class="tbl-empty">No assets yet</td></tr>`}
     </tbody>
   </table></div></div>`;
 }
@@ -3896,125 +4529,763 @@ function openAsset(){
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveAsset()">Save</button></div>`);
 }
 function saveAsset(){const name=v('as-name'),cat=v('as-cat'),date=v('as-date'),method=v('as-method'),value=parseFloat(v('as-value'))||0,residual=parseFloat(v('as-residual'))||0,life=parseInt(v('as-life'))||5;if(!name||!value)return alert('Name & value are required!');DB.assets.push({id:uid(),name,cat,date,method,value,residual,life});saveDB();closeModal();nav('assets');}
+function openEditAsset(id){
+  const a=DB.assets.find(x=>x.id===id);if(!a)return;
+  const cats=['Tanah','Bangunan','Kendaraan','Mesin & Peralatan','Inventaris Kantor','Komputer & IT','Lainnya'];
+  const catOpts=cats.map(c=>`<option${c===a.cat?' selected':''}>${c}</option>`).join('');
+  const methOpts=['Straight-Line','Declining Balance'].map(m=>`<option${m===a.method?' selected':''}>${m}</option>`).join('');
+  openModal('Edit Fixed Asset',`
+  <input type="hidden" id="as-id" value="${a.id}">
+  <div class="fg"><label>Asset Name</label><input id="as-name" value="${a.name}"></div>
+  <div class="fr3">
+    <div class="fg"><label>Category</label><select id="as-cat">${catOpts}</select></div>
+    <div class="fg"><label>Acquisition Date</label><input type="date" id="as-date" value="${a.date}"></div>
+    <div class="fg"><label>Method</label><select id="as-method">${methOpts}</select></div>
+  </div>
+  <div class="fr3">
+    <div class="fg"><label>Acquisition Value</label><input type="number" id="as-value" value="${a.value}"></div>
+    <div class="fg"><label>Residual Value</label><input type="number" id="as-residual" value="${a.residual||0}"></div>
+    <div class="fg"><label>Useful Life (Yrs)</label><input type="number" id="as-life" value="${a.life}" min="1"></div>
+  </div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="updateAsset()">Update Asset</button></div>`);
+}
+function updateAsset(){
+  const id=v('as-id'),name=v('as-name'),cat=v('as-cat'),date=v('as-date'),method=v('as-method'),
+    value=parseFloat(v('as-value'))||0,residual=parseFloat(v('as-residual'))||0,life=parseInt(v('as-life'))||5;
+  if(!name||!value)return alert('Name & value are required!');
+  const idx=DB.assets.findIndex(x=>x.id===id);
+  if(idx<0)return alert('Asset not found!');
+  DB.assets[idx]={...DB.assets[idx],name,cat,date,method,value,residual,life};
+  saveDB();closeModal();nav('assets');
+}
 function delAsset(id){if(!confirm('Delete this asset?'))return;DB.assets=DB.assets.filter(a=>a.id!==id);saveDB();nav('assets');}
 function exportAssets(){exportXLSX([{name:'Aset',data:DB.assets.map(a=>{const p=calcPenyusutan(a);return{Nama:a.name,Kategori:a.cat,'Acquisition Date':a.date,'Acquisition Value':a.value,Method:a.method,'Useful Life (Thn)':a.life,'Akum Penyusutan':p.akum,'Book Value':p.bookVal};})}],'aset_tetap');}
+
+// ── AMS PRODUCT / SERVICE SEED (v2 — Full Catalog) ──────────────────────────
+function seedAMSProducts(){
+  if(DB.products&&DB.products.length>0)return;
+  const CAT_UNITS={
+    APAR:'unit',Fire_Alarm:'unit',Hydrant:'unit',Sprinkler:'unit',
+    Pump_Room:'unit',Foam_Special:'paket',PPE_Safety:'unit',
+    Material:'batang/pcs',Services:'proyek/paket'
+  };
+  const seed=[
+    // ─── APAR ───────────────────────────────────────────────────────────────
+    {code:'AP001',name:'APAR Dry Chemical 1 Kg',cat:'APAR',unit:'Unit',sell:250000,buy:150000},
+    {code:'AP002',name:'APAR Dry Chemical 3 Kg',cat:'APAR',unit:'Unit',sell:350000,buy:210000},
+    {code:'AP003',name:'APAR Dry Chemical 6 Kg',cat:'APAR',unit:'Unit',sell:550000,buy:330000},
+    {code:'AP004',name:'APAR Dry Chemical 9 Kg',cat:'APAR',unit:'Unit',sell:750000,buy:450000},
+    {code:'AP005',name:'APAR CO2 3 Kg',cat:'APAR',unit:'Unit',sell:850000,buy:500000},
+    {code:'AP006',name:'APAR CO2 5 Kg',cat:'APAR',unit:'Unit',sell:1200000,buy:720000},
+    {code:'AP007',name:'APAR Foam 9 L',cat:'APAR',unit:'Unit',sell:900000,buy:540000},
+    {code:'AP008',name:'APAR Clean Agent 3 Kg',cat:'APAR',unit:'Unit',sell:1500000,buy:900000},
+    {code:'AP009',name:'APAR Trolley 25 Kg',cat:'APAR',unit:'Unit',sell:3500000,buy:2100000},
+    {code:'AP010',name:'APAR Trolley 50 Kg',cat:'APAR',unit:'Unit',sell:6000000,buy:3600000},
+    // ─── FIRE ALARM ─────────────────────────────────────────────────────────
+    {code:'FA001',name:'Smoke Detector / Detektor Asap',cat:'Fire Alarm',unit:'Unit',sell:350000,buy:200000},
+    {code:'FA002',name:'Heat Detector / Detektor Panas',cat:'Fire Alarm',unit:'Unit',sell:350000,buy:200000},
+    {code:'FA003',name:'Beam Detector',cat:'Fire Alarm',unit:'Unit',sell:2500000,buy:1500000},
+    {code:'FA004',name:'Manual Call Point',cat:'Fire Alarm',unit:'Unit',sell:400000,buy:240000},
+    {code:'FA005',name:'Alarm Bell 6 Inch',cat:'Fire Alarm',unit:'Unit',sell:300000,buy:180000},
+    {code:'FA006',name:'Horn Strobe',cat:'Fire Alarm',unit:'Unit',sell:450000,buy:270000},
+    {code:'FA007',name:'Fire Alarm Panel 2 Zone',cat:'Fire Alarm',unit:'Unit',sell:3500000,buy:2100000},
+    {code:'FA008',name:'Fire Alarm Panel 4 Zone',cat:'Fire Alarm',unit:'Unit',sell:5500000,buy:3300000},
+    {code:'FA009',name:'Fire Alarm Panel 8 Zone',cat:'Fire Alarm',unit:'Unit',sell:8500000,buy:5100000},
+    {code:'FA010',name:'Repeater Panel',cat:'Fire Alarm',unit:'Unit',sell:4500000,buy:2700000},
+    {code:'FA011',name:'Fire Telephone',cat:'Fire Alarm',unit:'Unit',sell:1200000,buy:720000},
+    {code:'FA012',name:'Detector Base',cat:'Fire Alarm',unit:'Unit',sell:75000,buy:45000},
+    {code:'FA013',name:'Fire Alarm Battery 12V 7Ah',cat:'Fire Alarm',unit:'Unit',sell:250000,buy:150000},
+    // ─── HYDRANT ────────────────────────────────────────────────────────────
+    {code:'HY001',name:'Hydrant Pillar 2 Way',cat:'Hydrant',unit:'Unit',sell:3500000,buy:2100000},
+    {code:'HY002',name:'Hydrant Pillar 3 Way',cat:'Hydrant',unit:'Unit',sell:4500000,buy:2700000},
+    {code:'HY003',name:'Landing Valve 2.5 Inch',cat:'Hydrant',unit:'Unit',sell:800000,buy:480000},
+    {code:'HY004',name:'Fire Hose Canvas 1.5 x 30M',cat:'Hydrant',unit:'Roll',sell:450000,buy:270000},
+    {code:'HY005',name:'Fire Hose Rubber 1.5 x 30M',cat:'Hydrant',unit:'Roll',sell:650000,buy:390000},
+    {code:'HY006',name:'Fire Hose Canvas 2.5 x 30M',cat:'Hydrant',unit:'Roll',sell:750000,buy:450000},
+    {code:'HY007',name:'Fire Hose Reel 30M',cat:'Hydrant',unit:'Unit',sell:1800000,buy:1080000},
+    {code:'HY008',name:'Nozzle Spray 1.5 Inch',cat:'Hydrant',unit:'Unit',sell:350000,buy:210000},
+    {code:'HY009',name:'Nozzle Jet 2.5 Inch',cat:'Hydrant',unit:'Unit',sell:500000,buy:300000},
+    {code:'HY010',name:'Hose Rack',cat:'Hydrant',unit:'Unit',sell:600000,buy:360000},
+    {code:'HY011',name:'Hose Cabinet',cat:'Hydrant',unit:'Unit',sell:2500000,buy:1500000},
+    {code:'HY012',name:'Siamese Connection',cat:'Hydrant',unit:'Unit',sell:1200000,buy:720000},
+    // ─── SPRINKLER ──────────────────────────────────────────────────────────
+    {code:'SP001',name:'Sprinkler Head Pendant',cat:'Sprinkler',unit:'Unit',sell:85000,buy:50000},
+    {code:'SP002',name:'Sprinkler Head Upright',cat:'Sprinkler',unit:'Unit',sell:85000,buy:50000},
+    {code:'SP003',name:'Sprinkler Head Sidewall',cat:'Sprinkler',unit:'Unit',sell:120000,buy:72000},
+    {code:'SP004',name:'Flexible Hose Sprinkler',cat:'Sprinkler',unit:'Unit',sell:250000,buy:150000},
+    {code:'SP005',name:'Alarm Valve',cat:'Sprinkler',unit:'Unit',sell:4500000,buy:2700000},
+    {code:'SP006',name:'Flow Switch',cat:'Sprinkler',unit:'Unit',sell:1200000,buy:720000},
+    {code:'SP007',name:'Tamper Switch',cat:'Sprinkler',unit:'Unit',sell:850000,buy:510000},
+    {code:'SP008',name:'Pressure Gauge',cat:'Sprinkler',unit:'Unit',sell:350000,buy:210000},
+    // ─── PUMP ROOM ──────────────────────────────────────────────────────────
+    {code:'PM001',name:'Electric Fire Pump',cat:'Pump Room',unit:'Unit',sell:35000000,buy:21000000},
+    {code:'PM002',name:'Diesel Fire Pump',cat:'Pump Room',unit:'Unit',sell:75000000,buy:45000000},
+    {code:'PM003',name:'Jockey Pump',cat:'Pump Room',unit:'Unit',sell:8500000,buy:5100000},
+    {code:'PM004',name:'Fire Pump Controller',cat:'Pump Room',unit:'Unit',sell:15000000,buy:9000000},
+    {code:'PM005',name:'Pressure Tank',cat:'Pump Room',unit:'Unit',sell:5000000,buy:3000000},
+    // ─── FOAM & SPECIAL SYSTEM ──────────────────────────────────────────────
+    {code:'FS001',name:'AFFF Foam Concentrate',cat:'Foam & Special System',unit:'Jerigen',sell:2500000,buy:1500000},
+    {code:'FS002',name:'Foam Bladder Tank',cat:'Foam & Special System',unit:'Unit',sell:25000000,buy:15000000},
+    {code:'FS003',name:'Foam Chamber',cat:'Foam & Special System',unit:'Unit',sell:8500000,buy:5100000},
+    {code:'FS004',name:'Foam Nozzle',cat:'Foam & Special System',unit:'Unit',sell:1500000,buy:900000},
+    {code:'FS005',name:'Water Mist System',cat:'Foam & Special System',unit:'Paket',sell:65000000,buy:39000000},
+    {code:'FS006',name:'Clean Agent FM200 System',cat:'Foam & Special System',unit:'Paket',sell:90000000,buy:54000000},
+    {code:'FS007',name:'Kitchen Suppression System (Wet Chemical)',cat:'Foam & Special System',unit:'Unit',sell:15000000,buy:9000000},
+    {code:'FS008',name:'Vehicle Fire Suppression System',cat:'Foam & Special System',unit:'Unit',sell:22000000,buy:13200000},
+    {code:'FS009',name:'Server Room Fire Suppression (Clean Agent)',cat:'Foam & Special System',unit:'Paket',sell:90000000,buy:54000000},
+    // ─── PPE / SAFETY ───────────────────────────────────────────────────────
+    {code:'SF001',name:'Safety Helmet',cat:'PPE / Safety',unit:'Unit',sell:85000,buy:50000},
+    {code:'SF002',name:'Safety Gloves',cat:'PPE / Safety',unit:'Pasang',sell:45000,buy:27000},
+    {code:'SF003',name:'Safety Goggles',cat:'PPE / Safety',unit:'Unit',sell:75000,buy:45000},
+    {code:'SF004',name:'Face Shield',cat:'PPE / Safety',unit:'Unit',sell:120000,buy:72000},
+    {code:'SF005',name:'Safety Vest',cat:'PPE / Safety',unit:'Unit',sell:85000,buy:51000},
+    {code:'SF006',name:'Safety Shoes',cat:'PPE / Safety',unit:'Pasang',sell:350000,buy:210000},
+    {code:'SF007',name:'Fire Blanket',cat:'PPE / Safety',unit:'Unit',sell:450000,buy:270000},
+    {code:'SF008',name:'Exit Sign',cat:'PPE / Safety',unit:'Unit',sell:250000,buy:150000},
+    {code:'SF009',name:'Emergency Lamp',cat:'PPE / Safety',unit:'Unit',sell:350000,buy:210000},
+    {code:'SF010',name:'SCBA Set',cat:'PPE / Safety',unit:'Set',sell:15000000,buy:9000000},
+    // ─── MATERIAL ───────────────────────────────────────────────────────────
+    {code:'MT001',name:'Pipe Sch40 2 Inch',cat:'Material',unit:'Batang',sell:285000,buy:171000},
+    {code:'MT002',name:'Pipe Sch40 4 Inch',cat:'Material',unit:'Batang',sell:750000,buy:450000},
+    {code:'MT003',name:'Elbow 2 Inch',cat:'Material',unit:'Pcs',sell:45000,buy:27000},
+    {code:'MT004',name:'Tee 2 Inch',cat:'Material',unit:'Pcs',sell:55000,buy:33000},
+    {code:'MT005',name:'Reducer 4x2 Inch',cat:'Material',unit:'Pcs',sell:75000,buy:45000},
+    {code:'MT006',name:'Flange 2 Inch',cat:'Material',unit:'Pcs',sell:85000,buy:51000},
+    {code:'MT007',name:'Butterfly Valve',cat:'Material',unit:'Unit',sell:350000,buy:210000},
+    {code:'MT008',name:'Gate Valve',cat:'Material',unit:'Unit',sell:450000,buy:270000},
+    {code:'MT009',name:'Check Valve',cat:'Material',unit:'Unit',sell:650000,buy:390000},
+    {code:'MT010',name:'Y Strainer',cat:'Material',unit:'Unit',sell:350000,buy:210000},
+    // ─── SERVICES / JASA ────────────────────────────────────────────────────
+    {code:'SV001',name:'Fire System Installation',cat:'Services',unit:'Proyek',sell:0,buy:0},
+    {code:'SV002',name:'Fire Alarm Installation',cat:'Services',unit:'Proyek',sell:0,buy:0},
+    {code:'SV003',name:'Hydrant Installation',cat:'Services',unit:'Proyek',sell:0,buy:0},
+    {code:'SV004',name:'Sprinkler Installation',cat:'Services',unit:'Proyek',sell:0,buy:0},
+    {code:'SV005',name:'APAR Refill Service',cat:'Services',unit:'Unit',sell:75000,buy:0},
+    {code:'SV006',name:'APAR Hydrotest',cat:'Services',unit:'Unit',sell:150000,buy:0},
+    {code:'SV007',name:'Fire Drill Training',cat:'Services',unit:'Sesi',sell:3500000,buy:0},
+    {code:'SV008',name:'Fire Risk Assessment',cat:'Services',unit:'Laporan',sell:4000000,buy:0},
+    {code:'SV009',name:'Fire Safety Audit',cat:'Services',unit:'Laporan',sell:2500000,buy:0},
+    {code:'SV010',name:'Annual Maintenance Contract',cat:'Services',unit:'Kontrak/Tahun',sell:12000000,buy:0},
+    {code:'SV011',name:'Testing & Commissioning',cat:'Services',unit:'Proyek',sell:0,buy:0},
+    {code:'SV012',name:'Preventive Maintenance',cat:'Services',unit:'Kunjungan',sell:1500000,buy:0},
+    {code:'SV013',name:'Corrective Maintenance',cat:'Services',unit:'Kunjungan',sell:2000000,buy:0},
+    {code:'SV014',name:'System Design & Engineering',cat:'Services',unit:'Proyek',sell:5000000,buy:0},
+    {code:'SV015',name:'Emergency Service Call',cat:'Services',unit:'Kunjungan',sell:3000000,buy:0},
+  ];
+  DB.products=seed.map(p=>({
+    id:uid(),code:p.code,name:p.name,category:p.cat,unit:p.unit,
+    sellPrice:p.sell,buyPrice:p.buy,stock:0,minStock:0,note:''
+  }));
+  saveDB();
+  console.log(`✅ AMS Products seeded: ${DB.products.length} items`);
+}
 
 // ================================================================
 //  PAYROLL
 // ================================================================
 function renderPayroll(c){
   const ta=document.getElementById('topbar-actions');
-  ta.innerHTML=`<button class="btn btn-pri" onclick="openAddEmp()">${t('pay_addEmp')}</button><button class="btn btn-acc" onclick="openRunPayroll()">▶ ${t('pay_run')}</button><button class="btn btn-out" onclick="exportPayroll()">⬇ Excel</button>`;
-  c.innerHTML=`<div class="tabs"><div class="tab active" onclick="showPTab('emp',this)">${t('pay_empData')}</div><div class="tab" onclick="showPTab('hist',this)">${t('pay_history')}</div></div><div id="payroll-emp" class="tabcnt active"></div><div id="payroll-hist" class="tabcnt"></div>`;
+  ta.innerHTML=`
+    <button class="btn btn-pri" onclick="openAddEmp()">+ Karyawan</button>
+    <button class="btn btn-acc" onclick="openRunPayroll()">▶ Proses Gaji</button>
+    <button class="btn btn-out" onclick="exportPayroll()">⬇ Excel</button>
+    <button class="btn btn-out" onclick="bulkPrintPayslips()">🖨 Bulk PDF</button>`;
+  c.innerHTML=`
+    <div class="tabs">
+      <div class="tab active" onclick="showPTab('emp',this)">👥 Data Karyawan</div>
+      <div class="tab" onclick="showPTab('hist',this)">📋 History Payroll</div>
+    </div>
+    <div id="payroll-emp" class="tabcnt active"></div>
+    <div id="payroll-hist" class="tabcnt"></div>`;
   renderEmpTable();renderPayrollHist();
 }
-function showPTab(id,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tabcnt').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('payroll-'+id).classList.add('active');}
+
+function showPTab(id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tabcnt').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('payroll-'+id).classList.add('active');
+}
+
 function renderEmpTable(){
   const d=document.getElementById('payroll-emp');if(!d)return;
-  d.innerHTML=`<div class="card"><div class="tbl-wrap"><table><thead><tr><th>${t('pay_nik')}</th><th>${t('lbl_name')}</th><th>${t('pay_position')}</th><th>PTKP</th><th>${t('pay_baseSalary')}</th><th>${t('pay_allowance')}</th><th>PPh 21/${getLang()==='id'?'bln':'mo'}</th><th>${t('pay_netSalary')}</th><th>${t('lbl_action')}</th></tr></thead><tbody>
-    ${DB.employees.length?DB.employees.map(e=>{const{pph21}=calcPPh21(e.gaji+e.tunjangan,e.ptkp);return`<tr><td class="muted">${e.nik}</td><td class="fw7">${e.name}</td><td>${e.jabatan}</td><td><span class="badge b-gray">${e.ptkp}</span></td><td>${rp(e.gaji)}</td><td>${rp(e.tunjangan)}</td><td class="bad">${rp(pph21)}</td><td class="ok fw7">${rp(e.gaji+e.tunjangan-pph21-e.bpjs)}</td><td class="gap8"><button class="btn btn-out btn-xs" onclick="openSlip('${e.id}')">${t('pay_slip')}</button><button class="btn btn-bad btn-xs" onclick="delEmp('${e.id}')">✕</button></td></tr>`;}).join(''):`<tr><td colspan="9" class="tbl-empty">${t('alert_noData')}</td></tr>`}
-  </tbody></table></div></div>`;
+  const yr=new Date().getFullYear();
+  const mn=new Date().getMonth()+1;
+  const hkBulanIni=hitungHK(yr,mn);
+  d.innerHTML=`
+  <div class="alert a-info" style="font-size:11.5px;margin-bottom:10px">
+    📅 Hari Kerja ${['','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][mn]} ${yr}: <b>${hkBulanIni} hari</b>
+    (Senin–Sabtu, minus libur nasional). Tunjangan proporsional = (HK Aktif ÷ 25) × Nilai Tunjangan.
+    <a onclick="nav('calendar')" style="color:#2563eb;cursor:pointer;margin-left:8px">⚙ Kelola Kalender →</a>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table style="font-size:11.5px">
+    <thead><tr>
+      <th>NIK</th><th>Nama & Divisi</th><th>Jabatan</th><th>PTKP</th>
+      <th>Gaji Pokok</th><th>Tun. Makan</th><th>Tun. Transport</th>
+      <th>BPJS/bln</th><th>PPh21/bln</th><th>Est. Bersih</th><th>Aksi</th>
+    </tr></thead><tbody>
+    ${DB.employees.length?DB.employees.map(e=>{
+      const hk=hkBulanIni;
+      const HK_STD=(DB.calConfig?.hkStd||25);
+      const tunM=Math.round((e.tunMakan||0)*(hk/HK_STD));
+      const tunT=Math.round((e.tunTransport||0)*(hk/HK_STD));
+      const bruto=e.gaji+tunM+tunT;
+      const {pph21}=calcPPh21(bruto,e.ptkp);
+      const bpjsKes=Math.round(Math.min(e.gaji,12000000)*0.01);
+      const bpjsTK=Math.round(e.gaji*0.02);
+      const bpjsJP=Math.round(Math.min(e.gaji,9559600)*0.01);
+      const bpjsTot=bpjsKes+bpjsTK+bpjsJP;
+      return`<tr>
+        <td class="muted">${e.nik}</td>
+        <td class="fw7">${e.name}<br><span style="font-size:9.5px;color:var(--muted)">${e.divisi||'—'}</span></td>
+        <td>${e.jabatan}</td>
+        <td><span class="badge b-gray">${e.ptkp}</span></td>
+        <td class="fw7">${rp(e.gaji)}</td>
+        <td style="color:#475569;font-size:10.5px">${rp(e.tunMakan||0)}/hr</td>
+        <td style="color:#475569;font-size:10.5px">${rp(e.tunTransport||0)}/hr</td>
+        <td class="bad">${rp(bpjsTot)}</td>
+        <td class="bad">${rp(pph21)}</td>
+        <td class="ok fw7">${rp(bruto-pph21-bpjsTot)}</td>
+        <td class="gap8">
+          <button class="btn btn-out btn-xs" onclick="openSlip('${e.id}')">👁</button>
+          <button class="btn btn-out btn-xs" onclick="openAddEmp('${e.id}')">✏️</button>
+          <button class="btn btn-bad btn-xs" onclick="delEmp('${e.id}')">✕</button>
+        </td></tr>`;
+    }).join(''):`<tr><td colspan="11" class="tbl-empty">Belum ada karyawan. Klik "+ Karyawan".</td></tr>`}
+    </tbody></table></div></div>`;
 }
+
 function renderPayrollHist(){
   const d=document.getElementById('payroll-hist');if(!d)return;
-  d.innerHTML=`<div class="card"><div class="tbl-wrap"><table><thead><tr><th>${t('pay_month')}</th><th>${t('pay_payDate')}</th><th>${t('pay_employees')}</th><th>${t('pay_totalSalary')}</th><th>PPh 21</th><th>${t('pay_netSalary')}</th><th>${t('lbl_action')}</th></tr></thead><tbody>
-    ${DB.payroll.length?[...DB.payroll].sort((a,b)=>b.year-a.year||b.month-a.month).map(p=>`<tr><td class="fw7">${monthName(p.month)} ${p.year}</td><td>${fDate(p.date)}</td><td>${p.slips.length} ${getLang()==='id'?'orang':'people'}</td><td class="fw7">${rp(p.totalGaji)}</td><td class="bad">${rp(p.totalPPh)}</td><td class="ok fw7">${rp(p.totalNet)}</td><td><button class="btn btn-out btn-xs" onclick="viewPayrollDetail('${p.id}')">${t('pay_detail')}</button></td></tr>`).join(''):`<tr><td colspan="7" class="tbl-empty">${t('alert_noData')}</td></tr>`}
-  </tbody></table></div></div>`;
+  d.innerHTML=`<div class="card"><div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Periode</th><th>Tgl Bayar</th><th>Karyawan</th>
+      <th>Total Bruto</th><th>PPh 21</th><th>BPJS</th><th>Net Dibayar</th><th>Aksi</th>
+    </tr></thead><tbody>
+    ${DB.payroll.length?[...DB.payroll].sort((a,b)=>b.year-a.year||b.month-a.month).map(p=>`<tr>
+      <td class="fw7">${monthName(p.month)} ${p.year}</td>
+      <td>${fDate(p.date)}</td>
+      <td>${p.slips.length} orang</td>
+      <td class="fw7">${rp(p.totalGaji)}</td>
+      <td class="bad">${rp(p.totalPPh)}</td>
+      <td class="bad">${rp(p.totalBPJS||0)}</td>
+      <td class="ok fw7">${rp(p.totalNet)}</td>
+      <td class="gap8">
+        <button class="btn btn-out btn-xs" onclick="viewPayrollDetail('${p.id}')">Detail</button>
+        <button class="btn btn-out btn-xs" onclick="bulkPrintPayslips('${p.id}')">🖨 PDF</button>
+      </td>
+    </tr>`).join(''):`<tr><td colspan="8" class="tbl-empty">Belum ada history payroll.</td></tr>`}
+    </tbody></table></div></div>`;
 }
+
+// ── PPh 21 Calculation ───────────────────────────────────────────
 function calcPPh21(monthly,ptkpKey){
-  const ptkpMap={'TK/0':54000000,'TK/1':58500000,'TK/2':63000000,'TK/3':67500000,'K/0':58500000,'K/1':63000000,'K/2':67500000,'K/3':72000000};
+  const ptkpMap={'TK/0':54000000,'TK/1':58500000,'TK/2':63000000,'TK/3':67500000,
+    'K/0':58500000,'K/1':63000000,'K/2':67500000,'K/3':72000000};
   const annual=monthly*12,ptkp=ptkpMap[ptkpKey]||54000000,pkp=Math.max(0,annual-ptkp);
   let pphA=0,rem=pkp;
-  const brackets=[[60000000,.05],[190000000,.15],[250000000,.25],[4500000000,.30],[Infinity,.35]];
-  brackets.forEach(([lim,rate])=>{if(rem>0){const s=Math.min(rem,lim);pphA+=s*rate;rem-=s;}});
+  [[60000000,.05],[190000000,.15],[250000000,.25],[4500000000,.30],[Infinity,.35]]
+    .forEach(([lim,rate])=>{if(rem>0){const s=Math.min(rem,lim);pphA+=s*rate;rem-=s;}});
   return{pph21:Math.round(pphA/12),ptkp,pkp};
 }
-function openAddEmp(){
-  openModal('Add Employee',`
-  <div class="fr2"><div class="fg"><label>NIK</label><input id="em-nik" placeholder="EMP001"></div><div class="fg"><label>Full Name</label><input id="em-name"></div></div>
-  <div class="fr2"><div class="fg"><label>Position</label><input id="em-jab"></div><div class="fg"><label>Tax ID (NPWP)</label><input id="em-npwp"></div></div>
-  <div class="fr2"><div class="fg"><label>Tax Status (PTKP)</label><select id="em-ptkp"><option>TK/0</option><option>TK/1</option><option>TK/2</option><option>TK/3</option><option>K/0</option><option>K/1</option><option>K/2</option><option>K/3</option></select></div><div class="fg"><label>Start Date</label><input type="date" id="em-join" value="${today()}"></div></div>
-  <div class="fr3"><div class="fg"><label>Base Salary</label><input type="number" id="em-gaji" placeholder="0"></div><div class="fg"><label>Allowance</label><input type="number" id="em-tun" placeholder="0"></div><div class="fg"><label>Health BPJS</label><input type="number" id="em-bpjs" placeholder="0"></div></div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveEmp()">Save</button></div>`);
-}
-function saveEmp(){const nik=v('em-nik'),name=v('em-name'),jabatan=v('em-jab'),npwp=v('em-npwp'),ptkp=v('em-ptkp'),join=v('em-join'),gaji=parseFloat(v('em-gaji'))||0,tunjangan=parseFloat(v('em-tun'))||0,bpjs=parseFloat(v('em-bpjs'))||0;if(!nik||!name||!gaji)return alert('Employee ID, name & salary are required!');DB.employees.push({id:uid(),nik,name,jabatan,npwp,ptkp,join,gaji,tunjangan,bpjs});saveDB();closeModal();renderEmpTable();}
-function delEmp(id){if(!confirm('Delete this employee?'))return;DB.employees=DB.employees.filter(e=>e.id!==id);saveDB();renderEmpTable();}
-function openRunPayroll(){
-  if(!DB.employees.length)return alert('Please add employees first!');
-  openModal('Process Payroll',`
-  <div class="fr2"><div class="fg"><label>Month</label><input type="month" id="pr-month" value="${curMonth()}"></div><div class="fg"><label>Payment Date</label><input type="date" id="pr-date" value="${today()}"></div></div>
-  <div class="fg"><label>Payment Account</label><select id="pr-bank">${acctOptions(['aktiva'])}</select></div>
-  <div class="alert a-info mt12">Processing payroll for <b>${DB.employees.length} karyawan</b>. Jurnal otomatis akan dibuat.</div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="runPayroll()">Proses Gaji</button></div>`);
-}
-function runPayroll(){
-  const mv=v('pr-month'),date=v('pr-date'),bankAcc=v('pr-bank');if(!mv||!date)return alert('Month & tanggal wajib!');
-  const[y,m]=mv.split('-').map(Number);if(DB.payroll.find(p=>p.year===y&&p.month===m))return alert('Payroll for this month already processed!');
-  let totGaji=0,totPPh=0;
-  const slips=DB.employees.map(e=>{const{pph21}=calcPPh21(e.gaji+e.tunjangan,e.ptkp);totGaji+=e.gaji+e.tunjangan;totPPh+=pph21;return{empId:e.id,gross:e.gaji+e.tunjangan,pph21,bpjs:e.bpjs,net:e.gaji+e.tunjangan-pph21-e.bpjs};});
-  DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Beban Gaji ${monthName(m)} ${y}`,entries:[{acc:'6101',deb:totGaji,crd:0},{acc:'2102',deb:0,crd:totGaji-totPPh},{acc:'2103',deb:0,crd:totPPh}]});
-  DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Pembayaran Gaji ${monthName(m)} ${y}`,entries:[{acc:'2102',deb:totGaji-totPPh,crd:0},{acc:bankAcc,deb:0,crd:totGaji-totPPh}]});
-  DB.payroll.push({id:uid(),year:y,month:m,date,bankAcc,slips,totalGaji:totGaji,totalPPh:totPPh,totalNet:totGaji-totPPh});
-  saveDB();closeModal();nav('payroll');
-}
-function openSlip(empId){
-  const e=DB.employees.find(x=>x.id===empId);if(!e)return;
-  const{pph21,ptkp,pkp}=calcPPh21(e.gaji+e.tunjangan,e.ptkp);
-  const co=DB.company;
-  const logo=co.logo?`<img src="${co.logo}" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:rgba(255,255,255,.15);">`: '';
-  openModal(`Slip Gaji — ${e.name}`,`
-  <div class="slip">
-    <div style="background:linear-gradient(135deg,#0f172a,#1e3a8a);color:white;padding:18px 22px;display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:12px">
-        ${co.logo?`<img src="${co.logo}" style="width:48px;height:48px;object-fit:contain;border-radius:8px;background:white;padding:4px;">`:''}
-        <div>
-          <div style="font-size:16px;font-weight:800">${co.name}</div>
-          <div style="font-size:10px;opacity:.75;margin-top:2px">📍 ${co.address}</div>
-          <div style="font-size:10px;opacity:.75">📞 ${co.phone}</div>
-        </div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:9px;letter-spacing:2px;opacity:.6;text-transform:uppercase">Payslip</div>
-        <div style="font-size:18px;font-weight:800;color:#f59e0b">${new Date().toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</div>
-      </div>
+
+// ── EMPLOYEE CRUD ────────────────────────────────────────────────
+function openAddEmp(editEmpId){
+  const e=editEmpId?DB.employees.find(x=>x.id===editEmpId):{};
+  const isEdit=!!editEmpId;
+  openModal(isEdit?`Edit Karyawan — ${e.name||''}`:'Tambah Karyawan',`
+  <div class="fr2">
+    <div class="fg"><label>NIK / Employee ID</label><input id="em-nik" value="${e.nik||''}" placeholder="EMP001"></div>
+    <div class="fg"><label>Nama Lengkap</label><input id="em-name" value="${e.name||''}"></div>
+  </div>
+  <div class="fr3">
+    <div class="fg"><label>Jabatan</label><input id="em-jab" value="${e.jabatan||''}"></div>
+    <div class="fg"><label>Divisi</label><input id="em-div" value="${e.divisi||''}"></div>
+    <div class="fg"><label>NPWP</label><input id="em-npwp" value="${e.npwp||''}"></div>
+  </div>
+  <div class="fr3">
+    <div class="fg"><label>Status PTKP</label>
+      <select id="em-ptkp">${['TK/0','TK/1','TK/2','TK/3','K/0','K/1','K/2','K/3'].map(x=>`<option${x===(e.ptkp||'TK/0')?' selected':''}>${x}</option>`).join('')}</select>
     </div>
-    <div style="height:3px;background:linear-gradient(90deg,#f59e0b,#2563eb)"></div>
-    <div class="slip-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #eee;font-size:12.5px">
-        <div><div style="font-size:10px;color:gray">NIK</div><div class="fw7">${e.nik}</div></div>
-        <div><div style="font-size:10px;color:gray">Name</div><div class="fw7">${e.name}</div></div>
-        <div><div style="font-size:10px;color:gray">Position</div><div>${e.jabatan}</div></div>
-        <div><div style="font-size:10px;color:gray">PTKP</div><div>${e.ptkp}</div></div>
-      </div>
-      <div style="font-size:10px;font-weight:700;color:gray;text-transform:uppercase;margin-bottom:6px">Penghasilan</div>
-      <div class="slip-row"><span>Base Salary</span><span>${rp(e.gaji)}</span></div>
-      <div class="slip-row"><span>Allowance</span><span>${rp(e.tunjangan)}</span></div>
-      <div class="slip-row bold"><span>Total Bruto</span><span>${rp(e.gaji+e.tunjangan)}</span></div>
-      <div style="font-size:10px;font-weight:700;color:gray;text-transform:uppercase;margin:10px 0 6px">Potongan</div>
-      <div class="slip-row"><span>PPh 21</span><span class="bad">-${rp(pph21)}</span></div>
-      <div class="slip-row"><span>Health BPJS</span><span class="bad">-${rp(e.bpjs)}</span></div>
-      <div class="slip-row total"><span>GAJI BERSIH</span><span class="ok">${rp(e.gaji+e.tunjangan-pph21-e.bpjs)}</span></div>
-      <div style="margin-top:12px;padding:10px;background:#f8fafc;border-radius:6px;font-size:11.5px">
-        <div class="fw7 mb4">Detail PPh 21</div>
-        <div class="slip-row" style="padding:2px 0"><span>Bruto/tahun</span><span>${rp((e.gaji+e.tunjangan)*12)}</span></div>
-        <div class="slip-row" style="padding:2px 0"><span>PTKP (${e.ptkp})</span><span>-${rp(ptkp)}</span></div>
-        <div class="slip-row bold" style="padding:2px 0"><span>PKP</span><span>${rp(pkp)}</span></div>
-        <div class="slip-row" style="padding:2px 0;color:var(--bad)"><span>PPh 21/bulan</span><span>${rp(pph21)}</span></div>
-      </div>
+    <div class="fg"><label>Tgl Masuk</label><input type="date" id="em-join" value="${e.join||today()}"></div>
+    <div class="fg"><label>Rek. Gaji (Info)</label><input id="em-bank" value="${e.bankInfo||''}" placeholder="BCA 123..."></div>
+  </div>
+  <hr style="margin:10px 0;border:none;border-top:1px solid var(--bdr)">
+  <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px;letter-spacing:.5px">
+    💰 Komponen Gaji & Tunjangan
+  </div>
+  <div class="fr2">
+    <div class="fg"><label>Gaji Pokok (Rp)</label><input type="number" id="em-gaji" value="${e.gaji||0}" oninput="previewEmpCalc()"></div>
+    <div class="fg"><label>Tunjangan Makan / hari (Rp)</label><input type="number" id="em-tunMakan" value="${e.tunMakan||0}" oninput="previewEmpCalc()"></div>
+  </div>
+  <div class="fr2">
+    <div class="fg"><label>Tunjangan Transport / hari (Rp)</label><input type="number" id="em-tunTrans" value="${e.tunTransport||0}" oninput="previewEmpCalc()"></div>
+    <div class="fg"><label>Tarif Lembur / jam (0 = auto: Gaji÷173×1.5)</label><input type="number" id="em-tarifLembur" value="${e.tarifLembur||0}"></div>
+  </div>
+  <div class="fr2">
+    <div class="fg"><label>Tarif Telat / kejadian (0 = gunakan default global)</label><input type="number" id="em-tarifTelat" value="${e.tarifTelat||0}"></div>
+    <div class="fg"></div>
+  </div>
+  <div id="emp-preview" style="margin-top:10px;padding:10px 14px;background:#f0f9ff;border-radius:8px;border:1px solid #bae6fd;font-size:11.5px"></div>
+  <div class="modal-ft">
+    <button class="btn btn-out" onclick="closeModal()">Batal</button>
+    <button class="btn btn-pri" onclick="saveEmp('${editEmpId||''}')">Simpan</button>
+  </div>`,'modal-lg');
+  previewEmpCalc();
+}
+
+function previewEmpCalc(){
+  const g=parseFloat(document.getElementById('em-gaji')?.value)||0;
+  const tM=parseFloat(document.getElementById('em-tunMakan')?.value)||0;
+  const tT=parseFloat(document.getElementById('em-tunTrans')?.value)||0;
+  const ptkp=document.getElementById('em-ptkp')?.value||'TK/0';
+  const HK_STD=DB.calConfig?.hkStd||25;
+  const tunBulan=(tM+tT)*HK_STD;
+  const {pph21}=calcPPh21(g+tunBulan,ptkp);
+  const bpjsKes=Math.round(Math.min(g,12000000)*0.01);
+  const bpjsTK=Math.round(g*0.02);
+  const bpjsJP=Math.round(Math.min(g,9559600)*0.01);
+  const net=g+tunBulan-pph21-bpjsKes-bpjsTK-bpjsJP;
+  const el=document.getElementById('emp-preview');
+  if(el) el.innerHTML=`<b>Estimasi (${HK_STD} hari kerja/bulan):</b> &nbsp;
+    Bruto <b>${rp(g+tunBulan)}</b> &nbsp;–&nbsp;
+    PPh21 <span style="color:#dc2626">${rp(pph21)}</span> &nbsp;–&nbsp;
+    BPJS Kes <span style="color:#dc2626">${rp(bpjsKes)}</span> &nbsp;–&nbsp;
+    BPJS TK/JHT <span style="color:#dc2626">${rp(bpjsTK)}</span> &nbsp;–&nbsp;
+    BPJS JP <span style="color:#dc2626">${rp(bpjsJP)}</span> &nbsp;=&nbsp;
+    <b style="color:#059669;font-size:13px">${rp(net)}</b>`;
+}
+
+function saveEmp(editId){
+  const nik=v('em-nik'),name=v('em-name'),jabatan=v('em-jab'),divisi=v('em-div'),
+    npwp=v('em-npwp'),ptkp=v('em-ptkp'),join=v('em-join'),bankInfo=v('em-bank'),
+    gaji=parseFloat(v('em-gaji'))||0,
+    tunMakan=parseFloat(v('em-tunMakan'))||0,
+    tunTransport=parseFloat(v('em-tunTrans'))||0,
+    tarifLembur=parseFloat(v('em-tarifLembur'))||0,
+    tarifTelat=parseFloat(v('em-tarifTelat'))||0;
+  if(!nik||!name||!gaji)return alert('NIK, nama, dan gaji pokok wajib!');
+  const obj={nik,name,jabatan,divisi,npwp,ptkp,join,bankInfo,gaji,tunMakan,tunTransport,tarifLembur,tarifTelat,
+    tunjangan:(tunMakan+tunTransport)*(DB.calConfig?.hkStd||25), // legacy
+    bpjs:Math.round(Math.min(gaji,12000000)*0.01)};
+  if(editId){const e=DB.employees.find(x=>x.id===editId);if(e)Object.assign(e,obj);}
+  else DB.employees.push({id:uid(),...obj});
+  saveDB();closeModal();renderEmpTable();
+}
+function delEmp(id){if(!confirm('Hapus karyawan?'))return;DB.employees=DB.employees.filter(e=>e.id!==id);saveDB();renderEmpTable();}
+
+// ── PAYROLL ENGINE ────────────────────────────────────────────────
+function calcDetailedSlip(e,hkAktif,lemburJam,telatX,absenHr,bonus,otherIn,otherOut){
+  const HK_STD=DB.calConfig?.hkStd||25;
+  // Tunjangan proporsional: (HK aktif ÷ HK_STD) × Nilai Tunjangan
+  const ratio=hkAktif/HK_STD;
+  const tunMakan=Math.round((e.tunMakan||0)*hkAktif);      // per hari × HK aktif
+  const tunTransport=Math.round((e.tunTransport||0)*hkAktif);
+  // Lembur: (Gaji ÷ 173) × 1.5 × jam, atau tarif custom
+  const tarifLembur=e.tarifLembur||Math.round(e.gaji/173*1.5);
+  const tunLembur=Math.round(lemburJam*tarifLembur);
+  // Bruto
+  const totalPendapatan=e.gaji+tunMakan+tunTransport+tunLembur+bonus+otherIn;
+  // PPh 21
+  const {pph21,ptkp,pkp}=calcPPh21(totalPendapatan,e.ptkp);
+  // BPJS Kesehatan: 1% gaji pokok (basis maks 12jt)
+  const bpjsKes=Math.round(Math.min(e.gaji,12000000)*0.01);
+  // BPJS TK JHT: 2%
+  const bpjsTK=Math.round(e.gaji*0.02);
+  // BPJS TK JP: 1% (basis maks 9.559.600)
+  const bpjsJP=Math.round(Math.min(e.gaji,9559600)*0.01);
+  // Keterlambatan
+  const tarifTelat=(e.tarifTelat>0?e.tarifTelat:0)||(DB.calConfig?.tarifTelat||50000);
+  const dedTelat=Math.round(telatX*tarifTelat);
+  // Absen tanpa izin: gaji ÷ HK_STD per hari
+  const gajiHarian=Math.round(e.gaji/HK_STD);
+  const dedAbsen=Math.round(absenHr*gajiHarian);
+  const totalPotongan=pph21+bpjsKes+bpjsTK+bpjsJP+dedTelat+dedAbsen+otherOut;
+  const gajiNet=totalPendapatan-totalPotongan;
+  return{
+    gaji:e.gaji,tunMakan,tunTransport,tunLembur,bonus,otherIn,totalPendapatan,
+    pph21,bpjsKes,bpjsTK,bpjsJP,dedTelat,dedAbsen,otherOut,totalPotongan,
+    gajiNet,hk:hkAktif,lemburJam,telatX,absenHr,tarifLembur,gajiHarian,ptkp,pkp,HK_STD
+  };
+}
+
+function openRunPayroll(){
+  if(!DB.employees.length)return alert('Tambah karyawan terlebih dahulu!');
+  const mo=curMonth();
+  const[yr,mn]=mo.split('-').map(Number);
+  const hkAuto=hitungHK(yr,mn);
+  openModal('▶ Proses Penggajian',`
+  <div class="fr2">
+    <div class="fg"><label>Bulan Gaji</label><input type="month" id="pr-month" value="${mo}" onchange="onPrMonthChange()"></div>
+    <div class="fg"><label>Tanggal Bayar</label><input type="date" id="pr-date" value="${today()}"></div>
+  </div>
+  <div class="fr2">
+    <div class="fg"><label>Akun Pembayaran</label><select id="pr-bank">${acctOptions(['aktiva'])}</select></div>
+    <div class="fg">
+      <label>Hari Kerja Bulan Ini <span id="pr-hk-hint" style="color:#2563eb;font-weight:700"></span></label>
+      <input type="number" id="pr-harikerja" value="${hkAuto}" min="1" max="31" oninput="renderPayrollInputRows()">
     </div>
   </div>
-  <div class="modal-ft no-print"><button class="btn btn-out" onclick="closeModal()">Close</button><button class="btn btn-pri" onclick="window.print()">🖨 Print</button></div>`,'modal-lg');
+  <div class="alert a-info" style="font-size:11px;margin-bottom:6px">
+    ✅ Hari kerja dihitung otomatis dari Kalender AMS (Senin–Sabtu, minus libur nasional).<br>
+    HR bisa override angka per karyawan di tabel bawah.
+  </div>
+  <div id="payroll-input-rows"></div>
+  <div class="modal-ft">
+    <button class="btn btn-out" onclick="closeModal()">Batal</button>
+    <button class="btn btn-pri" onclick="runPayroll()">✅ Proses & Jurnal Otomatis</button>
+  </div>`,'modal-wide');
+  document.getElementById('pr-hk-hint').textContent=`(Auto: ${hkAuto} hari)`;
+  renderPayrollInputRows();
 }
+
+function onPrMonthChange(){
+  const mv=document.getElementById('pr-month')?.value;
+  if(!mv)return;
+  const[y,m]=mv.split('-').map(Number);
+  const hkAuto=hitungHK(y,m);
+  const inp=document.getElementById('pr-harikerja');
+  if(inp){inp.value=hkAuto;}
+  const hint=document.getElementById('pr-hk-hint');
+  if(hint)hint.textContent=`(Auto: ${hkAuto} hari)`;
+  renderPayrollInputRows();
+}
+
+function renderPayrollInputRows(){
+  const hk=parseInt(document.getElementById('pr-harikerja')?.value)||25;
+  const el=document.getElementById('payroll-input-rows');
+  if(!el)return;
+  el.innerHTML=`<div style="overflow-x:auto;font-size:11px">
+  <table style="width:100%">
+    <thead><tr style="background:#f0f4ff">
+      <th style="padding:6px 8px;text-align:left;min-width:130px">Karyawan</th>
+      <th style="padding:6px 8px;text-align:center;min-width:55px" title="Override hari kerja per karyawan">HK Override</th>
+      <th style="padding:6px 8px;text-align:center;min-width:70px">Lembur (jam)</th>
+      <th style="padding:6px 8px;text-align:center;min-width:55px">Telat (×)</th>
+      <th style="padding:6px 8px;text-align:center;min-width:55px">Absen (hr)</th>
+      <th style="padding:6px 8px;text-align:center;min-width:80px">Bonus (Rp)</th>
+      <th style="padding:6px 8px;text-align:center;min-width:80px">Tambahan</th>
+      <th style="padding:6px 8px;text-align:center;min-width:80px">Pot. Lain</th>
+      <th style="padding:6px 8px;text-align:right;min-width:90px;color:#059669">Est. Bersih</th>
+    </tr></thead>
+    <tbody>${DB.employees.map((e,i)=>`
+    <tr style="${i%2?'background:#f9fafb':''}">
+      <td style="padding:5px 8px"><b>${e.name}</b><br><span style="color:var(--muted);font-size:9px">${e.jabatan}</span></td>
+      <td style="padding:3px"><input type="number" id="pr-hk-${e.id}" value="${hk}" min="0" max="31" style="width:48px;text-align:center;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="recalcSlipPreview('${e.id}')"></td>
+      <td style="padding:3px"><input type="number" id="pr-lembur-${e.id}" value="0" min="0" style="width:56px;text-align:center;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="recalcSlipPreview('${e.id}')"></td>
+      <td style="padding:3px"><input type="number" id="pr-telat-${e.id}" value="0" min="0" style="width:48px;text-align:center;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="recalcSlipPreview('${e.id}')"></td>
+      <td style="padding:3px"><input type="number" id="pr-absen-${e.id}" value="0" min="0" style="width:48px;text-align:center;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="recalcSlipPreview('${e.id}')"></td>
+      <td style="padding:3px"><input type="number" id="pr-bonus-${e.id}" value="0" min="0" style="width:78px;text-align:center;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="recalcSlipPreview('${e.id}')"></td>
+      <td style="padding:3px"><input type="number" id="pr-otherIn-${e.id}" value="0" min="0" style="width:78px;text-align:center;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="recalcSlipPreview('${e.id}')"></td>
+      <td style="padding:3px"><input type="number" id="pr-otherOut-${e.id}" value="0" min="0" style="width:78px;text-align:center;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="recalcSlipPreview('${e.id}')"></td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700;color:#059669" id="pr-est-${e.id}">—</td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+  DB.employees.forEach(e=>recalcSlipPreview(e.id));
+}
+
+function recalcSlipPreview(empId){
+  const e=DB.employees.find(x=>x.id===empId);if(!e)return;
+  const g=id=>parseFloat(document.getElementById(id)?.value)||0;
+  const s=calcDetailedSlip(e,g(`pr-hk-${empId}`),g(`pr-lembur-${empId}`),g(`pr-telat-${empId}`),
+    g(`pr-absen-${empId}`),g(`pr-bonus-${empId}`),g(`pr-otherIn-${empId}`),g(`pr-otherOut-${empId}`));
+  const el=document.getElementById(`pr-est-${empId}`);
+  if(el)el.textContent=rp(s.gajiNet);
+}
+
+function runPayroll(){
+  const mv=v('pr-month'),date=v('pr-date'),bankAcc=v('pr-bank');
+  if(!mv||!date)return alert('Bulan & tanggal wajib!');
+  const[y,m]=mv.split('-').map(Number);
+  if(DB.payroll.find(p=>p.year===y&&p.month===m))return alert('Payroll bulan ini sudah diproses!');
+  const g=id=>parseFloat(document.getElementById(id)?.value)||0;
+  let totGross=0,totPPh=0,totNet=0,totBPJS=0;
+  const slips=DB.employees.map(e=>{
+    const s=calcDetailedSlip(e,g(`pr-hk-${e.id}`),g(`pr-lembur-${e.id}`),g(`pr-telat-${e.id}`),
+      g(`pr-absen-${e.id}`),g(`pr-bonus-${e.id}`),g(`pr-otherIn-${e.id}`),g(`pr-otherOut-${e.id}`));
+    totGross+=s.totalPendapatan;totPPh+=s.pph21;totNet+=s.gajiNet;
+    totBPJS+=s.bpjsKes+s.bpjsTK+s.bpjsJP;
+    return{empId:e.id,...s};
+  });
+  // ── Jurnal Akrual Gaji ──
+  DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Beban Gaji ${monthName(m)} ${y}`,entries:[
+    {acc:'6101',deb:totGross,crd:0},
+    {acc:'2102',deb:0,crd:totNet},        // Utang Gaji
+    {acc:'2103',deb:0,crd:totPPh},        // Utang PPh 21
+    {acc:'2109',deb:0,crd:totBPJS},       // Utang BPJS
+  ]});
+  // ── Jurnal Pembayaran Gaji ──
+  DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Pembayaran Gaji ${monthName(m)} ${y}`,entries:[
+    {acc:'2102',deb:totNet,crd:0},
+    {acc:bankAcc,deb:0,crd:totNet},
+  ]});
+  const rec={id:uid(),year:y,month:m,date,bankAcc,slips,
+    totalGaji:totGross,totalPPh:totPPh,totalNet:totNet,totalBPJS:totBPJS};
+  DB.payroll.push(rec);
+  saveDB();closeModal();
+  logAudit('Payroll',`${monthName(m)} ${y}: ${slips.length} karyawan, gross ${rp(totGross)}, net ${rp(totNet)}`);
+  nav('payroll');
+  alert(`✅ Payroll ${monthName(m)} ${y} selesai!\n${slips.length} karyawan | Gross: ${rp(totGross)} | Net: ${rp(totNet)}`);
+}
+
+// ── PAYSLIP ───────────────────────────────────────────────────────
+function buildSlipHTML(e,slip,pRec,co){
+  const bulan=`${monthName(pRec.month)} ${pRec.year}`;
+  const logoHtml=co.logo?`<img src="${co.logo}" style="height:52px;object-fit:contain;border-radius:8px;background:#fff;padding:4px;box-shadow:0 1px 6px rgba(0,0,0,.1)">`:
+    `<div style="height:52px;width:52px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div>`;
+  const rows=(items)=>items.filter(([,v])=>v>0).map(([l,v])=>`
+    <tr><td style="padding:4px 10px;color:#475569;font-size:11px">${l}</td>
+        <td style="padding:4px 10px;text-align:right;font-weight:600;font-size:11px">${rp(v)}</td></tr>`).join('');
+  const dedRows=(items)=>items.filter(([,v])=>v>0).map(([l,v])=>`
+    <tr><td style="padding:4px 10px;color:#475569;font-size:11px">${l}</td>
+        <td style="padding:4px 10px;text-align:right;font-weight:600;color:#dc2626;font-size:11px">-${rp(v)}</td></tr>`).join('');
+  return`<div style="font-family:'Plus Jakarta Sans',Arial,sans-serif;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact">
+    <!-- HEADER -->
+    <div style="background:linear-gradient(135deg,#E8510A 0%,#0f172a 100%);color:#fff;padding:16px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          ${logoHtml}
+          <div>
+            <div style="font-size:14px;font-weight:800">${co.name}</div>
+            <div style="font-size:9px;opacity:.7;line-height:1.6">${co.address||''}</div>
+            <div style="font-size:9px;opacity:.7">${co.phone||''} &nbsp;|&nbsp; ${co.email||''}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:8px;letter-spacing:2px;opacity:.55;text-transform:uppercase">Employee Payslip / Slip Gaji</div>
+          <div style="font-size:15px;font-weight:800;color:#FBBF24;margin-top:2px">${bulan}</div>
+        </div>
+      </div>
+      <div style="height:1px;background:rgba(255,255,255,.2);margin:8px 0"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+        ${[['Nama / Name',e.name],['NIK / ID',e.nik],['Jabatan',e.jabatan],
+           ['Divisi',e.divisi||'—'],['Status PTKP',e.ptkp],['Hari Kerja / Working Days',`${slip.hk||25} hari`],
+           ['Tgl Masuk / Join Date',fDate(e.join||'')],['Rek. Gaji',e.bankInfo||'—']].map(([l,val])=>`
+          <div style="font-size:9.5px"><span style="opacity:.6">${l}</span><br><b>${val}</b></div>`).join('')}
+      </div>
+    </div>
+    <!-- BODY -->
+    <div style="display:grid;grid-template-columns:1fr 1fr">
+      <!-- Pendapatan -->
+      <div style="border-right:1px solid #e2e8f0">
+        <div style="background:#ecfdf5;padding:7px 10px;font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.8px">
+          Earnings / Pendapatan
+        </div>
+        <table style="width:100%">
+          ${rows([
+            ['Gaji Pokok / Basic Salary',slip.gaji],
+            [`Tunjangan Makan (${slip.hk} hr)`,slip.tunMakan],
+            [`Tunjangan Transport (${slip.hk} hr)`,slip.tunTransport],
+            [`Lembur (${slip.lemburJam||0} jam × Rp${rp(slip.tarifLembur||0)})`,slip.tunLembur],
+            ['Bonus',slip.bonus],
+            ['Pendapatan Lain',slip.otherIn],
+          ])}
+        </table>
+        <div style="border-top:2px solid #059669;padding:7px 10px;display:flex;justify-content:space-between;font-weight:800;color:#059669;font-size:12px">
+          <span>TOTAL PENDAPATAN</span><span>${rp(slip.totalPendapatan)}</span>
+        </div>
+      </div>
+      <!-- Potongan -->
+      <div>
+        <div style="background:#fff1f2;padding:7px 10px;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.8px">
+          Deductions / Potongan
+        </div>
+        <table style="width:100%">
+          ${dedRows([
+            ['PPh 21',slip.pph21],
+            ['BPJS Kesehatan (1%)',slip.bpjsKes],
+            ['BPJS TK / JHT (2%)',slip.bpjsTK],
+            ['BPJS TK / JP (1%)',slip.bpjsJP||0],
+            [`Keterlambatan (${slip.telatX||0}×)`,slip.dedTelat],
+            [`Absen tanpa izin (${slip.absenHr||0} hr)`,slip.dedAbsen],
+            ['Potongan Lain',slip.otherOut],
+          ])}
+        </table>
+        <div style="border-top:2px solid #dc2626;padding:7px 10px;display:flex;justify-content:space-between;font-weight:800;color:#dc2626;font-size:12px">
+          <span>TOTAL POTONGAN</span><span>${rp(slip.totalPotongan)}</span>
+        </div>
+      </div>
+    </div>
+    <!-- NET -->
+    <div style="background:linear-gradient(90deg,#0f172a,#1e3a8a);color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:10px;opacity:.7;letter-spacing:1px;text-transform:uppercase">Gaji Bersih / Net Salary</div>
+        <div style="font-size:10px;opacity:.6;margin-top:2px">Terbilang: ${terbilang(slip.gajiNet)} Rupiah</div>
+      </div>
+      <div style="font-size:22px;font-weight:900;color:#FBBF24">${rp(slip.gajiNet)}</div>
+    </div>
+    <!-- TANDA TANGAN -->
+    <div style="padding:14px 20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:10.5px;border-top:1px solid #f1f5f9">
+      <div>
+        <div style="color:var(--muted,#64748b);margin-bottom:28px">Tangerang Selatan, ${new Date(pRec.date||today()).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+        <div style="color:var(--muted,#64748b);margin-bottom:28px">Disetujui Oleh / Authorized Signatory,</div>
+        <div style="border-top:1px solid #000;padding-top:4px">( ……………………………………… )</div>
+        <div style="color:var(--muted,#64748b);font-size:9.5px">HRD / Finance Manager</div>
+      </div>
+      <div>
+        <div style="color:var(--muted,#64748b);margin-bottom:28px">&nbsp;</div>
+        <div style="color:var(--muted,#64748b);margin-bottom:28px">Diterima Oleh / Received By,</div>
+        <div style="border-top:1px solid #000;padding-top:4px">( ${e.name} )</div>
+        <div style="color:var(--muted,#64748b);font-size:9.5px">Karyawan / Employee</div>
+      </div>
+    </div>
+    <!-- NOTES -->
+    <div style="padding:8px 20px 12px;font-size:9px;color:#94a3b8;border-top:1px solid #f1f5f9;line-height:1.7">
+      1. Slip ini dibuat secara elektronik dan sah tanpa tanda tangan fisik. / This payslip is electronically generated and valid without physical signature.<br>
+      2. Harap verifikasi semua jumlah dalam 3 hari kerja. Pertanyaan: hr@ptams.id<br>
+      3. Tunjangan dihitung: (${slip.hk} Hari Kerja ÷ ${slip.HK_STD||25}) × Nilai Tunjangan Harian. Lembur: Gaji ÷ 173 × 1.5 × jam.<br>
+      4. BPJS: Kes 1% (maks basis 12jt) | JHT 2% | JP 1% (maks basis 9,56jt) | PPh 21 tarif progresif UU HPP.
+    </div>
+  </div>`;
+}
+
+// Helper: terbilang (bilangan ke kata)
+function terbilang(n){
+  if(!n||n===0)return'Nol';
+  const satuan=['','Satu','Dua','Tiga','Empat','Lima','Enam','Tujuh','Delapan','Sembilan'];
+  const belasan=['Sepuluh','Sebelas','Dua Belas','Tiga Belas','Empat Belas','Lima Belas','Enam Belas','Tujuh Belas','Delapan Belas','Sembilan Belas'];
+  function konversi(num){
+    if(num===0)return'';
+    if(num<10)return satuan[num];
+    if(num<20)return belasan[num-10];
+    if(num<100)return satuan[Math.floor(num/10)]+' Puluh'+(num%10?' '+satuan[num%10]:'');
+    if(num<1000)return(Math.floor(num/100)===1?'Seratus':satuan[Math.floor(num/100)]+' Ratus')+(num%100?' '+konversi(num%100):'');
+    if(num<1000000)return(Math.floor(num/1000)===1?'Seribu':konversi(Math.floor(num/1000))+' Ribu')+(num%1000?' '+konversi(num%1000):'');
+    if(num<1000000000)return konversi(Math.floor(num/1000000))+' Juta'+(num%1000000?' '+konversi(num%1000000):'');
+    return konversi(Math.floor(num/1000000000))+' Miliar'+(num%1000000000?' '+konversi(num%1000000000):'');
+  }
+  return konversi(Math.floor(Math.abs(n)));
+}
+
+function openSlip(empId,payrollId){
+  let slip,e,pRec;
+  if(payrollId){
+    pRec=DB.payroll.find(x=>x.id===payrollId);
+    if(pRec){slip=pRec.slips.find(s=>s.empId===empId);e=DB.employees.find(x=>x.id===empId);}
+  } else {
+    e=DB.employees.find(x=>x.id===empId);
+    if(e){
+      const yr=new Date().getFullYear(),mn=new Date().getMonth()+1;
+      const hkAuto=hitungHK(yr,mn);
+      slip=calcDetailedSlip(e,hkAuto,0,0,0,0,0,0);
+      pRec={year:yr,month:mn,date:today()};
+    }
+  }
+  if(!e||!slip)return alert('Data tidak ditemukan.');
+  const co=DB.company;
+  openModal(`Slip Gaji — ${e.name} | ${monthName(pRec.month)} ${pRec.year}`,`
+  <div id="slip-print-area">${buildSlipHTML(e,slip,pRec,co)}</div>
+  <div class="modal-ft no-print">
+    <button class="btn btn-out" onclick="closeModal()">Tutup</button>
+    <button class="btn btn-pri" onclick="printSlip()">🖨 Print / PDF</button>
+  </div>`,'modal-lg');
+}
+
+function printSlip(){
+  const area=document.getElementById('slip-print-area');
+  if(!area)return window.print();
+  const co=DB.company;
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Slip Gaji — ${co.name}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    @media print{@page{size:A4;margin:10mm}.no-print{display:none!important}}</style>
+    </head><body>${area.innerHTML}
+    <script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`;
+  const w=window.open('','_blank');w.document.write(html);w.document.close();
+}
+
 function viewPayrollDetail(id){
   const p=DB.payroll.find(x=>x.id===id);if(!p)return;
-  openModal(`Payroll ${monthName(p.month)} ${p.year}`,`
-  <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Position</th><th>Bruto</th><th>PPh 21</th><th>BPJS</th><th>Bersih</th></tr></thead>
-  <tbody>${p.slips.map(s=>{const e=DB.employees.find(x=>x.id===s.empId);return`<tr><td class="fw7">${e?e.name:'?'}</td><td>${e?e.jabatan:''}</td><td>${rp(s.gross)}</td><td class="bad">${rp(s.pph21)}</td><td class="bad">${rp(s.bpjs||0)}</td><td class="ok fw7">${rp(s.net)}</td></tr>`;}).join('')}
-  <tr style="background:#f0f7ff;font-weight:700"><td colspan="2">TOTAL</td><td>${rp(p.totalGaji)}</td><td class="bad">${rp(p.totalPPh)}</td><td>-</td><td class="ok">${rp(p.totalNet)}</td></tr>
-  </tbody></table></div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Close</button><button class="btn btn-pri" onclick="window.print()">🖨 Print</button></div>`,'modal-lg');
+  openModal(`Detail Payroll — ${monthName(p.month)} ${p.year}`,`
+  <div class="tbl-wrap"><table style="font-size:11px">
+    <thead><tr style="background:#f0f4ff">
+      <th>Nama</th><th>Jabatan</th><th>HK</th><th>Bruto</th>
+      <th>PPh21</th><th>BPJS Kes</th><th>BPJS TK+JP</th><th>Pot.Lain</th><th>Bersih</th><th>Slip</th>
+    </tr></thead>
+    <tbody>
+    ${p.slips.map(s=>{
+      const e=DB.employees.find(x=>x.id===s.empId);
+      const potLain=(s.dedTelat||0)+(s.dedAbsen||0)+(s.otherOut||0);
+      return`<tr>
+        <td class="fw7">${e?e.name:'?'}</td>
+        <td>${e?e.jabatan:''}</td>
+        <td style="text-align:center">${s.hk||25}</td>
+        <td>${rp(s.totalPendapatan||s.gross||0)}</td>
+        <td class="bad">${rp(s.pph21||0)}</td>
+        <td class="bad">${rp(s.bpjsKes||0)}</td>
+        <td class="bad">${rp((s.bpjsTK||0)+(s.bpjsJP||0))}</td>
+        <td class="bad">${rp(potLain)}</td>
+        <td class="ok fw7">${rp(s.gajiNet||s.net||0)}</td>
+        <td><button class="btn btn-out btn-xs" onclick="openSlip('${s.empId}','${p.id}')">👁</button></td>
+      </tr>`;
+    }).join('')}
+    <tr style="background:#dbeafe;font-weight:800">
+      <td colspan="3">TOTAL</td>
+      <td>${rp(p.totalGaji)}</td>
+      <td class="bad">${rp(p.totalPPh)}</td>
+      <td colspan="3" class="bad">BPJS: ${rp(p.totalBPJS||0)}</td>
+      <td class="ok">${rp(p.totalNet)}</td>
+      <td></td>
+    </tr>
+    </tbody></table></div>
+  <div class="modal-ft">
+    <button class="btn btn-out" onclick="closeModal()">Tutup</button>
+    <button class="btn btn-pri" onclick="bulkPrintPayslips('${p.id}')">🖨 Bulk Print Semua</button>
+  </div>`,'modal-wide');
 }
-function exportPayroll(){if(!DB.payroll.length)return alert('No payroll data yet');const rows=[];DB.payroll.forEach(p=>p.slips.forEach(s=>{const e=DB.employees.find(x=>x.id===s.empId);rows.push({Tahun:p.year,Month:p.month,NIK:e?e.nik:'',Nama:e?e.name:'',Position:e?e.jabatan:'',Bruto:s.gross,PPh21:s.pph21,BPJS:s.bpjs||0,Bersih:s.net});}));exportXLSX([{name:'Payroll',data:rows}],'payroll');}
+
+// Bulk print all payslips for a payroll period
+function bulkPrintPayslips(payrollId){
+  let p=null;
+  if(payrollId){
+    p=DB.payroll.find(x=>x.id===payrollId);
+  } else {
+    // Most recent
+    const sorted=[...DB.payroll].sort((a,b)=>b.year-a.year||b.month-a.month);
+    p=sorted[0];
+  }
+  if(!p)return alert('Tidak ada data payroll.');
+  const co=DB.company;
+  let allSlips='';
+  p.slips.forEach((s,i)=>{
+    const e=DB.employees.find(x=>x.id===s.empId);
+    if(!e)return;
+    allSlips+=`<div style="page-break-after:${i<p.slips.length-1?'always':'avoid'};margin-bottom:20px">
+      ${buildSlipHTML(e,s,p,co)}
+    </div>`;
+  });
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Payroll ${monthName(p.month)} ${p.year} — ${co.name}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:10mm}
+    @media print{@page{size:A4;margin:8mm}}</style>
+    </head><body>${allSlips}
+    <script>window.onload=()=>setTimeout(()=>window.print(),600)<\/script></body></html>`;
+  const w=window.open('','_blank');w.document.write(html);w.document.close();
+}
+
+function exportPayroll(){
+  if(!DB.payroll.length)return alert('Belum ada data payroll.');
+  const rows=[];
+  DB.payroll.forEach(p=>p.slips.forEach(s=>{
+    const e=DB.employees.find(x=>x.id===s.empId);
+    rows.push({
+      Tahun:p.year,Bulan:monthName(p.month),'Tgl Bayar':p.date,
+      NIK:e?e.nik:'',Nama:e?e.name:'',Jabatan:e?e.jabatan:'',
+      'Hari Kerja':s.hk||25,
+      'Gaji Pokok':s.gaji||0,
+      'Tun. Makan':s.tunMakan||0,'Tun. Transport':s.tunTransport||0,
+      'Lembur':s.tunLembur||0,'Bonus':s.bonus||0,'Tambahan':s.otherIn||0,
+      'Total Bruto':s.totalPendapatan||s.gross||0,
+      'PPh 21':s.pph21||0,'BPJS Kes':s.bpjsKes||0,'BPJS JHT':s.bpjsTK||0,'BPJS JP':s.bpjsJP||0,
+      'Pot. Telat':s.dedTelat||0,'Pot. Absen':s.dedAbsen||0,'Pot. Lain':s.otherOut||0,
+      'Total Potongan':s.totalPotongan||0,'Gaji Bersih':s.gajiNet||s.net||0,
+    });
+  }));
+  exportXLSX([{name:'Payroll',data:rows}],'payroll_detail');
+}
+
 
 // ================================================================
 //  TAX
@@ -4275,6 +5546,15 @@ function terbilangRp(n){
 //  SETTINGS
 // ================================================================
 function renderSettings(c){
+  // Guard: Admin only — but be defensive about _currentUser state
+  const role=_currentUser?.role||sessionStorage.getItem('__role__')||'';
+  if(role&&role!=='Admin'){
+    c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:12px"><div style="font-size:48px">🔒</div><div style="font-size:18px;font-weight:700">Akses Ditolak</div><div style="color:#64748b">Halaman ini hanya untuk Admin.</div></div>';
+    document.getElementById('topbar-actions').innerHTML='';return;
+  }
+  // Ensure DB fields exist (migrate if needed)
+  if(!DB.taxSettings)DB.taxSettings={ppnRate:11,pph23Rate:2,pph4Rate:2};
+  if(!DB.company)DB.company={name:'',npwp:'',address:'',phone:'',email:'',year:new Date().getFullYear(),logo:''};
   const co=DB.company;
   const logoPreview=co.logo?`<img src="${co.logo}" class="logo-preview"><br><button class="btn btn-bad btn-xs" style="margin-top:6px" onclick="removeLogo()">✕ ${getLang()==='id'?'Hapus Logo':'Remove Logo'}</button>`:`<div style="font-size:22px;margin-bottom:4px">🏢</div><p style="font-size:11.5px;color:var(--muted)">${getLang()==='id'?'Klik untuk upload logo':'Click to upload logo'}</p><p style="font-size:10.5px;color:var(--muted)">PNG/JPG, max 2MB</p>`;
   c.innerHTML=`
@@ -4325,6 +5605,28 @@ function renderSettings(c){
           <button class="btn btn-out" onclick="exportPayroll()">⬇ ${t('nav_payroll')}</button>
         </div>
       </div>
+      <!-- TAX SETTINGS CARD -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-hd">💹 Tarif Pajak Default <span>Berlaku untuk invoice baru</span></div>
+        <div class="alert a-info" style="font-size:11.5px;margin-bottom:10px">
+          Update kapan saja sesuai PMK terbaru. Invoice lama tidak berubah.
+        </div>
+        <div class="fr3">
+          <div class="fg"><label>PPN / VAT (%)</label>
+            <input type="number" id="ts-ppn" value="${DB.taxSettings?.ppnRate||11}" min="0" max="100" step="0.1">
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">Contoh: 11% atau 12%</div>
+          </div>
+          <div class="fg"><label>PPh 23 (%)</label>
+            <input type="number" id="ts-pph23" value="${DB.taxSettings?.pph23Rate||2}" min="0" max="100" step="0.1">
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">Default: 2% (jasa)</div>
+          </div>
+          <div class="fg"><label>PPh 4(2) (%)</label>
+            <input type="number" id="ts-pph4" value="${DB.taxSettings?.pph4Rate||2}" min="0" max="100" step="0.1">
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">Default: 2% (konstruksi)</div>
+          </div>
+        </div>
+        <div style="margin-top:10px"><button class="btn btn-pri" onclick="saveTaxSettings()">💾 Simpan Tarif Pajak</button></div>
+      </div>
       <div class="card"><div class="card-hd">${t('set_backup')}</div>
         <div style="display:flex;flex-direction:column;gap:6px">
           <button class="btn btn-out" onclick="backupData()">${t('set_backupBtn')}</button>
@@ -4343,6 +5645,14 @@ function renderSettings(c){
 function saveCompany(){
   DB.company={...DB.company,name:v('co-name'),npwp:v('co-npwp'),address:v('co-addr'),phone:v('co-phone'),email:v('co-email'),year:parseInt(v('co-year'))||new Date().getFullYear()};
   saveDB();document.getElementById('sb-coname').textContent=DB.company.name;updateSidebarLogo();alert('Profil disimpan!');
+function saveTaxSettings(){
+  if(!DB.taxSettings)DB.taxSettings={};
+  DB.taxSettings.ppnRate=parseFloat(v('ts-ppn'))||11;
+  DB.taxSettings.pph23Rate=parseFloat(v('ts-pph23'))||2;
+  DB.taxSettings.pph4Rate=parseFloat(v('ts-pph4'))||2;
+  saveDB();alert('✅ Tarif pajak disimpan. Invoice baru akan menggunakan tarif ini.');
+}
+
 }
 function handleLogoUpload(input){
   const f=input.files[0];if(!f)return;if(f.size>2097152)return alert('Maks 2MB!');
@@ -5602,12 +6912,19 @@ function skipAutoBackup(){
 async function init(){
   checkSession();
   const c=document.getElementById('content');
-  c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:14px"><div style="font-size:36px;animation:spin 1.5s linear infinite">☁️</div><div style="font-weight:700;color:#2563eb;font-size:15px">Memuat data dari cloud...</div><div style="color:#64748b;font-size:12px">Menghubungkan ke Supabase</div></div><style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>';
-  DB=await loadDB();
+  c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:14px"><div style="font-size:36px;animation:spin 1.5s linear infinite">☁️</div><div style="font-weight:700;color:#2563eb;font-size:15px">Memuat data dari cloud...</div><div style="color:#64748b;font-size:12px">Menghubungkan ke Supabase — maks 8 detik</div></div><style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>';
+  // Timeout 8 detik — kalau Supabase lambat, pakai lokal saja
+  const dbTimeout=new Promise(res=>setTimeout(()=>res(null),8000));
+  const dbResult=await Promise.race([loadDB(),dbTimeout]);
+  DB=dbResult||JSON.parse(localStorage.getItem(SK)||'null')||defaultDB();
+  if(!DB.company)DB=defaultDB();
   if(!DB.users||!DB.users.length)DB.users=[{id:'usr_admin',username:'admin',password:'AMS2025!',role:'Admin',name:'Administrator',createdAt:new Date().toISOString()}];
   if(!DB.auditLog)DB.auditLog=[];
   if(!DB.roles||!DB.roles.length)DB.roles=['Admin','Direktur','Manager','Finance','HRD','Staff'];
-  if(!DB.lockedPeriods)DB.lockedPeriods=[]; // migrate DB lama yang belum punya field ini
+  if(!DB.lockedPeriods)DB.lockedPeriods=[];
+  if(!DB.calendar)DB.calendar={};
+  if(!DB.calConfig)DB.calConfig={tarifTelat:50000,tarifAbsenHarian:0};
+  if(!DB.taxSettings)DB.taxSettings={ppnRate:11,pph23Rate:2,pph4Rate:2,defaultTaxType:'ppn'};
   if(!DB.rekonBank)DB.rekonBank=[];         // migrate DB lama
   // Migrate: tambah akun baru jika belum ada
   const newAccounts=[
@@ -5621,16 +6938,45 @@ async function init(){
   if(acc4201&&acc4201.name==='Interest Income')acc4201.name='Interest & Profit Sharing Income';
   const scn=document.getElementById('sb-coname');if(scn)scn.textContent=DB.company.name;
   updateSidebarLogo();
-  setSyncStatus('synced');
+  seedAMSProducts();
+  setSyncStatus(_isOnline?'synced':'offline');
   if(isAdmin()){
     const nu=document.getElementById('nav-users');if(nu)nu.style.display='flex';
     const na=document.getElementById('nav-audit');if(na)na.style.display='flex';
   }
   // Apply language on load
   applyLang();
+  // Store role backup for guard checks
+  if(_currentUser?.role) sessionStorage.setItem('__role__',_currentUser.role);
   // Jalankan auto backup harian
   autoBackup();
   nav('dashboard');
+
+  // ── Offline-first: background connectivity monitor ──
+  // Ping setiap 15 detik. Kalau kembali online → auto-sync pending changes
+  _pingTimer=setInterval(async()=>{
+    const wasOnline=_isOnline;
+    _isOnline=await pingSupabase();
+    if(!wasOnline&&_isOnline){
+      // Baru kembali online
+      setSyncStatus('saving');
+      await syncPendingToCloud();
+    } else if(!_isOnline&&wasOnline){
+      setSyncStatus('offline');
+      console.info('[SiAkun] Koneksi terputus — beralih ke mode offline');
+    }
+  },15000);
+
+  // Juga listen ke browser online/offline events
+  window.addEventListener('online', async()=>{
+    _isOnline=true;
+    if(_offlinePending)await syncPendingToCloud();
+    else setSyncStatus('synced');
+  });
+  window.addEventListener('offline',()=>{
+    _isOnline=false;
+    setSyncStatus('offline');
+  });
 }
 window.onload=init;
 
@@ -5641,6 +6987,11 @@ function getRoles(){return DB.roles&&DB.roles.length?DB.roles:['Admin','Direktur
 function roleOptions(selected){return getRoles().map(r=>`<option value="${r}" ${r===selected?'selected':''}>${r}</option>`).join('');}
 
 function renderUsers(c){
+  const role=_currentUser?.role||sessionStorage.getItem('__role__')||'';
+  if(role&&role!=='Admin'){
+    c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:12px"><div style="font-size:48px">🔒</div><div style="font-size:18px;font-weight:700">Akses Ditolak</div><div style="color:#64748b">Halaman ini hanya untuk Admin.</div></div>';
+    document.getElementById('topbar-actions').innerHTML='';return;
+  }
   if(!isAdmin()){c.innerHTML=`<div class="alert a-bad mt16">⛔ ${getLang()==='id'?'Akses ditolak. Hanya Admin yang bisa mengakses halaman ini.':'Access denied. Admin only.'}</div>`;return;}
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openAddUser()">${t('usr_add')}</button>`;
   const users=DB.users||[];
@@ -5852,6 +7203,11 @@ async function saveMyPassword(){
 //  AUDIT TRAIL (Admin only)
 // ================================================================
 function renderAudit(c){
+  const role=_currentUser?.role||sessionStorage.getItem('__role__')||'';
+  if(role&&role!=='Admin'){
+    c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:12px"><div style="font-size:48px">🔒</div><div style="font-size:18px;font-weight:700">Akses Ditolak</div><div style="color:#64748b">Halaman ini hanya untuk Admin.</div></div>';
+    document.getElementById('topbar-actions').innerHTML='';return;
+  }
   if(!isAdmin()){c.innerHTML='<div class="alert a-bad mt16">⛔ Akses ditolak.</div>';return;}
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-out" onclick="exportAudit()">⬇ Export Excel</button>`;
   const logs=DB.auditLog||[];
