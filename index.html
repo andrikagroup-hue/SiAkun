@@ -786,20 +786,37 @@ function localHash(str){
 
 async function verifyPassword(plain,stored){
   if(!stored)return false;
-  // EMERGENCY BYPASS: kalau buka via file:// dan password di-hash
-  // tidak bisa verify → pakai master password list
+
+  // ── FILE:// mode — crypto.subtle tidak jalan di Edge/Chrome untuk file:// ──
   if(location.protocol==='file:'){
-    const MASTER=['AMS2025!','ams2026!','ams2025!','AMS2026!'];
-    if(MASTER.includes(plain))return true;
-    // Juga coba plaintext match langsung
-    if(!stored.startsWith('sha256:')&&!stored.startsWith('local:'))return plain===stored;
+    // Coba local: hash match dulu
+    if(stored.startsWith('local:'))return('local:'+localHash(plain))===stored;
+    // Plaintext
+    if(!stored.startsWith('sha256:'))return plain===stored;
+    // sha256: tersimpan di Supabase tapi tidak bisa verify → tidak bisa masuk via file://
+    // Instruksikan user untuk buka via GitHub
     return false;
   }
-  // Plaintext langsung cocok
-  if(!stored.startsWith('sha256:')&&!stored.startsWith('local:'))return plain===stored;
-  // Hash match
-  const hashed=await hashPassword(plain);
-  return hashed===stored;
+
+  // ── HTTPS mode — full verification ──────────────────────────────────────
+  // Plaintext (password belum pernah di-hash)
+  if(!stored.startsWith('sha256:')&&!stored.startsWith('local:')){
+    return plain===stored;
+  }
+  // local: format (di-set saat akses via file://)
+  if(stored.startsWith('local:')){
+    return('local:'+localHash(plain))===stored;
+  }
+  // sha256: format — verifikasi dengan crypto.subtle
+  if(stored.startsWith('sha256:')){
+    try{
+      const enc=new TextEncoder().encode(plain);
+      const buf=await crypto.subtle.digest('SHA-256',enc);
+      const h='sha256:'+Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      return h===stored;
+    }catch(e){return false;}
+  }
+  return false;
 }
 
 
@@ -1974,8 +1991,9 @@ async function doLogin(){
   }
 
   if(ok){
-    // Auto-migrate: hash plaintext password ke format yang sesuai protocol
-    if(found.password&&!found.password.startsWith('sha256:')&&!found.password.startsWith('local:')){
+    // Auto-migrate: upgrade password ke sha256 saat login berhasil via https://
+    // Ini juga upgrade local: format → sha256: secara otomatis
+    if(found.password&&!found.password.startsWith('sha256:')&&location.protocol==='https:'){
       found.password=await hashPassword(p);
       saveDB();
     }
