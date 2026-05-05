@@ -5718,7 +5718,7 @@ function buildSlipHTML(e,slip,pRec,co){
     <!-- TANDA TANGAN -->
     <div style="padding:14px 20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:10.5px;border-top:1px solid #f1f5f9">
       <div>
-        <div style="color:var(--muted,#64748b);margin-bottom:28px">Tangerang Selatan, ${new Date(pRec.date||today()).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+        <div style="color:var(--muted,#64748b);margin-bottom:28px">Tangerang Selatan, <span id="slip-date-text" contenteditable="true" style="outline:none;border-bottom:1px dashed #94a3b8;cursor:text" title="Klik untuk edit tanggal">${new Date(pRec.date||today()).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</span></div>
         <div style="color:var(--muted,#64748b);margin-bottom:28px">Disetujui Oleh / Authorized Signatory,</div>
         <div style="border-top:1px solid #000;padding-top:4px">( <span id="slip-signatory-name" contenteditable="true" style="min-width:120px;display:inline-block;outline:none;border-bottom:1px dashed #94a3b8">${co.signatory||''}</span> )</div>
         <div style="color:var(--muted,#64748b);font-size:9.5px">HRD / Finance Manager</div>
