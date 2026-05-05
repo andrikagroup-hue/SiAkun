@@ -5087,8 +5087,9 @@ function renderCalendar(c){
 
   document.getElementById('topbar-actions').innerHTML=`
     <select onchange="window._calYear=this.value;nav('calendar')" style="font-size:12px;padding:5px 10px;border:1px solid var(--bdr);border-radius:6px">
-      ${[2025,2026,2027,2028].map(y=>`<option${y===yr?' selected':''}>${y}</option>`).join('')}
+      ${Array.from({length:9},(_,i)=>new Date().getFullYear()-2+i).map(y=>`<option${y===yr?' selected':''}>${y}</option>`).join('')}
     </select>
+    <button class="btn btn-acc" onclick="openImportHoliday()">📂 Import Libur</button>
     <button class="btn btn-pri" onclick="openAddHoliday()">+ Tambah Hari Libur</button>`;
 
   c.innerHTML=`
@@ -5126,6 +5127,150 @@ function renderCalendar(c){
     </table></div>
   </div>`;
 }
+function openImportHoliday(){
+  const yr=parseInt(window._calYear||new Date().getFullYear());
+  openModal(`📂 Import Hari Libur ${yr}`,`
+  <div class="alert a-info" style="font-size:11.5px">
+    Upload file daftar hari libur nasional & cuti bersama. Format kolom minimal: <b>Tanggal | Nama</b> (tipe otomatis dideteksi dari kata kunci "cuti").
+    <br>Format didukung: <b>.xlsx · .xls · .csv · .html · .tsv</b>
+  </div>
+  <div class="fg">
+    <label>Upload File</label>
+    <input type="file" id="hl-import-file" accept=".xlsx,.xls,.csv,.html,.htm,.tsv"
+      style="padding:12px;border:2px dashed var(--bdr);border-radius:8px;cursor:pointer;background:#f8fafc;width:100%"
+      onchange="previewImportHoliday(this,${yr})">
+  </div>
+  <div id="hl-import-preview" style="margin-top:10px"></div>
+  <div class="modal-ft">
+    <button class="btn btn-out" onclick="closeModal()">Batal</button>
+    <button id="hl-import-btn" class="btn btn-pri" style="display:none" onclick="confirmImportHoliday(${yr})">✅ Import Sekarang</button>
+  </div>`,'modal-wide');
+}
+
+let _hlImportData=[];
+function previewImportHoliday(input,yr){
+  const f=input.files[0];if(!f)return;
+  const ext=f.name.split('.').pop().toLowerCase();
+  const reader=new FileReader();
+
+  function processRows(rows){
+    // Cari kolom tanggal dan nama
+    if(rows.length<1)return alert('File kosong!');
+    const headers=rows[0].map(h=>String(h||'').toLowerCase());
+    const dateCol=headers.findIndex(h=>h.includes('tanggal')||h.includes('date')||h.includes('tgl'));
+    const nameCol=headers.findIndex(h=>h.includes('nama')||h.includes('name')||h.includes('keterangan')||h.includes('libur'));
+    const typeCol=headers.findIndex(h=>h.includes('tipe')||h.includes('type')||h.includes('jenis'));
+
+    const dataRows=rows.slice(1).filter(r=>r.some(c=>c!==''&&c!==null&&c!==undefined));
+    _hlImportData=[];
+
+    dataRows.forEach(row=>{
+      // Ambil nilai kolom
+      const rawDate=dateCol>=0?row[dateCol]:row[0];
+      const rawName=nameCol>=0?row[nameCol]:row[1];
+      const rawType=typeCol>=0?row[typeCol]:null;
+      if(!rawDate||!rawName)return;
+
+      // Parse tanggal — support berbagai format
+      let dateStr='';
+      if(rawDate instanceof Date){
+        dateStr=rawDate.toISOString().slice(0,10);
+      } else if(typeof rawDate==='number'&&rawDate>40000){
+        // Excel serial date
+        const d=new Date(Math.round((rawDate-25569)*86400000));
+        dateStr=d.toISOString().slice(0,10);
+      } else {
+        const s=String(rawDate).trim();
+        // Coba parse DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, dll
+        const parts=s.match(/(\d{1,4})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+        if(parts){
+          const [,a,b,c]=parts;
+          // Deteksi format
+          if(parseInt(a)>31)dateStr=`${a}-${b.padStart(2,'0')}-${c.padStart(2,'0')}`;
+          else dateStr=`${c.length===2?'20'+c:c}-${b.padStart(2,'0')}-${a.padStart(2,'0')}`;
+        } else {
+          const d=new Date(s);
+          if(!isNaN(d))dateStr=d.toISOString().slice(0,10);
+        }
+      }
+      if(!dateStr)return;
+      // Hanya ambil yang sesuai tahun
+      if(!dateStr.startsWith(String(yr)))return;
+
+      // Deteksi tipe
+      const nameStr=String(rawName).trim();
+      let type='libur';
+      if(rawType){
+        const t=String(rawType).toLowerCase();
+        if(t.includes('cuti')||t.includes('bersama')||t.includes('joint'))type='cuti_bersama';
+      } else {
+        if(nameStr.toLowerCase().includes('cuti'))type='cuti_bersama';
+      }
+      _hlImportData.push({date:dateStr,name:nameStr,type});
+    });
+
+    const prev=document.getElementById('hl-import-preview');
+    const btn=document.getElementById('hl-import-btn');
+    if(!_hlImportData.length){
+      prev.innerHTML=`<div class="alert a-warn">Tidak ada data valid untuk tahun ${yr} yang ditemukan. Pastikan format tanggal benar dan tahun sesuai.</div>`;
+      btn.style.display='none';return;
+    }
+    const libCount=_hlImportData.filter(h=>h.type==='libur').length;
+    const cutiCount=_hlImportData.filter(h=>h.type==='cuti_bersama').length;
+    prev.innerHTML=`
+      <div class="alert a-ok" style="margin-bottom:10px">✅ Ditemukan <b>${_hlImportData.length} hari</b> (${libCount} libur nasional, ${cutiCount} cuti bersama)</div>
+      <div style="max-height:200px;overflow-y:auto"><table style="width:100%;font-size:11px;border-collapse:collapse">
+        <thead><tr style="background:#f0f4ff"><th style="padding:5px 8px;text-align:left">Tanggal</th><th style="padding:5px 8px;text-align:left">Nama</th><th style="padding:5px 8px">Tipe</th></tr></thead>
+        <tbody>${_hlImportData.map(h=>`<tr style="border-bottom:1px solid #f1f5f9">
+          <td style="padding:4px 8px">${fDate(h.date)}</td>
+          <td style="padding:4px 8px">${h.name}</td>
+          <td style="padding:4px 8px;text-align:center"><span class="badge ${h.type==='libur'?'b-bad':'b-warn'}">${h.type==='libur'?'🔴 Libur':'🟡 Cuti'}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    btn.style.display='inline-flex';
+  }
+
+  if(ext==='csv'||ext==='tsv'){
+    reader.onload=e=>{
+      const sep=ext==='tsv'?'\t':(()=>{const l=e.target.result.split('\n')[0];return(l.match(/;/g)||[]).length>(l.match(/,/g)||[]).length?';':','})();
+      const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());
+      const parseL=line=>{const r=[];let cur='',inQ=false;for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===sep&&!inQ){r.push(cur.trim());cur='';}else{cur+=ch;}}r.push(cur.trim());return r;};
+      processRows(lines.map(l=>parseL(l)));
+    };reader.readAsText(f,'UTF-8');
+  } else if(ext==='html'||ext==='htm'){
+    reader.onload=e=>{
+      const doc=new DOMParser().parseFromString(e.target.result,'text/html');
+      const table=doc.querySelector('table');
+      if(!table)return alert('Tidak ada tabel di file HTML ini.');
+      const rows=[...table.querySelectorAll('tr')].map(tr=>[...tr.querySelectorAll('td,th')].map(td=>(td.innerText||td.textContent||'').trim()));
+      processRows(rows);
+    };reader.readAsText(f,'UTF-8');
+  } else {
+    reader.onload=e=>{
+      const wb=XLSX.read(e.target.result,{type:'binary',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      processRows(rows);
+    };reader.readAsBinaryString(f);
+  }
+}
+
+function confirmImportHoliday(yr){
+  if(!_hlImportData.length)return;
+  ensureCalYear(yr);
+  const existing=DB.calendar[yr]||[];
+  let added=0,skipped=0;
+  _hlImportData.forEach(h=>{
+    if(existing.find(e=>e.date===h.date)){skipped++;return;}
+    existing.push(h);added++;
+  });
+  DB.calendar[yr]=existing;
+  saveDB();closeModal();
+  logAudit('Import Kalender',`${yr}: ${added} ditambah, ${skipped} duplikat dilewati`);
+  alert(`✅ Import selesai!\n${added} hari libur ditambahkan\n${skipped} sudah ada (dilewati)`);
+  nav('calendar');
+}
+
 function openAddHoliday(){
   const yr=window._calYear||new Date().getFullYear();
   openModal('Tambah Hari Libur',`
