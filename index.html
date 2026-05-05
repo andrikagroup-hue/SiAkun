@@ -5482,9 +5482,116 @@ function renderPayrollHist(){
       <td class="gap8">
         <button class="btn btn-out btn-xs" onclick="viewPayrollDetail('${p.id}')">Detail</button>
         <button class="btn btn-out btn-xs" onclick="bulkPrintPayslips('${p.id}')">🖨 PDF</button>
+        <button class="btn btn-acc btn-xs" onclick="openEditPayroll('${p.id}')">✏️</button>
+        <button class="btn btn-bad btn-xs" onclick="delPayroll('${p.id}')">✕</button>
       </td>
     </tr>`).join(''):`<tr><td colspan="8" class="tbl-empty">Belum ada history payroll.</td></tr>`}
     </tbody></table></div></div>`;
+}
+
+function openEditPayroll(id){
+  const p=DB.payroll.find(x=>x.id===id);if(!p)return;
+  openModal(`✏️ Edit Payroll — ${monthName(p.month)} ${p.year}`,`
+  <div class="alert a-warn" style="font-size:11.5px">Edit ini akan mengupdate data payroll dan jurnal terkait. Nominal gaji karyawan dihitung ulang sesuai HK Override baru.</div>
+  <div class="fr2">
+    <div class="fg"><label>Tanggal Bayar</label><input type="date" id="ep-date" value="${p.date}"></div>
+    <div class="fg"><label>Akun Pembayaran</label><select id="ep-acc">${DB.accounts.filter(a=>['aktiva'].includes(a.type)&&['lancar'].includes(a.sub)).map(a=>`<option value="${a.id}"${a.id===p.bankAcc?' selected':''}>[${a.code}] ${a.name}</option>`).join('')}</select></div>
+  </div>
+  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:12px 0 8px">Override Per Karyawan</div>
+  <div class="tbl-wrap"><table style="font-size:12px">
+    <thead><tr style="background:#f0f4ff">
+      <th>Karyawan</th><th>HK</th><th>Bonus (Rp)</th><th>Tambahan (Rp)</th><th>Pot. Lain (Rp)</th><th>Est. Bersih</th>
+    </tr></thead>
+    <tbody>
+    ${p.slips.map((s,i)=>{
+      const e=DB.employees.find(x=>x.id===s.empId);
+      return`<tr>
+        <td class="fw7">${e?e.name:'?'}<input type="hidden" id="ep-eid-${i}" value="${s.empId}"></td>
+        <td><input type="number" id="ep-hk-${i}" value="${s.hk||25}" min="1" max="31" style="width:55px;text-align:center;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
+        <td><input type="number" id="ep-bon-${i}" value="${s.bonus||0}" min="0" style="width:90px;text-align:right;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
+        <td><input type="number" id="ep-add-${i}" value="${s.otherIn||0}" min="0" style="width:90px;text-align:right;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
+        <td><input type="number" id="ep-pot-${i}" value="${s.otherOut||0}" min="0" style="width:90px;text-align:right;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
+        <td id="ep-est-${i}" style="font-weight:700;color:var(--ok)">${rp(s.gajiNet||s.net||0)}</td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table></div>
+  <div class="modal-ft">
+    <button class="btn btn-out" onclick="closeModal()">Batal</button>
+    <button class="btn btn-pri" onclick="saveEditPayroll('${id}',${p.slips.length})">💾 Simpan & Update Jurnal</button>
+  </div>`,'modal-wide');
+}
+
+function updateEpEst(i){
+  const empId=document.getElementById(`ep-eid-${i}`)?.value;
+  const e=DB.employees.find(x=>x.id===empId);if(!e)return;
+  const hk=parseInt(document.getElementById(`ep-hk-${i}`)?.value)||25;
+  const bon=parseFloat(document.getElementById(`ep-bon-${i}`)?.value)||0;
+  const add=parseFloat(document.getElementById(`ep-add-${i}`)?.value)||0;
+  const pot=parseFloat(document.getElementById(`ep-pot-${i}`)?.value)||0;
+  const slip=calcDetailedSlip(e,hk,0,0,0,bon,add,pot);
+  const el=document.getElementById(`ep-est-${i}`);
+  if(el)el.textContent=rp(slip.gajiNet);
+}
+
+function saveEditPayroll(id,count){
+  const p=DB.payroll.find(x=>x.id===id);if(!p)return;
+  const date=document.getElementById('ep-date')?.value;
+  const bankAcc=document.getElementById('ep-acc')?.value;
+  if(!date)return alert('Tanggal bayar wajib diisi!');
+
+  // Hapus jurnal lama terkait payroll ini
+  DB.transactions=DB.transactions.filter(tx=>tx.ref!==p.txRef);
+
+  // Hitung ulang semua slip
+  let totalGaji=0,totalPPh=0,totalBPJS=0,totalNet=0;
+  for(let i=0;i<count;i++){
+    const empId=document.getElementById(`ep-eid-${i}`)?.value;
+    const e=DB.employees.find(x=>x.id===empId);if(!e)continue;
+    const hk=parseInt(document.getElementById(`ep-hk-${i}`)?.value)||25;
+    const bon=parseFloat(document.getElementById(`ep-bon-${i}`)?.value)||0;
+    const add=parseFloat(document.getElementById(`ep-add-${i}`)?.value)||0;
+    const pot=parseFloat(document.getElementById(`ep-pot-${i}`)?.value)||0;
+    const slip=calcDetailedSlip(e,hk,0,0,0,bon,add,pot);
+
+    // Update slip di payroll record
+    const idx=p.slips.findIndex(s=>s.empId===empId);
+    if(idx>-1)Object.assign(p.slips[idx],{...slip,hk,bonus:bon,otherIn:add,otherOut:pot});
+
+    totalGaji+=slip.totalPendapatan||0;
+    totalPPh+=slip.pph21||0;
+    totalBPJS+=(slip.bpjsKes||0)+(slip.bpjsTK||0)+(slip.bpjsJP||0);
+    totalNet+=slip.gajiNet||0;
+  }
+
+  Object.assign(p,{date,bankAcc,totalGaji,totalPPh,totalBPJS,totalNet});
+
+  // Buat ulang jurnal payroll
+  const txRef=`PAY-${p.year}${String(p.month).padStart(2,'0')}`;
+  p.txRef=txRef;
+  const entries=[];
+  p.slips.forEach(s=>{
+    entries.push({acc:'6101',deb:s.totalPendapatan||0,crd:0});
+  });
+  entries.push({acc:bankAcc,deb:0,crd:totalNet});
+  if(totalPPh>0)entries.push({acc:'2105',deb:0,crd:totalPPh});
+  if(totalBPJS>0)entries.push({acc:'2108',deb:0,crd:totalBPJS});
+  DB.transactions.push({id:uid(),date,ref:txRef,desc:`Gaji ${monthName(p.month)} ${p.year}`,entries});
+
+  saveDB();closeModal();
+  logAudit('Edit Payroll',`${monthName(p.month)} ${p.year} — Net: ${rp(totalNet)}`);
+  renderPayrollHist();
+}
+
+function delPayroll(id){
+  const p=DB.payroll.find(x=>x.id===id);if(!p)return;
+  if(!confirm(`Hapus payroll ${monthName(p.month)} ${p.year}?\n\nJurnal terkait juga akan dihapus.\nAksi ini tidak bisa dibatalkan.`))return;
+  // Hapus jurnal terkait
+  if(p.txRef)DB.transactions=DB.transactions.filter(tx=>tx.ref!==p.txRef);
+  DB.payroll=DB.payroll.filter(x=>x.id!==id);
+  saveDB();
+  logAudit('Hapus Payroll',`${monthName(p.month)} ${p.year}`);
+  renderPayrollHist();
 }
 
 // ── PPh 21 Calculation ───────────────────────────────────────────
