@@ -5465,6 +5465,13 @@ function calcDetailedSlip(e,hkAktif,lemburJam,telatX,absenHr,bonus,otherIn,other
   const bpjsTK=Math.round(e.gaji*0.02);
   // BPJS TK JP: 1% (basis maks 9.559.600)
   const bpjsJP=Math.round(Math.min(e.gaji,9559600)*0.01);
+  // ── BPJS Beban Perusahaan (tidak dipotong dari gaji karyawan) ──
+  const bpjsKesEmp=Math.round(Math.min(e.gaji,12000000)*0.04);   // 4% perusahaan
+  const bpjsJHTEmp=Math.round(e.gaji*0.037);                      // 3.7%
+  const bpjsJPEmp=Math.round(Math.min(e.gaji,9559600)*0.02);      // 2%
+  const bpjsJKK=Math.round(e.gaji*0.0024);                        // 0.24% (risiko 1 — standar)
+  const bpjsJKM=Math.round(e.gaji*0.003);                         // 0.3%
+  const totalBpjsEmp=bpjsKesEmp+bpjsJHTEmp+bpjsJPEmp+bpjsJKK+bpjsJKM;
   // Keterlambatan
   const tarifTelat=(e.tarifTelat>0?e.tarifTelat:0)||(DB.calConfig?.tarifTelat||50000);
   const dedTelat=Math.round(telatX*tarifTelat);
@@ -5476,7 +5483,9 @@ function calcDetailedSlip(e,hkAktif,lemburJam,telatX,absenHr,bonus,otherIn,other
   return{
     gaji:e.gaji,tunMakan,tunTransport,tunLembur,bonus,otherIn,totalPendapatan,
     pph21,bpjsKes,bpjsTK,bpjsJP,dedTelat,dedAbsen,otherOut,totalPotongan,
-    gajiNet,hk:hkAktif,lemburJam,telatX,absenHr,tarifLembur,gajiHarian,ptkp,pkp,HK_STD
+    gajiNet,hk:hkAktif,lemburJam,telatX,absenHr,tarifLembur,gajiHarian,ptkp,pkp,HK_STD,
+    // Beban perusahaan
+    bpjsKesEmp,bpjsJHTEmp,bpjsJPEmp,bpjsJKK,bpjsJKM,totalBpjsEmp
   };
 }
 
@@ -5570,12 +5579,13 @@ function runPayroll(){
   const[y,m]=mv.split('-').map(Number);
   if(DB.payroll.find(p=>p.year===y&&p.month===m))return alert('Payroll bulan ini sudah diproses!');
   const g=id=>parseFloat(document.getElementById(id)?.value)||0;
-  let totGross=0,totPPh=0,totNet=0,totBPJS=0;
+  let totGross=0,totPPh=0,totNet=0,totBPJS=0,totBpjsEmp=0;
   const slips=DB.employees.map(e=>{
     const s=calcDetailedSlip(e,g(`pr-hk-${e.id}`),g(`pr-lembur-${e.id}`),g(`pr-telat-${e.id}`),
       g(`pr-absen-${e.id}`),g(`pr-bonus-${e.id}`),g(`pr-otherIn-${e.id}`),g(`pr-otherOut-${e.id}`));
     totGross+=s.totalPendapatan;totPPh+=s.pph21;totNet+=s.gajiNet;
     totBPJS+=s.bpjsKes+s.bpjsTK+s.bpjsJP;
+    totBpjsEmp+=s.totalBpjsEmp||0;
     return{empId:e.id,...s};
   });
   // ── Jurnal Akrual Gaji ──
@@ -5583,15 +5593,22 @@ function runPayroll(){
     {acc:'6101',deb:totGross,crd:0},
     {acc:'2102',deb:0,crd:totNet},        // Utang Gaji
     {acc:'2103',deb:0,crd:totPPh},        // Utang PPh 21
-    {acc:'2109',deb:0,crd:totBPJS},       // Utang BPJS
+    {acc:'2109',deb:0,crd:totBPJS},       // Utang BPJS karyawan
   ]});
+  // ── Jurnal Beban BPJS Perusahaan ──
+  if(totBpjsEmp>0){
+    DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Beban BPJS Perusahaan ${monthName(m)} ${y}`,entries:[
+      {acc:'6103',deb:totBpjsEmp,crd:0},  // Beban BPJS Perusahaan
+      {acc:'2109',deb:0,crd:totBpjsEmp},  // Utang BPJS
+    ]});
+  }
   // ── Jurnal Pembayaran Gaji ──
   DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Pembayaran Gaji ${monthName(m)} ${y}`,entries:[
     {acc:'2102',deb:totNet,crd:0},
     {acc:bankAcc,deb:0,crd:totNet},
   ]});
   const rec={id:uid(),year:y,month:m,date,bankAcc,slips,
-    totalGaji:totGross,totalPPh:totPPh,totalNet:totNet,totalBPJS:totBPJS};
+    totalGaji:totGross,totalPPh:totPPh,totalNet:totNet,totalBPJS:totBPJS,totalBpjsEmp:totBpjsEmp};
   DB.payroll.push(rec);
   saveDB();closeModal();
   logAudit('Payroll',`${monthName(m)} ${y}: ${slips.length} karyawan, gross ${rp(totGross)}, net ${rp(totNet)}`);
@@ -5685,6 +5702,19 @@ function buildSlipHTML(e,slip,pRec,co){
       </div>
       <div style="font-size:22px;font-weight:900;color:#FBBF24">${rp(slip.gajiNet)}</div>
     </div>
+    <!-- BPJS PERUSAHAAN -->
+    ${slip.totalBpjsEmp>0?`
+    <div style="padding:10px 20px;background:#fafafa;border-top:1px solid #e2e8f0">
+      <div style="font-size:9.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Iuran BPJS Pemberi Kerja (Tidak Dipotong dari Gaji)</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px">
+        ${[['Kes. 4%',slip.bpjsKesEmp||0],['JHT 3.7%',slip.bpjsJHTEmp||0],['JP 2%',slip.bpjsJPEmp||0],['JKK 0.24%',slip.bpjsJKK||0],['JKM 0.3%',slip.bpjsJKM||0]].map(([l,v])=>`
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:5px;padding:5px 8px;text-align:center">
+          <div style="font-size:9px;color:#94a3b8">${l}</div>
+          <div style="font-size:10.5px;font-weight:700;color:#dc2626">${rp(v)}</div>
+        </div>`).join('')}
+      </div>
+      <div style="text-align:right;font-size:10.5px;font-weight:700;color:#dc2626;margin-top:5px">Total Beban Perusahaan: ${rp(slip.totalBpjsEmp)}</div>
+    </div>`:''}
     <!-- TANDA TANGAN -->
     <div style="padding:14px 20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:10.5px;border-top:1px solid #f1f5f9">
       <div>
@@ -5705,7 +5735,8 @@ function buildSlipHTML(e,slip,pRec,co){
       1. Slip ini dibuat secara elektronik dan sah tanpa tanda tangan fisik. / This payslip is electronically generated and valid without physical signature.<br>
       2. Harap verifikasi semua jumlah dalam 3 hari kerja. Pertanyaan: hr@ptams.id<br>
       3. Tunjangan dihitung: (${slip.hk} Hari Kerja ÷ ${slip.HK_STD||25}) × Nilai Tunjangan Harian. Lembur: Gaji ÷ 173 × 1.5 × jam.<br>
-      4. BPJS: Kes 1% (maks basis 12jt) | JHT 2% | JP 1% (maks basis 9,56jt) | PPh 21 tarif progresif UU HPP.
+      4. BPJS Karyawan: Kes 1% | JHT 2% | JP 1% | PPh 21 tarif progresif UU HPP.<br>
+      5. BPJS Perusahaan: Kes 4% | JHT 3.7% | JP 2% | JKK 0.24% | JKM 0.3% — tidak dipotong dari gaji karyawan, menjadi beban perusahaan.
     </div>
   </div>`;
 }
@@ -7570,6 +7601,7 @@ async function init(){
       {id:'2114',code:'2-2114',name:'Pinjaman Jangka Pendek / Short-term Loans',type:'kewajiban',sub:'lancar'},
       {id:'2115',code:'2-2115',name:'Biaya yang Masih Harus Dibayar / Accrued Expenses',type:'kewajiban',sub:'lancar'},
       {id:'2116',code:'2-2116',name:'Pendapatan Diterima Dimuka / Deferred Revenue',type:'kewajiban',sub:'lancar'},
+      {id:'6103',code:'6-6103',name:'Beban BPJS Perusahaan / Employer BPJS Expense',type:'beban',sub:'sdm'},
       {id:'6207',code:'6-6207',name:'Biaya Pemeliharaan Kendaraan / Vehicle Maintenance',type:'beban',sub:'operasional'},
       {id:'6209',code:'6-6209',name:'Biaya Perjalanan Dinas / Business Travel',type:'beban',sub:'operasional'},
       {id:'6210',code:'6-6210',name:'Biaya Ekspedisi, Pos & Materai / Shipping, Postage & Stamp',type:'beban',sub:'operasional'},
