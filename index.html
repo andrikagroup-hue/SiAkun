@@ -5720,7 +5720,7 @@ function buildSlipHTML(e,slip,pRec,co){
       <div>
         <div style="color:var(--muted,#64748b);margin-bottom:28px">Tangerang Selatan, ${new Date(pRec.date||today()).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
         <div style="color:var(--muted,#64748b);margin-bottom:28px">Disetujui Oleh / Authorized Signatory,</div>
-        <div style="border-top:1px solid #000;padding-top:4px">( ……………………………………… )</div>
+        <div style="border-top:1px solid #000;padding-top:4px">( <span id="slip-signatory-name" contenteditable="true" style="min-width:120px;display:inline-block;outline:none;border-bottom:1px dashed #94a3b8">${co.signatory||''}</span> )</div>
         <div style="color:var(--muted,#64748b);font-size:9.5px">HRD / Finance Manager</div>
       </div>
       <div>
@@ -5732,11 +5732,15 @@ function buildSlipHTML(e,slip,pRec,co){
     </div>
     <!-- NOTES -->
     <div style="padding:8px 20px 12px;font-size:9px;color:#94a3b8;border-top:1px solid #f1f5f9;line-height:1.7">
-      1. Slip ini dibuat secara elektronik dan sah tanpa tanda tangan fisik. / This payslip is electronically generated and valid without physical signature.<br>
-      2. Harap verifikasi semua jumlah dalam 3 hari kerja. Pertanyaan: hr@ptams.id<br>
-      3. Tunjangan dihitung: (${slip.hk} Hari Kerja ÷ ${slip.HK_STD||25}) × Nilai Tunjangan Harian. Lembur: Gaji ÷ 173 × 1.5 × jam.<br>
-      4. BPJS Karyawan: Kes 1% | JHT 2% | JP 1% | PPh 21 tarif progresif UU HPP.<br>
-      5. BPJS Perusahaan: Kes 4% | JHT 3.7% | JP 2% | JKK 0.24% | JKM 0.3% — tidak dipotong dari gaji karyawan, menjadi beban perusahaan.
+      <b style="color:#64748b">NOTES / CATATAN</b><br>
+      1. This payslip is generated electronically and is valid without a physical signature / Slip gaji ini dibuat secara elektronik dan sah tanpa tanda tangan fisik.<br>
+      2. Please verify all amounts. Report any discrepancies within 3 working days / Harap verifikasi semua jumlah. Laporkan ketidaksesuaian dalam 3 hari kerja.<br>
+      3. For inquiries, contact HR Department at ${co.email||'hr@andrikagroup.com'} / Untuk pertanyaan, hubungi HR di ${co.email||'hr@andrikagroup.com'}.<br>
+      4. Working days are calculated based on attendance records / Hari kerja dihitung berdasarkan catatan kehadiran.<br>
+      5. Tax deductions are calculated according to Indonesian tax regulations / Potongan pajak dihitung sesuai peraturan perpajakan Indonesia.<br>
+      6. Salary calculation is based on ${slip.HK_STD||25} working days. If more working days, meal &amp; transport allowance will be added / Perhitungan gaji berdasarkan ${slip.HK_STD||25} hari kerja. Jika lebih, tunjangan makan &amp; transport akan ditambahkan.<br>
+      7. BPJS Perusahaan: Kes 4% | JHT 3.7% | JP 2% | JKK 0.24% | JKM 0.3% — tidak dipotong dari gaji karyawan, menjadi beban perusahaan.<br>
+      <span style="color:#475569;font-style:italic">This document is a valid proof of salary payment | Dokumen ini adalah bukti pembayaran gaji yang sah</span>
     </div>
   </div>`;
 }
@@ -6171,6 +6175,7 @@ function renderSettings(c){
         <div class="fg"><label>${t('set_npwp')}</label><input id="co-npwp" value="${co.npwp}"></div>
         <div class="fg"><label>${t('set_address')}</label><input id="co-addr" value="${co.address}"></div>
         <div class="fr2"><div class="fg"><label>${t('lbl_phone')}</label><input id="co-phone" value="${co.phone}"></div><div class="fg"><label>${t('lbl_email')}</label><input id="co-email" value="${co.email}"></div></div>
+        <div class="fg"><label>Nama Penanda Tangan Default (HRD/Finance Manager)</label><input id="co-signatory" value="${co.signatory||''}" placeholder="contoh: Dedi Candra — bisa diedit langsung di slip saat print"></div>
         <div class="fg"><label>${t('set_fiscalYear')}</label><input type="number" id="co-year" value="${co.year}"></div>
         <button class="btn btn-pri" onclick="saveCompany()">${t('set_saveProfile')}</button>
       </div>
@@ -6245,7 +6250,7 @@ function renderSettings(c){
 }
 
 function saveCompany(){
-  DB.company={...DB.company,name:v('co-name'),npwp:v('co-npwp'),address:v('co-addr'),phone:v('co-phone'),email:v('co-email'),year:parseInt(v('co-year'))||new Date().getFullYear()};
+  DB.company={...DB.company,name:v('co-name'),npwp:v('co-npwp'),address:v('co-addr'),phone:v('co-phone'),email:v('co-email'),signatory:v('co-signatory'),year:parseInt(v('co-year'))||new Date().getFullYear()};
   saveDB();document.getElementById('sb-coname').textContent=DB.company.name;updateSidebarLogo();alert('Profil disimpan!');
 function saveTaxSettings(){
   if(!DB.taxSettings)DB.taxSettings={};
