@@ -2261,8 +2261,8 @@ function defaultDB(){
     {id:'usr_andri',username:'andriams',password:'ams2026!',role:'Direktur',name:'Andri AMS',createdAt:new Date().toISOString()},
   ],
     roles:['Admin','Direktur','Manager','Finance','HRD','Staff'],
-    lockedPeriods:[], // array of "YYYY-MM" strings — e.g. ["2026-01","2026-02"]
-    prepaidItems:[],  // array of prepaid/amortisation schedules
+    lockedPeriods:[], // array of "YYYY-MM" strings
+    prepaidItems:[],  // prepaid amortisation schedules — e.g. ["2026-01","2026-02"]
     calendar:{},       // {YYYY:[{date,name,type}]}
     calConfig:{tarifTelat:50000,tarifAbsenHarian:0},
     taxSettings:{ppnRate:11,pph23Rate:2,pph4Rate:2,defaultTaxType:'ppn'}, // tarif pajak global
@@ -2543,27 +2543,20 @@ function nav(page){
 
   // ── Migrasi: pastikan BSI sebelum BCA di urutan akun ──
   if(DB.accounts&&DB.accounts.length){
-    const bsiIdx=DB.accounts.findIndex(a=>a.name&&(a.name.toLowerCase().includes('syariah indonesia')||a.name.toLowerCase().includes(' bsi')));
+    const bsiIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bsi')||a.name&&a.name.toLowerCase().includes('syariah indonesia'));
     const bcaIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bca'));
-    // Normalize BSI id ke '1102' jika masih '1102b'
-    if(bsiIdx>-1&&DB.accounts[bsiIdx].id==='1102b'){
-      // Cek apakah id '1102' sudah dipakai akun lain
-      const conflict=DB.accounts.find(a=>a.id==='1102'&&!a.name.toLowerCase().includes('syariah')&&!a.name.toLowerCase().includes('bsi'));
-      if(!conflict)DB.accounts[bsiIdx].id='1102';
-    }
     // Kalau BSI ada tapi posisinya setelah BCA, pindahkan BSI ke sebelum BCA
-    const bsiIdx2=DB.accounts.findIndex(a=>a.name&&(a.name.toLowerCase().includes('syariah indonesia')||a.name.toLowerCase().includes(' bsi')));
-    const bcaIdx2=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bca'));
-    if(bsiIdx2>-1&&bcaIdx2>-1&&bsiIdx2>bcaIdx2){
-      const bsiAcct=DB.accounts.splice(bsiIdx2,1)[0];
+    if(bsiIdx>-1&&bcaIdx>-1&&bsiIdx>bcaIdx){
+      const bsiAcct=DB.accounts.splice(bsiIdx,1)[0];
       const newBcaIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bca'));
       DB.accounts.splice(newBcaIdx,0,bsiAcct);
       saveDB();
     }
     // Kalau BSI belum ada sama sekali, tambahkan setelah Cash
-    if(DB.accounts.findIndex(a=>a.name&&(a.name.toLowerCase().includes('syariah indonesia')||a.name.toLowerCase().includes(' bsi')))===-1){
+    if(bsiIdx===-1){
       const cashIdx=DB.accounts.findIndex(a=>a.id==='1101'||a.code==='1-1101');
-      DB.accounts.splice(cashIdx+1,0,{id:'1102',code:'1-1102',name:'Bank Syariah Indonesia (BSI)',type:'aktiva',sub:'lancar'});
+      const newBsi={id:'1102b',code:'1-1102',name:'Bank Syariah Indonesia (BSI)',type:'aktiva',sub:'lancar'};
+      DB.accounts.splice(cashIdx+1,0,newBsi);
       saveDB();
     }
   }
@@ -2607,11 +2600,8 @@ function nav(page){
   }
 }
 function destroyCharts(){
-  // Destroy tracked chart instances
   Object.values(charts).forEach(ch=>{try{ch.destroy();}catch(e){}});
   charts={};
-  // Destroy any orphaned Chart.js instances on DOM canvas elements
-  // (terjadi kalau nav dipanggil sebelum setTimeout chart selesai)
   if(typeof Chart!=='undefined'&&Chart.getChart){
     document.querySelectorAll('canvas').forEach(canvas=>{
       const existing=Chart.getChart(canvas);
@@ -2766,23 +2756,14 @@ function renderDashboard(c){
   const lowStock=DB.products.filter(p=>p.stock<=p.minStock).length;
   const recent=[...DB.invoices].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
 
-  // Revenue dari invoice yang sudah confirmed/paid (fallback jika jurnal kosong)
-  const invRevenue=DB.invoices.filter(i=>['confirmed','partial','paid'].includes(i.status)).reduce((s,i)=>s+i.dpp,0);
-  const pendapatan=lr.pendapatan||invRevenue;
-  const thisMonth=new Date().toISOString().slice(0,7);
-  const invThisMonth=DB.invoices.filter(i=>i.date&&i.date.startsWith(thisMonth)&&i.status!=='draft').reduce((s,i)=>s+i.total,0);
-  const paidThisMonth=DB.invoices.filter(i=>i.status==='paid'&&i.date&&i.date.startsWith(thisMonth)).reduce((s,i)=>s+i.total,0);
-
   c.innerHTML=`
   <div class="stats">
-    <div class="stat g"><div class="stat-lbl">${t('db_revenue')}</div><div class="stat-val">${rp(pendapatan)}</div><div class="stat-sub">${t('db_curYear')}</div></div>
+    <div class="stat g"><div class="stat-lbl">${t('db_revenue')}</div><div class="stat-val">${rp(lr.pendapatan)}</div><div class="stat-sub">${t('db_curYear')}</div></div>
     <div class="stat r"><div class="stat-lbl">${t('db_expenses')}</div><div class="stat-val">${rp(lr.beban+lr.hpp)}</div><div class="stat-sub">${t('db_cogsOps')}</div></div>
     <div class="stat ${lr.labaBersih>=0?'b':'r'}"><div class="stat-lbl">${t('db_netprofit')}</div><div class="stat-val" style="color:${lr.labaBersih>=0?'var(--ok)':'var(--bad)'}">${lr.labaBersih<0?"- ":""}${rp(lr.labaBersih)}</div></div>
     <div class="stat y"><div class="stat-lbl">${t('db_ar')}</div><div class="stat-val">${rp(totalAR)}</div><div class="stat-sub">${overdueInv} ${t('db_overdue')}</div></div>
     <div class="stat r"><div class="stat-lbl">${t('db_ap')}</div><div class="stat-val">${rp(totalAP)}</div></div>
     <div class="stat ${lowStock?'r':'g'}"><div class="stat-lbl">${t('db_lowstock')}</div><div class="stat-val">${lowStock}</div><div class="stat-sub">${t('db_products')}</div></div>
-    <div class="stat b"><div class="stat-lbl">Invoice Bulan Ini</div><div class="stat-val">${rp(invThisMonth)}</div><div class="stat-sub">${DB.invoices.filter(i=>i.date&&i.date.startsWith(thisMonth)).length} invoice</div></div>
-    <div class="stat g"><div class="stat-lbl">Lunas Bulan Ini</div><div class="stat-val">${rp(paidThisMonth)}</div><div class="stat-sub">${DB.invoices.filter(i=>i.status==='paid'&&i.date&&i.date.startsWith(thisMonth)).length} invoice</div></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
     <div style="background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:16px"><div style="font-size:13px;font-weight:700;margin-bottom:10px">${t('db_plSummary')}</div><canvas id="ch-lr"></canvas><div id="ch-lr-legend" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:2px"></div></div>
@@ -2799,7 +2780,6 @@ function renderDashboard(c){
     </table></div>
   </div>`;
 
-  // Helper: destroy existing Chart.js instance sebelum buat baru
   const _safeChart=(id,config)=>{
     const canvas=document.getElementById(id);
     if(!canvas)return null;
@@ -2899,15 +2879,13 @@ function renderDashboard(c){
     const draft=invs.filter(i=>i.status==='draft').length;
     const ctx2=document.getElementById('ch-inv');
     if(ctx2)charts.inv=_safeChart('ch-inv',{type:'doughnut',data:{labels:[t('st_paid'),t('st_unpaid'),t('st_partial'),t('st_overdue'),t('st_draft')],datasets:[{data:[paid,unpaid,partial,overdue,draft],backgroundColor:['#10b981','#ef4444','#f59e0b','#dc2626','#94a3b8'],borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}});
-    // Trend chart — revenue 6 bulan dari invoice
+    // Trend chart 6 bulan
     const ctx3=document.getElementById('ch-trend');
     if(ctx3){
-      const now=new Date();
-      const months=[],labels=[],revData=[],paidData=[];
+      const now=new Date();const labels=[],revData=[],paidData=[];
       for(let m=5;m>=0;m--){
         const d=new Date(now.getFullYear(),now.getMonth()-m,1);
         const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        months.push(key);
         labels.push(['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][d.getMonth()]);
         const mInv=DB.invoices.filter(i=>i.date&&i.date.startsWith(key)&&i.status!=='draft');
         revData.push(mInv.reduce((s,i)=>s+i.total,0));
@@ -3349,120 +3327,65 @@ function saveInvoice(action){
 }
 function openEditInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);
-  if(!inv)return;
-  if(inv.status!=='draft')return alert('Hanya invoice Draft yang bisa diedit. Untuk yang sudah dikonfirmasi, hapus dan buat ulang.');
-  invItemCount=inv.items.length;
+  if(!inv||inv.status!=='draft')return alert('Hanya invoice Draft yang bisa diedit.');
   const tx=DB.taxSettings||{ppnRate:11,pph23Rate:2,pph4Rate:2};
   openModal('✏️ Edit Invoice — '+inv.no,`
   <div class="fr3">
     <div class="fg"><label>No. Invoice</label><input id="inv-no" value="${inv.no}"></div>
-    <div class="fg"><label>Tanggal Invoice</label><input type="date" id="inv-date" value="${inv.date}"></div>
+    <div class="fg"><label>Tanggal</label><input type="date" id="inv-date" value="${inv.date}"></div>
     <div class="fg"><label>Jatuh Tempo</label><input type="date" id="inv-due" value="${inv.dueDate}"></div>
   </div>
   <div class="fr2">
-    <div class="fg"><label>Customer</label>
-      <select id="inv-contact"><option value="">— Pilih Customer —</option>${contactOptions('customer',inv.contactId)}</select>
-    </div>
+    <div class="fg"><label>Customer</label><select id="inv-contact"><option value="">— Pilih —</option>${contactOptions('customer',inv.contactId)}</select></div>
     <div class="fg"><label>Akun Penerimaan</label><select id="inv-bank">${acctOptions(['aktiva'],inv.bankAcc)}</select></div>
   </div>
-  <div style="margin:12px 0 4px;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Detail Item</div>
-  <div style="display:grid;grid-template-columns:2fr 55px 105px 90px 75px 90px 26px;gap:4px;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;padding:0 2px">
-    <div>Produk / Deskripsi</div><div style="text-align:center">Qty</div><div style="text-align:right">Harga Jual</div>
-    <div style="text-align:center;color:#059669">Diskon Rp</div><div style="text-align:center;color:#059669">Disc %</div>
-    <div style="text-align:right">Subtotal</div><div></div>
-  </div>
-  <div id="inv-items">${inv.items.map((item,i)=>`<div class="inv-row" id="invr-${i}" style="display:grid;grid-template-columns:2fr 55px 105px 90px 75px 90px 26px;gap:4px;margin-bottom:4px;align-items:center">
-    <select style="font-size:11px;padding:3px 6px;border:1px solid var(--bdr);border-radius:5px" onchange="fillInvProduct(${i},this)">
-      <option value="">— Produk / manual —</option>${productOptions(item.productId)}
-    </select>
+  <div id="inv-items">${inv.items.map((item,i)=>`<div class="inv-row" id="invr-${i}" style="display:grid;grid-template-columns:2fr 55px 105px 90px 26px;gap:4px;margin-bottom:4px;align-items:center">
+    <select style="font-size:11px;padding:3px 6px;border:1px solid var(--bdr);border-radius:5px" onchange="fillInvProduct(${i},this)"><option value="">— Produk / manual —</option>${productOptions(item.productId)}</select>
     <input type="number" value="${item.qty}" min="0.01" step="any" oninput="calcInvTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
     <input type="number" value="${item.price}" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
-    <input type="number" value="${item.discRp||0}" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;color:#059669">
-    <input type="number" value="${item.discPct||0}" min="0" max="100" step="0.1" oninput="calcInvTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;color:#059669">
     <input type="number" value="${item.subtotal}" readonly style="text-align:right;padding:3px 5px;border:1px solid #e2e8f0;border-radius:5px;background:#f8fafc;font-weight:600">
     <button class="btn btn-bad btn-xs" onclick="removeInvRow(${i})">✕</button>
   </div>`).join('')}</div>
-  <button class="btn btn-out btn-sm" style="margin-top:8px" onclick="addInvRow()">+ Tambah Baris</button>
-  <div class="fr2" style="margin-top:14px;gap:14px;align-items:flex-start">
+  <button class="btn btn-out btn-sm" style="margin-top:8px" onclick="addInvRow()">+ Baris</button>
+  <div class="fr2" style="margin-top:14px">
     <div>
-      <div class="fg" style="margin-bottom:10px"><label>Catatan / Notes</label>
-        <textarea id="inv-note" rows="3" style="resize:none;width:100%;font-size:11px;padding:6px;border:1px solid var(--bdr);border-radius:6px;font-family:var(--font)">${inv.note||''}</textarea>
-      </div>
-      <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:.5px">Pajak / Tax</div>
-      ${[
-        ['inv-ppn','inv-ppn-rate',inv.ppnRate||tx.ppnRate,'PPN','b-warn','inv-ppn-amt','#d97706',inv.ppn],
-        ['inv-pph23','inv-pph23-rate',inv.pph23Rate||tx.pph23Rate,'PPh 23 (dipotong customer)','b-bad','inv-pph23-amt','#dc2626',inv.pph23],
-        ['inv-pph4','inv-pph4-rate',inv.pph4Rate||tx.pph4Rate,'PPh 4(2)','b-bad','inv-pph4-amt','#dc2626',inv.pph4],
-      ].map(([cid,rid,rate,lbl,badge,amtId,col,checked])=>`
-      <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;cursor:pointer;padding:5px 0;border-bottom:1px solid #f1f5f9">
-        <input type="checkbox" id="${cid}" onchange="calcInvTotals()"${checked?' checked':''}>
-        <span>${lbl}</span>
-        <input type="number" id="${rid}" value="${rate}" min="0" max="100" step="0.1"
-          style="width:48px;padding:2px 6px;border:1px solid var(--bdr);border-radius:4px;font-size:11px;text-align:center"
-          oninput="calcInvTotals()">%
-        <span id="${amtId}" style="margin-left:auto;color:${col};font-weight:600;font-size:11px">Rp 0</span>
+      ${[['inv-ppn','inv-ppn-rate',inv.ppnRate||tx.ppnRate,'PPN',inv.ppn],
+         ['inv-pph23','inv-pph23-rate',inv.pph23Rate||tx.pph23Rate,'PPh 23',inv.pph23],
+         ['inv-pph4','inv-pph4-rate',inv.pph4Rate||tx.pph4Rate,'PPh 4(2)',inv.pph4],
+        ].map(([cid,rid,rate,lbl,checked])=>`<label style="display:flex;align-items:center;gap:8px;font-size:11.5px;padding:5px 0">
+        <input type="checkbox" id="${cid}" onchange="calcInvTotals()"${checked?' checked':''}> ${lbl}
+        <input type="number" id="${rid}" value="${rate}" min="0" max="100" step="0.1" style="width:48px;padding:2px 6px;border:1px solid var(--bdr);border-radius:4px;font-size:11px;text-align:center" oninput="calcInvTotals()">%
       </label>`).join('')}
     </div>
-    <div style="min-width:272px;background:#f8fafc;border-radius:10px;border:1px solid var(--bdr);padding:14px;font-size:12px">
-      <div style="font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px;letter-spacing:.5px">Ringkasan / Summary</div>
-      ${[
-        ['inv-s-sub','Subtotal',''],
-        ['inv-s-disc','Total Diskon','color:#059669'],
-        ['inv-s-dpp','DPP','font-weight:700;border-bottom:1px solid var(--bdr);padding-bottom:6px'],
-        ['inv-s-ppn','PPN','color:#d97706'],
-        ['inv-s-p23','PPh 23 (kurang penerimaan)','color:#dc2626'],
-        ['inv-s-p4','PPh 4(2)','color:#dc2626'],
-      ].map(([id,lbl,style])=>`
-      <div style="display:flex;justify-content:space-between;padding:4px 0;${style}">
-        <span style="color:#475569">${lbl}</span><span id="${id}" style="font-weight:600">Rp 0</span>
-      </div>`).join('')}
-      <div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:2px solid #0f172a;margin-top:6px;font-size:14px;font-weight:800">
-        <span>TOTAL TAGIHAN</span><span id="inv-s-total" style="color:#E8510A">Rp 0</span>
-      </div>
+    <div style="min-width:220px;background:#f8fafc;border-radius:10px;border:1px solid var(--bdr);padding:12px;font-size:12px">
+      ${[['inv-s-sub','Subtotal'],['inv-s-dpp','DPP','font-weight:700'],['inv-s-ppn','PPN'],['inv-s-p23','PPh 23'],['inv-s-p4','PPh 4(2)']].map(([id,lbl,s])=>`<div style="display:flex;justify-content:space-between;padding:3px 0;${s||''}"><span>${lbl}</span><span id="${id}">Rp 0</span></div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0f172a;margin-top:4px;font-size:14px;font-weight:800"><span>TOTAL</span><span id="inv-s-total" style="color:#E8510A">Rp 0</span></div>
     </div>
   </div>
-  <div class="modal-ft">
-    <button class="btn btn-out" onclick="closeModal()">Batal</button>
-    <button class="btn btn-pri" onclick="saveEditInvoice('${id}')">💾 Simpan Perubahan</button>
-  </div>`,'modal-wide');
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Batal</button><button class="btn btn-pri" onclick="saveEditInvoice('${id}')">💾 Simpan</button></div>`,'modal-wide');
   calcInvTotals();
 }
 function saveEditInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);if(!inv)return;
   const no=v('inv-no'),date=v('inv-date'),dueDate=v('inv-due'),contactId=v('inv-contact'),bankAcc=v('inv-bank');
   if(!no||!date)return alert('No. Invoice dan tanggal wajib!');
-  const items=[];let subtotal=0,totalDisc=0;
+  const items=[];let subtotal=0;
   document.querySelectorAll('#inv-items .inv-row').forEach(row=>{
-    const sel=row.querySelector('select');
-    const ins=row.querySelectorAll('input[type=number]');
+    const sel=row.querySelector('select');const ins=row.querySelectorAll('input[type=number]');
     const qty=parseFloat(ins[0].value)||0,price=parseFloat(ins[1].value)||0;
-    const discRp=parseFloat(ins[2].value)||0,discPct=parseFloat(ins[3].value)||0;
-    if(qty&&price>0){
-      const line=qty*price;
-      const disc=Math.min(line,discRp+Math.round((line-discRp)*discPct/100));
-      const net=Math.max(0,Math.round(line-disc));
-      items.push({productId:sel.value||null,qty,price,discRp,discPct,discount:discPct,subtotal:net});
-      subtotal+=line;totalDisc+=disc;
-    }
+    if(qty&&price>0){const net=Math.round(qty*price);items.push({productId:sel.value||null,qty,price,subtotal:net});subtotal+=net;}
   });
   if(!items.length)return alert('Tambah minimal 1 item!');
-  const dpp=Math.max(0,subtotal-totalDisc);
-  const ppnRate=parseFloat(v('inv-ppn-rate'))||11;
-  const pph23Rate=parseFloat(v('inv-pph23-rate'))||2;
-  const pph4Rate=parseFloat(v('inv-pph4-rate'))||2;
-  const hasPPN=document.getElementById('inv-ppn').checked;
-  const hasPPh23=document.getElementById('inv-pph23').checked;
-  const hasPPh4=document.getElementById('inv-pph4').checked;
-  const ppnAmt=hasPPN?Math.round(dpp*ppnRate/100):0;
-  const pph23Amt=hasPPh23?Math.round(dpp*pph23Rate/100):0;
-  const pph4Amt=hasPPh4?Math.round(dpp*pph4Rate/100):0;
-  const total=dpp+ppnAmt-pph23Amt-pph4Amt;
-  Object.assign(inv,{no,date,dueDate,contactId,bankAcc,items,
-    subtotal:Math.round(subtotal),discTotal:Math.round(totalDisc),dpp:Math.round(dpp),
-    ppn:hasPPN,ppnRate,ppnAmt,pph23:hasPPh23,pph23Rate,pph23Amt,
-    pph4:hasPPh4,pph4Rate,pph4Amt,total:Math.round(total),note:v('inv-note')});
-  logAudit('Edit Invoice',`${inv.no} — Total: ${rp(inv.total)}`);
-  saveDB();closeModal();nav('invoices');
+  const hasPPN=document.getElementById('inv-ppn').checked,ppnRate=parseFloat(v('inv-ppn-rate'))||11;
+  const hasPPh23=document.getElementById('inv-pph23').checked,pph23Rate=parseFloat(v('inv-pph23-rate'))||2;
+  const hasPPh4=document.getElementById('inv-pph4').checked,pph4Rate=parseFloat(v('inv-pph4-rate'))||2;
+  const ppnAmt=hasPPN?Math.round(subtotal*ppnRate/100):0;
+  const pph23Amt=hasPPh23?Math.round(subtotal*pph23Rate/100):0;
+  const pph4Amt=hasPPh4?Math.round(subtotal*pph4Rate/100):0;
+  Object.assign(inv,{no,date,dueDate,contactId,bankAcc,items,subtotal,dpp:subtotal,
+    ppn:hasPPN,ppnRate,ppnAmt,pph23:hasPPh23,pph23Rate,pph23Amt,pph4:hasPPh4,pph4Rate,pph4Amt,
+    total:subtotal+ppnAmt-pph23Amt-pph4Amt});
+  logAudit('Edit Invoice',`${inv.no}`);saveDB();closeModal();nav('invoices');
 }
 function confirmInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);
@@ -3681,40 +3604,29 @@ function renderPurchases(c){
   </table></div></div>`;
 }
 
-let poItemCount=1;
 function openEditPO(id){
-  const po=DB.purchases.find(x=>x.id===id);if(!po)return;
-  if(po.status!=='draft')return alert('Hanya PO Draft yang bisa diedit.');
-  poItemCount=po.items?po.items.length:1;
-  openModal('✏️ Edit Purchase Order — '+po.no,`
+  const po=DB.purchases.find(x=>x.id===id);if(!po||po.status!=='draft')return alert('Hanya PO Draft yang bisa diedit.');
+  openModal('✏️ Edit PO — '+po.no,`
   <div class="fr3">
     <div class="fg"><label>No PO</label><input id="po-no" value="${po.no}"></div>
-    <div class="fg"><label>Date</label><input type="date" id="po-date" value="${po.date}"></div>
+    <div class="fg"><label>Tanggal</label><input type="date" id="po-date" value="${po.date}"></div>
     <div class="fg"><label>Due Date</label><input type="date" id="po-due" value="${po.dueDate||''}"></div>
   </div>
-  <div class="fg"><label>Supplier</label><select id="po-contact"><option value="">— Select Supplier —</option>${contactOptions('supplier',po.contactId)}</select></div>
-  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:10px 0 6px">Item Pembelian</div>
-  <div style="display:grid;grid-template-columns:2fr 60px 110px 80px 100px 28px;gap:6px;margin-bottom:4px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">
-    <div>Produk / Deskripsi</div><div>Qty</div><div>Harga Beli</div><div>Diskon%</div><div>Subtotal</div><div></div>
-  </div>
-  <div id="po-items">${(po.items||[{qty:1,buyPrice:0,disc:0,subtotal:0}]).map((item,i)=>`<div class="inv-row" id="por-${i}" style="display:grid;grid-template-columns:2fr 60px 110px 80px 100px 28px;gap:6px;margin-bottom:4px;align-items:center">
-    <select onchange="fillPOProduct(${i},this)" style="font-size:11px;padding:4px;border:1px solid var(--bdr);border-radius:5px"><option value="">— pilih products —</option>${productOptions(item.productId)}</select>
+  <div class="fg"><label>Supplier</label><select id="po-contact"><option value="">— Select —</option>${contactOptions('supplier',po.contactId)}</select></div>
+  <div id="po-items">${(po.items||[]).map((item,i)=>`<div class="inv-row" id="por-${i}" style="display:grid;grid-template-columns:2fr 60px 110px 80px 28px;gap:6px;margin-bottom:4px;align-items:center">
+    <select onchange="fillPOProduct(${i},this)" style="font-size:11px;padding:4px;border:1px solid var(--bdr);border-radius:5px"><option value="">— Produk —</option>${productOptions(item.productId)}</select>
     <input type="number" value="${item.qty||1}" min="0.01" oninput="calcPOTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
     <input type="number" value="${item.buyPrice||0}" min="0" oninput="calcPOTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
-    <input type="number" value="${item.disc||0}" min="0" max="100" oninput="calcPOTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
     <input type="number" value="${item.subtotal||0}" readonly style="text-align:right;padding:3px 5px;border:1px solid #e2e8f0;border-radius:5px;background:#f8fafc;font-weight:600">
     <button class="btn btn-bad btn-xs" onclick="removePORow(${i})">✕</button>
   </div>`).join('')}</div>
-  <button class="btn btn-out btn-sm mt12" onclick="addPORow()">+ Tambah Baris</button>
+  <button class="btn btn-out btn-sm mt12" onclick="addPORow()">+ Baris</button>
   <div class="fr2 mt12">
-    <div class="fg"><label><input type="checkbox" id="po-ppn" onchange="calcPOTotals()"${po.hasPPN?' checked':''}> VAT Input 11%</label></div>
-    <div style="margin-top:8px">
-      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px;border-bottom:1px solid #f1f5f9"><span>Subtotal</span><span id="po-sub">Rp 0</span></div>
-      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px;border-bottom:1px solid #f1f5f9"><span>VAT Input</span><span id="po-ppnamt">Rp 0</span></div>
-      <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:14px;font-weight:800;border-top:2px solid #000;margin-top:4px"><span>TOTAL</span><span id="po-total">Rp 0</span></div>
-    </div>
+    <label style="align-items:center;gap:8px;font-size:12px"><input type="checkbox" id="po-ppn" onchange="calcPOTotals()"${po.hasPPN?' checked':''}> VAT Input 11%</label>
+    <div><div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px"><span>Subtotal</span><span id="po-sub">Rp 0</span></div>
+    <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:14px;font-weight:800;border-top:2px solid #000;margin-top:4px"><span>TOTAL</span><span id="po-total">Rp 0</span></div></div>
   </div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveEditPO('${id}')">💾 Simpan Perubahan</button></div>`,'modal-lg');
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Batal</button><button class="btn btn-pri" onclick="saveEditPO('${id}')">💾 Simpan</button></div>`,'modal-lg');
   calcPOTotals();
 }
 function saveEditPO(id){
@@ -3723,18 +3635,17 @@ function saveEditPO(id){
   if(!no||!date)return alert('No PO dan tanggal wajib!');
   const items=[];let sub=0;
   document.querySelectorAll('#po-items .inv-row').forEach(row=>{
-    const sel=row.querySelector('select');
-    const ins=row.querySelectorAll('input[type=number]');
-    const qty=parseFloat(ins[0].value)||0,buyPrice=parseFloat(ins[1].value)||0,disc=parseFloat(ins[2].value)||0;
-    if(qty&&buyPrice>0){const tot=qty*buyPrice*(1-disc/100);items.push({productId:sel.value||null,qty,buyPrice,disc,subtotal:Math.round(tot)});sub+=tot;}
+    const sel=row.querySelector('select');const ins=row.querySelectorAll('input[type=number]');
+    const qty=parseFloat(ins[0].value)||0,buyPrice=parseFloat(ins[1].value)||0;
+    if(qty&&buyPrice>0){const tot=Math.round(qty*buyPrice);items.push({productId:sel.value||null,qty,buyPrice,subtotal:tot});sub+=tot;}
   });
   if(!items.length)return alert('Tambah minimal 1 item!');
   const hasPPN=document.getElementById('po-ppn').checked;
   const ppnAmt=hasPPN?Math.round(sub*0.11):0;
-  Object.assign(po,{no,date,dueDate,contactId,items,hasPPN,ppnAmt,total:Math.round(sub+ppnAmt)});
-  logAudit('Edit PO',`${po.no} — Total: ${rp(po.total)}`);
-  saveDB();closeModal();nav('purchases');
+  Object.assign(po,{no,date,dueDate,contactId,items,hasPPN,ppnAmt,total:sub+ppnAmt});
+  logAudit('Edit PO',po.no);saveDB();closeModal();nav('purchases');
 }
+let poItemCount=1;
 function openAddPurchase(){
   poItemCount=1;
   const no='PO-'+today().replace(/-/g,'')+'-'+(DB.purchases.length+1).toString().padStart(3,'0');
@@ -4825,269 +4736,151 @@ function exportBudget(){exportXLSX([{name:'Budget',data:DB.budgets.map(b=>{const
 //  ASSETS
 // ================================================================
 // ================================================================
-//  PREPAID & AMORTISASI SCHEDULER
+//  PREPAID & AMORTISASI
 // ================================================================
 function renderPrepaid(c){
   const ta=document.getElementById('topbar-actions');
-  ta.innerHTML=`<button class="btn btn-pri" onclick="openAddPrepaid()">+ Tambah Prepaid</button>`;
+  if(ta)ta.innerHTML=`<button class="btn btn-pri" onclick="openAddPrepaid()">+ Tambah Prepaid</button>`;
   const items=DB.prepaidItems||[];
-  const today_=today();
-
-  // Summary stats
-  const totalPrepaid=items.filter(p=>p.status!=='closed').reduce((s,p)=>s+currentPrepaidBalance(p),0);
-  const dueThisMonth=items.filter(p=>p.status!=='closed'&&nextAmortMonth(p)===today_.slice(0,7));
-
+  const totalBal=items.filter(p=>p.status!=='closed').reduce((s,p)=>s+currentPrepaidBalance(p),0);
+  const thisM=new Date().toISOString().slice(0,7);
+  const due=items.filter(p=>p.status!=='closed'&&nextAmortMonth(p)===thisM);
   c.innerHTML=`
   <div class="stats" style="grid-template-columns:repeat(3,1fr)">
-    <div class="stat b"><div class="stat-lbl">Total Saldo Prepaid</div><div class="stat-val">${rp(totalPrepaid)}</div><div class="stat-sub">${items.filter(p=>p.status!=='closed').length} item aktif</div></div>
-    <div class="stat y"><div class="stat-lbl">Jatuh Tempo Bulan Ini</div><div class="stat-val">${dueThisMonth.length}</div><div class="stat-sub">perlu posting jurnal</div></div>
+    <div class="stat b"><div class="stat-lbl">Total Saldo Prepaid</div><div class="stat-val">${rp(totalBal)}</div><div class="stat-sub">${items.filter(p=>p.status!=='closed').length} item aktif</div></div>
+    <div class="stat y"><div class="stat-lbl">Jatuh Tempo Bulan Ini</div><div class="stat-val">${due.length}</div><div class="stat-sub">perlu posting</div></div>
     <div class="stat g"><div class="stat-lbl">Sudah Lunas</div><div class="stat-val">${items.filter(p=>p.status==='closed').length}</div><div class="stat-sub">item selesai</div></div>
   </div>
-
-  ${items.length?items.map(p=>renderPrepaidCard(p)).join(''):`
-  <div class="card" style="text-align:center;padding:40px">
+  ${items.length?items.map(p=>{
+    const bal=currentPrepaidBalance(p);
+    const posted=(p.schedule||[]).filter(s=>s.posted).length,total=(p.schedule||[]).length;
+    const pct=total?Math.round(posted/total*100):0;
+    const isDone=p.status==='closed'||bal<=0;
+    const nextSch=(p.schedule||[]).find(s=>!s.posted);
+    return`<div class="card" style="border-left:4px solid ${isDone?'#10b981':'#2563eb'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div><div style="font-weight:700;font-size:14px">${p.name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${fDate(p.startDate)} – ${fDate(p.endDate)}</div></div>
+        <div style="display:flex;gap:6px">
+          ${isDone?'<span class="badge b-ok">✅ Lunas</span>':nextAmortMonth(p)===thisM?'<span class="badge b-warn">⚠️ Due</span>':'<span class="badge b-info">Aktif</span>'}
+          <button class="btn btn-bad btn-xs" onclick="delPrepaidItem('${p.id}')">✕</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+        <div><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase">Nilai Awal</div><div style="font-weight:700">${rp(p.totalAmount)}</div></div>
+        <div><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase">Saldo</div><div style="font-weight:700;color:${isDone?'var(--ok)':'#2563eb'}">${rp(bal)}</div></div>
+        <div><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase">Per Bulan</div><div style="font-weight:700">${rp(p.monthlyAmount)}</div></div>
+      </div>
+      <div style="background:#f1f5f9;border-radius:6px;height:8px;margin-bottom:6px"><div style="background:${isDone?'#10b981':'#2563eb'};height:8px;border-radius:6px;width:${pct}%"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">${posted}/${total} bulan (${pct}%)</div>
+      <div style="display:flex;gap:8px">
+        ${!isDone&&nextSch?`<button class="btn btn-ok btn-sm" onclick="postAmort('${p.id}','${nextSch.month}')">▶ Post ${nextSch.month} — ${rp(nextSch.amount)}</button>`:''}
+        <button class="btn btn-out btn-sm" onclick="openPrepaidDetail('${p.id}')">📋 Jadwal</button>
+      </div>
+    </div>`;
+  }).join(''):`<div class="card" style="text-align:center;padding:40px">
     <div style="font-size:40px;margin-bottom:12px">📆</div>
     <div style="font-weight:700;font-size:15px;margin-bottom:6px">Belum ada Prepaid</div>
-    <div style="color:var(--muted);font-size:12.5px;margin-bottom:16px">Tambahkan sewa dibayar dimuka, asuransi, lisensi, atau biaya lain yang perlu diamortisasi.</div>
-    <button class="btn btn-pri" onclick="openAddPrepaid()">+ Tambah Prepaid Pertama</button>
+    <div style="color:var(--muted);font-size:12.5px;margin-bottom:16px">Tambahkan sewa, asuransi, atau biaya lain yang perlu diamortisasi per bulan.</div>
+    <button class="btn btn-pri" onclick="openAddPrepaid()">+ Tambah Prepaid</button>
   </div>`}`;
 }
-
-function renderPrepaidCard(p){
-  const balance=currentPrepaidBalance(p);
-  const posted=(p.schedule||[]).filter(s=>s.posted).length;
-  const total=(p.schedule||[]).length;
-  const pct=total?Math.round(posted/total*100):0;
-  const nextDue=nextAmortMonth(p);
-  const isDone=p.status==='closed'||balance<=0;
-  const nextSch=(p.schedule||[]).find(s=>!s.posted);
-
-  return`<div class="card" style="border-left:4px solid ${isDone?'#10b981':'#2563eb'}">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-      <div>
-        <div style="font-weight:700;font-size:14px">${p.name}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${p.prepaidAcc} → ${p.expAcc} · ${fDate(p.startDate)} – ${fDate(p.endDate)}</div>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center">
-        ${isDone?'<span class="badge b-ok">✅ Lunas</span>':nextDue===today().slice(0,7)?'<span class="badge b-warn">⚠️ Due Bulan Ini</span>':'<span class="badge b-info">Aktif</span>'}
-        <button class="btn btn-bad btn-xs" onclick="delPrepaid('${p.id}')">✕</button>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
-      <div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700">Nilai Awal</div><div style="font-weight:700">${rp(p.totalAmount)}</div></div>
-      <div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700">Saldo Prepaid</div><div style="font-weight:700;color:${isDone?'var(--ok)':'#2563eb'}">${rp(balance)}</div></div>
-      <div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700">Amortisasi/bln</div><div style="font-weight:700">${rp(p.monthlyAmount)}</div></div>
-    </div>
-    <div style="background:#f1f5f9;border-radius:6px;height:8px;margin-bottom:10px">
-      <div style="background:${isDone?'#10b981':'#2563eb'};height:8px;border-radius:6px;width:${pct}%;transition:width .3s"></div>
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">${posted}/${total} bulan diamortisasi (${pct}%)</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${!isDone&&nextSch?`<button class="btn btn-ok btn-sm" onclick="postAmort('${p.id}','${nextSch.month}')">▶ Post ${nextSch.month} — ${rp(nextSch.amount)}</button>`:''}
-      <button class="btn btn-out btn-sm" onclick="openPrepaidDetail('${p.id}')">📋 Jadwal Lengkap</button>
-    </div>
-  </div>`;
-}
-
-function currentPrepaidBalance(p){
-  const postedTotal=(p.schedule||[]).filter(s=>s.posted).reduce((s,x)=>s+x.amount,0);
-  return Math.max(0,(p.totalAmount||0)-postedTotal);
-}
-function nextAmortMonth(p){
-  const next=(p.schedule||[]).find(s=>!s.posted);
-  return next?next.month:null;
-}
-
+function currentPrepaidBalance(p){return Math.max(0,(p.totalAmount||0)-(p.schedule||[]).filter(s=>s.posted).reduce((s,x)=>s+x.amount,0));}
+function nextAmortMonth(p){const n=(p.schedule||[]).find(s=>!s.posted);return n?n.month:null;}
 function openAddPrepaid(){
-  const accOpts=DB.accounts.filter(a=>a.type==='aktiva').map(a=>`<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
-  const expOpts=DB.accounts.filter(a=>a.type==='beban').map(a=>`<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('');
-
   openModal('📆 Tambah Prepaid / Amortisasi',`
-  <div class="alert a-info" style="font-size:11.5px">Isi detail prepaid → sistem generate jadwal amortisasi otomatis. Tiap bulan tinggal klik ▶ Post.</div>
   <div class="fg"><label>Nama / Keterangan</label><input id="pp-name" placeholder="contoh: Sewa Ruko Apr 2026 – Apr 2027"></div>
   <div class="fr2">
-    <div class="fg"><label>Akun Prepaid (Aset)</label>
-      <select id="pp-acc">${accOpts}</select>
-    </div>
-    <div class="fg"><label>Akun Beban (Amortisasi ke)</label>
-      <select id="pp-exp">${expOpts}</select>
-    </div>
+    <div class="fg"><label>Akun Prepaid (Aset)</label><select id="pp-acc">${DB.accounts.filter(a=>a.type==='aktiva').map(a=>`<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('')}</select></div>
+    <div class="fg"><label>Akun Beban</label><select id="pp-exp">${DB.accounts.filter(a=>a.type==='beban').map(a=>`<option value="${a.id}">[${a.code}] ${a.name}</option>`).join('')}</select></div>
   </div>
   <div class="fr3">
     <div class="fg"><label>Nilai Total (Rp)</label><input type="number" id="pp-total" placeholder="50000000" oninput="calcPrepaidPreview()"></div>
     <div class="fg"><label>Mulai Amortisasi</label><input type="month" id="pp-start" value="${today().slice(0,7)}" oninput="calcPrepaidPreview()"></div>
     <div class="fg"><label>Jumlah Bulan</label><input type="number" id="pp-months" value="12" min="1" max="120" oninput="calcPrepaidPreview()"></div>
   </div>
-  <div class="fg"><label>Ref Jurnal Awal (sudah dicatat di mana)</label><input id="pp-ref" placeholder="contoh: BSI-260420-2"></div>
-  <div id="pp-preview" style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin-top:4px;display:none">
-    <div style="font-weight:700;font-size:12px;margin-bottom:8px;color:#0284c7">📊 Preview Amortisasi</div>
+  <div id="pp-preview" style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin-top:8px;display:none">
+    <div style="font-weight:700;font-size:12px;margin-bottom:8px;color:#0284c7">📊 Preview</div>
     <div id="pp-preview-body"></div>
   </div>
-  <div class="modal-ft">
-    <button class="btn btn-out" onclick="closeModal()">Batal</button>
-    <button class="btn btn-pri" onclick="savePrepaid()">💾 Simpan & Generate Jadwal</button>
-  </div>`,'modal-wide');
-
-  // Auto-select 1306 dan 6201
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Batal</button><button class="btn btn-pri" onclick="savePrepaid()">💾 Simpan & Generate Jadwal</button></div>`,'modal-wide');
   setTimeout(()=>{
-    const accSel=document.getElementById('pp-acc');
-    const expSel=document.getElementById('pp-exp');
-    [...(accSel?.options||[])].forEach((o,i)=>{if(o.value==='1306')accSel.selectedIndex=i;});
-    [...(expSel?.options||[])].forEach((o,i)=>{if(o.value==='6201')expSel.selectedIndex=i;});
+    const accSel=document.getElementById('pp-acc'),expSel=document.getElementById('pp-exp');
+    if(accSel)[...accSel.options].forEach((o,i)=>{if(o.value==='1306')accSel.selectedIndex=i;});
+    if(expSel)[...expSel.options].forEach((o,i)=>{if(o.value==='6201')expSel.selectedIndex=i;});
     calcPrepaidPreview();
   },50);
 }
-
 function calcPrepaidPreview(){
   const total=parseFloat(document.getElementById('pp-total')?.value)||0;
   const startMonth=document.getElementById('pp-start')?.value;
   const months=parseInt(document.getElementById('pp-months')?.value)||12;
-  const prev=document.getElementById('pp-preview');
-  const body=document.getElementById('pp-preview-body');
-  if(!prev||!body)return;
-  if(!total||!startMonth||months<1){prev.style.display='none';return;}
-
-  const monthly=Math.floor(total/months);
-  const lastMonth=total-(monthly*(months-1));
+  const prev=document.getElementById('pp-preview'),body=document.getElementById('pp-preview-body');
+  if(!prev||!body||!total||!startMonth){if(prev)prev.style.display='none';return;}
+  const monthly=Math.floor(total/months),last=total-(monthly*(months-1));
   const schedule=[];
   for(let i=0;i<months;i++){
-    const d=new Date(startMonth+'-01');
-    d.setMonth(d.getMonth()+i);
-    const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    schedule.push({month:m,amount:i===months-1?lastMonth:monthly});
+    const d=new Date(startMonth+'-01');d.setMonth(d.getMonth()+i);
+    schedule.push({month:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,amount:i===months-1?last:monthly});
   }
-
   prev.style.display='block';
-  body.innerHTML=`
-  <div style="display:flex;gap:16px;margin-bottom:8px;font-size:12px">
-    <span>Amortisasi/bulan: <b>${rp(monthly)}</b></span>
-    <span>Total: <b>${rp(total)}</b></span>
-    <span>Periode: <b>${months} bulan</b></span>
-  </div>
-  <div style="max-height:160px;overflow-y:auto">
-  <table style="width:100%;font-size:11px;border-collapse:collapse">
-    <thead><tr><th style="padding:4px 8px;background:#e0f2fe;text-align:left">Bulan</th><th style="padding:4px 8px;background:#e0f2fe;text-align:right">Amortisasi</th><th style="padding:4px 8px;background:#e0f2fe;text-align:right">Sisa Prepaid</th></tr></thead>
-    <tbody>
-      ${schedule.map((s,i)=>{
-        const remaining=total-schedule.slice(0,i+1).reduce((x,y)=>x+y.amount,0);
-        return`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:3px 8px">${s.month}</td><td style="padding:3px 8px;text-align:right">${rp(s.amount)}</td><td style="padding:3px 8px;text-align:right;color:${remaining<=0?'var(--ok)':'inherit'}">${rp(Math.max(0,remaining))}</td></tr>`;
-      }).join('')}
-    </tbody>
+  let running=total;
+  body.innerHTML=`<div style="font-size:12px;margin-bottom:8px">Rp ${monthly.toLocaleString('id-ID')}/bulan × ${months} bulan</div>
+  <div style="max-height:150px;overflow-y:auto"><table style="width:100%;font-size:11px;border-collapse:collapse">
+    <thead><tr><th style="padding:3px 6px;background:#e0f2fe;text-align:left">Bulan</th><th style="padding:3px 6px;background:#e0f2fe;text-align:right">Amortisasi</th><th style="padding:3px 6px;background:#e0f2fe;text-align:right">Sisa</th></tr></thead>
+    <tbody>${schedule.map(s=>{running-=s.amount;return`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:3px 6px">${s.month}</td><td style="padding:3px 6px;text-align:right">${rp(s.amount)}</td><td style="padding:3px 6px;text-align:right">${rp(Math.max(0,running))}</td></tr>`;}).join('')}</tbody>
   </table></div>`;
   window._ppSchedule=schedule;
 }
-
 function savePrepaid(){
-  const name=v('pp-name'),accId=v('pp-acc'),expId=v('pp-exp'),ref=v('pp-ref');
+  const name=v('pp-name'),accId=v('pp-acc'),expId=v('pp-exp');
   const total=parseFloat(document.getElementById('pp-total')?.value)||0;
-  const startMonth=v('pp-start');
-  const months=parseInt(document.getElementById('pp-months')?.value)||12;
-  if(!name||!total||!startMonth||!accId||!expId)return alert('Semua field wajib diisi!');
+  const startMonth=v('pp-start'),months=parseInt(document.getElementById('pp-months')?.value)||12;
+  if(!name||!total||!startMonth||!accId||!expId)return alert('Semua field wajib!');
   if(!window._ppSchedule)calcPrepaidPreview();
-  const schedule=window._ppSchedule||[];
-  if(!schedule.length)return alert('Gagal generate jadwal. Cek input.');
-
+  const schedule=window._ppSchedule||[];if(!schedule.length)return alert('Gagal generate jadwal.');
   const monthly=Math.floor(total/months);
-  const lastAmount=total-(monthly*(months-1));
-
-  // Hitung tanggal mulai & akhir
   const startDate=startMonth+'-01';
-  const endD=new Date(startMonth+'-01');
-  endD.setMonth(endD.getMonth()+months-1);
+  const endD=new Date(startMonth+'-01');endD.setMonth(endD.getMonth()+months-1);
   const endDate=`${endD.getFullYear()}-${String(endD.getMonth()+1).padStart(2,'0')}-${new Date(endD.getFullYear(),endD.getMonth()+1,0).getDate()}`;
-
-  const prepaid={
-    id:uid(),name,prepaidAcc:accId,expAcc:expId,
-    totalAmount:total,monthlyAmount:monthly,lastAmount,
-    startDate,endDate,startMonth,months,ref,
-    status:'active',
-    schedule:schedule.map(s=>({...s,posted:false,txId:null})),
-    createdAt:new Date().toISOString()
-  };
+  const prepaid={id:uid(),name,prepaidAcc:accId,expAcc:expId,totalAmount:total,monthlyAmount:monthly,
+    startDate,endDate,startMonth,months,status:'active',
+    schedule:schedule.map(s=>({...s,posted:false,txId:null})),createdAt:new Date().toISOString()};
   if(!DB.prepaidItems)DB.prepaidItems=[];
-  DB.prepaidItems.push(prepaid);
-  saveDB();closeModal();
-  logAudit('Tambah Prepaid',`${name} — ${rp(total)} / ${months} bulan`);
-  nav('prepaid');
+  DB.prepaidItems.push(prepaid);saveDB();closeModal();
+  logAudit('Tambah Prepaid',`${name} — ${rp(total)}`);nav('prepaid');
 }
-
 function postAmort(prepaidId,month){
   const p=DB.prepaidItems.find(x=>x.id===prepaidId);if(!p)return;
-  const sch=p.schedule.find(s=>s.month===month&&!s.posted);if(!sch)return alert('Jadwal tidak ditemukan atau sudah diposting.');
-  if(!confirm(`Post amortisasi ${month} — ${rp(sch.amount)}?\n\nJurnal:\nDr ${sch.amount} → Akun Beban\nCr ${sch.amount} → Akun Prepaid`))return;
-
-  // Buat jurnal otomatis
-  const date=`${month}-01`;
+  const sch=p.schedule.find(s=>s.month===month&&!s.posted);if(!sch)return alert('Sudah diposting.');
+  if(!confirm(`Post amortisasi ${month} — ${rp(sch.amount)}?`))return;
   const txId=uid();
-  const tx={
-    id:txId,
-    date,
-    ref:`AMORT-${p.id.slice(-4)}-${month}`,
+  DB.transactions.push({id:txId,date:`${month}-01`,ref:`AMORT-${p.id.slice(-4)}-${month}`,
     desc:`Amortisasi ${p.name} — ${month}`,
-    entries:[
-      {acc:p.expAcc,deb:sch.amount,crd:0},
-      {acc:p.prepaidAcc,deb:0,crd:sch.amount}
-    ]
-  };
-  DB.transactions.push(tx);
-  sch.posted=true;
-  sch.txId=txId;
-  sch.postedAt=new Date().toISOString();
-
-  // Cek apakah semua sudah diposting
+    entries:[{acc:p.expAcc,deb:sch.amount,crd:0},{acc:p.prepaidAcc,deb:0,crd:sch.amount}]});
+  sch.posted=true;sch.txId=txId;sch.postedAt=new Date().toISOString();
   if(p.schedule.every(s=>s.posted))p.status='closed';
-  saveDB();
-  logAudit('Post Amortisasi',`${p.name} ${month} — ${rp(sch.amount)}`);
-  nav('prepaid');
+  saveDB();logAudit('Post Amortisasi',`${p.name} ${month}`);nav('prepaid');
 }
-
 function openPrepaidDetail(id){
   const p=DB.prepaidItems.find(x=>x.id===id);if(!p)return;
-  const balance=currentPrepaidBalance(p);
-  openModal(`📋 Jadwal Amortisasi — ${p.name}`,`
-  <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap">
-    <div><span style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700">Nilai Awal</span><br><b>${rp(p.totalAmount)}</b></div>
-    <div><span style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700">Saldo Saat Ini</span><br><b style="color:#2563eb">${rp(balance)}</b></div>
-    <div><span style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700">Per Bulan</span><br><b>${rp(p.monthlyAmount)}</b></div>
-    <div><span style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700">Periode</span><br><b>${fDate(p.startDate)} – ${fDate(p.endDate)}</b></div>
-  </div>
-  <div class="tbl-wrap">
-  <table style="width:100%;font-size:12px;border-collapse:collapse">
-    <thead><tr>
-      <th style="padding:7px 10px;background:#f0f4ff;text-align:left">Bulan</th>
-      <th style="padding:7px 10px;background:#f0f4ff;text-align:right">Amortisasi</th>
-      <th style="padding:7px 10px;background:#f0f4ff;text-align:right">Sisa Prepaid</th>
-      <th style="padding:7px 10px;background:#f0f4ff;text-align:center">Status</th>
-      <th style="padding:7px 10px;background:#f0f4ff"></th>
-    </tr></thead>
-    <tbody>
-      ${(()=>{
-        let running=p.totalAmount;
-        return p.schedule.map(s=>{
-          running-=s.amount;
-          const remaining=Math.max(0,running);
-          return`<tr style="border-bottom:1px solid #f1f5f9;background:${s.posted?'#f0fdf4':'#fff'}">
-            <td style="padding:6px 10px;font-weight:${s.posted?'400':'600'}">${s.month}</td>
-            <td style="padding:6px 10px;text-align:right">${rp(s.amount)}</td>
-            <td style="padding:6px 10px;text-align:right;color:${remaining<=0?'var(--ok)':'inherit'}">${rp(remaining)}</td>
-            <td style="padding:6px 10px;text-align:center">${s.posted?'<span class="badge b-ok">✅ Posted</span>':'<span class="badge b-warn">Belum</span>'}</td>
-            <td style="padding:6px 10px;text-align:center">
-              ${!s.posted?`<button class="btn btn-ok btn-xs" onclick="closeModal();postAmort('${p.id}','${s.month}')">▶ Post</button>`:`<a onclick="closeModal();nav('journal')" style="font-size:10.5px;color:var(--pri);cursor:pointer">Lihat Jurnal</a>`}
-            </td>
-          </tr>`;
-        }).join('');
-      })()}
-    </tbody>
+  let running=p.totalAmount;
+  openModal(`📋 Jadwal — ${p.name}`,`
+  <div class="tbl-wrap"><table style="width:100%;font-size:12px;border-collapse:collapse">
+    <thead><tr><th style="padding:6px 10px;background:#f0f4ff;text-align:left">Bulan</th><th style="padding:6px 10px;background:#f0f4ff;text-align:right">Amortisasi</th><th style="padding:6px 10px;background:#f0f4ff;text-align:right">Sisa</th><th style="padding:6px 10px;background:#f0f4ff;text-align:center">Status</th><th></th></tr></thead>
+    <tbody>${p.schedule.map(s=>{running-=s.amount;return`<tr style="border-bottom:1px solid #f1f5f9;background:${s.posted?'#f0fdf4':'#fff'}">
+      <td style="padding:6px 10px">${s.month}</td><td style="padding:6px 10px;text-align:right">${rp(s.amount)}</td>
+      <td style="padding:6px 10px;text-align:right">${rp(Math.max(0,running))}</td>
+      <td style="padding:6px 10px;text-align:center">${s.posted?'<span class="badge b-ok">✅ Posted</span>':'<span class="badge b-warn">Belum</span>'}</td>
+      <td style="padding:6px 10px">${!s.posted?`<button class="btn btn-ok btn-xs" onclick="closeModal();postAmort('${p.id}','${s.month}')">▶ Post</button>`:''}</td>
+    </tr>`;}).join('')}</tbody>
   </table></div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Tutup</button></div>`,'modal-wide');
 }
-
-function delPrepaid(id){
-  if(!confirm('Hapus prepaid ini? Jurnal yang sudah diposting tidak akan dihapus.'))return;
-  DB.prepaidItems=DB.prepaidItems.filter(p=>p.id!==id);
-  saveDB();nav('prepaid');
+function delPrepaidItem(id){
+  if(!confirm('Hapus prepaid ini? Jurnal yang sudah diposting tidak dihapus.'))return;
+  DB.prepaidItems=DB.prepaidItems.filter(p=>p.id!==id);saveDB();nav('prepaid');
 }
-
 function renderAssets(c){
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openAsset()">+ Add Asset</button><button class="btn btn-out" onclick="exportAssets()">⬇ Excel</button>`;
   const totVal=DB.assets.reduce((s,a)=>s+a.value,0),totAkum=DB.assets.reduce((s,a)=>s+calcPenyusutan(a).akum,0);
@@ -5328,7 +5121,7 @@ function renderCalendar(c){
             <button class="btn btn-out btn-xs" onclick="editHoliday('${h.date}',${yr})">✏️</button>
             <button class="btn btn-bad btn-xs" onclick="delHoliday('${h.date}',${yr})">✕</button>
           </td></tr>`;
-      }).join(''):`<tr><td colspan="5" class="tbl-empty">Belum ada data. Klik "Load Default ${yr}".</td></tr>`}
+      }).join(''):`<tr><td colspan="5" class="tbl-empty">Belum ada hari libur. Klik "+ Tambah Hari Libur" untuk menambahkan.</td></tr>`}
       </tbody>
     </table></div>
   </div>`;
@@ -5492,36 +5285,24 @@ function renderPayrollHist(){
 function openEditPayroll(id){
   const p=DB.payroll.find(x=>x.id===id);if(!p)return;
   openModal(`✏️ Edit Payroll — ${monthName(p.month)} ${p.year}`,`
-  <div class="alert a-warn" style="font-size:11.5px">Edit ini akan mengupdate data payroll dan jurnal terkait. Nominal gaji karyawan dihitung ulang sesuai HK Override baru.</div>
+  <div class="alert a-warn" style="font-size:11.5px">Edit ini update data payroll dan jurnal terkait.</div>
   <div class="fr2">
     <div class="fg"><label>Tanggal Bayar</label><input type="date" id="ep-date" value="${p.date}"></div>
-    <div class="fg"><label>Akun Pembayaran</label><select id="ep-acc">${DB.accounts.filter(a=>['aktiva'].includes(a.type)&&['lancar'].includes(a.sub)).map(a=>`<option value="${a.id}"${a.id===p.bankAcc?' selected':''}>[${a.code}] ${a.name}</option>`).join('')}</select></div>
+    <div class="fg"><label>Akun Pembayaran</label><select id="ep-acc">${DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='lancar').map(a=>`<option value="${a.id}"${a.id===p.bankAcc?' selected':''}>[${a.code}] ${a.name}</option>`).join('')}</select></div>
   </div>
-  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:12px 0 8px">Override Per Karyawan</div>
   <div class="tbl-wrap"><table style="font-size:12px">
-    <thead><tr style="background:#f0f4ff">
-      <th>Karyawan</th><th>HK</th><th>Bonus (Rp)</th><th>Tambahan (Rp)</th><th>Pot. Lain (Rp)</th><th>Est. Bersih</th>
-    </tr></thead>
-    <tbody>
-    ${p.slips.map((s,i)=>{
-      const e=DB.employees.find(x=>x.id===s.empId);
-      return`<tr>
-        <td class="fw7">${e?e.name:'?'}<input type="hidden" id="ep-eid-${i}" value="${s.empId}"></td>
-        <td><input type="number" id="ep-hk-${i}" value="${s.hk||25}" min="1" max="31" style="width:55px;text-align:center;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
-        <td><input type="number" id="ep-bon-${i}" value="${s.bonus||0}" min="0" style="width:90px;text-align:right;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
-        <td><input type="number" id="ep-add-${i}" value="${s.otherIn||0}" min="0" style="width:90px;text-align:right;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
-        <td><input type="number" id="ep-pot-${i}" value="${s.otherOut||0}" min="0" style="width:90px;text-align:right;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
-        <td id="ep-est-${i}" style="font-weight:700;color:var(--ok)">${rp(s.gajiNet||s.net||0)}</td>
-      </tr>`;
-    }).join('')}
-    </tbody>
+    <thead><tr style="background:#f0f4ff"><th>Karyawan</th><th>HK</th><th>Bonus</th><th>Tambahan</th><th>Pot. Lain</th><th>Est. Bersih</th></tr></thead>
+    <tbody>${p.slips.map((s,i)=>{const e=DB.employees.find(x=>x.id===s.empId);return`<tr>
+      <td class="fw7">${e?e.name:'?'}<input type="hidden" id="ep-eid-${i}" value="${s.empId}"></td>
+      <td><input type="number" id="ep-hk-${i}" value="${s.hk||25}" min="1" max="31" style="width:55px;text-align:center;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
+      <td><input type="number" id="ep-bon-${i}" value="${s.bonus||0}" min="0" style="width:85px;text-align:right;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
+      <td><input type="number" id="ep-add-${i}" value="${s.otherIn||0}" min="0" style="width:85px;text-align:right;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
+      <td><input type="number" id="ep-pot-${i}" value="${s.otherOut||0}" min="0" style="width:85px;text-align:right;padding:3px;border:1px solid var(--bdr);border-radius:4px" oninput="updateEpEst(${i})"></td>
+      <td id="ep-est-${i}" style="font-weight:700;color:var(--ok)">${rp(s.gajiNet||0)}</td>
+    </tr>`;}).join('')}</tbody>
   </table></div>
-  <div class="modal-ft">
-    <button class="btn btn-out" onclick="closeModal()">Batal</button>
-    <button class="btn btn-pri" onclick="saveEditPayroll('${id}',${p.slips.length})">💾 Simpan & Update Jurnal</button>
-  </div>`,'modal-wide');
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Batal</button><button class="btn btn-pri" onclick="saveEditPayroll('${id}',${p.slips.length})">💾 Simpan & Update Jurnal</button></div>`,'modal-wide');
 }
-
 function updateEpEst(i){
   const empId=document.getElementById(`ep-eid-${i}`)?.value;
   const e=DB.employees.find(x=>x.id===empId);if(!e)return;
@@ -5530,20 +5311,13 @@ function updateEpEst(i){
   const add=parseFloat(document.getElementById(`ep-add-${i}`)?.value)||0;
   const pot=parseFloat(document.getElementById(`ep-pot-${i}`)?.value)||0;
   const slip=calcDetailedSlip(e,hk,0,0,0,bon,add,pot);
-  const el=document.getElementById(`ep-est-${i}`);
-  if(el)el.textContent=rp(slip.gajiNet);
+  const el=document.getElementById(`ep-est-${i}`);if(el)el.textContent=rp(slip.gajiNet);
 }
-
 function saveEditPayroll(id,count){
   const p=DB.payroll.find(x=>x.id===id);if(!p)return;
-  const date=document.getElementById('ep-date')?.value;
-  const bankAcc=document.getElementById('ep-acc')?.value;
-  if(!date)return alert('Tanggal bayar wajib diisi!');
-
-  // Hapus jurnal lama terkait payroll ini
-  DB.transactions=DB.transactions.filter(tx=>tx.ref!==p.txRef);
-
-  // Hitung ulang semua slip
+  const date=document.getElementById('ep-date')?.value,bankAcc=document.getElementById('ep-acc')?.value;
+  if(!date)return alert('Tanggal bayar wajib!');
+  if(p.txRef)DB.transactions=DB.transactions.filter(tx=>tx.ref!==p.txRef);
   let totalGaji=0,totalPPh=0,totalBPJS=0,totalNet=0;
   for(let i=0;i<count;i++){
     const empId=document.getElementById(`ep-eid-${i}`)?.value;
@@ -5553,47 +5327,28 @@ function saveEditPayroll(id,count){
     const add=parseFloat(document.getElementById(`ep-add-${i}`)?.value)||0;
     const pot=parseFloat(document.getElementById(`ep-pot-${i}`)?.value)||0;
     const slip=calcDetailedSlip(e,hk,0,0,0,bon,add,pot);
-
-    // Update slip di payroll record
     const idx=p.slips.findIndex(s=>s.empId===empId);
     if(idx>-1)Object.assign(p.slips[idx],{...slip,hk,bonus:bon,otherIn:add,otherOut:pot});
-
-    totalGaji+=slip.totalPendapatan||0;
-    totalPPh+=slip.pph21||0;
-    totalBPJS+=(slip.bpjsKes||0)+(slip.bpjsTK||0)+(slip.bpjsJP||0);
-    totalNet+=slip.gajiNet||0;
+    totalGaji+=slip.totalPendapatan||0;totalPPh+=slip.pph21||0;
+    totalBPJS+=(slip.bpjsKes||0)+(slip.bpjsTK||0)+(slip.bpjsJP||0);totalNet+=slip.gajiNet||0;
   }
-
   Object.assign(p,{date,bankAcc,totalGaji,totalPPh,totalBPJS,totalNet});
-
-  // Buat ulang jurnal payroll
-  const txRef=`PAY-${p.year}${String(p.month).padStart(2,'0')}`;
-  p.txRef=txRef;
+  const txRef=`PAY-${p.year}${String(p.month).padStart(2,'0')}`;p.txRef=txRef;
   const entries=[];
-  p.slips.forEach(s=>{
-    entries.push({acc:'6101',deb:s.totalPendapatan||0,crd:0});
-  });
+  p.slips.forEach(s=>entries.push({acc:'6101',deb:s.totalPendapatan||0,crd:0}));
   entries.push({acc:bankAcc,deb:0,crd:totalNet});
   if(totalPPh>0)entries.push({acc:'2105',deb:0,crd:totalPPh});
   if(totalBPJS>0)entries.push({acc:'2108',deb:0,crd:totalBPJS});
   DB.transactions.push({id:uid(),date,ref:txRef,desc:`Gaji ${monthName(p.month)} ${p.year}`,entries});
-
-  saveDB();closeModal();
-  logAudit('Edit Payroll',`${monthName(p.month)} ${p.year} — Net: ${rp(totalNet)}`);
-  renderPayrollHist();
+  saveDB();closeModal();logAudit('Edit Payroll',`${monthName(p.month)} ${p.year}`);renderPayrollHist();
 }
-
 function delPayroll(id){
   const p=DB.payroll.find(x=>x.id===id);if(!p)return;
-  if(!confirm(`Hapus payroll ${monthName(p.month)} ${p.year}?\n\nJurnal terkait juga akan dihapus.\nAksi ini tidak bisa dibatalkan.`))return;
-  // Hapus jurnal terkait
+  if(!confirm(`Hapus payroll ${monthName(p.month)} ${p.year}?\nJurnal terkait juga dihapus.`))return;
   if(p.txRef)DB.transactions=DB.transactions.filter(tx=>tx.ref!==p.txRef);
   DB.payroll=DB.payroll.filter(x=>x.id!==id);
-  saveDB();
-  logAudit('Hapus Payroll',`${monthName(p.month)} ${p.year}`);
-  renderPayrollHist();
+  saveDB();logAudit('Hapus Payroll',`${monthName(p.month)} ${p.year}`);renderPayrollHist();
 }
-
 // ── PPh 21 Calculation ───────────────────────────────────────────
 function calcPPh21(monthly,ptkpKey){
   const ptkpMap={'TK/0':54000000,'TK/1':58500000,'TK/2':63000000,'TK/3':67500000,
@@ -6391,9 +6146,9 @@ function renderSettings(c){
     </div>
     <div>
       <div class="card"><div class="card-hd">${t('set_import')}</div>
-        <div class="alert a-ok" style="margin-bottom:12px">📂 <b>Multi-Format Import</b> — ${getLang()==='id'?'Upload Excel, ODS, CSV, TSV, atau HTML dari Google Sheets. Akun dipetakan otomatis!':'Upload Excel, ODS, CSV, TSV, or HTML from Google Sheets. Accounts auto-mapped!'}</div>
+        <div class="alert a-ok" style="margin-bottom:12px">✨ <b>Smart Import</b> — ${getLang()==='id'?'upload Excel apa saja, SiAkun otomatis petakan ke accounts yang tepat. Tidak perlu tahu kode COA!':'Upload any Excel file, SiAkun automatically maps to the correct accounts. No need to know COA codes!'}</div>
         <div style="display:flex;flex-direction:column;gap:7px">
-          <button class="btn btn-pri" onclick="openImportWizard()">📂 ${getLang()==='id'?'Import Transaksi (Multi Format)':'Import Transactions (Multi Format)'}</button>
+          <button class="btn btn-pri" onclick="openImportWizard()">🧙 ${getLang()==='id'?'Import Transaksi (Smart Wizard)':'Import Transactions (Smart Wizard)'}</button>
           <div style="border-top:1px solid var(--bdr);padding-top:7px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-top:2px">${getLang()==='id'?'Import Master Data':'Import Master Data'}</div>
           <div class="fg" style="margin:0"><label>${getLang()==='id'?'Import Kontak':'Import Contacts'}</label><input type="file" accept=".xlsx,.xls" onchange="importData(this,'contacts')"></div>
           <div class="fg" style="margin:0"><label>${getLang()==='id'?'Import Produk':'Import Products'}</label><input type="file" accept=".xlsx,.xls" onchange="importData(this,'products')"></div>
@@ -6401,8 +6156,8 @@ function renderSettings(c){
           <button class="btn btn-out" onclick="downloadTemplates()">⬇ Download Template</button>
           <div style="border-top:1px solid var(--bdr);padding-top:8px;margin-top:4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">Custom Format</div>
           <button class="btn btn-acc" onclick="document.getElementById('import-cr-ams').click()">📊 Import Cash Report (Format AMS)</button>
-          <input type="file" id="import-cr-ams" accept=".xlsx,.xls,.csv,.ods,.html,.htm" style="display:none" onchange="importCashReportAMS(this)">
-          <p style="font-size:10.5px;color:var(--muted);margin:2px 0 0">Format CR PT. Andrika Mitra Solusi (.xlsx, .csv, .html)</p>
+          <input type="file" id="import-cr-ams" accept=".xlsx,.xls" style="display:none" onchange="importCashReportAMS(this)">
+          <p style="font-size:10.5px;color:var(--muted);margin:2px 0 0">For PT. Andrika Mitra Solusi Cash Report format</p>
           <div style="border-top:1px solid var(--bdr);padding-top:8px;margin-top:4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">🏦 Import Mutasi Bank → Jurnal</div>
           <button class="btn btn-pri" style="background:var(--ok)" onclick="document.getElementById('import-bsi-journal').click()">🏦 Import Mutasi BSI → Auto Jurnal</button>
           <input type="file" id="import-bsi-journal" accept=".pdf,.xlsx,.xls,.csv" style="display:none" onchange="openBSIJournalImport(this)">
@@ -6550,25 +6305,10 @@ function autoRefNo(type,i){
 
 function openImportWizard(){
   openModal('📂 Import Transaksi — Multi Format',`
-  <div class="alert a-info" style="margin-bottom:12px">Upload file dari mana saja — Google Sheets, Excel, atau sistem lain. SiAkun otomatis petakan ke akun yang sesuai.</div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
-    ${[
-      ['📊','Excel (.xlsx/.xls)','export dari Excel / Google Sheets','#eff6ff','#2563eb'],
-      ['📋','ODS (.ods)','export dari LibreOffice Calc','#f0fdf4','#059669'],
-      ['📄','CSV / TSV','export dari Google Sheets atau sistem ERP','#fefce8','#d97706'],
-      ['🌐','HTML (.html)','download Web Page dari Google Sheets','#fdf4ff','#7c3aed'],
-      ['📑','Cash Report AMS','format CR PT. Andrika Mitra Solusi','#fff7ed','#ea580c'],
-      ['💡','Auto-detect','upload saja, format akan terdeteksi otomatis!','#f0f9ff','#0284c7'],
-    ].map(([ic,lbl,sub,bg,col])=>`<div style="background:${bg};border:1px solid ${col}33;border-radius:8px;padding:10px;text-align:center">
-      <div style="font-size:20px">${ic}</div>
-      <div style="font-size:11.5px;font-weight:700;color:${col};margin-top:4px">${lbl}</div>
-      <div style="font-size:10px;color:#64748b;margin-top:2px">${sub}</div>
-    </div>`).join('')}
-  </div>
+  <div class="alert a-info" style="margin-bottom:12px">Upload file dari Google Sheets, Excel, atau sistem lain. Format didukung: <b>.xlsx · .ods · .csv · .tsv · .html</b></div>
   <div class="fg"><label>Upload File</label>
     <input type="file" accept=".xlsx,.xls,.ods,.csv,.tsv,.html,.htm" onchange="handleWizardFile(this)"
       style="padding:12px;border:2px dashed var(--bdr);border-radius:8px;cursor:pointer;background:#f8fafc;width:100%">
-    <div style="font-size:10.5px;color:var(--muted);margin-top:4px">Format didukung: .xlsx · .xls · .ods · .csv · .tsv · .html</div>
   </div>
   <div id="iw-step2" style="display:none"></div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button></div>`,'modal-xl');
@@ -6578,77 +6318,44 @@ function handleWizardFile(input){
   const f=input.files[0];if(!f)return;
   const ext=f.name.split('.').pop().toLowerCase();
   const reader=new FileReader();
-
-  // ── CSV / TSV → parse manual ──
   if(ext==='csv'||ext==='tsv'){
     reader.onload=e=>{
       try{
-        const sep=ext==='tsv'?'\t':detectCSVSep(e.target.result);
+        const sep=ext==='tsv'?'\t':(()=>{const l=e.target.result.split('\n')[0]||'';return(l.match(/;/g)||[]).length>(l.match(/,/g)||[]).length?';':','})();
         const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());
-        if(lines.length<2)return alert('File kosong atau hanya ada header!');
-        _iwHeaders=parseCSVLine(lines[0],sep).map(String);
-        _iwRows=lines.slice(1).map(l=>parseCSVLine(l,sep)).filter(r=>r.some(c=>c!==''));
+        if(lines.length<2)return alert('File kosong!');
+        const parseL=(line)=>{const r=[];let cur='',inQ=false;for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===sep&&!inQ){r.push(cur.trim());cur='';}else{cur+=ch;}}r.push(cur.trim());return r;};
+        _iwHeaders=parseL(lines[0]).map(String);
+        _iwRows=lines.slice(1).map(l=>parseL(l)).filter(r=>r.some(c=>c!==''));
         renderWizardStep2();
-      }catch(err){alert('Gagal baca file: '+err.message);}
-    };
-    reader.readAsText(f,'UTF-8');
-    return;
+      }catch(err){alert('Error: '+err.message);}
+    };reader.readAsText(f,'UTF-8');return;
   }
-
-  // ── HTML → parse table ──
   if(ext==='html'||ext==='htm'){
     reader.onload=e=>{
       try{
-        const parser=new DOMParser();
-        const doc=parser.parseFromString(e.target.result,'text/html');
-        const table=doc.querySelector('table');
-        if(!table)return alert('Tidak ada tabel HTML ditemukan dalam file ini.');
-        const rows=[...table.querySelectorAll('tr')].map(tr=>[...tr.querySelectorAll('td,th')].map(td=>td.innerText||td.textContent||''));
+        const parser=new DOMParser();const doc=parser.parseFromString(e.target.result,'text/html');
+        const table=doc.querySelector('table');if(!table)return alert('Tidak ada tabel HTML.');
+        const rows=[...table.querySelectorAll('tr')].map(tr=>[...tr.querySelectorAll('td,th')].map(td=>(td.innerText||td.textContent||'').trim()));
         if(rows.length<2)return alert('Tabel kosong!');
-        _iwHeaders=rows[0].map(String);
-        _iwRows=rows.slice(1).filter(r=>r.some(c=>String(c).trim()!==''));
+        _iwHeaders=rows[0].map(String);_iwRows=rows.slice(1).filter(r=>r.some(c=>String(c).trim()!==''));
         renderWizardStep2();
-      }catch(err){alert('Gagal baca HTML: '+err.message);}
-    };
-    reader.readAsText(f,'UTF-8');
-    return;
+      }catch(err){alert('Error: '+err.message);}
+    };reader.readAsText(f,'UTF-8');return;
   }
-
-  // ── XLSX / XLS / ODS → SheetJS ──
   reader.onload=e=>{
     try{
       const wb=XLSX.read(e.target.result,{type:'binary'});
       const sheet=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
-      if(rows.length<2)return alert('File kosong atau hanya ada header!');
-      _iwHeaders=rows[0].map(String);
-      _iwRows=rows.slice(1).filter(r=>r.some(c=>c!==''));
+      if(rows.length<2)return alert('File kosong!');
+      _iwHeaders=rows[0].map(String);_iwRows=rows.slice(1).filter(r=>r.some(c=>c!==''));
       renderWizardStep2();
     }catch(err){alert('Gagal baca file: '+err.message);}
-  };
-  reader.readAsBinaryString(f);
+  };reader.readAsBinaryString(f);
 }
-
-// Helper: detect CSV separator (comma vs semicolon)
-function detectCSVSep(str){
-  const line=str.split('\n')[0]||'';
-  const commas=(line.match(/,/g)||[]).length;
-  const semis=(line.match(/;/g)||[]).length;
-  return semis>commas?';':',';
-}
-
-// Helper: parse single CSV line respecting quoted fields
-function parseCSVLine(line,sep){
-  const result=[];let cur='',inQ=false;
-  for(let i=0;i<line.length;i++){
-    const ch=line[i];
-    if(ch==='"'){inQ=!inQ;}
-    else if(ch===sep&&!inQ){result.push(cur.trim());cur='';}
-    else{cur+=ch;}
-  }
-  result.push(cur.trim());
-  return result;
-}
+function detectCSVSep(str){const line=str.split('\n')[0]||'';return(line.match(/;/g)||[]).length>(line.match(/,/g)||[]).length?';':',';}
+function parseCSVLine(line,sep){const r=[];let cur='',inQ=false;for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===sep&&!inQ){r.push(cur.trim());cur='';}else{cur+=ch;}}r.push(cur.trim());return r;}
 
 function renderWizardStep2(){
   const hdOpts=_iwHeaders.map((h,i)=>`<option value="${i}">${h||'Kolom '+(i+1)}</option>`).join('');
@@ -6833,133 +6540,144 @@ function executeWizardImport(){
 function importCashReportAMS(input){
   const f=input.files[0];if(!f)return;
   if(input.id)input.value='';
-  const ext=f.name.split('.').pop().toLowerCase();
   const reader=new FileReader();
-
-  // ── Core processor: accepts array of {sheetName, rows[][]} ──
-  function processAMSSheets(allSheets){
-    let totalImported=0,sheetResults=[];
-    allSheets.forEach(function({sheetName,rows}){
-      // Cari baris header
-      var hRow=-1, cDate=0, cDesc=1, cDeb=2, cCrd=3, cRef=-1;
-      for(var i=0;i<Math.min(10,rows.length);i++){
-        var r=(rows[i]||[]).map(function(c){return String(c===null||c===undefined?'':c).toLowerCase();});
-        if(r.some(function(c){return c.indexOf('date')>-1||c.indexOf('tanggal')>-1;})&&
-           r.some(function(c){return c.indexOf('deb')>-1;})){
-          hRow=i;
-          cDate=r.findIndex(function(c){return c.indexOf('date')>-1||c.indexOf('tanggal')>-1;});
-          cDesc=r.findIndex(function(c){return c.indexOf('desc')>-1||c.indexOf('desci')>-1||c.indexOf('ket')>-1;});
-          cDeb=r.findIndex(function(c){return c.indexOf('deb')>-1;});
-          cCrd=r.findIndex(function(c){return c.indexOf('cred')>-1||c.indexOf('kred')>-1;});
-          cRef=r.findIndex(function(c){return c.indexOf('ref')>-1||c.indexOf('reff')>-1||c.indexOf('kode')>-1||c.indexOf('no.')>-1;});
-          if(cDesc<0)cDesc=1;if(cDeb<0)cDeb=2;if(cCrd<0)cCrd=3;
-          break;
-        }
-      }
-      if(hRow<0)return;
-
-      function parseAmt(v){
-        if(v===null||v===undefined||v==='')return 0;
-        if(typeof v==='number')return Math.abs(v);
-        var s=String(v).replace(/[Rp\s,]/g,'');
-        if(s.charAt(0)==='='){
-          try{const expr=s.slice(1).replace(/[^0-9+\-*/().]/g,'');if(!expr)return 0;return Math.abs(Function('"use strict";return('+expr+')')());}catch(x){return 0;}
-        }
-        return Math.abs(parseFloat(s.replace(',','.'))||0);
-      }
-      function parseDate(v){
-        if(v===null||v===undefined||v==='')return null;
-        if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);
-        if(typeof v==='number'&&v>40000&&v<150000){var d=new Date(Math.round((v-25569)*86400000));return isNaN(d)?null:d.toISOString().slice(0,10);}
-        if(typeof v==='string'){var d2=new Date(v.trim());if(!isNaN(d2.getTime())&&v.trim().length>4)return d2.toISOString().slice(0,10);}
-        return null;
-      }
-
-      var skipDescs=['prepared by','reviewed by','total transaction','real petty cash',
-                     'cash on hand','opening balance','ratu','dedi candra','staff admin','associate director'];
-      var lastDate=null,count=0;
-
-      for(var i=hRow+1;i<rows.length;i++){
-        var row=rows[i]||[];
-        if(row.every(function(c){return c===null||c===''||c===undefined;}))continue;
-        var rawDate=cDate>=0?row[cDate]:null;
-        var parsedDate=parseDate(rawDate);
-        if(parsedDate)lastDate=parsedDate;
-        var rawDesc=cDesc>=0?row[cDesc]:null;
-        var desc=String(rawDesc===null||rawDesc===undefined?'':rawDesc).trim();
-        if(!desc)continue;
-        var dl=desc.toLowerCase();
-        if(skipDescs.some(function(sw){return dl.indexOf(sw)>-1;}))continue;
-        var debAmt=parseAmt(row[cDeb]);
-        var crdAmt=parseAmt(row[cCrd]);
-        if(debAmt<=0&&crdAmt<=0)continue;
-        if(!lastDate)continue;
-        var kasKecil=crAmsFindCash();
-        var modalDisetor=crAmsFindModal();
-        var rawRef=cRef>=0?row[cRef]:null;
-        var ref=rawRef?String(rawRef).trim():'CR-'+sheetName.toUpperCase().slice(0,3)+'-'+(i+1);
-        if(debAmt>0){DB.transactions.push({id:uid(),date:lastDate,ref:ref,desc:desc,entries:[{acc:kasKecil,deb:debAmt,crd:0},{acc:modalDisetor,deb:0,crd:debAmt}]});count++;totalImported++;}
-        if(crdAmt>0){var expenseAcc=crAmsMapAccount('',desc);DB.transactions.push({id:uid(),date:lastDate,ref:ref,desc:desc,entries:[{acc:expenseAcc,deb:crdAmt,crd:0},{acc:kasKecil,deb:0,crd:crdAmt}]});count++;totalImported++;}
-      }
-      sheetResults.push({sheet:sheetName,count:count});
-    });
-
-    saveDB();
-    if(totalImported===0){
-      alert('⚠️ 0 data terimport. Pastikan format file sesuai CR PT. AMS.');
-    } else {
-      var detail=sheetResults.map(function(s){return'• '+s.sheet+': '+s.count+' jurnal';}).join('\n');
-      alert('✅ Import Cash Report berhasil!\n\n'+detail+'\n\nTotal: '+totalImported+' jurnal dibuat.\nCek di menu Jurnal Umum.');
-      nav('journal');
-    }
-  }
-
-  // ── CSV/TSV ──
-  if(ext==='csv'||ext==='tsv'){
-    reader.onload=function(e){
-      try{
-        const sep=ext==='tsv'?'\t':detectCSVSep(e.target.result);
-        const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());
-        const rows=lines.map(l=>parseCSVLine(l,sep));
-        processAMSSheets([{sheetName:f.name,rows}]);
-      }catch(err){alert('❌ Error: '+err.message);}
-    };
-    reader.readAsText(f,'UTF-8');
-    return;
-  }
-  // ── HTML ──
-  if(ext==='html'||ext==='htm'){
-    reader.onload=function(e){
-      try{
-        const parser=new DOMParser();
-        const doc=parser.parseFromString(e.target.result,'text/html');
-        const tables=[...doc.querySelectorAll('table')];
-        if(!tables.length)return alert('Tidak ada tabel di file HTML ini.');
-        const allSheets=tables.map((table,i)=>{
-          const rows=[...table.querySelectorAll('tr')].map(tr=>[...tr.querySelectorAll('td,th')].map(td=>(td.innerText||td.textContent||'').trim()));
-          return{sheetName:'Sheet'+(i+1),rows};
-        });
-        processAMSSheets(allSheets);
-      }catch(err){alert('❌ Error: '+err.message);}
-    };
-    reader.readAsText(f,'UTF-8');
-    return;
-  }
-  // ── XLSX / XLS / ODS ──
   reader.onload=function(evt){
     try{
+      // ── STRUKTUR FILE CR AMS: A=Tanggal, B=Deskripsi, C=Debet, D=Kredit ──
       const data=new Uint8Array(evt.target.result);
       const wb=XLSX.read(data,{type:'array',cellDates:false,raw:true});
-      const allSheets=wb.SheetNames.map(sheetName=>({
-        sheetName,
-        rows:XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:null,raw:true})
-      }));
-      processAMSSheets(allSheets);
-    }catch(err){alert('❌ Error: '+err.message+'\n'+err.stack.slice(0,300));}
+      let totalImported=0,sheetResults=[];
+
+      wb.SheetNames.forEach(function(sheetName){
+        const ws=wb.Sheets[sheetName];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});
+
+        // Cari baris header (ada kata 'date'/'tanggal' DAN 'deb')
+        var hRow=-1, cDate=0, cDesc=1, cDeb=2, cCrd=3, cRef=-1;
+        for(var i=0;i<Math.min(10,rows.length);i++){
+          var r=(rows[i]||[]).map(function(c){return String(c===null||c===undefined?'':c).toLowerCase();});
+          if(r.some(function(c){return c.indexOf('date')>-1||c.indexOf('tanggal')>-1;})&&
+             r.some(function(c){return c.indexOf('deb')>-1;})){
+            hRow=i;
+            cDate=r.findIndex(function(c){return c.indexOf('date')>-1||c.indexOf('tanggal')>-1;});
+            cDesc=r.findIndex(function(c){return c.indexOf('desc')>-1||c.indexOf('desci')>-1||c.indexOf('ket')>-1;});
+            cDeb=r.findIndex(function(c){return c.indexOf('deb')>-1;});
+            cCrd=r.findIndex(function(c){return c.indexOf('cred')>-1||c.indexOf('kred')>-1;});
+            // ── Deteksi kolom Reff Code otomatis ──
+            cRef=r.findIndex(function(c){return c.indexOf('ref')>-1||c.indexOf('reff')>-1||c.indexOf('kode')>-1||c.indexOf('no.')>-1;});
+            // fallback ke posisi default jika ada yang -1
+            if(cDesc<0)cDesc=1;
+            if(cDeb<0)cDeb=2;
+            if(cCrd<0)cCrd=3;
+            break;
+          }
+        }
+        if(hRow<0)return;
+
+        // ── Parse nilai (angka, string, formula) ──
+        function parseAmt(v){
+          if(v===null||v===undefined||v==='')return 0;
+          if(typeof v==='number')return Math.abs(v);
+          var s=String(v).replace(/[Rp\s,]/g,'');
+          if(s.charAt(0)==='='){
+            // Fix #4: replace eval() with Function() — no local scope access
+            // Regex whitelist ensures only safe math characters get through
+            try{
+              const expr=s.slice(1).replace(/[^0-9+\-*/().]/g,'');
+              if(!expr)return 0;
+              return Math.abs(Function('"use strict";return('+expr+')')());
+            }catch(x){return 0;}
+          }
+          return Math.abs(parseFloat(s.replace(',','.'))||0);
+        }
+
+        // ── Parse tanggal dari serial Excel atau Date object ──
+        function parseDate(v){
+          if(v===null||v===undefined||v==='')return null;
+          if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);
+          if(typeof v==='number'&&v>40000&&v<150000){
+            var d=new Date(Math.round((v-25569)*86400000));
+            return isNaN(d)?null:d.toISOString().slice(0,10);
+          }
+          if(typeof v==='string'){
+            // reject string yang bukan tanggal (mis: "Total Transaction")
+            var d2=new Date(v.trim());
+            if(!isNaN(d2.getTime())&&v.trim().length>4)return d2.toISOString().slice(0,10);
+          }
+          return null;
+        }
+
+        var skipDescs=['prepared by','reviewed by','total transaction','real petty cash',
+                       'cash on hand','opening balance','ratu','dedi candra','staff admin',
+                       'associate director'];
+
+        var lastDate=null, count=0;
+
+        for(var i=hRow+1;i<rows.length;i++){
+          var row=rows[i]||[];
+          if(row.every(function(c){return c===null||c===''||c===undefined;}))continue;
+
+          // Update tanggal kalau ada nilai tanggal di kolom A
+          var rawDate=cDate>=0?row[cDate]:null;
+          var parsedDate=parseDate(rawDate);
+          if(parsedDate)lastDate=parsedDate;
+
+          // Ambil deskripsi
+          var rawDesc=cDesc>=0?row[cDesc]:null;
+          var desc=String(rawDesc===null||rawDesc===undefined?'':rawDesc).trim();
+          if(!desc)continue;
+
+          // Skip baris footer/tanda tangan
+          var dl=desc.toLowerCase();
+          if(skipDescs.some(function(sw){return dl.indexOf(sw)>-1;}))continue;
+
+          // Baca jumlah debet & kredit
+          var debAmt=parseAmt(row[cDeb]);
+          var crdAmt=parseAmt(row[cCrd]);
+          if(debAmt<=0&&crdAmt<=0)continue;
+          if(!lastDate)continue;
+
+          var kasKecil=crAmsFindCash();
+          var modalDisetor=crAmsFindModal();
+          // Pakai Reff Code dari Excel kalau ada, fallback ke auto-generate
+          var rawRef=cRef>=0?row[cRef]:null;
+          var ref=rawRef?String(rawRef).trim():'CR-'+sheetName.toUpperCase().slice(0,3)+'-'+(i+1);
+
+          if(debAmt>0){
+            // DEBET = uang MASUK ke kas kecil: Dr Kas Kecil / Cr Modal Disetor
+            DB.transactions.push({id:uid(),date:lastDate,ref:ref,desc:desc,entries:[
+              {acc:kasKecil,deb:debAmt,crd:0},
+              {acc:modalDisetor,deb:0,crd:debAmt}
+            ]});
+            count++;totalImported++;
+          }
+          if(crdAmt>0){
+            // KREDIT = uang KELUAR dari kas kecil: Dr [Beban/Aset] / Cr Kas Kecil
+            var expenseAcc=crAmsMapAccount('',desc);
+            DB.transactions.push({id:uid(),date:lastDate,ref:ref,desc:desc,entries:[
+              {acc:expenseAcc,deb:crdAmt,crd:0},
+              {acc:kasKecil,deb:0,crd:crdAmt}
+            ]});
+            count++;totalImported++;
+          }
+        }
+        sheetResults.push({sheet:sheetName,count:count});
+      });
+
+      saveDB();
+      if(totalImported===0){
+        alert('⚠️ 0 data terimport. Pastikan file yang diupload adalah CR_PT__AMS__FEB-MARCH_.xlsx asli.');
+      } else {
+        var detail=sheetResults.map(function(s){return'• '+s.sheet+': '+s.count+' jurnal';}).join('\n');
+        alert('✅ Import Cash Report berhasil!\n\n'+detail+'\n\nTotal: '+totalImported+' jurnal dibuat.\nCek di menu Jurnal Umum.');
+        nav('journal');
+      }
+    }catch(err){
+      alert('❌ Error: '+err.message+'\n'+err.stack.slice(0,300));
+    }
   };
   reader.readAsArrayBuffer(f);
 }
-
 
 function crAmsFindAcc(codeOrName){
   // 1. by id exact
@@ -7818,50 +7536,40 @@ async function init(){
     }
   }
   // ══════════════════════════════════════════════════════════════
-  //  AUTO-MIGRATE CoA — jalankan setiap load, idempotent & aman
+  //  AUTO-MIGRATE CoA — idempotent, aman dijalankan tiap load
   // ══════════════════════════════════════════════════════════════
   if(DB.accounts&&Array.isArray(DB.accounts)){
-
-    // ── STEP 1: Hapus duplikat yang terlanjur masuk di v19.4 ──
-    // Akun baru ini punya PADANAN legacy yang sudah ada → buang yang baru,
-    // rename legacy ke bilingual supaya konsisten.
+    // STEP 1: Rename legacy accounts ke bilingual & hapus duplikat v19.4
     const legacyRenames=[
-      // [legacyId, namaBaruBilingual, idDuplikatYangDihapus]
       ['1204','Penyisihan Piutang Tak Tertagih / Allowance for Doubtful Accounts','1205'],
       ['1501','Uang Muka Pembelian / Purchase Advance','1305'],
       ['1502','Biaya Dibayar Dimuka / Prepaid Expenses','1307'],
       ['1503','Perlengkapan Kantor / Office Supplies','1312'],
-      ['1504','Uang Muka Pajak PPh 25 / Prepaid Tax PPh 25',null],
       ['1505','Investasi Jangka Pendek / Short-term Investments','1310'],
     ];
     legacyRenames.forEach(([legacyId,newName,dupId])=>{
       const legacy=DB.accounts.find(a=>a.id===legacyId);
-      if(legacy)legacy.name=newName;                         // rename legacy → bilingual
-      if(dupId)DB.accounts=DB.accounts.filter(a=>a.id!==dupId); // hapus duplikat baru
+      if(legacy)legacy.name=newName;
+      if(dupId)DB.accounts=DB.accounts.filter(a=>a.id!==dupId);
     });
-    // Hapus 1311 (Persediaan generik) — sudah covered 1301-1304 inventory spesifik
     DB.accounts=DB.accounts.filter(a=>a.id!=='1311');
 
-    // ── STEP 2: Tambah akun yang benar-benar baru (no legacy equivalent) ──
+    // STEP 2: Tambah akun baru yang belum ada
     const toAdd=[
-      // Aset Lancar baru
       {id:'1306',code:'1-1306',name:'Sewa Dibayar Dimuka / Prepaid Lease',type:'aktiva',sub:'lancar'},
       {id:'1308',code:'1-1308',name:'Uang Muka Lainnya / Other Advance Payments',type:'aktiva',sub:'lancar'},
       {id:'1309',code:'1-1309',name:'Uang Jaminan / Guarantee Deposit',type:'aktiva',sub:'lancar'},
-      // Akumulasi Penyusutan per-kategori (spesifik, bukan 1699 generik)
       {id:'1611',code:'1-1611',name:'Akumulasi Penyusutan Gedung / Accum. Depreciation - Building',type:'aktiva',sub:'tetap'},
       {id:'1612',code:'1-1612',name:'Akumulasi Penyusutan Kendaraan / Accum. Depreciation - Vehicles',type:'aktiva',sub:'tetap'},
       {id:'1613',code:'1-1613',name:'Akumulasi Penyusutan Peralatan / Accum. Depreciation - Equipment',type:'aktiva',sub:'tetap'},
       {id:'1614',code:'1-1614',name:'Akumulasi Penyusutan Inventaris / Accum. Depreciation - Inventory',type:'aktiva',sub:'tetap'},
       {id:'1615',code:'1-1615',name:'Akumulasi Penyusutan Komputer / Accum. Depreciation - Computers',type:'aktiva',sub:'tetap'},
       {id:'1620',code:'1-1620',name:'Aset Tidak Lancar Lainnya / Other Non-Current Assets',type:'aktiva',sub:'tetap'},
-      // Kewajiban baru (v19 SKK structure)
       {id:'2112',code:'2-2112',name:'Utang PPh 4(2) / PPh 4(2) Payable',type:'kewajiban',sub:'lancar'},
       {id:'2113',code:'2-2113',name:'Utang Lain-lain / Other Payables',type:'kewajiban',sub:'lancar'},
       {id:'2114',code:'2-2114',name:'Pinjaman Jangka Pendek / Short-term Loans',type:'kewajiban',sub:'lancar'},
       {id:'2115',code:'2-2115',name:'Biaya yang Masih Harus Dibayar / Accrued Expenses',type:'kewajiban',sub:'lancar'},
       {id:'2116',code:'2-2116',name:'Pendapatan Diterima Dimuka / Deferred Revenue',type:'kewajiban',sub:'lancar'},
-      // Beban operasional baru
       {id:'6207',code:'6-6207',name:'Biaya Pemeliharaan Kendaraan / Vehicle Maintenance',type:'beban',sub:'operasional'},
       {id:'6209',code:'6-6209',name:'Biaya Perjalanan Dinas / Business Travel',type:'beban',sub:'operasional'},
       {id:'6210',code:'6-6210',name:'Biaya Ekspedisi, Pos & Materai / Shipping, Postage & Stamp',type:'beban',sub:'operasional'},
@@ -7870,72 +7578,42 @@ async function init(){
       {id:'6213',code:'6-6213',name:'Biaya Profesional / Tenaga Ahli / Professional Fees',type:'beban',sub:'operasional'},
       {id:'6214',code:'6-6214',name:'Biaya Jamuan / Entertainment',type:'beban',sub:'operasional'},
       {id:'6215',code:'6-6215',name:'Biaya Umum & Administrasi / General & Administrative',type:'beban',sub:'operasional'},
-      // Beban lain
       {id:'6507',code:'6-6507',name:'Pajak Penghasilan Badan / Corporate Income Tax',type:'beban',sub:'lain'},
       {id:'6508',code:'6-6508',name:'Pajak Final Bagi Hasil / Final Tax on Profit Sharing',type:'beban',sub:'lain'},
       {id:'6509',code:'6-6509',name:'Beban Lain-lain / Other Expenses',type:'beban',sub:'lain'},
       {id:'6510',code:'6-6510',name:'Final Tax Expense (PPh Final)',type:'beban',sub:'lain'},
     ];
     toAdd.forEach(na=>{
-      // Skip jika sudah ada by ID
       if(DB.accounts.find(a=>a.id===na.id))return;
-      // Jika ada by code tapi ID random (legacy) → normalize ID & nama
       const byCode=DB.accounts.find(a=>a.code===na.code);
       if(byCode){byCode.id=na.id;byCode.name=na.name;return;}
       DB.accounts.push(na);
     });
 
-    // ── STEP 3: Fix BSI duplicate / ID conflict ──
-    const bsiAll=DB.accounts.filter(a=>a.name&&(a.name.toLowerCase().includes('syariah indonesia')||
-      (a.name.toLowerCase().includes('bsi')&&a.type==='aktiva')));
-    if(bsiAll.length>1){
-      const keep=bsiAll.find(a=>a.id==='1102')||bsiAll[0];
-      keep.id='1102';
-      DB.accounts=DB.accounts.filter(a=>!bsiAll.includes(a)||a===keep);
-    }
+    // STEP 3: Fix BSI duplicate
+    const bsiAll=DB.accounts.filter(a=>a.name&&(a.name.toLowerCase().includes('syariah indonesia')||(a.name.toLowerCase().includes('bsi')&&a.type==='aktiva')));
+    if(bsiAll.length>1){const keep=bsiAll.find(a=>a.id==='1102')||bsiAll[0];keep.id='1102';DB.accounts=DB.accounts.filter(a=>!bsiAll.includes(a)||a===keep);}
+    if(bsiAll.length>0)bsiAll[0].id='1102';
 
-    // ── STEP 4: Fix Software & Subscription ──
-    // PENTING: jangan ubah ID akun ini karena semua jurnal lama pakai ID asli!
-    // Hanya update code & name. Jika v19.4 sudah salah ubah ID ke '6209b',
-    // rollback ID-nya ke ID asli agar acctBal() bisa baca jurnal lama.
+    // STEP 4: Software account — JANGAN ubah ID (jurnal pakai ID asli moinyg082vw52)
     const softwareAccNew=DB.accounts.find(a=>a.id==='6209b'&&a.type==='beban');
     if(softwareAccNew){
-      // Sudah salah di-migrate ke 6209b — rollback ID ke aslinya
-      // Cek apakah ada transaksi yang pakai ID lama
-      const oldId='moinyg082vw52';
-      const hasOldTx=(DB.transactions||[]).some(tx=>(tx.entries||[]).some(e=>e.acc===oldId));
-      if(hasOldTx){
-        // Kembalikan ID supaya acctBal bisa baca jurnal lama
-        softwareAccNew.id=oldId;
-        softwareAccNew.code='6-6209b'; // kode tetap b agar tidak konflik Business Travel
-        softwareAccNew.name='Biaya Software & Langganan / Software & Subscription';
-      }
+      const hasOldTx=(DB.transactions||[]).some(tx=>(tx.entries||[]).some(e=>e.acc==='moinyg082vw52'));
+      if(hasOldTx){softwareAccNew.id='moinyg082vw52';softwareAccNew.code='6-6209b';}
     }
-    // Kalau account software belum ada sama sekali, tambah baru
-    const softwareAccFinal=DB.accounts.find(a=>a.name&&a.name.toLowerCase().includes('software')&&a.type==='beban');
-    if(!softwareAccFinal){
-      DB.accounts.push({id:'moinyg082vw52',code:'6-6209b',name:'Biaya Software & Langganan / Software & Subscription',type:'beban',sub:'operasional'});
-    }
+    const softwareFinal=DB.accounts.find(a=>a.name&&a.name.toLowerCase().includes('software')&&a.type==='beban');
+    if(!softwareFinal)DB.accounts.push({id:'moinyg082vw52',code:'6-6209b',name:'Biaya Software & Langganan / Software & Subscription',type:'beban',sub:'operasional'});
 
-    // ── STEP 5: Rename fixes untuk versi lama ──
+    // STEP 5: Rename fixes
     const acc4201=DB.accounts.find(a=>a.id==='4201');
     if(acc4201&&acc4201.name==='Interest Income')acc4201.name='Interest & Profit Sharing Income';
 
-    // ── STEP 6: Sort semua akun by kode numerik ──
+    // STEP 6: Sort by kode numerik
     DB.accounts.sort((a,b)=>{
-      // Parse kode: '1-1102' → [1, 1102], '6-6510' → [6, 6510]
-      const parse=code=>{
-        if(!code)return[99,99999];
-        const parts=code.replace(/[^\d-]/g,'').split('-').filter(Boolean);
-        return parts.map(Number);
-      };
-      const [a1,a2]=parse(a.code);
-      const [b1,b2]=parse(b.code);
+      const parse=code=>{if(!code)return[99,99999];const parts=code.replace(/[^\d-]/g,'').split('-').filter(Boolean);return parts.map(Number);};
+      const [a1,a2]=parse(a.code),[b1,b2]=parse(b.code);
       if(a1!==b1)return a1-b1;
-      // Akun dengan kode berakhir huruf (misal 1102b) → urut setelah numeric
-      const an=isNaN(a2)?99999:a2;
-      const bn=isNaN(b2)?99999:b2;
-      return an-bn;
+      return(isNaN(a2)?99999:a2)-(isNaN(b2)?99999:b2);
     });
 
     saveDB();
