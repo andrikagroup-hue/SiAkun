@@ -301,6 +301,42 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   /* Card full width */
   .grid-2{grid-template-columns:1fr!important;}
 }
+
+/* ── EXPENSE ANALYTICS ── */
+.exp-filter-bar{background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.exp-filter-bar label{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.exp-filter-bar select{padding:6px 10px;border-radius:7px;font-family:var(--font);font-size:12px;font-weight:600;border:1px solid var(--bdr);background:#fff;color:var(--txt);cursor:pointer;}
+.exp-filter-bar select:focus{outline:none;border-color:var(--pri);}
+.chart-toggle{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--bdr);}
+.chart-toggle button{border:none;background:#fff;color:var(--muted);padding:6px 14px;font-size:11.5px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .2s;border-radius:0;}
+.chart-toggle button.active{background:var(--pri);color:#fff;}
+.exp-charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+@media(max-width:900px){.exp-charts-grid{grid-template-columns:1fr;}}
+.exp-chart-card{background:#fff;border:1px solid var(--bdr);border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.exp-chart-title{font-size:13px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;}
+.exp-chart-title span{font-size:11px;font-weight:500;color:var(--muted);}
+.exp-chart-wrap{position:relative;height:300px;margin-top:14px;}
+.exp-ranking-card{background:#fff;border:1px solid var(--bdr);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.exp-ranking-card h3{font-size:13px;font-weight:700;margin-bottom:14px;}
+.exp-rank-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f1f5f9;transition:all .15s;}
+.exp-rank-row:last-child{border-bottom:none;}
+.exp-rank-row:hover{background:#f8fafc;border-radius:8px;padding-left:8px;}
+.exp-rank-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;}
+.exp-rank-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.exp-rank-name{flex:1;font-size:12.5px;font-weight:600;}
+.exp-rank-bar-wrap{width:120px;background:#f1f5f9;border-radius:99px;height:6px;}
+.exp-rank-bar{height:100%;border-radius:99px;transition:width .8s ease;}
+.exp-rank-amount{font-size:12px;font-weight:700;text-align:right;min-width:110px;}
+.exp-rank-pct{font-size:10.5px;color:var(--muted);text-align:right;min-width:38px;}
+.exp-insight-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.exp-insight-item{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;flex:1;min-width:200px;display:flex;align-items:flex-start;gap:10px;}
+.exp-insight-item.warn{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-color:#fde68a;}
+.exp-insight-item.ok{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-color:#6ee7b7;}
+.exp-insight-icon{font-size:20px;line-height:1;padding-top:2px;}
+.exp-insight-text{font-size:12px;line-height:1.6;}
+.exp-insight-text strong{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+.exp-detail-card{background:#fff;border:1px solid var(--bdr);border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.exp-detail-card h3{font-size:13px;font-weight:700;margin-bottom:12px;}
 </style>
 </head>
 <body>
@@ -358,6 +394,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_operational">Operational</div>
     <div class="nav-i" onclick="nav('transactions')"><span class="ic">💸</span><span data-i18n="nav_transactions">Income & Expenses</span></div>
+    <div class="nav-i" onclick="nav('expenseChart')"><span class="ic">📊</span><span>Expense Analytics</span></div>
     <div class="nav-i" onclick="nav('budget')"><span class="ic">🎯</span><span data-i18n="nav_budget">Budget & Planning</span></div>
     <div class="nav-i" onclick="nav('assets')"><span class="ic">🏢</span><span data-i18n="nav_assets">Fixed Assets</span></div>
     <div class="nav-i" onclick="nav('prepaid')"><span class="ic">📆</span><span>Prepaid & Amortisasi</span></div>
@@ -2586,7 +2623,7 @@ function nav(page){
   destroyCharts();
   const c=document.getElementById('content');
   c.innerHTML='';
-  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,prepaid:renderPrepaid,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon};
+  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,prepaid:renderPrepaid,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon,expenseChart:renderExpenseChart};
   if(pages[page]){
     try{pages[page](c);}catch(e){
       console.error('[SiAkun]',page,e);
@@ -8288,6 +8325,321 @@ function makeAllSearchable(){
     startObs();
   }
 })();
+
+/* ══════════════════════════════════════════════════════════
+   EXPENSE ANALYTICS — renderExpenseChart(c)
+   Dipanggil oleh nav('expenseChart')
+   ══════════════════════════════════════════════════════════ */
+
+// Kategori & mapping ke akun CoA siAKun
+const EXP_CATS = {
+  ATK:        {label:'ATK',         color:'#3b82f6', icon:'📎', accounts:['6205','6112','6211','6113']},
+  Marketing:  {label:'Marketing',   color:'#f59e0b', icon:'📣', accounts:['6301','6302','6303','6304']},
+  Salary:     {label:'Salary',      color:'#8b5cf6', icon:'👥', accounts:['6101','6102','6103','6104','6105','6106','6107']},
+  Operasional:{label:'Operasional', color:'#10b981', icon:'⚙️', accounts:['moii2d6ulz7v4','6114','6201','6202','6203','6204','6206','6207','6208','6209','moinyg082vw52','6210','6212','6213','6214','6215']},
+  Lainnya:    {label:'Lainnya',     color:'#ef4444', icon:'🗂️', accounts:['6305','6401','6402','6403','6404','6405','6501','6502','6503','6504','6505','6506','6507','6508','6509','6510','5101','5102','5103','5104','5105']}
+};
+
+// Build reverse map: accId → categoryKey
+const EXP_A2C = {};
+Object.entries(EXP_CATS).forEach(([k,v]) => v.accounts.forEach(a => { EXP_A2C[a] = k; }));
+
+let _expChartType = 'pie';
+let _expPieInst = null, _expTrendInst = null, _expRows = [];
+
+function _eRp(n)  { return 'Rp ' + Math.round(n).toLocaleString('id-ID'); }
+function _eRpS(n) {
+  if(n>=1e6) return 'Rp '+(n/1e6).toLocaleString('id-ID',{maximumFractionDigits:1})+'jt';
+  if(n>=1e3) return 'Rp '+(n/1e3).toLocaleString('id-ID',{maximumFractionDigits:0})+'rb';
+  return _eRp(n);
+}
+
+// Baca semua entri expense dari DB.transactions
+function _eGetRows() {
+  const rows = [];
+  (DB.transactions||[]).forEach(tx => {
+    (tx.entries||[]).forEach(e => {
+      if(e.deb > 0) {
+        const acc = (DB.accounts||[]).find(a => a.id === e.acc);
+        if(acc && (acc.type==='beban' || acc.type==='hpp')) {
+          rows.push({date:tx.date, desc:tx.desc, accId:e.acc, accName:acc.name, amount:e.deb});
+        }
+      }
+    });
+  });
+  return rows;
+}
+
+function _eFilter(rows, month, year) {
+  return rows.filter(r => {
+    const d = new Date(r.date);
+    return (month===0 || d.getMonth()+1===month) && (year===0 || d.getFullYear()===year);
+  });
+}
+
+function _eAggregate(rows) {
+  const t = {};
+  Object.keys(EXP_CATS).forEach(k => { t[k] = 0; });
+  rows.forEach(r => { const c = EXP_A2C[r.accId]||'Lainnya'; t[c] += r.amount; });
+  return t;
+}
+
+function _eTrend(year) {
+  const allRows = _eGetRows();
+  const months = Array.from({length:6}, (_,i) => {
+    const d = new Date(year, new Date().getMonth()-5+i, 1);
+    return {month:d.getMonth()+1, year:d.getFullYear()};
+  });
+  const res = {}; Object.keys(EXP_CATS).forEach(k => { res[k] = new Array(6).fill(0); });
+  months.forEach((m,i) => {
+    allRows.filter(r => { const d=new Date(r.date); return d.getFullYear()===m.year && d.getMonth()+1===m.month; })
+      .forEach(r => { res[EXP_A2C[r.accId]||'Lainnya'][i] += r.amount; });
+  });
+  const mn=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  return {labels:months.map(m=>mn[m.month-1]), data:res};
+}
+
+function renderExpenseChart(c) {
+  const curY = new Date().getFullYear();
+  const curM = new Date().getMonth()+1;
+  const yOpts = [curY,curY-1,curY-2].map(y=>`<option value="${y}"${y===curY?' selected':''}>${y}</option>`).join('');
+  const mOpts = ['Semua Bulan','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
+    .map((m,i)=>`<option value="${i}"${i===0?' selected':''}>${m}</option>`).join('');
+
+  c.innerHTML = `
+<div class="content" style="padding:18px 22px">
+  <!-- Filter Bar -->
+  <div class="exp-filter-bar">
+    <label>Bulan</label>
+    <select id="expFM">${mOpts}</select>
+    <label>Tahun</label>
+    <select id="expFY">${yOpts}</select>
+    <button class="btn btn-pri btn-sm" onclick="expApply()">🔍 Tampilkan</button>
+    <div class="chart-toggle" style="margin-left:auto">
+      <button id="expBtnPie" class="active" onclick="expSwitch('pie')">🥧 Pie</button>
+      <button id="expBtnDonut" onclick="expSwitch('donut')">🍩 Donut</button>
+    </div>
+  </div>
+
+  <!-- Stat Cards -->
+  <div class="stats" id="expStats" style="margin-bottom:16px"></div>
+
+  <!-- Insight -->
+  <div class="exp-insight-bar" id="expInsight"></div>
+
+  <!-- Charts Grid -->
+  <div class="exp-charts-grid">
+    <div class="exp-chart-card">
+      <div class="exp-chart-title">Distribusi Pengeluaran <span id="expChartLbl">Pie Chart</span></div>
+      <div class="exp-chart-wrap"><canvas id="expPieC"></canvas></div>
+    </div>
+    <div class="exp-chart-card">
+      <div class="exp-chart-title">Tren Bulanan per Kategori <span>6 Bulan Terakhir</span></div>
+      <div class="exp-chart-wrap"><canvas id="expTrendC"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Ranking -->
+  <div class="exp-ranking-card">
+    <h3>🏆 Ranking Pengeluaran per Kategori</h3>
+    <div id="expRank"></div>
+  </div>
+
+  <!-- Detail Table -->
+  <div class="exp-detail-card">
+    <h3>📋 Detail Transaksi Pengeluaran</h3>
+    <div class="tbl-wrap" style="margin-top:10px">
+      <table>
+        <thead><tr>
+          <th>Tanggal</th><th>Keterangan</th><th>Akun</th><th>Kategori</th>
+          <th style="text-align:right">Nominal</th>
+        </tr></thead>
+        <tbody id="expTBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>`;
+
+  expApply();
+}
+
+function expApply() {
+  const month = parseInt(document.getElementById('expFM').value);
+  const year  = parseInt(document.getElementById('expFY').value);
+  _expRows = _eFilter(_eGetRows(), month, year);
+  const totals = _eAggregate(_expRows);
+  document.getElementById('expInsight').innerHTML = '';
+  _expRenderStats(totals);
+  _expRenderInsight(totals);
+  _expRenderPie(totals);
+  _expRenderTrend(year);
+  _expRenderRank(totals);
+  _expRenderTable(_expRows);
+}
+
+function expSwitch(type) {
+  _expChartType = type;
+  document.getElementById('expBtnPie').classList.toggle('active', type==='pie');
+  document.getElementById('expBtnDonut').classList.toggle('active', type==='donut');
+  document.getElementById('expChartLbl').textContent = type==='pie'?'Pie Chart':'Donut Chart';
+  _expRenderPie(_eAggregate(_expRows));
+}
+
+function _expRenderStats(totals) {
+  const total = Object.values(totals).reduce((s,v)=>s+v,0);
+  const sorted = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  const el = document.getElementById('expStats'); if(!el) return; el.innerHTML='';
+  el.insertAdjacentHTML('beforeend',
+    `<div class="stat b"><div class="stat-lbl">💰 Total Pengeluaran</div><div class="stat-val">${_eRpS(total)}</div><div class="stat-sub">${_eRp(total)}</div></div>`);
+  sorted.forEach(([key,amount],i)=>{
+    const cfg=EXP_CATS[key], pct=total>0?((amount/total)*100).toFixed(1):0;
+    el.insertAdjacentHTML('beforeend',
+      `<div class="stat" style="--c:${cfg.color}"><div style="position:absolute;top:12px;right:12px;width:20px;height:20px;border-radius:50%;background:${cfg.color};color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center">${i+1}</div>
+       <div class="stat-lbl">${cfg.icon} ${cfg.label}</div>
+       <div class="stat-val" style="color:${cfg.color};font-size:16px">${_eRpS(amount)}</div>
+       <div class="stat-sub">${pct}% dari total</div></div>`);
+  });
+}
+
+function _expRenderInsight(totals) {
+  const total=Object.values(totals).reduce((s,v)=>s+v,0);
+  const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  const [topK,topV]=sorted[0]||['Lainnya',0];
+  const topPct=total>0?((topV/total)*100).toFixed(1):0;
+  const cfg=EXP_CATS[topK];
+  const el=document.getElementById('expInsight'); if(!el) return;
+  el.insertAdjacentHTML('beforeend',`
+    <div class="exp-insight-item warn">
+      <div class="exp-insight-icon">${cfg.icon}</div>
+      <div class="exp-insight-text"><strong>Pengeluaran Terbesar</strong>
+        <b>${cfg.label}</b> mendominasi <b>${topPct}%</b> dari total (${_eRpS(topV)}). Pantau kategori ini secara berkala.</div>
+    </div>
+    <div class="exp-insight-item">
+      <div class="exp-insight-icon">🧾</div>
+      <div class="exp-insight-text"><strong>Total Transaksi</strong>
+        Periode ini terdapat <b>${_expRows.length} transaksi</b> senilai <b>${_eRpS(total)}</b>.</div>
+    </div>`);
+  const [minK,minV]=sorted[sorted.length-1]||[];
+  if(minV>0 && minK!==topK){
+    const cfgM=EXP_CATS[minK],minPct=total>0?((minV/total)*100).toFixed(1):0;
+    el.insertAdjacentHTML('beforeend',`
+      <div class="exp-insight-item ok">
+        <div class="exp-insight-icon">${cfgM.icon}</div>
+        <div class="exp-insight-text"><strong>Pengeluaran Terkecil</strong>
+          <b>${cfgM.label}</b> hanya ${minPct}% dari total (${_eRpS(minV)}).</div>
+      </div>`);
+  }
+}
+
+function _expRenderPie(totals) {
+  const ctx=document.getElementById('expPieC'); if(!ctx) return;
+  if(_expPieInst){_expPieInst.destroy();_expPieInst=null;}
+  const labels=Object.keys(EXP_CATS).map(k=>EXP_CATS[k].label);
+  const data=Object.keys(EXP_CATS).map(k=>totals[k]||0);
+  const colors=Object.keys(EXP_CATS).map(k=>EXP_CATS[k].color);
+  const total=data.reduce((s,v)=>s+v,0);
+  _expPieInst=new Chart(ctx,{
+    type:'pie',
+    data:{labels,datasets:[{data,backgroundColor:colors,hoverBackgroundColor:colors.map(c=>c+'cc'),borderWidth:3,borderColor:'#fff',hoverOffset:10}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      cutout:_expChartType==='donut'?'62%':'0%',
+      animation:{duration:600,easing:'easeInOutQuart'},
+      plugins:{
+        legend:{position:'bottom',labels:{font:{family:"'Plus Jakarta Sans',sans-serif",size:11.5,weight:'600'},padding:14,usePointStyle:true,pointStyleWidth:10}},
+        tooltip:{callbacks:{label(c){const p=total>0?((c.parsed/total)*100).toFixed(1):0;return `  ${c.label}: ${_eRp(c.parsed)} (${p}%)`;}},
+          backgroundColor:'rgba(15,23,42,.9)',titleFont:{family:"'Plus Jakarta Sans',sans-serif",size:12,weight:'700'},bodyFont:{family:"'Plus Jakarta Sans',sans-serif",size:12},padding:10,cornerRadius:8}
+      }
+    },
+    plugins:[
+      {id:'ctrText',afterDraw(ch){
+        if(_expChartType!=='donut') return;
+        const{ctx:c,chartArea:{left,top,right,bottom}}=ch;
+        const cx=(left+right)/2,cy=(top+bottom)/2;
+        c.save();c.textAlign='center';c.textBaseline='middle';
+        c.fillStyle='#0f172a';c.font="700 12px 'Plus Jakarta Sans',sans-serif";c.fillText('Total',cx,cy-11);
+        c.fillStyle='#2563eb';c.font="800 14px 'Plus Jakarta Sans',sans-serif";c.fillText(_eRpS(total),cx,cy+10);
+        c.restore();
+      }},
+      {id:'pctLbl',afterDatasetDraw(ch){
+        const{ctx:c}=ch;
+        ch.getDatasetMeta(0).data.forEach((arc,i)=>{
+          const p=total>0?((data[i]/total)*100).toFixed(1):0;
+          if(parseFloat(p)<5) return;
+          const mid=(arc.startAngle+arc.endAngle)/2,r=(arc.outerRadius+(arc.innerRadius||0))/2;
+          const x=arc.x+Math.cos(mid)*r,y=arc.y+Math.sin(mid)*r;
+          c.save();c.fillStyle='#fff';c.font="700 11px 'Plus Jakarta Sans',sans-serif";
+          c.textAlign='center';c.textBaseline='middle';c.fillText(p+'%',x,y);c.restore();
+        });
+      }}
+    ]
+  });
+}
+
+function _expRenderTrend(year) {
+  const ctx=document.getElementById('expTrendC'); if(!ctx) return;
+  if(_expTrendInst){_expTrendInst.destroy();_expTrendInst=null;}
+  const{labels,data}=_eTrend(year);
+  const datasets=Object.entries(EXP_CATS).map(([key,cfg])=>({
+    label:cfg.label,data:data[key],backgroundColor:cfg.color+'99',
+    borderColor:cfg.color,borderWidth:2,borderRadius:5,borderSkipped:false
+  }));
+  _expTrendInst=new Chart(ctx,{
+    type:'bar',data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{font:{family:"'Plus Jakarta Sans',sans-serif",size:10.5}}},
+        y:{stacked:true,grid:{color:'#f1f5f9'},ticks:{font:{family:"'Plus Jakarta Sans',sans-serif",size:10},callback:v=>_eRpS(v)}}
+      },
+      plugins:{
+        legend:{position:'bottom',labels:{font:{family:"'Plus Jakarta Sans',sans-serif",size:10.5,weight:'600'},padding:12,usePointStyle:true}},
+        tooltip:{mode:'index',intersect:false,callbacks:{label(c){return `  ${c.dataset.label}: ${_eRp(c.parsed.y)}`;}},
+          backgroundColor:'rgba(15,23,42,.9)',padding:10,cornerRadius:8}
+      }
+    }
+  });
+}
+
+function _expRenderRank(totals) {
+  const total=Object.values(totals).reduce((s,v)=>s+v,0);
+  const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  const maxV=sorted[0]?.[1]||1;
+  const el=document.getElementById('expRank'); if(!el) return; el.innerHTML='';
+  if(sorted.every(([,v])=>v===0)){
+    el.innerHTML='<div class="tbl-empty">Tidak ada data pengeluaran untuk periode ini.</div>';return;
+  }
+  const rc=['#f59e0b','#94a3b8','#a16207','#2563eb','#10b981'];
+  sorted.forEach(([key,amount],i)=>{
+    const cfg=EXP_CATS[key],pct=total>0?((amount/total)*100).toFixed(1):0,bw=((amount/maxV)*100).toFixed(1);
+    el.insertAdjacentHTML('beforeend',`
+      <div class="exp-rank-row">
+        <div class="exp-rank-num" style="background:${rc[i]||'#94a3b8'}">${i+1}</div>
+        <div class="exp-rank-dot" style="background:${cfg.color}"></div>
+        <div class="exp-rank-name">${cfg.icon} ${cfg.label}</div>
+        <div class="exp-rank-bar-wrap"><div class="exp-rank-bar" style="width:${bw}%;background:${cfg.color}"></div></div>
+        <div class="exp-rank-amount">${_eRp(amount)}</div>
+        <div class="exp-rank-pct">${pct}%</div>
+      </div>`);
+  });
+}
+
+function _expRenderTable(rows) {
+  const tbody=document.getElementById('expTBody'); if(!tbody) return;
+  if(!rows.length){
+    tbody.innerHTML='<tr><td colspan="5" class="tbl-empty">Tidak ada transaksi untuk periode ini.</td></tr>';return;
+  }
+  tbody.innerHTML=[...rows].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(r=>{
+    const ck=EXP_A2C[r.accId]||'Lainnya',cfg=EXP_CATS[ck];
+    return `<tr>
+      <td>${new Date(r.date).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td>${r.desc}</td>
+      <td style="color:var(--muted);font-size:11.5px">${r.accName}</td>
+      <td><span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;background:${cfg.color}22;color:${cfg.color}">${cfg.icon} ${cfg.label}</span></td>
+      <td style="text-align:right;font-weight:700">${_eRp(r.amount)}</td>
+    </tr>`;
+  }).join('');
+}
+/* ── END EXPENSE ANALYTICS ── */
 
 </script>
 </body>
