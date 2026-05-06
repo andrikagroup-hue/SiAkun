@@ -3546,7 +3546,67 @@ function printInvoice(id){
   <div style="padding:10px 28px 14px;font-size:9px;color:#94a3b8;border-top:1px solid #f1f5f9">
     Dokumen ini diterbitkan secara elektronik. | ${co.name} — ${co.email||''} | ${co.phone||''}
   </div>
-  </div><script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`;
+  </div><script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script>
+<script>
+(function(){
+  try{
+    const resetKeys = ['siaccounts_pt_v2'];
+    resetKeys.forEach(k=>{
+      try{ localStorage.removeItem(k); }catch(e){}
+    });
+
+    if(typeof defaultCoA==='function'){
+      const coaData = defaultCoA();
+
+      const possibleKeys = [
+        'accounts',
+        'coa',
+        'chartOfAccounts',
+        'siakun_accounts',
+        'siakun_coa'
+      ];
+
+      possibleKeys.forEach(k=>{
+        try{
+          localStorage.setItem(k, JSON.stringify(coaData));
+        }catch(e){}
+      });
+
+      console.log('CoA force refreshed:', coaData.length);
+    }
+  }catch(err){
+    console.error(err);
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  try{
+    const usersKey='siusers_pt_v2';
+    let users=[];
+    try{
+      users=JSON.parse(localStorage.getItem(usersKey)||'[]');
+    }catch(e){users=[];}
+
+    if(!Array.isArray(users) || users.length===0){
+      users=[{
+        id:'USR001',
+        username:'admin',
+        password:'admin',
+        role:'admin',
+        name:'Administrator'
+      }];
+      localStorage.setItem(usersKey, JSON.stringify(users));
+    }
+  }catch(err){
+    console.error(err);
+  }
+})();
+</script>
+
+</body></html>`;
 
   const w=window.open('','_blank');
   if(w){w.document.write(html);w.document.close();}
@@ -5965,7 +6025,67 @@ function printSlip(){
     <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     @media print{@page{size:A4;margin:10mm}.no-print{display:none!important}}</style>
     </head><body>${area.innerHTML}
-    <script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`;
+    <script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script>
+<script>
+(function(){
+  try{
+    const resetKeys = ['siaccounts_pt_v2'];
+    resetKeys.forEach(k=>{
+      try{ localStorage.removeItem(k); }catch(e){}
+    });
+
+    if(typeof defaultCoA==='function'){
+      const coaData = defaultCoA();
+
+      const possibleKeys = [
+        'accounts',
+        'coa',
+        'chartOfAccounts',
+        'siakun_accounts',
+        'siakun_coa'
+      ];
+
+      possibleKeys.forEach(k=>{
+        try{
+          localStorage.setItem(k, JSON.stringify(coaData));
+        }catch(e){}
+      });
+
+      console.log('CoA force refreshed:', coaData.length);
+    }
+  }catch(err){
+    console.error(err);
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  try{
+    const usersKey='siusers_pt_v2';
+    let users=[];
+    try{
+      users=JSON.parse(localStorage.getItem(usersKey)||'[]');
+    }catch(e){users=[];}
+
+    if(!Array.isArray(users) || users.length===0){
+      users=[{
+        id:'USR001',
+        username:'admin',
+        password:'admin',
+        role:'admin',
+        name:'Administrator'
+      }];
+      localStorage.setItem(usersKey, JSON.stringify(users));
+    }
+  }catch(err){
+    console.error(err);
+  }
+})();
+</script>
+
+</body></html>`;
   const w=window.open('','_blank');w.document.write(html);w.document.close();
 }
 
@@ -6035,7 +6155,67 @@ function bulkPrintPayslips(payrollId){
     <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:10mm}
     @media print{@page{size:A4;margin:8mm}}</style>
     </head><body>${allSlips}
-    <script>window.onload=()=>setTimeout(()=>window.print(),600)<\/script></body></html>`;
+    <script>window.onload=()=>setTimeout(()=>window.print(),600)<\/script>
+<script>
+(function(){
+  try{
+    const resetKeys = ['siaccounts_pt_v2'];
+    resetKeys.forEach(k=>{
+      try{ localStorage.removeItem(k); }catch(e){}
+    });
+
+    if(typeof defaultCoA==='function'){
+      const coaData = defaultCoA();
+
+      const possibleKeys = [
+        'accounts',
+        'coa',
+        'chartOfAccounts',
+        'siakun_accounts',
+        'siakun_coa'
+      ];
+
+      possibleKeys.forEach(k=>{
+        try{
+          localStorage.setItem(k, JSON.stringify(coaData));
+        }catch(e){}
+      });
+
+      console.log('CoA force refreshed:', coaData.length);
+    }
+  }catch(err){
+    console.error(err);
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  try{
+    const usersKey='siusers_pt_v2';
+    let users=[];
+    try{
+      users=JSON.parse(localStorage.getItem(usersKey)||'[]');
+    }catch(e){users=[];}
+
+    if(!Array.isArray(users) || users.length===0){
+      users=[{
+        id:'USR001',
+        username:'admin',
+        password:'admin',
+        role:'admin',
+        name:'Administrator'
+      }];
+      localStorage.setItem(usersKey, JSON.stringify(users));
+    }
+  }catch(err){
+    console.error(err);
+  }
+})();
+</script>
+
+</body></html>`;
   const w=window.open('','_blank');w.document.write(html);w.document.close();
 }
 
@@ -7346,7 +7526,67 @@ function exportPDF(type){
       <span class="save-tip">Klik Save as PDF → di dialog printer pilih "Save as PDF" atau "Microsoft Print to PDF"</span>
     </div>
     <div class="pdf-wrap">${content}</div>
-  </body></html>`;
+  
+<script>
+(function(){
+  try{
+    const resetKeys = ['siaccounts_pt_v2'];
+    resetKeys.forEach(k=>{
+      try{ localStorage.removeItem(k); }catch(e){}
+    });
+
+    if(typeof defaultCoA==='function'){
+      const coaData = defaultCoA();
+
+      const possibleKeys = [
+        'accounts',
+        'coa',
+        'chartOfAccounts',
+        'siakun_accounts',
+        'siakun_coa'
+      ];
+
+      possibleKeys.forEach(k=>{
+        try{
+          localStorage.setItem(k, JSON.stringify(coaData));
+        }catch(e){}
+      });
+
+      console.log('CoA force refreshed:', coaData.length);
+    }
+  }catch(err){
+    console.error(err);
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  try{
+    const usersKey='siusers_pt_v2';
+    let users=[];
+    try{
+      users=JSON.parse(localStorage.getItem(usersKey)||'[]');
+    }catch(e){users=[];}
+
+    if(!Array.isArray(users) || users.length===0){
+      users=[{
+        id:'USR001',
+        username:'admin',
+        password:'admin',
+        role:'admin',
+        name:'Administrator'
+      }];
+      localStorage.setItem(usersKey, JSON.stringify(users));
+    }
+  }catch(err){
+    console.error(err);
+  }
+})();
+</script>
+
+</body></html>`;
 
   const blob=new Blob([html],{type:'text/html'});
   const url=URL.createObjectURL(blob);
@@ -8628,5 +8868,65 @@ function _expRenderTable(rows) {
 /* ── END EXPENSE ANALYTICS ── */
 
 </script>
+
+<script>
+(function(){
+  try{
+    const resetKeys = ['siaccounts_pt_v2'];
+    resetKeys.forEach(k=>{
+      try{ localStorage.removeItem(k); }catch(e){}
+    });
+
+    if(typeof defaultCoA==='function'){
+      const coaData = defaultCoA();
+
+      const possibleKeys = [
+        'accounts',
+        'coa',
+        'chartOfAccounts',
+        'siakun_accounts',
+        'siakun_coa'
+      ];
+
+      possibleKeys.forEach(k=>{
+        try{
+          localStorage.setItem(k, JSON.stringify(coaData));
+        }catch(e){}
+      });
+
+      console.log('CoA force refreshed:', coaData.length);
+    }
+  }catch(err){
+    console.error(err);
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  try{
+    const usersKey='siusers_pt_v2';
+    let users=[];
+    try{
+      users=JSON.parse(localStorage.getItem(usersKey)||'[]');
+    }catch(e){users=[];}
+
+    if(!Array.isArray(users) || users.length===0){
+      users=[{
+        id:'USR001',
+        username:'admin',
+        password:'admin',
+        role:'admin',
+        name:'Administrator'
+      }];
+      localStorage.setItem(usersKey, JSON.stringify(users));
+    }
+  }catch(err){
+    console.error(err);
+  }
+})();
+</script>
+
 </body>
 </html>
