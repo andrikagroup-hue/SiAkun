@@ -4510,78 +4510,7 @@ function printInvoice(id){
   <div style="padding:10px 28px 14px;font-size:9px;color:#94a3b8;border-top:1px solid #f1f5f9">
     Dokumen ini diterbitkan secara elektronik. | ${co.name} — ${co.email||''} | ${co.phone||''}
   </div>
-  </div><script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script>
-<script>
-/* ===== KLEDO COA OVERRIDE ===== */
-
-window.KLEDO_CATEGORIES = [
-'Kas & Bank',
-'Akun Piutang',
-'Persediaan',
-'Aktiva Lancar Lainnya',
-'Aktiva Tetap',
-'Depresiasi & Amortisasi',
-'Aktiva Lainnya',
-'Akun Hutang',
-'Kewajiban Lancar Lainnya',
-'Kewajiban Jangka Panjang',
-'Ekuitas',
-'Pendapatan',
-'Harga Pokok Penjualan',
-'Beban',
-'Pendapatan Lainnya',
-'Beban Lainnya'
-];
-
-function replaceLegacyCoAUI(){
-
-  // replace legacy type dropdown
-  document.querySelectorAll('select').forEach(sel=>{
-
-    const txt = sel.innerText || '';
-
-    if(
-      txt.includes('Asset') ||
-      txt.includes('Liability') ||
-      txt.includes('Revenue') ||
-      txt.includes('Expense')
-    ){
-
-      const current = sel.value;
-
-      sel.innerHTML = window.KLEDO_CATEGORIES.map(v=>`
-        <option value="${v}">${v}</option>
-      `).join('');
-
-      if(window.KLEDO_CATEGORIES.includes(current)){
-        sel.value = current;
-      }
-    }
-  });
-
-  // replace legacy text
-  document.body.innerHTML = document.body.innerHTML
-    .replaceAll('Current Assets','Kas & Bank')
-    .replaceAll('Fixed Assets','Aktiva Tetap')
-    .replaceAll('Operational Expenses','Beban')
-    .replaceAll('HR Expenses','Beban')
-    .replaceAll('Other Expenses','Beban Lainnya')
-    .replaceAll('Asset','Kas & Bank')
-    .replaceAll('Liability','Akun Hutang')
-    .replaceAll('Equity','Ekuitas')
-    .replaceAll('Revenue','Pendapatan')
-    .replaceAll('HPP','Harga Pokok Penjualan')
-    .replaceAll('Expense','Beban');
-}
-
-window.addEventListener('load', ()=>{
-  setTimeout(replaceLegacyCoAUI,1000);
-  setTimeout(replaceLegacyCoAUI,3000);
-});
-
-</script>
-
-</body></html>`;
+  </div><script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`;
 
   const w=window.open('','_blank');
   if(w){w.document.write(html);w.document.close();}
@@ -7000,78 +6929,7 @@ function printSlip(){
     <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     @media print{@page{size:A4;margin:10mm}.no-print{display:none!important}}</style>
     </head><body>${area.innerHTML}
-    <script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script>
-<script>
-/* ===== KLEDO COA OVERRIDE ===== */
-
-window.KLEDO_CATEGORIES = [
-'Kas & Bank',
-'Akun Piutang',
-'Persediaan',
-'Aktiva Lancar Lainnya',
-'Aktiva Tetap',
-'Depresiasi & Amortisasi',
-'Aktiva Lainnya',
-'Akun Hutang',
-'Kewajiban Lancar Lainnya',
-'Kewajiban Jangka Panjang',
-'Ekuitas',
-'Pendapatan',
-'Harga Pokok Penjualan',
-'Beban',
-'Pendapatan Lainnya',
-'Beban Lainnya'
-];
-
-function replaceLegacyCoAUI(){
-
-  // replace legacy type dropdown
-  document.querySelectorAll('select').forEach(sel=>{
-
-    const txt = sel.innerText || '';
-
-    if(
-      txt.includes('Asset') ||
-      txt.includes('Liability') ||
-      txt.includes('Revenue') ||
-      txt.includes('Expense')
-    ){
-
-      const current = sel.value;
-
-      sel.innerHTML = window.KLEDO_CATEGORIES.map(v=>`
-        <option value="${v}">${v}</option>
-      `).join('');
-
-      if(window.KLEDO_CATEGORIES.includes(current)){
-        sel.value = current;
-      }
-    }
-  });
-
-  // replace legacy text
-  document.body.innerHTML = document.body.innerHTML
-    .replaceAll('Current Assets','Kas & Bank')
-    .replaceAll('Fixed Assets','Aktiva Tetap')
-    .replaceAll('Operational Expenses','Beban')
-    .replaceAll('HR Expenses','Beban')
-    .replaceAll('Other Expenses','Beban Lainnya')
-    .replaceAll('Asset','Kas & Bank')
-    .replaceAll('Liability','Akun Hutang')
-    .replaceAll('Equity','Ekuitas')
-    .replaceAll('Revenue','Pendapatan')
-    .replaceAll('HPP','Harga Pokok Penjualan')
-    .replaceAll('Expense','Beban');
-}
-
-window.addEventListener('load', ()=>{
-  setTimeout(replaceLegacyCoAUI,1000);
-  setTimeout(replaceLegacyCoAUI,3000);
-});
-
-</script>
-
-</body></html>`;
+    <script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script></body></html>`;
   const w=window.open('','_blank');w.document.write(html);w.document.close();
 }
 
@@ -7141,78 +6999,7 @@ function bulkPrintPayslips(payrollId){
     <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:10mm}
     @media print{@page{size:A4;margin:8mm}}</style>
     </head><body>${allSlips}
-    <script>window.onload=()=>setTimeout(()=>window.print(),600)<\/script>
-<script>
-/* ===== KLEDO COA OVERRIDE ===== */
-
-window.KLEDO_CATEGORIES = [
-'Kas & Bank',
-'Akun Piutang',
-'Persediaan',
-'Aktiva Lancar Lainnya',
-'Aktiva Tetap',
-'Depresiasi & Amortisasi',
-'Aktiva Lainnya',
-'Akun Hutang',
-'Kewajiban Lancar Lainnya',
-'Kewajiban Jangka Panjang',
-'Ekuitas',
-'Pendapatan',
-'Harga Pokok Penjualan',
-'Beban',
-'Pendapatan Lainnya',
-'Beban Lainnya'
-];
-
-function replaceLegacyCoAUI(){
-
-  // replace legacy type dropdown
-  document.querySelectorAll('select').forEach(sel=>{
-
-    const txt = sel.innerText || '';
-
-    if(
-      txt.includes('Asset') ||
-      txt.includes('Liability') ||
-      txt.includes('Revenue') ||
-      txt.includes('Expense')
-    ){
-
-      const current = sel.value;
-
-      sel.innerHTML = window.KLEDO_CATEGORIES.map(v=>`
-        <option value="${v}">${v}</option>
-      `).join('');
-
-      if(window.KLEDO_CATEGORIES.includes(current)){
-        sel.value = current;
-      }
-    }
-  });
-
-  // replace legacy text
-  document.body.innerHTML = document.body.innerHTML
-    .replaceAll('Current Assets','Kas & Bank')
-    .replaceAll('Fixed Assets','Aktiva Tetap')
-    .replaceAll('Operational Expenses','Beban')
-    .replaceAll('HR Expenses','Beban')
-    .replaceAll('Other Expenses','Beban Lainnya')
-    .replaceAll('Asset','Kas & Bank')
-    .replaceAll('Liability','Akun Hutang')
-    .replaceAll('Equity','Ekuitas')
-    .replaceAll('Revenue','Pendapatan')
-    .replaceAll('HPP','Harga Pokok Penjualan')
-    .replaceAll('Expense','Beban');
-}
-
-window.addEventListener('load', ()=>{
-  setTimeout(replaceLegacyCoAUI,1000);
-  setTimeout(replaceLegacyCoAUI,3000);
-});
-
-</script>
-
-</body></html>`;
+    <script>window.onload=()=>setTimeout(()=>window.print(),600)<\/script></body></html>`;
   const w=window.open('','_blank');w.document.write(html);w.document.close();
 }
 
@@ -8523,78 +8310,7 @@ function exportPDF(type){
       <span class="save-tip">Klik Save as PDF → di dialog printer pilih "Save as PDF" atau "Microsoft Print to PDF"</span>
     </div>
     <div class="pdf-wrap">${content}</div>
-  
-<script>
-/* ===== KLEDO COA OVERRIDE ===== */
-
-window.KLEDO_CATEGORIES = [
-'Kas & Bank',
-'Akun Piutang',
-'Persediaan',
-'Aktiva Lancar Lainnya',
-'Aktiva Tetap',
-'Depresiasi & Amortisasi',
-'Aktiva Lainnya',
-'Akun Hutang',
-'Kewajiban Lancar Lainnya',
-'Kewajiban Jangka Panjang',
-'Ekuitas',
-'Pendapatan',
-'Harga Pokok Penjualan',
-'Beban',
-'Pendapatan Lainnya',
-'Beban Lainnya'
-];
-
-function replaceLegacyCoAUI(){
-
-  // replace legacy type dropdown
-  document.querySelectorAll('select').forEach(sel=>{
-
-    const txt = sel.innerText || '';
-
-    if(
-      txt.includes('Asset') ||
-      txt.includes('Liability') ||
-      txt.includes('Revenue') ||
-      txt.includes('Expense')
-    ){
-
-      const current = sel.value;
-
-      sel.innerHTML = window.KLEDO_CATEGORIES.map(v=>`
-        <option value="${v}">${v}</option>
-      `).join('');
-
-      if(window.KLEDO_CATEGORIES.includes(current)){
-        sel.value = current;
-      }
-    }
-  });
-
-  // replace legacy text
-  document.body.innerHTML = document.body.innerHTML
-    .replaceAll('Current Assets','Kas & Bank')
-    .replaceAll('Fixed Assets','Aktiva Tetap')
-    .replaceAll('Operational Expenses','Beban')
-    .replaceAll('HR Expenses','Beban')
-    .replaceAll('Other Expenses','Beban Lainnya')
-    .replaceAll('Asset','Kas & Bank')
-    .replaceAll('Liability','Akun Hutang')
-    .replaceAll('Equity','Ekuitas')
-    .replaceAll('Revenue','Pendapatan')
-    .replaceAll('HPP','Harga Pokok Penjualan')
-    .replaceAll('Expense','Beban');
-}
-
-window.addEventListener('load', ()=>{
-  setTimeout(replaceLegacyCoAUI,1000);
-  setTimeout(replaceLegacyCoAUI,3000);
-});
-
-</script>
-
-</body></html>`;
+  </body></html>`;
 
   const blob=new Blob([html],{type:'text/html'});
   const url=URL.createObjectURL(blob);
@@ -10062,73 +9778,67 @@ window.addEventListener('load',()=>{
 </script>
 
 <script>
-/* ===== KLEDO COA OVERRIDE ===== */
+/* ===== FIX MISSING COA ===== */
+(function(){
 
-window.KLEDO_CATEGORIES = [
-'Kas & Bank',
-'Akun Piutang',
-'Persediaan',
-'Aktiva Lancar Lainnya',
-'Aktiva Tetap',
-'Depresiasi & Amortisasi',
-'Aktiva Lainnya',
-'Akun Hutang',
-'Kewajiban Lancar Lainnya',
-'Kewajiban Jangka Panjang',
-'Ekuitas',
-'Pendapatan',
-'Harga Pokok Penjualan',
-'Beban',
-'Pendapatan Lainnya',
-'Beban Lainnya'
+const missingAccounts = [
+{id:'10200',code:'10200',name:'Persediaan Barang',category:'Persediaan',type:'Asset'},
+{id:'20601',code:'20601',name:'Kewajiban Lancar Lainnya',category:'Liability',type:'Liability'},
+{id:'30200',code:'30200',name:'Deviden',category:'Equity',type:'Equity'},
+{id:'30999',code:'30999',name:'Ekuitas Saldo Awal',category:'Equity',type:'Equity'},
+{id:'40000',code:'40000',name:'Pendapatan',category:'Revenue',type:'Revenue'},
+{id:'40200',code:'40200',name:'Retur Penjualan',category:'Revenue',type:'Revenue'},
+{id:'40201',code:'40201',name:'Pendapatan Belum Ditagih',category:'Revenue',type:'Revenue'},
+{id:'60210',code:'60210',name:'Beban Manfaat Karyawan',category:'Expense',type:'Expense'},
+{id:'60213',code:'60213',name:'Beban Piutang Tak Tertagih',category:'Expense',type:'Expense'},
+{id:'60300',code:'60300',name:'Beban Kantor',category:'Expense',type:'Expense'},
+{id:'70000',code:'70000',name:'Pendapatan Lainnya',category:'Other Income',type:'Revenue'},
+{id:'70001',code:'70001',name:'Pendapatan Bunga',category:'Other Income',type:'Revenue'},
+{id:'70002',code:'70002',name:'Keuntungan Selisih Kurs',category:'Other Income',type:'Revenue'},
+{id:'70099',code:'70099',name:'Pendapatan Lain-lain',category:'Other Income',type:'Revenue'},
+{id:'70100',code:'70100',name:'Pendapatan Non Operasional',category:'Other Income',type:'Revenue'},
+{id:'80000',code:'80000',name:'Beban Lainnya',category:'Other Expense',type:'Expense'},
+{id:'80999',code:'80999',name:'Beban Lain-lain',category:'Other Expense',type:'Expense'},
+{id:'90000',code:'90000',name:'Pajak Penghasilan',category:'Tax',type:'Expense'},
+{id:'90001',code:'90001',name:'Pajak Final',category:'Tax',type:'Expense'}
 ];
 
-function replaceLegacyCoAUI(){
+function ensureMissingAccounts(){
 
-  // replace legacy type dropdown
-  document.querySelectorAll('select').forEach(sel=>{
+  let accs = [];
 
-    const txt = sel.innerText || '';
+  try{
+    accs = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]');
+  }catch(e){
+    accs = [];
+  }
 
-    if(
-      txt.includes('Asset') ||
-      txt.includes('Liability') ||
-      txt.includes('Revenue') ||
-      txt.includes('Expense')
-    ){
+  if(!Array.isArray(accs)) accs = [];
 
-      const current = sel.value;
+  const existingCodes = new Set(
+    accs.map(a => String(a.code || '').replace(/[^0-9]/g,''))
+  );
 
-      sel.innerHTML = window.KLEDO_CATEGORIES.map(v=>`
-        <option value="${v}">${v}</option>
-      `).join('');
-
-      if(window.KLEDO_CATEGORIES.includes(current)){
-        sel.value = current;
-      }
+  missingAccounts.forEach(acc=>{
+    if(!existingCodes.has(acc.code)){
+      accs.push(acc);
     }
   });
 
-  // replace legacy text
-  document.body.innerHTML = document.body.innerHTML
-    .replaceAll('Current Assets','Kas & Bank')
-    .replaceAll('Fixed Assets','Aktiva Tetap')
-    .replaceAll('Operational Expenses','Beban')
-    .replaceAll('HR Expenses','Beban')
-    .replaceAll('Other Expenses','Beban Lainnya')
-    .replaceAll('Asset','Kas & Bank')
-    .replaceAll('Liability','Akun Hutang')
-    .replaceAll('Equity','Ekuitas')
-    .replaceAll('Revenue','Pendapatan')
-    .replaceAll('HPP','Harga Pokok Penjualan')
-    .replaceAll('Expense','Beban');
+  localStorage.setItem('siakun_coa_v2', JSON.stringify(accs));
+
+  if(window.DB){
+    DB.accounts = accs;
+  }
+
+  window.accounts = accs;
 }
 
 window.addEventListener('load', ()=>{
-  setTimeout(replaceLegacyCoAUI,1000);
-  setTimeout(replaceLegacyCoAUI,3000);
+  setTimeout(ensureMissingAccounts, 800);
 });
 
+})();
 </script>
 
 </body>
