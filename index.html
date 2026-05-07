@@ -3260,170 +3260,149 @@ function defaultDB(){
 
 function defaultCoA(){
   return [
-    // ── KAS & BANK ──
-    {id:'1-10001',code:'1-10001',name:'Kas',                              type:'aktiva',sub:'lancar',category:'Kas & Bank'},
-    {id:'1-10002',code:'1-10002',name:'Rekening Bank',                    type:'aktiva',sub:'lancar',category:'Kas & Bank'},
-    {id:'1-10003',code:'1-10003',name:'Giro',                             type:'aktiva',sub:'lancar',category:'Kas & Bank'},
-    // ── AKUN PIUTANG ──
-    {id:'1-10100',code:'1-10100',name:'Piutang Usaha',                    type:'aktiva',sub:'lancar',category:'Akun Piutang'},
-    {id:'1-10101',code:'1-10101',name:'Piutang Belum Ditagih',            type:'aktiva',sub:'lancar',category:'Akun Piutang'},
-    {id:'1-10102',code:'1-10102',name:'Cadangan Kerugian Piutang',        type:'aktiva',sub:'lancar',category:'Akun Piutang'},
-    // ── PERSEDIAAN ──
-    {id:'1-10200',code:'1-10200',name:'Persediaan Barang',                type:'aktiva',sub:'lancar',category:'Persediaan'},
-    // ── AKTIVA LANCAR LAINNYA ──
-    {id:'1-10300',code:'1-10300',name:'Piutang Lainnya',                  type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
-    {id:'1-10301',code:'1-10301',name:'Piutang Karyawan',                 type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
-    {id:'1-10400',code:'1-10400',name:'Dana Belum Disetor',               type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
-    {id:'1-10401',code:'1-10401',name:'Aset Lancar Lainnya',              type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
-    {id:'1-10402',code:'1-10402',name:'Biaya Dibayar Di Muka',            type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
-    {id:'1-10403',code:'1-10403',name:'Uang Muka',                        type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
-    {id:'1-10500',code:'1-10500',name:'PPN Masukan',                      type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
-    {id:'1-10501',code:'1-10501',name:'Pajak Dibayar Di Muka - PPh 22',   type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
-    {id:'1-10502',code:'1-10502',name:'Pajak Dibayar Di Muka - PPh 23',   type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
-    {id:'1-10503',code:'1-10503',name:'Pajak Dibayar Di Muka - PPh 25',   type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
-    // ── AKTIVA TETAP ──
-    {id:'1-10700',code:'1-10700',name:'Aset Tetap - Tanah',               type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
-    {id:'1-10701',code:'1-10701',name:'Aset Tetap - Bangunan',            type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
+    {id:'1-10001',code:'1-10001',name:'Kas',type:'aktiva',sub:'lancar',category:'Kas & Bank'},
+    {id:'1-10002',code:'1-10002',name:'Rekening Bank',type:'aktiva',sub:'lancar',category:'Kas & Bank'},
+    {id:'1-10003',code:'1-10003',name:'Giro',type:'aktiva',sub:'lancar',category:'Kas & Bank'},
+    {id:'1-10100',code:'1-10100',name:'Piutang Usaha',type:'aktiva',sub:'lancar',category:'Akun Piutang'},
+    {id:'1-10101',code:'1-10101',name:'Piutang Belum Ditagih',type:'aktiva',sub:'lancar',category:'Akun Piutang'},
+    {id:'1-10102',code:'1-10102',name:'Cadangan Kerugian Piutang',type:'aktiva',sub:'lancar',category:'Akun Piutang'},
+    {id:'1-10200',code:'1-10200',name:'Persediaan Barang',type:'aktiva',sub:'lancar',category:'Persediaan'},
+    {id:'1-10300',code:'1-10300',name:'Piutang Lainnya',type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
+    {id:'1-10301',code:'1-10301',name:'Piutang Karyawan',type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
+    {id:'1-10400',code:'1-10400',name:'Dana Belum Disetor',type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
+    {id:'1-10401',code:'1-10401',name:'Aset Lancar Lainnya',type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
+    {id:'1-10402',code:'1-10402',name:'Biaya Dibayar Di Muka',type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
+    {id:'1-10403',code:'1-10403',name:'Uang Muka',type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
+    {id:'1-10500',code:'1-10500',name:'PPN Masukan',type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
+    {id:'1-10501',code:'1-10501',name:'Pajak Dibayar Di Muka - PPh 22',type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
+    {id:'1-10502',code:'1-10502',name:'Pajak Dibayar Di Muka - PPh 23',type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
+    {id:'1-10503',code:'1-10503',name:'Pajak Dibayar Di Muka - PPh 25',type:'aktiva',sub:'lancar',category:'Aktiva Lancar Lainnya'},
+    {id:'1-10700',code:'1-10700',name:'Aset Tetap - Tanah',type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
+    {id:'1-10701',code:'1-10701',name:'Aset Tetap - Bangunan',type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
     {id:'1-10702',code:'1-10702',name:'Aset Tetap - Building Improvements',type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
-    {id:'1-10703',code:'1-10703',name:'Aset Tetap - Kendaraan',           type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
-    {id:'1-10704',code:'1-10704',name:'Aset Tetap - Mesin & Peralatan',   type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
-    {id:'1-10705',code:'1-10705',name:'Aset Tetap - Perlengkapan Kantor', type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
+    {id:'1-10703',code:'1-10703',name:'Aset Tetap - Kendaraan',type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
+    {id:'1-10704',code:'1-10704',name:'Aset Tetap - Mesin & Peralatan',type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
+    {id:'1-10705',code:'1-10705',name:'Aset Tetap - Perlengkapan Kantor',type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
     {id:'1-10706',code:'1-10706',name:'Aset Tetap - Aset Sewa Guna Usaha',type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
-    {id:'1-10707',code:'1-10707',name:'Aset Tak Berwujud',                type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
-    // ── DEPRESIASI & AMORTISASI ──
-    {id:'1-10751',code:'1-10751',name:'Akumulasi Penyusutan - Bangunan',              type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
-    {id:'1-10752',code:'1-10752',name:'Akumulasi Penyusutan - Building Improvements', type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
-    {id:'1-10753',code:'1-10753',name:'Akumulasi Penyusutan - Kendaraan',             type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
-    {id:'1-10754',code:'1-10754',name:'Akumulasi Penyusutan - Mesin & Peralatan',     type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
-    {id:'1-10755',code:'1-10755',name:'Akumulasi Penyusutan - Peralatan Kantor',      type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
-    {id:'1-10756',code:'1-10756',name:'Akumulasi Penyusutan - Aset Sewa Guna Usaha',  type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
-    {id:'1-10757',code:'1-10757',name:'Akumulasi Amortisasi',                          type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
-    // ── AKTIVA LAINNYA ──
-    {id:'1-10800',code:'1-10800',name:'Investasi',                        type:'aktiva',sub:'lainnya',category:'Aktiva Lainnya'},
-    // ── AKUN HUTANG ──
-    {id:'2-20100',code:'2-20100',name:'Hutang Usaha',                     type:'pasiva',sub:'lancar',category:'Akun Hutang'},
-    {id:'2-20101',code:'2-20101',name:'Hutang Belum Ditagih',             type:'pasiva',sub:'lancar',category:'Akun Hutang'},
-    // ── KEWAJIBAN LANCAR LAINNYA ──
-    {id:'2-20200',code:'2-20200',name:'Hutang Lain Lain',                 type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20201',code:'2-20201',name:'Hutang Gaji',                      type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20202',code:'2-20202',name:'Hutang Deviden',                   type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20203',code:'2-20203',name:'Pendapatan Diterima Di Muka',      type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20205',code:'2-20205',name:'Hutang Konsinyasi',                type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20301',code:'2-20301',name:'Sarana Kantor Terhutang',          type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20302',code:'2-20302',name:'Bunga Terhutang',                  type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20399',code:'2-20399',name:'Biaya Terhutang Lainnya',          type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20400',code:'2-20400',name:'Hutang Bank',                      type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20500',code:'2-20500',name:'PPN Keluaran',                     type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20501',code:'2-20501',name:'Hutang Pajak - PPh 21',            type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20502',code:'2-20502',name:'Hutang Pajak - PPh 22',            type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20503',code:'2-20503',name:'Hutang Pajak - PPh 23',            type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20504',code:'2-20504',name:'Hutang Pajak - PPh 29',            type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20599',code:'2-20599',name:'Hutang Pajak Lainnya',             type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20600',code:'2-20600',name:'Hutang dari Pemegang Saham',       type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    {id:'2-20601',code:'2-20601',name:'Kewajiban Lancar Lainnya',         type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
-    // ── KEWAJIBAN JANGKA PANJANG ──
-    {id:'2-20700',code:'2-20700',name:'Kewajiban Manfaat Karyawan',       type:'pasiva',sub:'panjang',category:'Kewajiban Jangka Panjang'},
-    // ── EKUITAS ──
-    {id:'3-30000',code:'3-30000',name:'Modal Saham',                      type:'modal',sub:'',category:'Ekuitas'},
-    {id:'3-30001',code:'3-30001',name:'Tambahan Modal Disetor',           type:'modal',sub:'',category:'Ekuitas'},
-    {id:'3-30100',code:'3-30100',name:'Laba Ditahan',                     type:'modal',sub:'',category:'Ekuitas'},
-    {id:'3-30200',code:'3-30200',name:'Deviden',                          type:'modal',sub:'',category:'Ekuitas'},
-    {id:'3-30300',code:'3-30300',name:'Pendapatan Komprehensif Lainnya',  type:'modal',sub:'',category:'Ekuitas'},
-    {id:'3-30999',code:'3-30999',name:'Ekuitas Saldo Awal',              type:'modal',sub:'',category:'Ekuitas'},
-    // ── PENDAPATAN ──
-    {id:'4-40000',code:'4-40000',name:'Pendapatan',                       type:'pendapatan',sub:'',category:'Pendapatan'},
-    {id:'4-40100',code:'4-40100',name:'Diskon Penjualan',                 type:'pendapatan',sub:'',category:'Pendapatan'},
-    {id:'4-40200',code:'4-40200',name:'Retur Penjualan',                  type:'pendapatan',sub:'',category:'Pendapatan'},
-    {id:'4-40201',code:'4-40201',name:'Pendapatan Belum Ditagih',         type:'pendapatan',sub:'',category:'Pendapatan'},
-    // ── HARGA POKOK PENJUALAN ──
-    {id:'5-50000',code:'5-50000',name:'Beban Pokok Pendapatan',           type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
-    {id:'5-50100',code:'5-50100',name:'Diskon Pembelian',                 type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
-    {id:'5-50200',code:'5-50200',name:'Retur Pembelian',                  type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
-    {id:'5-50300',code:'5-50300',name:'Pengiriman & Pengangkutan',        type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
-    {id:'5-50400',code:'5-50400',name:'Biaya Impor',                      type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
-    {id:'5-50500',code:'5-50500',name:'Biaya Produksi',                   type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
-    // ── BEBAN — PENJUALAN ──
-    {id:'6-60001',code:'6-60001',name:'Iklan & Promosi',                  type:'beban',sub:'penjualan',category:'Beban'},
-    {id:'6-60002',code:'6-60002',name:'Komisi & Fee',                     type:'beban',sub:'penjualan',category:'Beban'},
+    {id:'1-10707',code:'1-10707',name:'Aset Tak Berwujud',type:'aktiva',sub:'tetap',category:'Aktiva Tetap'},
+    {id:'1-10751',code:'1-10751',name:'Akumulasi Penyusutan - Bangunan',type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
+    {id:'1-10752',code:'1-10752',name:'Akumulasi Penyusutan - Building Improvements',type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
+    {id:'1-10753',code:'1-10753',name:'Akumulasi Penyusutan - Kendaraan',type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
+    {id:'1-10754',code:'1-10754',name:'Akumulasi Penyusutan - Mesin & Peralatan',type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
+    {id:'1-10755',code:'1-10755',name:'Akumulasi Penyusutan - Peralatan Kantor',type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
+    {id:'1-10756',code:'1-10756',name:'Akumulasi Penyusutan - Aset Sewa Guna Usaha',type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
+    {id:'1-10757',code:'1-10757',name:'Akumulasi Amortisasi',type:'aktiva',sub:'tetap',category:'Depresiasi & Amortisasi'},
+    {id:'1-10800',code:'1-10800',name:'Investasi',type:'aktiva',sub:'lainnya',category:'Aktiva Lainnya'},
+    {id:'2-20100',code:'2-20100',name:'Hutang Usaha',type:'pasiva',sub:'lancar',category:'Akun Hutang'},
+    {id:'2-20101',code:'2-20101',name:'Hutang Belum Ditagih',type:'pasiva',sub:'lancar',category:'Akun Hutang'},
+    {id:'2-20200',code:'2-20200',name:'Hutang Lain Lain',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20201',code:'2-20201',name:'Hutang Gaji',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20202',code:'2-20202',name:'Hutang Deviden',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20203',code:'2-20203',name:'Pendapatan Diterima Di Muka',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20205',code:'2-20205',name:'Hutang Konsinyasi',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20301',code:'2-20301',name:'Sarana Kantor Terhutang',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20302',code:'2-20302',name:'Bunga Terhutang',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20399',code:'2-20399',name:'Biaya Terhutang Lainnya',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20400',code:'2-20400',name:'Hutang Bank',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20500',code:'2-20500',name:'PPN Keluaran',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20501',code:'2-20501',name:'Hutang Pajak - PPh 21',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20502',code:'2-20502',name:'Hutang Pajak - PPh 22',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20503',code:'2-20503',name:'Hutang Pajak - PPh 23',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20504',code:'2-20504',name:'Hutang Pajak - PPh 29',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20599',code:'2-20599',name:'Hutang Pajak Lainnya',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20600',code:'2-20600',name:'Hutang dari Pemegang Saham',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20601',code:'2-20601',name:'Kewajiban Lancar Lainnya',type:'pasiva',sub:'lancar',category:'Kewajiban Lancar Lainnya'},
+    {id:'2-20700',code:'2-20700',name:'Kewajiban Manfaat Karyawan',type:'pasiva',sub:'panjang',category:'Kewajiban Jangka Panjang'},
+    {id:'3-30000',code:'3-30000',name:'Modal Saham',type:'modal',sub:'',category:'Ekuitas'},
+    {id:'3-30001',code:'3-30001',name:'Tambahan Modal Disetor',type:'modal',sub:'',category:'Ekuitas'},
+    {id:'3-30100',code:'3-30100',name:'Laba Ditahan',type:'modal',sub:'',category:'Ekuitas'},
+    {id:'3-30200',code:'3-30200',name:'Deviden',type:'modal',sub:'',category:'Ekuitas'},
+    {id:'3-30300',code:'3-30300',name:'Pendapatan Komprehensif Lainnya',type:'modal',sub:'',category:'Ekuitas'},
+    {id:'3-30999',code:'3-30999',name:'Ekuitas Saldo Awal',type:'modal',sub:'',category:'Ekuitas'},
+    {id:'4-40000',code:'4-40000',name:'Pendapatan',type:'pendapatan',sub:'',category:'Pendapatan'},
+    {id:'4-40100',code:'4-40100',name:'Diskon Penjualan',type:'pendapatan',sub:'',category:'Pendapatan'},
+    {id:'4-40200',code:'4-40200',name:'Retur Penjualan',type:'pendapatan',sub:'',category:'Pendapatan'},
+    {id:'4-40201',code:'4-40201',name:'Pendapatan Belum Ditagih',type:'pendapatan',sub:'',category:'Pendapatan'},
+    {id:'5-50000',code:'5-50000',name:'Beban Pokok Pendapatan',type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
+    {id:'5-50100',code:'5-50100',name:'Diskon Pembelian',type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
+    {id:'5-50200',code:'5-50200',name:'Retur Pembelian',type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
+    {id:'5-50300',code:'5-50300',name:'Pengiriman & Pengangkutan',type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
+    {id:'5-50400',code:'5-50400',name:'Biaya Impor',type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
+    {id:'5-50500',code:'5-50500',name:'Biaya Produksi',type:'hpp',sub:'',category:'Harga Pokok Penjualan'},
+    {id:'6-60001',code:'6-60001',name:'Iklan & Promosi',type:'beban',sub:'penjualan',category:'Beban'},
+    {id:'6-60002',code:'6-60002',name:'Komisi & Fee',type:'beban',sub:'penjualan',category:'Beban'},
     {id:'6-60003',code:'6-60003',name:'Bensin, Tol dan Parkir - Penjualan',type:'beban',sub:'penjualan',category:'Beban'},
-    {id:'6-60004',code:'6-60004',name:'Perjalanan Dinas - Penjualan',     type:'beban',sub:'penjualan',category:'Beban'},
-    {id:'6-60005',code:'6-60005',name:'Komunikasi - Penjualan',           type:'beban',sub:'penjualan',category:'Beban'},
-    {id:'6-60006',code:'6-60006',name:'Marketing Lainnya',                type:'beban',sub:'penjualan',category:'Beban'},
-    {id:'6-60007',code:'6-60007',name:'Biaya MDR Penjualan',              type:'beban',sub:'penjualan',category:'Beban'},
-    // ── BEBAN — SDM ──
-    {id:'6-60101',code:'6-60101',name:'Gaji',                             type:'beban',sub:'sdm',category:'Beban'},
-    {id:'6-60102',code:'6-60102',name:'Upah',                             type:'beban',sub:'sdm',category:'Beban'},
-    {id:'6-60103',code:'6-60103',name:'Makanan & Transportasi',           type:'beban',sub:'sdm',category:'Beban'},
-    {id:'6-60104',code:'6-60104',name:'Lembur',                           type:'beban',sub:'sdm',category:'Beban'},
-    {id:'6-60105',code:'6-60105',name:'Pengobatan',                       type:'beban',sub:'sdm',category:'Beban'},
-    {id:'6-60106',code:'6-60106',name:'THR & Bonus',                      type:'beban',sub:'sdm',category:'Beban'},
-    {id:'6-60107',code:'6-60107',name:'Jamsostek',                        type:'beban',sub:'sdm',category:'Beban'},
-    {id:'6-60108',code:'6-60108',name:'Insentif',                         type:'beban',sub:'sdm',category:'Beban'},
-    {id:'6-60109',code:'6-60109',name:'Pesangon',                         type:'beban',sub:'sdm',category:'Beban'},
-    {id:'6-60110',code:'6-60110',name:'Manfaat dan Tunjangan Lain',       type:'beban',sub:'sdm',category:'Beban'},
-    // ── BEBAN — UMUM ──
-    {id:'6-60200',code:'6-60200',name:'Donasi',                           type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60201',code:'6-60201',name:'Hiburan',                          type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60202',code:'6-60202',name:'Bensin, Tol dan Parkir - Umum',    type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60203',code:'6-60203',name:'Perbaikan & Pemeliharaan',         type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60204',code:'6-60204',name:'Perjalanan Dinas - Umum',          type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60205',code:'6-60205',name:'Makanan',                          type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60206',code:'6-60206',name:'Komunikasi - Umum',                type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60207',code:'6-60207',name:'Iuran & Langganan',                type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60208',code:'6-60208',name:'Asuransi',                         type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60209',code:'6-60209',name:'Legal & Profesional',              type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60210',code:'6-60210',name:'Beban Manfaat Karyawan',           type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60211',code:'6-60211',name:'Sarana Kantor',                    type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60212',code:'6-60212',name:'Pelatihan & Pengembangan',         type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60213',code:'6-60213',name:'Beban Piutang Tak Tertagih',       type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60214',code:'6-60214',name:'Pajak dan Perizinan',              type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60215',code:'6-60215',name:'Denda',                            type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60216',code:'6-60216',name:'Pengeluaran Barang Rusak',         type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60217',code:'6-60217',name:'Listrik',                          type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60218',code:'6-60218',name:'Air',                              type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60219',code:'6-60219',name:'IPL',                              type:'beban',sub:'umum',category:'Beban'},
-    {id:'6-60220',code:'6-60220',name:'Langganan Software',               type:'beban',sub:'umum',category:'Beban'},
-    // ── BEBAN — KANTOR ──
-    {id:'6-60300',code:'6-60300',name:'Beban Kantor',                     type:'beban',sub:'kantor',category:'Beban'},
-    {id:'6-60301',code:'6-60301',name:'Alat Tulis Kantor & Printing',     type:'beban',sub:'kantor',category:'Beban'},
-    {id:'6-60302',code:'6-60302',name:'Bea Materai',                      type:'beban',sub:'kantor',category:'Beban'},
-    {id:'6-60303',code:'6-60303',name:'Keamanan dan Kebersihan',          type:'beban',sub:'kantor',category:'Beban'},
-    {id:'6-60304',code:'6-60304',name:'Supplies dan Material',            type:'beban',sub:'kantor',category:'Beban'},
-    {id:'6-60305',code:'6-60305',name:'Pemborong',                        type:'beban',sub:'kantor',category:'Beban'},
-    // ── BEBAN — SEWA ──
-    {id:'6-60400',code:'6-60400',name:'Biaya Sewa - Bangunan',            type:'beban',sub:'sewa',category:'Beban'},
-    {id:'6-60401',code:'6-60401',name:'Biaya Sewa - Kendaraan',           type:'beban',sub:'sewa',category:'Beban'},
-    {id:'6-60402',code:'6-60402',name:'Biaya Sewa - Operasional',         type:'beban',sub:'sewa',category:'Beban'},
-    {id:'6-60403',code:'6-60403',name:'Biaya Sewa - Lain - lain',         type:'beban',sub:'sewa',category:'Beban'},
-    // ── BEBAN — PENYUSUTAN ──
-    {id:'6-60500',code:'6-60500',name:'Penyusutan - Bangunan',            type:'beban',sub:'penyusutan',category:'Beban'},
-    {id:'6-60501',code:'6-60501',name:'Penyusutan - Perbaikan Bangunan',  type:'beban',sub:'penyusutan',category:'Beban'},
-    {id:'6-60502',code:'6-60502',name:'Penyusutan - Kendaraan',           type:'beban',sub:'penyusutan',category:'Beban'},
-    {id:'6-60503',code:'6-60503',name:'Penyusutan - Mesin & Peralatan',   type:'beban',sub:'penyusutan',category:'Beban'},
-    {id:'6-60504',code:'6-60504',name:'Penyusutan - Peralatan Kantor',    type:'beban',sub:'penyusutan',category:'Beban'},
+    {id:'6-60004',code:'6-60004',name:'Perjalanan Dinas - Penjualan',type:'beban',sub:'penjualan',category:'Beban'},
+    {id:'6-60005',code:'6-60005',name:'Komunikasi - Penjualan',type:'beban',sub:'penjualan',category:'Beban'},
+    {id:'6-60006',code:'6-60006',name:'Marketing Lainnya',type:'beban',sub:'penjualan',category:'Beban'},
+    {id:'6-60007',code:'6-60007',name:'Biaya MDR Penjualan',type:'beban',sub:'penjualan',category:'Beban'},
+    {id:'6-60101',code:'6-60101',name:'Gaji',type:'beban',sub:'sdm',category:'Beban'},
+    {id:'6-60102',code:'6-60102',name:'Upah',type:'beban',sub:'sdm',category:'Beban'},
+    {id:'6-60103',code:'6-60103',name:'Makanan & Transportasi',type:'beban',sub:'sdm',category:'Beban'},
+    {id:'6-60104',code:'6-60104',name:'Lembur',type:'beban',sub:'sdm',category:'Beban'},
+    {id:'6-60105',code:'6-60105',name:'Pengobatan',type:'beban',sub:'sdm',category:'Beban'},
+    {id:'6-60106',code:'6-60106',name:'THR & Bonus',type:'beban',sub:'sdm',category:'Beban'},
+    {id:'6-60107',code:'6-60107',name:'Jamsostek',type:'beban',sub:'sdm',category:'Beban'},
+    {id:'6-60108',code:'6-60108',name:'Insentif',type:'beban',sub:'sdm',category:'Beban'},
+    {id:'6-60109',code:'6-60109',name:'Pesangon',type:'beban',sub:'sdm',category:'Beban'},
+    {id:'6-60110',code:'6-60110',name:'Manfaat dan Tunjangan Lain',type:'beban',sub:'sdm',category:'Beban'},
+    {id:'6-60200',code:'6-60200',name:'Donasi',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60201',code:'6-60201',name:'Hiburan',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60202',code:'6-60202',name:'Bensin, Tol dan Parkir - Umum',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60203',code:'6-60203',name:'Perbaikan & Pemeliharaan',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60204',code:'6-60204',name:'Perjalanan Dinas - Umum',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60205',code:'6-60205',name:'Makanan',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60206',code:'6-60206',name:'Komunikasi - Umum',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60207',code:'6-60207',name:'Iuran & Langganan',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60208',code:'6-60208',name:'Asuransi',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60209',code:'6-60209',name:'Legal & Profesional',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60210',code:'6-60210',name:'Beban Manfaat Karyawan',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60211',code:'6-60211',name:'Sarana Kantor',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60212',code:'6-60212',name:'Pelatihan & Pengembangan',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60213',code:'6-60213',name:'Beban Piutang Tak Tertagih',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60214',code:'6-60214',name:'Pajak dan Perizinan',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60215',code:'6-60215',name:'Denda',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60216',code:'6-60216',name:'Pengeluaran Barang Rusak',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60217',code:'6-60217',name:'Listrik',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60218',code:'6-60218',name:'Air',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60219',code:'6-60219',name:'IPL',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60220',code:'6-60220',name:'Langganan Software',type:'beban',sub:'umum',category:'Beban'},
+    {id:'6-60300',code:'6-60300',name:'Beban Kantor',type:'beban',sub:'kantor',category:'Beban'},
+    {id:'6-60301',code:'6-60301',name:'Alat Tulis Kantor & Printing',type:'beban',sub:'kantor',category:'Beban'},
+    {id:'6-60302',code:'6-60302',name:'Bea Materai',type:'beban',sub:'kantor',category:'Beban'},
+    {id:'6-60303',code:'6-60303',name:'Keamanan dan Kebersihan',type:'beban',sub:'kantor',category:'Beban'},
+    {id:'6-60304',code:'6-60304',name:'Supplies dan Material',type:'beban',sub:'kantor',category:'Beban'},
+    {id:'6-60305',code:'6-60305',name:'Pemborong',type:'beban',sub:'kantor',category:'Beban'},
+    {id:'6-60400',code:'6-60400',name:'Biaya Sewa - Bangunan',type:'beban',sub:'sewa',category:'Beban'},
+    {id:'6-60401',code:'6-60401',name:'Biaya Sewa - Kendaraan',type:'beban',sub:'sewa',category:'Beban'},
+    {id:'6-60402',code:'6-60402',name:'Biaya Sewa - Operasional',type:'beban',sub:'sewa',category:'Beban'},
+    {id:'6-60403',code:'6-60403',name:'Biaya Sewa - Lain - lain',type:'beban',sub:'sewa',category:'Beban'},
+    {id:'6-60500',code:'6-60500',name:'Penyusutan - Bangunan',type:'beban',sub:'penyusutan',category:'Beban'},
+    {id:'6-60501',code:'6-60501',name:'Penyusutan - Perbaikan Bangunan',type:'beban',sub:'penyusutan',category:'Beban'},
+    {id:'6-60502',code:'6-60502',name:'Penyusutan - Kendaraan',type:'beban',sub:'penyusutan',category:'Beban'},
+    {id:'6-60503',code:'6-60503',name:'Penyusutan - Mesin & Peralatan',type:'beban',sub:'penyusutan',category:'Beban'},
+    {id:'6-60504',code:'6-60504',name:'Penyusutan - Peralatan Kantor',type:'beban',sub:'penyusutan',category:'Beban'},
     {id:'6-60599',code:'6-60599',name:'Penyusutan - Aset Sewa Guna Usaha',type:'beban',sub:'penyusutan',category:'Beban'},
-    // ── PENDAPATAN LAINNYA ──
-    {id:'7-70000',code:'7-70000',name:'Pendapatan Bunga - Bank',           type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
-    {id:'7-70001',code:'7-70001',name:'Pendapatan Bunga - Deposito',       type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
+    {id:'7-70000',code:'7-70000',name:'Pendapatan Bunga - Bank',type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
+    {id:'7-70001',code:'7-70001',name:'Pendapatan Bunga - Deposito',type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
     {id:'7-70002',code:'7-70002',name:'Pendapatan Komisi - Barang Konsinyasi',type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
-    {id:'7-70003',code:'7-70003',name:'Pembulatan',                        type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
-    {id:'7-70099',code:'7-70099',name:'Pendapatan Lain - lain',            type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
+    {id:'7-70003',code:'7-70003',name:'Pembulatan',type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
+    {id:'7-70099',code:'7-70099',name:'Pendapatan Lain - lain',type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
     {id:'7-70100',code:'7-70100',name:'Pendapatan Lainnya (Service Charge)',type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
-    {id:'7-70101',code:'7-70101',name:'Biaya Tambahan Pelanggan',          type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
-    // ── BEBAN LAINNYA ──
-    {id:'8-80000',code:'8-80000',name:'Beban Bunga',                      type:'beban',sub:'lain',category:'Beban Lainnya'},
-    {id:'8-80001',code:'8-80001',name:'Provisi',                          type:'beban',sub:'lain',category:'Beban Lainnya'},
-    {id:'8-80002',code:'8-80002',name:'(Laba)/Rugi Pelepasan Aset Tetap', type:'beban',sub:'lain',category:'Beban Lainnya'},
-    {id:'8-80100',code:'8-80100',name:'Penyesuaian Persediaan',           type:'beban',sub:'lain',category:'Beban Lainnya'},
-    {id:'8-80999',code:'8-80999',name:'Beban Lain - lain',                type:'beban',sub:'lain',category:'Beban Lainnya'},
-    {id:'8-81001',code:'8-81001',name:'Revaluasi Bank',                   type:'beban',sub:'lain',category:'Beban Lainnya'},
+    {id:'7-70101',code:'7-70101',name:'Biaya Tambahan Pelanggan',type:'pendapatan',sub:'lain',category:'Pendapatan Lainnya'},
+    {id:'8-80000',code:'8-80000',name:'Beban Bunga',type:'beban',sub:'lain',category:'Beban Lainnya'},
+    {id:'8-80001',code:'8-80001',name:'Provisi',type:'beban',sub:'lain',category:'Beban Lainnya'},
+    {id:'8-80002',code:'8-80002',name:'(Laba)/Rugi Pelepasan Aset Tetap',type:'beban',sub:'lain',category:'Beban Lainnya'},
+    {id:'8-80100',code:'8-80100',name:'Penyesuaian Persediaan',type:'beban',sub:'lain',category:'Beban Lainnya'},
+    {id:'8-80999',code:'8-80999',name:'Beban Lain - lain',type:'beban',sub:'lain',category:'Beban Lainnya'},
+    {id:'8-81001',code:'8-81001',name:'Revaluasi Bank',type:'beban',sub:'lain',category:'Beban Lainnya'},
     {id:'8-81002',code:'8-81002',name:'Laba/Rugi Selisih Kurs - Belum Direalisasikan',type:'beban',sub:'lain',category:'Beban Lainnya'},
-    {id:'8-81003',code:'8-81003',name:'Laba/Rugi Selisih Kurs - Realisasikan',        type:'beban',sub:'lain',category:'Beban Lainnya'},
-    // ── BEBAN PAJAK ──
-    {id:'9-90000',code:'9-90000',name:'Beban Pajak - Kini',               type:'beban',sub:'pajak',category:'Beban Lainnya'},
-    {id:'9-90001',code:'9-90001',name:'Beban Pajak - Tangguhan',          type:'beban',sub:'pajak',category:'Beban Lainnya'},
+    {id:'8-81003',code:'8-81003',name:'Laba/Rugi Selisih Kurs - Realisasikan',type:'beban',sub:'lain',category:'Beban Lainnya'},
+    {id:'9-90000',code:'9-90000',name:'Beban Pajak - Kini',type:'beban',sub:'pajak',category:'Beban Lainnya'},
+    {id:'9-90001',code:'9-90001',name:'Beban Pajak - Tangguhan',type:'beban',sub:'pajak',category:'Beban Lainnya'},
   ];
 }
+
 function uid(){
   return typeof crypto.randomUUID==='function'
     ? crypto.randomUUID().replace(/-/g,'')
@@ -4812,35 +4791,26 @@ function renderAccounts(c){
   }
   const ta=document.getElementById('topbar-actions');
   ta.innerHTML=`<button class="btn btn-pri" onclick="openAccount()">+ Add Account</button><button class="btn btn-out" onclick="exportAkun()">⬇ Excel</button>`;
-  const _GRP=[
-    {label:'🏦 Kas & Bank',              cat:'Kas & Bank'},
-    {label:'📥 Akun Piutang',            cat:'Akun Piutang'},
-    {label:'📦 Persediaan',              cat:'Persediaan'},
-    {label:'🗂️ Aktiva Lancar Lainnya',   cat:'Aktiva Lancar Lainnya'},
-    {label:'🏢 Aktiva Tetap',            cat:'Aktiva Tetap'},
-    {label:'📉 Depresiasi & Amortisasi', cat:'Depresiasi & Amortisasi'},
-    {label:'📈 Aktiva Lainnya',          cat:'Aktiva Lainnya'},
-    {label:'💳 Akun Hutang',             cat:'Akun Hutang'},
-    {label:'📋 Kewajiban Lancar Lainnya',cat:'Kewajiban Lancar Lainnya'},
-    {label:'🏦 Kewajiban Jangka Panjang',cat:'Kewajiban Jangka Panjang'},
-    {label:'💎 Ekuitas',                 cat:'Ekuitas'},
-    {label:'💰 Pendapatan',              cat:'Pendapatan'},
-    {label:'🔁 Pendapatan Lainnya',      cat:'Pendapatan Lainnya'},
-    {label:'📦 Harga Pokok Penjualan',   cat:'Harga Pokok Penjualan'},
-    {label:'📢 Beban — Penjualan',       cat:'Beban', sub:'penjualan'},
-    {label:'👥 Beban — SDM',             cat:'Beban', sub:'sdm'},
-    {label:'⚙️ Beban — Umum',            cat:'Beban', sub:'umum'},
-    {label:'🗃️ Beban — Kantor',          cat:'Beban', sub:'kantor'},
-    {label:'🏠 Beban — Sewa',            cat:'Beban', sub:'sewa'},
-    {label:'📉 Beban — Penyusutan',      cat:'Beban', sub:'penyusutan'},
-    {label:'🗂️ Beban Lainnya',           cat:'Beban Lainnya'},
-    {label:'💸 Beban Pajak',             cat:'Beban Lainnya', sub:'pajak'},
+  const _G=[
+    {l:'🏦 Kas & Bank',c:'Kas & Bank'},{l:'📥 Akun Piutang',c:'Akun Piutang'},
+    {l:'📦 Persediaan',c:'Persediaan'},{l:'🗂️ Aktiva Lancar Lainnya',c:'Aktiva Lancar Lainnya'},
+    {l:'🏢 Aktiva Tetap',c:'Aktiva Tetap'},{l:'📉 Depresiasi & Amortisasi',c:'Depresiasi & Amortisasi'},
+    {l:'📈 Aktiva Lainnya',c:'Aktiva Lainnya'},{l:'💳 Akun Hutang',c:'Akun Hutang'},
+    {l:'📋 Kewajiban Lancar Lainnya',c:'Kewajiban Lancar Lainnya'},
+    {l:'🏦 Kewajiban Jangka Panjang',c:'Kewajiban Jangka Panjang'},
+    {l:'💎 Ekuitas',c:'Ekuitas'},{l:'💰 Pendapatan',c:'Pendapatan'},
+    {l:'🔁 Pendapatan Lainnya',c:'Pendapatan Lainnya'},
+    {l:'📦 Harga Pokok Penjualan',c:'Harga Pokok Penjualan'},
+    {l:'📢 Beban — Penjualan',c:'Beban',s:'penjualan'},{l:'👥 Beban — SDM',c:'Beban',s:'sdm'},
+    {l:'⚙️ Beban — Umum',c:'Beban',s:'umum'},{l:'🗃️ Beban — Kantor',c:'Beban',s:'kantor'},
+    {l:'🏠 Beban — Sewa',c:'Beban',s:'sewa'},{l:'📉 Beban — Penyusutan',c:'Beban',s:'penyusutan'},
+    {l:'🗂️ Beban Lainnya',c:'Beban Lainnya'},{l:'💸 Beban Pajak',c:'Beban Lainnya',s:'pajak'},
   ];
-  const groups=_GRP.map(g=>({label:g.label,f:a=>{
-    const c=a.category||'';
-    if(g.sub) return c===g.cat&&a.sub===g.sub;
-    if(g.cat==='Beban') return c==='Beban'&&!g.sub;
-    return c===g.cat;
+  const groups=_G.map(g=>({label:g.l,f:a=>{
+    const cat=a.category||'';
+    if(g.s) return cat===g.c&&a.sub===g.s;
+    if(g.c==='Beban') return cat==='Beban'&&!a.sub;
+    return cat===g.c;
   }}));
   c.innerHTML=`
   <div class="alert a-info">Chart of Accounts (CoA) is the foundation of financial recording. Total: <b>${DB.accounts.length} accounts</b></div>
@@ -4857,10 +4827,10 @@ function renderAccounts(c){
 }
 function openAccount(id){
   const a=id?DB.accounts.find(x=>x.id===id):{};editId=id||null;
-  const _CAT_MAP={'Kas & Bank':{type:'aktiva',sub:'lancar'},'Akun Piutang':{type:'aktiva',sub:'lancar'},'Persediaan':{type:'aktiva',sub:'lancar'},'Aktiva Lancar Lainnya':{type:'aktiva',sub:'lancar'},'Aktiva Tetap':{type:'aktiva',sub:'tetap'},'Depresiasi & Amortisasi':{type:'aktiva',sub:'tetap'},'Aktiva Lainnya':{type:'aktiva',sub:'lainnya'},'Akun Hutang':{type:'pasiva',sub:'lancar'},'Kewajiban Lancar Lainnya':{type:'pasiva',sub:'lancar'},'Kewajiban Jangka Panjang':{type:'pasiva',sub:'panjang'},'Ekuitas':{type:'modal',sub:''},'Pendapatan':{type:'pendapatan',sub:''},'Pendapatan Lainnya':{type:'pendapatan',sub:'lain'},'Harga Pokok Penjualan':{type:'hpp',sub:''},'Beban':{type:'beban',sub:''},'Beban Lainnya':{type:'beban',sub:'lain'}};
-  const _curCat=a.category||'';
-  const _catOpts=Object.keys(_CAT_MAP).map(c=>`<option value="${c}"${_curCat===c?' selected':''}>${c}</option>`).join('');
-  const _subOpts=[{val:'penjualan',lbl:'Penjualan (Sales)'},{val:'sdm',lbl:'SDM (HR)'},{val:'umum',lbl:'Umum (General)'},{val:'kantor',lbl:'Kantor (Office)'},{val:'sewa',lbl:'Sewa (Rent)'},{val:'penyusutan',lbl:'Penyusutan (Depreciation)'},{val:'pajak',lbl:'Pajak (Tax)'},{val:'lain',lbl:'Lain-lain'}].map(s=>`<option value="${s.val}"${a.sub===s.val?' selected':''}>${s.lbl}</option>`).join('');
+  const _CM={'Kas & Bank':{type:'aktiva',sub:'lancar'},'Akun Piutang':{type:'aktiva',sub:'lancar'},'Persediaan':{type:'aktiva',sub:'lancar'},'Aktiva Lancar Lainnya':{type:'aktiva',sub:'lancar'},'Aktiva Tetap':{type:'aktiva',sub:'tetap'},'Depresiasi & Amortisasi':{type:'aktiva',sub:'tetap'},'Aktiva Lainnya':{type:'aktiva',sub:'lainnya'},'Akun Hutang':{type:'pasiva',sub:'lancar'},'Kewajiban Lancar Lainnya':{type:'pasiva',sub:'lancar'},'Kewajiban Jangka Panjang':{type:'pasiva',sub:'panjang'},'Ekuitas':{type:'modal',sub:''},'Pendapatan':{type:'pendapatan',sub:''},'Pendapatan Lainnya':{type:'pendapatan',sub:'lain'},'Harga Pokok Penjualan':{type:'hpp',sub:''},'Beban':{type:'beban',sub:''},'Beban Lainnya':{type:'beban',sub:'lain'}};
+  const _cc=a.category||'';
+  const _co=Object.keys(_CM).map(c=>`<option value="${c}"${_cc===c?' selected':''}>${c}</option>`).join('');
+  const _so=[{v:'penjualan',l:'Penjualan'},{v:'sdm',l:'SDM'},{v:'umum',l:'Umum'},{v:'kantor',l:'Kantor'},{v:'sewa',l:'Sewa'},{v:'penyusutan',l:'Penyusutan'},{v:'pajak',l:'Pajak'},{v:'lain',l:'Lain-lain'}].map(s=>`<option value="${s.v}"${a.sub===s.v?' selected':''}>${s.l}</option>`).join('');
   openModal(id?'Edit Account':'Add Account',`
   <div class="fr2">
     <div class="fg"><label>Account Code</label><input id="ac-code" value="${a.code||''}" placeholder="cth: 6-60301"></div>
@@ -4868,12 +4838,12 @@ function openAccount(id){
   </div>
   <div class="fg"><label>Category (Kledo)</label>
     <select id="ac-cat" onchange="document.getElementById('ac-sub-wrap').style.display=this.value==='Beban'?'block':'none'">
-      <option value="">— Pilih kategori —</option>${_catOpts}
+      <option value="">— Pilih kategori —</option>${_co}
     </select>
   </div>
-  <div class="fg" id="ac-sub-wrap" style="display:${_curCat==='Beban'?'block':'none'}">
+  <div class="fg" id="ac-sub-wrap" style="display:${_cc==='Beban'?'block':'none'}">
     <label>Sub Category Beban</label>
-    <select id="ac-sub"><option value="">— Pilih sub —</option>${_subOpts}</select>
+    <select id="ac-sub"><option value="">— Pilih sub —</option>${_so}</select>
   </div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveAccount()">Save</button></div>`);
 }
@@ -4881,10 +4851,10 @@ function saveAccount(){
   const code=v('ac-code'),name=v('ac-name'),category=v('ac-cat');
   if(!code||!name||!category)return alert('Kode, nama, dan kategori wajib diisi!');
   const _M={'Kas & Bank':{type:'aktiva',sub:'lancar'},'Akun Piutang':{type:'aktiva',sub:'lancar'},'Persediaan':{type:'aktiva',sub:'lancar'},'Aktiva Lancar Lainnya':{type:'aktiva',sub:'lancar'},'Aktiva Tetap':{type:'aktiva',sub:'tetap'},'Depresiasi & Amortisasi':{type:'aktiva',sub:'tetap'},'Aktiva Lainnya':{type:'aktiva',sub:'lainnya'},'Akun Hutang':{type:'pasiva',sub:'lancar'},'Kewajiban Lancar Lainnya':{type:'pasiva',sub:'lancar'},'Kewajiban Jangka Panjang':{type:'pasiva',sub:'panjang'},'Ekuitas':{type:'modal',sub:''},'Pendapatan':{type:'pendapatan',sub:''},'Pendapatan Lainnya':{type:'pendapatan',sub:'lain'},'Harga Pokok Penjualan':{type:'hpp',sub:''},'Beban':{type:'beban',sub:''},'Beban Lainnya':{type:'beban',sub:'lain'}};
-  const mapped=_M[category]||{type:'beban',sub:''};
-  const type=mapped.type;
+  const m=_M[category]||{type:'beban',sub:''};
+  const type=m.type;
   const subEl=document.getElementById('ac-sub');
-  const sub=category==='Beban'&&subEl&&subEl.value?subEl.value:mapped.sub;
+  const sub=category==='Beban'&&subEl&&subEl.value?subEl.value:m.sub;
   if(editId){const a=DB.accounts.find(x=>x.id===editId);Object.assign(a,{code,name,type,sub,category});}
   else DB.accounts.push({id:uid(),code,name,type,sub,category});
   saveDB();closeModal();nav('accounts');
@@ -8745,69 +8715,30 @@ async function init(){
   // ══════════════════════════════════════════════════════════════
   //  ONE-TIME COA MIGRATION → Kledo PT Andrika Mitra Solusi
   //  Hanya jalan SEKALI, ditandai DB._coaVersion = 'kledo-v1'
-  //  Hapus flag ini di Supabase/localStorage kalau mau re-run.
   // ══════════════════════════════════════════════════════════════
   if(DB._coaVersion !== 'kledo-v1'){
-    console.info('[SiAkun] 🔄 Migrasi COA → Kledo format...');
-
-    // Bersihkan cache localStorage lama
+    console.info('[SiAkun] Migrasi COA ke Kledo...');
     localStorage.removeItem('siakun_coa_v2');
     localStorage.removeItem('siaccounts_pt_v2');
-
-    // Ganti SEMUA accounts dengan COA Kledo
     DB.accounts = defaultCoA();
-
-    // Tandai sudah migrasi — tidak akan jalan lagi
     DB._coaVersion = 'kledo-v1';
-
-    // Simpan ke localStorage SEKARANG
     localStorage.setItem(SK, JSON.stringify(DB));
-
-    // Push langsung ke Supabase supaya cloud juga bersih
     if(_isOnline){
-      sbSave(DB).then(()=>{
-        console.info('[SiAkun] ✅ COA Kledo berhasil disinkronkan ke cloud');
-      }).catch(e=>{
-        console.warn('[SiAkun] ⚠️ Cloud sync gagal, tersimpan lokal:', e);
-      });
+      sbSave(DB)
+        .then(()=>console.info('[SiAkun] COA Kledo synced ke cloud'))
+        .catch(e=>console.warn('[SiAkun] Sync gagal:', e));
     }
-
-    console.info('[SiAkun] ✅ Migrasi COA selesai —', DB.accounts.length, 'akun Kledo dimuat');
+    console.info('[SiAkun] Migrasi selesai -', DB.accounts.length, 'akun');
   }
-
-  // Pastikan field category terisi untuk semua akun (jika ada akun manual tanpa category)
+  // Pastikan field category terisi untuk akun manual yang belum punya
   if(DB.accounts && Array.isArray(DB.accounts)){
-    const CODE_RANGES = [
-      ['1-10001','1-10003','Kas & Bank'],
-      ['1-10100','1-10102','Akun Piutang'],
-      ['1-10200','1-10200','Persediaan'],
-      ['1-10300','1-10503','Aktiva Lancar Lainnya'],
-      ['1-10700','1-10707','Aktiva Tetap'],
-      ['1-10751','1-10757','Depresiasi & Amortisasi'],
-      ['1-10800','1-10800','Aktiva Lainnya'],
-      ['2-20100','2-20101','Akun Hutang'],
-      ['2-20200','2-20601','Kewajiban Lancar Lainnya'],
-      ['2-20700','2-20700','Kewajiban Jangka Panjang'],
-      ['3-30000','3-30999','Ekuitas'],
-      ['4-40000','4-40201','Pendapatan'],
-      ['5-50000','5-50500','Harga Pokok Penjualan'],
-      ['6-60001','6-60599','Beban'],
-      ['7-70000','7-70101','Pendapatan Lainnya'],
-      ['8-80000','9-90001','Beban Lainnya'],
-    ];
-    let changed = false;
-    DB.accounts.forEach(acc => {
-      if(!acc.category && acc.code){
-        for(const [from,to,cat] of CODE_RANGES){
-          if(acc.code >= from && acc.code <= to){ acc.category = cat; changed = true; break; }
-        }
-        if(!acc.category){ acc.category = 'Lainnya'; changed = true; }
-      }
-    });
-    if(changed) saveDB();
+    const _R=[['1-10001','1-10003','Kas & Bank'],['1-10100','1-10102','Akun Piutang'],['1-10200','1-10200','Persediaan'],['1-10300','1-10503','Aktiva Lancar Lainnya'],['1-10700','1-10707','Aktiva Tetap'],['1-10751','1-10757','Depresiasi & Amortisasi'],['1-10800','1-10800','Aktiva Lainnya'],['2-20100','2-20101','Akun Hutang'],['2-20200','2-20601','Kewajiban Lancar Lainnya'],['2-20700','2-20700','Kewajiban Jangka Panjang'],['3-30000','3-30999','Ekuitas'],['4-40000','4-40201','Pendapatan'],['5-50000','5-50500','Harga Pokok Penjualan'],['6-60001','6-60599','Beban'],['7-70000','7-70101','Pendapatan Lainnya'],['8-80000','9-90001','Beban Lainnya']];
+    let _changed=false;
+    DB.accounts.forEach(a=>{if(!a.category&&a.code){for(const[f,t,c]of _R){if(a.code>=f&&a.code<=t){a.category=c;_changed=true;break;}}if(!a.category){a.category='Lainnya';_changed=true;}}});
+    if(_changed)saveDB();
   }
-
-    const scn=document.getElementById('sb-coname');idebarLogo();
+  const scn=document.getElementById('sb-coname');if(scn)scn.textContent=DB.company.name;
+  updateSidebarLogo();
   seedAMSProducts();
   // Ensure all DB fields exist after cloud load
   if(!DB.taxSettings)DB.taxSettings={ppnRate:11,pph23Rate:2,pph4Rate:2};
