@@ -2878,6 +2878,15 @@ function isDebitNormal(account){
 // Resolver: cari account by ID, fallback ke code, fallback ke nama-pattern
 function resolveAccount(ref){
   if(!ref) return null;
+
+  const accs = DB.accounts || [];
+
+  return accs.find(a =>
+    String(a.id) === String(ref) ||
+    String(a.code) === String(ref)
+  ) || null;
+}
+  if(!ref) return null;
   const accs = DB.accounts || [];
   // 1. Match by ID
   let a = accs.find(x => String(x.id) === String(ref));
