@@ -1681,7 +1681,6 @@ function confirmBSIJournalImport(bankAccId){
   if(missing.length)return alert(
     `${missing.length} transaksi aktif belum dipilih akun lawannya!\n`+
     `Pilih akun atau ubah action-nya ke "Skip".`
- `
 );
 
   if(!activeRows.length)return alert('Semua baris di-skip. Tidak ada yang diimport.');
