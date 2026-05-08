@@ -2866,7 +2866,7 @@ function recalculateAllBalances(){
     localStorage.setItem(SK, JSON.stringify(DB));
   } catch(e){ console.warn('[Ledger] Save failed:', e); }
 
-  console.info(`[Ledger] Posted ${totalEntries} entries (${unmatched} unmatched)`);
+  console.log(`[Ledger] Posted ${totalEntries} entries (${unmatched} unmatched)`);
   return { totalEntries, unmatched };
 }
 
