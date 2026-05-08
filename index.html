@@ -2886,26 +2886,7 @@ function resolveAccount(ref){
     String(a.code) === String(ref)
   ) || null;
 }
-  if(!ref) return null;
-  const accs = DB.accounts || [];
-  // 1. Match by ID
-  let a = accs.find(x => String(x.id) === String(ref));
-  if(a) return a;
-  // 2. Match by code (handles legacy IDs like '1201' vs new '1-10100')
-  a = accs.find(x =>
-  String(x.code||'').replace(/[^0-9]/g,'') ===
-  String(ref||'').replace(/[^0-9]/g,'')
-);
-  if(a) return a;
-  // 3. Match by partial code (legacy 1201 → 1-1201, 1-10100, etc.)
-  const refClean = String(ref).replace(/[^0-9]/g,'');
-  if(refClean.length >= 3){
-    a = accs.find(x => String(x.code||'').replace(/[^0-9]/g,'').startsWith(refClean));
-    if(a) return a;
-  }
-  return null;
-}
-
+  
 // Hitung saldo SATU akun dari semua jurnal — sumber tunggal kebenaran
 function acctBal(id){
   if(!id || !DB.accounts) return 0;
