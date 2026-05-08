@@ -10280,12 +10280,12 @@ function saveEditCoA(){
 }
   function getAccountBalance(acc){
 
-  if(!window.DB || !DB.tx) return 0;
+  if(!window.DB || !DB.transactions) return 0;
 
   let debit = 0;
   let credit = 0;
 
-  DB.tx.forEach(tx=>{
+  DB.transactions.forEach(tx=>{
 
     (tx.entries || []).forEach(e=>{
 
