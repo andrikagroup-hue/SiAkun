@@ -1537,7 +1537,8 @@ function renderBSIJournalPreview(fileName){
   }
 
   openModal(isID?`🏦 Preview Import Mutasi BSI — Cek Duplikat (${fileName})`
-                :`🏦 BSI Import Preview — Duplicate Check (${fileName})`,`
+:`🏦 BSI Import Preview — Duplicate Check (${fileName})`,
+`
   <!-- STATS -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
     <div class="stat b"><div class="stat-lbl">Total Baris</div><div class="stat-val">${rows.length}</div></div>
@@ -1678,7 +1679,8 @@ function confirmBSIJournalImport(bankAccId){
   if(missing.length)return alert(
     `${missing.length} transaksi aktif belum dipilih akun lawannya!\n`+
     `Pilih akun atau ubah action-nya ke "Skip".`
-  );
+ `
+);
 
   if(!activeRows.length)return alert('Semua baris di-skip. Tidak ada yang diimport.');
 
