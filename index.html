@@ -194,7 +194,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 }
 
 /* SEARCHABLE SELECT */
-.ss-wrap{position:relative;display:inline-block;width:100%;}
+.ss-wrap{
+  position:relative;
+  display:inline-block;
+  width:100%;
+  overflow:visible !important;
+}
 .ss-input{width:100%;padding:7px 28px 7px 10px;border:1px solid var(--bdr);border-radius:7px;font-family:var(--font);font-size:12.5px;color:var(--txt);background:#fff;outline:none;cursor:pointer;transition:border .15s;}
 .ss-input:focus{border-color:var(--pri);}
 .ss-arrow{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);font-size:11px;}
@@ -207,12 +212,16 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   border:1px solid var(--bdr);
   border-radius:8px;
   box-shadow:0 8px 24px rgba(0,0,0,.12);
-  z-index:9999;
+  z-index:99999;
   max-height:220px;
   overflow-y:auto;
-  overflow-x:auto;
+  overflow-x:hidden;
   display:none;
   flex-direction:column;
+}
+
+.ss-dropdown.open{
+  display:flex !important;
 }
 .ss-search{padding:7px 10px;border:none;border-bottom:1px solid var(--bdr);font-family:var(--font);font-size:12px;outline:none;color:var(--txt);}
 .ss-list{overflow-y:auto;flex:1;}
