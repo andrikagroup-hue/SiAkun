@@ -10018,7 +10018,7 @@ function renderAccountsDynamic(){
   const grouped={};
 
   accounts.forEach(acc=>{
-    const cat=dynamicCategory(acc);
+    const cat = acc.subCategory || dynamicCategory(acc);
 
     if(!grouped[cat]) grouped[cat]=[];
 
@@ -10076,7 +10076,7 @@ function renderAccountsDynamic(){
 
                   <td>${acc.code || ''}</td>
                   <td>${acc.name || ''}</td>
-                  <td>${dynamicCategory(acc)}</td>
+                  <td>${acc.subCategory || ''}</td>
                   <td>Rp 0</td>
 
                   <td>
@@ -10166,7 +10166,7 @@ function saveEditCoA(){
 
   acc.code = document.getElementById('edit-coa-code').value;
   acc.name = document.getElementById('edit-coa-name').value;
-  acc.type = document.getElementById('edit-coa-category').value;
+  acc.subCategory = document.getElementById('edit-coa-category').value;
 
   localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts));
 
