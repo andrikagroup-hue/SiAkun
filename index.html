@@ -202,16 +202,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   position:absolute;
   top:calc(100% + 3px);
   left:0;
-  min-width:420px;
-  width:max-content;
-  max-width:680px;
+  width:520px;
   background:#fff;
   border:1px solid var(--bdr);
   border-radius:8px;
   box-shadow:0 8px 24px rgba(0,0,0,.12);
   z-index:9999;
   max-height:220px;
-  overflow:hidden;
+  overflow-y:auto;
+  overflow-x:auto;
   display:none;
   flex-direction:column;
 }
@@ -223,9 +222,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   cursor:pointer;
   color:var(--txt);
   white-space:nowrap;
-  overflow:visible;
-  text-overflow:unset;
-  min-width:420px;
+  min-width:500px;
 }
 .ss-opt:hover,.ss-opt.active{background:var(--lightBlue,#dbeafe);color:var(--pri);}
 .ss-opt.selected{font-weight:700;color:var(--pri);}
