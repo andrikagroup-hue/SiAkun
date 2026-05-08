@@ -10133,22 +10133,13 @@ window.addEventListener('load',()=>{
 
   if(!acc) return;
 
-  const newName = prompt('Nama akun:', acc.name || '');
+  window.currentEditCoA = acc;
 
-  if(newName===null) return;
+  document.getElementById('edit-coa-code').value = acc.code || '';
+  document.getElementById('edit-coa-name').value = acc.name || '';
+  document.getElementById('edit-coa-category').value = acc.type || '';
 
-  const newCode = prompt('Kode akun:', acc.code || '');
-
-  if(newCode===null) return;
-
-  acc.name = newName;
-  acc.code = newCode;
-
-  localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts));
-
-  renderAccountsDynamic();
-
-  alert('Akun berhasil diupdate');
+  document.getElementById('editCoAModal').style.display='flex';
 
 }
 
@@ -10163,9 +10154,115 @@ function deleteCoA(id){
     alert('Akun berhasil dihapus');
   }
 }
+function closeEditCoA(){
+  document.getElementById('editCoAModal').style.display='none';
+}
+
+function saveEditCoA(){
+
+  const acc = window.currentEditCoA;
+
+  if(!acc) return;
+
+  acc.code = document.getElementById('edit-coa-code').value;
+  acc.name = document.getElementById('edit-coa-name').value;
+  acc.type = document.getElementById('edit-coa-category').value;
+
+  localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts));
+
+  renderAccountsDynamic();
+
+  closeEditCoA();
+
+  alert('Akun berhasil diupdate');
+
+}
+  
 </script>
 
+<div id="editCoAModal" style="
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.45);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:9999;
+">
 
+  <div style="
+  width:500px;
+  max-width:95%;
+  background:#fff;
+  border-radius:18px;
+  padding:24px;
+  ">
+
+    <div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+    ">
+      <h2>Edit Akun</h2>
+
+      <button onclick="closeEditCoA()" style="
+      border:none;
+      background:none;
+      font-size:24px;
+      cursor:pointer;
+      ">
+        ×
+      </button>
+    </div>
+
+    <div style="display:grid;gap:14px">
+
+      <input
+        id="edit-coa-code"
+        placeholder="Kode akun"
+        style="padding:12px;border:1px solid #ddd;border-radius:10px"
+      >
+
+      <input
+        id="edit-coa-name"
+        placeholder="Nama akun"
+        style="padding:12px;border:1px solid #ddd;border-radius:10px"
+      >
+
+      <select
+        id="edit-coa-category"
+        style="padding:12px;border:1px solid #ddd;border-radius:10px"
+      >
+        <option value="aktiva">Aktiva</option>
+        <option value="kewajiban">Kewajiban</option>
+        <option value="modal">Modal</option>
+        <option value="pendapatan">Pendapatan</option>
+        <option value="beban">Beban</option>
+      </select>
+
+    </div>
+
+    <div style="
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:24px;
+    ">
+
+      <button onclick="closeEditCoA()" class="btn">
+        Batal
+      </button>
+
+      <button onclick="saveEditCoA()" class="btn btn-pri">
+        Simpan
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
 
 
 
