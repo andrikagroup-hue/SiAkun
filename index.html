@@ -10077,7 +10077,7 @@ function renderAccountsDynamic(){
                   <td>${acc.code || ''}</td>
                   <td>${acc.name || ''}</td>
                   <td>${acc.subCategory || ''}</td>
-                  <td>Rp 0</td>
+                  <td>${fmt(getAccountBalance(acc))}</td>
 
                   <td>
   <button onclick="editCoA('${acc.id}')">✏️</button>
@@ -10177,7 +10177,43 @@ function saveEditCoA(){
   alert('Akun berhasil diupdate');
 
 }
-  
+  function getAccountBalance(acc){
+
+  if(!window.DB || !DB.tx) return 0;
+
+  let debit = 0;
+  let credit = 0;
+
+  DB.tx.forEach(tx=>{
+
+    (tx.entries || []).forEach(e=>{
+
+      if(e.acc === acc.id){
+
+        debit += Number(e.deb || 0);
+        credit += Number(e.crd || 0);
+
+      }
+
+    });
+
+  });
+
+  const cat = (acc.category || '').toLowerCase();
+  const sub = (acc.subCategory || '').toLowerCase();
+
+  const debitNormal =
+    cat.includes('aktiva') ||
+    cat.includes('beban') ||
+    sub.includes('kas') ||
+    sub.includes('piutang') ||
+    sub.includes('persediaan');
+
+  return debitNormal
+    ? debit - credit
+    : credit - debit;
+
+}
 </script>
 
 <div id="editCoAModal" style="
