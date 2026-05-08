@@ -1959,7 +1959,7 @@ async function parseBSIExcel(file){
   const ws=wb.Sheets[wb.SheetNames[0]];
   const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
   const rows=[];
-
+let current = null;
   // Cari baris header
   let headerRow=-1;
   raw.forEach((row,i)=>{
@@ -1997,11 +1997,40 @@ async function parseBSIExcel(file){
     amount=amtRaw;
     flow=col5==='DB'||col5==='CR'?col5:'DB';
 
-    if(date&&desc&&amount>0){
-      rows.push({date,desc,amount,flow,status:'open',addedAt:new Date().toISOString()});
-    }
+  if(date){
+
+  if(amount>0){
+
+    if(current) rows.push(current);
+
+    current = {
+      date,
+      desc,
+      amount,
+      flow,
+      status:'open',
+      addedAt:new Date().toISOString()
+    };
+
   }
-  return rows;
+
+}else{
+
+  const extra = row.map(x=>String(x||'').trim()).join(' ').trim();
+
+  if(current && extra){
+
+    current.desc += ' ' + extra;
+
+  }
+
+}
+
+}
+
+if(current) rows.push(current);
+
+return rows;
 }
 
 // ── Parser CSV ──
