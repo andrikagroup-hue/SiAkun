@@ -1338,10 +1338,11 @@ if(e.crd>0)siakuBankEntries.push({txId:tx.id,date:tx.date,ref:tx.ref,desc:tx.des
   e.date===row.date &&
   Math.abs(e.amount-row.amount)<1 &&
   e.flow===row.flow &&
-  (
-    (e.desc||'').toLowerCase().includes((row.desc||'').toLowerCase()) ||
-    (row.desc||'').toLowerCase().includes((e.desc||'').toLowerCase())
-  )
+  const match=siakuBankEntries.find(e=>
+  e.date===row.date &&
+  Math.abs(e.amount-row.amount)<1 &&
+  e.flow===row.flow
+);
 );
     row.status=match?'matched':'open';
     row.matchedWith=match?`${match.ref||''} ${match.desc||''}`.trim():'';
