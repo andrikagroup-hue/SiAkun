@@ -1334,11 +1334,25 @@ if(e.crd>0)siakuBankEntries.push({txId:tx.id,date:tx.date,ref:tx.ref,desc:tx.des
   // Auto-match tiap row
   s.rows.forEach(row=>{
     if(row.status==='unmatched')return; // skip yang sudah ditandai manual
-  const match=siakuBankEntries.find(e=>
-  e.date===row.date &&
-  Math.abs(e.amount-row.amount)<1 &&
-  e.flow===row.flow
-);
+  const clean=(txt='')=>
+  txt.toLowerCase()
+     .replace(/[^a-z0-9 ]/g,' ')
+     .replace(/\s+/g,' ')
+     .trim();
+
+const rowWords=clean(row.desc).split(' ');
+
+const match=siakuBankEntries.find(e=>{
+  if(e.date!==row.date) return false;
+  if(Math.abs(e.amount-row.amount)>=1) return false;
+  if(e.flow!==row.flow) return false;
+
+  const bankWords=clean(e.desc).split(' ');
+
+  return rowWords.some(w=>
+    w.length>3 && bankWords.includes(w)
+  );
+});
     row.status=match?'matched':'open';
     row.matchedWith=match?`${match.ref||''} ${match.desc||''}`.trim():'';
   });
