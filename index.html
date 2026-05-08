@@ -1536,8 +1536,10 @@ function renderBSIJournalPreview(fileName){
     return `${dateStr} | ${tx.ref||tx.desc.slice(0,30)} | ${rp(Math.max(totDeb,totCrd))}`;
   }
 
-  openModal(isID?`🏦 Preview Import Mutasi BSI — Cek Duplikat (${fileName})`
-:`🏦 BSI Import Preview — Duplicate Check (${fileName})`,
+  openModal(
+  isID
+    ? `🏦 Preview Import Mutasi BSI — Cek Duplikat (${fileName})`
+    : `🏦 BSI Import Preview — Duplicate Check (${fileName})`,
 `
   <!-- STATS -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
