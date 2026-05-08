@@ -3,932 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SiAkun v19.5 — Financial System</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-/* ===== FULL DYNAMIC COA PATCH ===== */
-
-function parseAccountCode(code=''){
-  const p = code.split('-');
-  return {
-    main: parseInt(p[0] || 0),
-    sub: parseInt((p[1] || '0').replace(/[^0-9]/g,''))
-  };
-}
-
-function sortAccounts(arr=[]){
-  return [...arr].sort((a,b)=>{
-    const A=parseAccountCode(a.code||'');
-    const B=parseAccountCode(b.code||'');
-    if(A.main!==B.main) return A.main-B.main;
-    return A.sub-B.sub;
-  });
-}
-
-function dynamicCategory(acc){
-  return acc.category || acc.subCategory || acc.type || 'Others';
-}
-
-function getDynamicAccounts(){
-  let accs = [];
-
-  try{
-    accs = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]');
-  }catch(e){}
-
-  if(!Array.isArray(accs) || !accs.length){
-    accs = (window.accounts || DB.accounts || []);
-  }
-
-  accs = accs.filter(a=>a && a.code && a.name);
-
-  accs = sortAccounts(accs);
-
-  localStorage.setItem('siakun_coa_v2', JSON.stringify(accs));
-
-  return accs;
-}
-
-function deleteAllCoA(){
-  if(!confirm('Delete all accounts?')) return;
-
-  localStorage.setItem('siakun_coa_v2','[]');
-
-  if(window.DB) DB.accounts=[];
-
-  renderAccountsDynamic();
-}
-
-function toggleSelectAllCoA(state){
-  document.querySelectorAll('.coa-check').forEach(el=>{
-    el.checked=state;
-  });
-}
-
-function deleteSelectedCoA(){
-  const ids=[...document.querySelectorAll('.coa-check:checked')]
-    .map(el=>el.value);
-
-  let accs=getDynamicAccounts();
-
-  accs=accs.filter(a=>!ids.includes(String(a.id)));
-
-  localStorage.setItem('siakun_coa_v2',JSON.stringify(accs));
-
-  if(window.DB) DB.accounts=accs;
-
-  renderAccountsDynamic();
-}
-
-function renderAccountsDynamic(){
-
-  const accounts = getDynamicAccounts();
-
-  const grouped={};
-
-  accounts.forEach(acc=>{
-    const cat=dynamicCategory(acc);
-
-    if(!grouped[cat]) grouped[cat]=[];
-
-    grouped[cat].push(acc);
-  });
-
-  let html=`
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-      <label style="display:flex;gap:6px;align-items:center;font-size:12px;font-weight:600">
-        <input type="checkbox" onchange="toggleSelectAllCoA(this.checked)">
-        Select All
-      </label>
-
-      <button class="btn btn-bad" onclick="deleteSelectedCoA()">
-        Delete Selected
-      </button>
-
-      <button class="btn btn-bad" onclick="deleteAllCoA()">
-        Delete All CoA
-      </button>
-    </div>
-  `;
-
-  Object.keys(grouped).forEach(cat=>{
-
-    const rows=grouped[cat];
-
-    html += `
-      <div class="card">
-        <div class="card-hd">
-          ${cat} (${rows.length} accounts)
-        </div>
-
-        <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                <th>Kode</th>
-                <th>Account Name</th>
-                <th>Category</th>
-                <th>Balance</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              ${rows.map(acc=>`
-                <tr>
-                  <td>
-                    <input class="coa-check" type="checkbox" value="${acc.id || ''}">
-                  </td>
-
-                  <td>${acc.code || ''}</td>
-                  <td>${acc.name || ''}</td>
-                  <td>${dynamicCategory(acc)}</td>
-                  <td>Rp 0</td>
-                </tr>
-              `).join('')}
-
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  });
-
-  const content=document.getElementById('content');
-
-  if(content){
-    content.innerHTML=html;
-  }
-}
-
-const _oldNav = window.nav;
-
-window.nav = function(page){
-
-  if(_oldNav) _oldNav(page);
-
-  if(page==='accounts'){
-
-    setTimeout(()=>{
-      renderAccountsDynamic();
-    },200);
-
-  }
-};
-
-window.addEventListener('load',()=>{
-  try{
-    const accs = getDynamicAccounts();
-
-    if(window.DB){
-      DB.accounts = accs;
-    }
-
-    window.accounts = accs;
-  }catch(e){}
-});
-
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js">
-/* ===== FULL DYNAMIC COA PATCH ===== */
-
-function parseAccountCode(code=''){
-  const p = code.split('-');
-  return {
-    main: parseInt(p[0] || 0),
-    sub: parseInt((p[1] || '0').replace(/[^0-9]/g,''))
-  };
-}
-
-function sortAccounts(arr=[]){
-  return [...arr].sort((a,b)=>{
-    const A=parseAccountCode(a.code||'');
-    const B=parseAccountCode(b.code||'');
-    if(A.main!==B.main) return A.main-B.main;
-    return A.sub-B.sub;
-  });
-}
-
-function dynamicCategory(acc){
-  return acc.category || acc.subCategory || acc.type || 'Others';
-}
-
-function getDynamicAccounts(){
-  let accs = [];
-
-  try{
-    accs = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]');
-  }catch(e){}
-
-  if(!Array.isArray(accs) || !accs.length){
-    accs = (window.accounts || DB.accounts || []);
-  }
-
-  accs = accs.filter(a=>a && a.code && a.name);
-
-  accs = sortAccounts(accs);
-
-  localStorage.setItem('siakun_coa_v2', JSON.stringify(accs));
-
-  return accs;
-}
-
-function deleteAllCoA(){
-  if(!confirm('Delete all accounts?')) return;
-
-  localStorage.setItem('siakun_coa_v2','[]');
-
-  if(window.DB) DB.accounts=[];
-
-  renderAccountsDynamic();
-}
-
-function toggleSelectAllCoA(state){
-  document.querySelectorAll('.coa-check').forEach(el=>{
-    el.checked=state;
-  });
-}
-
-function deleteSelectedCoA(){
-  const ids=[...document.querySelectorAll('.coa-check:checked')]
-    .map(el=>el.value);
-
-  let accs=getDynamicAccounts();
-
-  accs=accs.filter(a=>!ids.includes(String(a.id)));
-
-  localStorage.setItem('siakun_coa_v2',JSON.stringify(accs));
-
-  if(window.DB) DB.accounts=accs;
-
-  renderAccountsDynamic();
-}
-
-function renderAccountsDynamic(){
-
-  const accounts = getDynamicAccounts();
-
-  const grouped={};
-
-  accounts.forEach(acc=>{
-    const cat=dynamicCategory(acc);
-
-    if(!grouped[cat]) grouped[cat]=[];
-
-    grouped[cat].push(acc);
-  });
-
-  let html=`
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-      <label style="display:flex;gap:6px;align-items:center;font-size:12px;font-weight:600">
-        <input type="checkbox" onchange="toggleSelectAllCoA(this.checked)">
-        Select All
-      </label>
-
-      <button class="btn btn-bad" onclick="deleteSelectedCoA()">
-        Delete Selected
-      </button>
-
-      <button class="btn btn-bad" onclick="deleteAllCoA()">
-        Delete All CoA
-      </button>
-    </div>
-  `;
-
-  Object.keys(grouped).forEach(cat=>{
-
-    const rows=grouped[cat];
-
-    html += `
-      <div class="card">
-        <div class="card-hd">
-          ${cat} (${rows.length} accounts)
-        </div>
-
-        <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                <th>Kode</th>
-                <th>Account Name</th>
-                <th>Category</th>
-                <th>Balance</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              ${rows.map(acc=>`
-                <tr>
-                  <td>
-                    <input class="coa-check" type="checkbox" value="${acc.id || ''}">
-                  </td>
-
-                  <td>${acc.code || ''}</td>
-                  <td>${acc.name || ''}</td>
-                  <td>${dynamicCategory(acc)}</td>
-                  <td>Rp 0</td>
-                </tr>
-              `).join('')}
-
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  });
-
-  const content=document.getElementById('content');
-
-  if(content){
-    content.innerHTML=html;
-  }
-}
-
-const _oldNav = window.nav;
-
-window.nav = function(page){
-
-  if(_oldNav) _oldNav(page);
-
-  if(page==='accounts'){
-
-    setTimeout(()=>{
-      renderAccountsDynamic();
-    },200);
-
-  }
-};
-
-window.addEventListener('load',()=>{
-  try{
-    const accs = getDynamicAccounts();
-
-    if(window.DB){
-      DB.accounts = accs;
-    }
-
-    window.accounts = accs;
-  }catch(e){}
-});
-
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js">
-/* ===== FULL DYNAMIC COA PATCH ===== */
-
-function parseAccountCode(code=''){
-  const p = code.split('-');
-  return {
-    main: parseInt(p[0] || 0),
-    sub: parseInt((p[1] || '0').replace(/[^0-9]/g,''))
-  };
-}
-
-function sortAccounts(arr=[]){
-  return [...arr].sort((a,b)=>{
-    const A=parseAccountCode(a.code||'');
-    const B=parseAccountCode(b.code||'');
-    if(A.main!==B.main) return A.main-B.main;
-    return A.sub-B.sub;
-  });
-}
-
-function dynamicCategory(acc){
-  return acc.category || acc.subCategory || acc.type || 'Others';
-}
-
-function getDynamicAccounts(){
-  let accs = [];
-
-  try{
-    accs = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]');
-  }catch(e){}
-
-  if(!Array.isArray(accs) || !accs.length){
-    accs = (window.accounts || DB.accounts || []);
-  }
-
-  accs = accs.filter(a=>a && a.code && a.name);
-
-  accs = sortAccounts(accs);
-
-  localStorage.setItem('siakun_coa_v2', JSON.stringify(accs));
-
-  return accs;
-}
-
-function deleteAllCoA(){
-  if(!confirm('Delete all accounts?')) return;
-
-  localStorage.setItem('siakun_coa_v2','[]');
-
-  if(window.DB) DB.accounts=[];
-
-  renderAccountsDynamic();
-}
-
-function toggleSelectAllCoA(state){
-  document.querySelectorAll('.coa-check').forEach(el=>{
-    el.checked=state;
-  });
-}
-
-function deleteSelectedCoA(){
-  const ids=[...document.querySelectorAll('.coa-check:checked')]
-    .map(el=>el.value);
-
-  let accs=getDynamicAccounts();
-
-  accs=accs.filter(a=>!ids.includes(String(a.id)));
-
-  localStorage.setItem('siakun_coa_v2',JSON.stringify(accs));
-
-  if(window.DB) DB.accounts=accs;
-
-  renderAccountsDynamic();
-}
-
-function renderAccountsDynamic(){
-
-  const accounts = getDynamicAccounts();
-
-  const grouped={};
-
-  accounts.forEach(acc=>{
-    const cat=dynamicCategory(acc);
-
-    if(!grouped[cat]) grouped[cat]=[];
-
-    grouped[cat].push(acc);
-  });
-
-  let html=`
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-      <label style="display:flex;gap:6px;align-items:center;font-size:12px;font-weight:600">
-        <input type="checkbox" onchange="toggleSelectAllCoA(this.checked)">
-        Select All
-      </label>
-
-      <button class="btn btn-bad" onclick="deleteSelectedCoA()">
-        Delete Selected
-      </button>
-
-      <button class="btn btn-bad" onclick="deleteAllCoA()">
-        Delete All CoA
-      </button>
-    </div>
-  `;
-
-  Object.keys(grouped).forEach(cat=>{
-
-    const rows=grouped[cat];
-
-    html += `
-      <div class="card">
-        <div class="card-hd">
-          ${cat} (${rows.length} accounts)
-        </div>
-
-        <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                <th>Kode</th>
-                <th>Account Name</th>
-                <th>Category</th>
-                <th>Balance</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              ${rows.map(acc=>`
-                <tr>
-                  <td>
-                    <input class="coa-check" type="checkbox" value="${acc.id || ''}">
-                  </td>
-
-                  <td>${acc.code || ''}</td>
-                  <td>${acc.name || ''}</td>
-                  <td>${dynamicCategory(acc)}</td>
-                  <td>Rp 0</td>
-                </tr>
-              `).join('')}
-
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  });
-
-  const content=document.getElementById('content');
-
-  if(content){
-    content.innerHTML=html;
-  }
-}
-
-const _oldNav = window.nav;
-
-window.nav = function(page){
-
-  if(_oldNav) _oldNav(page);
-
-  if(page==='accounts'){
-
-    setTimeout(()=>{
-      renderAccountsDynamic();
-    },200);
-
-  }
-};
-
-window.addEventListener('load',()=>{
-  try{
-    const accs = getDynamicAccounts();
-
-    if(window.DB){
-      DB.accounts = accs;
-    }
-
-    window.accounts = accs;
-  }catch(e){}
-});
-
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
-/* ===== FULL DYNAMIC COA PATCH ===== */
-
-function parseAccountCode(code=''){
-  const p = code.split('-');
-  return {
-    main: parseInt(p[0] || 0),
-    sub: parseInt((p[1] || '0').replace(/[^0-9]/g,''))
-  };
-}
-
-function sortAccounts(arr=[]){
-  return [...arr].sort((a,b)=>{
-    const A=parseAccountCode(a.code||'');
-    const B=parseAccountCode(b.code||'');
-    if(A.main!==B.main) return A.main-B.main;
-    return A.sub-B.sub;
-  });
-}
-
-function dynamicCategory(acc){
-  return acc.category || acc.subCategory || acc.type || 'Others';
-}
-
-function getDynamicAccounts(){
-  let accs = [];
-
-  try{
-    accs = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]');
-  }catch(e){}
-
-  if(!Array.isArray(accs) || !accs.length){
-    accs = (window.accounts || DB.accounts || []);
-  }
-
-  accs = accs.filter(a=>a && a.code && a.name);
-
-  accs = sortAccounts(accs);
-
-  localStorage.setItem('siakun_coa_v2', JSON.stringify(accs));
-
-  return accs;
-}
-
-function deleteAllCoA(){
-  if(!confirm('Delete all accounts?')) return;
-
-  localStorage.setItem('siakun_coa_v2','[]');
-
-  if(window.DB) DB.accounts=[];
-
-  renderAccountsDynamic();
-}
-
-function toggleSelectAllCoA(state){
-  document.querySelectorAll('.coa-check').forEach(el=>{
-    el.checked=state;
-  });
-}
-
-function deleteSelectedCoA(){
-  const ids=[...document.querySelectorAll('.coa-check:checked')]
-    .map(el=>el.value);
-
-  let accs=getDynamicAccounts();
-
-  accs=accs.filter(a=>!ids.includes(String(a.id)));
-
-  localStorage.setItem('siakun_coa_v2',JSON.stringify(accs));
-
-  if(window.DB) DB.accounts=accs;
-
-  renderAccountsDynamic();
-}
-
-function renderAccountsDynamic(){
-
-  const accounts = getDynamicAccounts();
-
-  const grouped={};
-
-  accounts.forEach(acc=>{
-    const cat=dynamicCategory(acc);
-
-    if(!grouped[cat]) grouped[cat]=[];
-
-    grouped[cat].push(acc);
-  });
-
-  let html=`
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-      <label style="display:flex;gap:6px;align-items:center;font-size:12px;font-weight:600">
-        <input type="checkbox" onchange="toggleSelectAllCoA(this.checked)">
-        Select All
-      </label>
-
-      <button class="btn btn-bad" onclick="deleteSelectedCoA()">
-        Delete Selected
-      </button>
-
-      <button class="btn btn-bad" onclick="deleteAllCoA()">
-        Delete All CoA
-      </button>
-    </div>
-  `;
-
-  Object.keys(grouped).forEach(cat=>{
-
-    const rows=grouped[cat];
-
-    html += `
-      <div class="card">
-        <div class="card-hd">
-          ${cat} (${rows.length} accounts)
-        </div>
-
-        <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                <th>Kode</th>
-                <th>Account Name</th>
-                <th>Category</th>
-                <th>Balance</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              ${rows.map(acc=>`
-                <tr>
-                  <td>
-                    <input class="coa-check" type="checkbox" value="${acc.id || ''}">
-                  </td>
-
-                  <td>${acc.code || ''}</td>
-                  <td>${acc.name || ''}</td>
-                  <td>${dynamicCategory(acc)}</td>
-                  <td>Rp 0</td>
-                </tr>
-              `).join('')}
-
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  });
-
-  const content=document.getElementById('content');
-
-  if(content){
-    content.innerHTML=html;
-  }
-}
-
-const _oldNav = window.nav;
-
-window.nav = function(page){
-
-  if(_oldNav) _oldNav(page);
-
-  if(page==='accounts'){
-
-    setTimeout(()=>{
-      renderAccountsDynamic();
-    },200);
-
-  }
-};
-
-window.addEventListener('load',()=>{
-  try{
-    const accs = getDynamicAccounts();
-
-    if(window.DB){
-      DB.accounts = accs;
-    }
-
-    window.accounts = accs;
-  }catch(e){}
-});
-
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js">
-/* ===== FULL DYNAMIC COA PATCH ===== */
-
-function parseAccountCode(code=''){
-  const p = code.split('-');
-  return {
-    main: parseInt(p[0] || 0),
-    sub: parseInt((p[1] || '0').replace(/[^0-9]/g,''))
-  };
-}
-
-function sortAccounts(arr=[]){
-  return [...arr].sort((a,b)=>{
-    const A=parseAccountCode(a.code||'');
-    const B=parseAccountCode(b.code||'');
-    if(A.main!==B.main) return A.main-B.main;
-    return A.sub-B.sub;
-  });
-}
-
-function dynamicCategory(acc){
-  return acc.category || acc.subCategory || acc.type || 'Others';
-}
-
-function getDynamicAccounts(){
-  let accs = [];
-
-  try{
-    accs = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]');
-  }catch(e){}
-
-  if(!Array.isArray(accs) || !accs.length){
-    accs = (window.accounts || DB.accounts || []);
-  }
-
-  accs = accs.filter(a=>a && a.code && a.name);
-
-  accs = sortAccounts(accs);
-
-  localStorage.setItem('siakun_coa_v2', JSON.stringify(accs));
-
-  return accs;
-}
-
-function deleteAllCoA(){
-  if(!confirm('Delete all accounts?')) return;
-
-  localStorage.setItem('siakun_coa_v2','[]');
-
-  if(window.DB) DB.accounts=[];
-
-  renderAccountsDynamic();
-}
-
-function toggleSelectAllCoA(state){
-  document.querySelectorAll('.coa-check').forEach(el=>{
-    el.checked=state;
-  });
-}
-
-function deleteSelectedCoA(){
-  const ids=[...document.querySelectorAll('.coa-check:checked')]
-    .map(el=>el.value);
-
-  let accs=getDynamicAccounts();
-
-  accs=accs.filter(a=>!ids.includes(String(a.id)));
-
-  localStorage.setItem('siakun_coa_v2',JSON.stringify(accs));
-
-  if(window.DB) DB.accounts=accs;
-
-  renderAccountsDynamic();
-}
-
-function renderAccountsDynamic(){
-
-  const accounts = getDynamicAccounts();
-
-  const grouped={};
-
-  accounts.forEach(acc=>{
-    const cat=dynamicCategory(acc);
-
-    if(!grouped[cat]) grouped[cat]=[];
-
-    grouped[cat].push(acc);
-  });
-
-  let html=`
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-      <label style="display:flex;gap:6px;align-items:center;font-size:12px;font-weight:600">
-        <input type="checkbox" onchange="toggleSelectAllCoA(this.checked)">
-        Select All
-      </label>
-
-      <button class="btn btn-bad" onclick="deleteSelectedCoA()">
-        Delete Selected
-      </button>
-
-      <button class="btn btn-bad" onclick="deleteAllCoA()">
-        Delete All CoA
-      </button>
-    </div>
-  `;
-
-  Object.keys(grouped).forEach(cat=>{
-
-    const rows=grouped[cat];
-
-    html += `
-      <div class="card">
-        <div class="card-hd">
-          ${cat} (${rows.length} accounts)
-        </div>
-
-        <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                <th>Kode</th>
-                <th>Account Name</th>
-                <th>Category</th>
-                <th>Balance</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              ${rows.map(acc=>`
-                <tr>
-                  <td>
-                    <input class="coa-check" type="checkbox" value="${acc.id || ''}">
-                  </td>
-
-                  <td>${acc.code || ''}</td>
-                  <td>${acc.name || ''}</td>
-                  <td>${dynamicCategory(acc)}</td>
-                  <td>Rp 0</td>
-                </tr>
-              `).join('')}
-
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  });
-
-  const content=document.getElementById('content');
-
-  if(content){
-    content.innerHTML=html;
-  }
-}
-
-const _oldNav = window.nav;
-
-window.nav = function(page){
-
-  if(_oldNav) _oldNav(page);
-
-  if(page==='accounts'){
-
-    setTimeout(()=>{
-      renderAccountsDynamic();
-    },200);
-
-  }
-};
-
-window.addEventListener('load',()=>{
-  try{
-    const accs = getDynamicAccounts();
-
-    if(window.DB){
-      DB.accounts = accs;
-    }
-
-    window.accounts = accs;
-  }catch(e){}
-});
-
-</script>
+<title>SiAkun v20.0 — Financial System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -1257,6 +337,87 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 .exp-insight-text strong{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
 .exp-detail-card{background:#fff;border:1px solid var(--bdr);border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
 .exp-detail-card h3{font-size:13px;font-weight:700;margin-bottom:12px;}
+
+/* ── Quick Nav Bar ── */
+.qnav-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;font-family:var(--font);font-size:12px;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;}
+.qnav-btn:hover{background:#f0f7ff;border-color:#2563eb;color:#2563eb;}
+.qnav-btn-outline{background:#f8fafc;color:#475569;}
+.qnav-ic{font-size:14px;}
+
+/* ── Modern COA Table ── */
+.coa-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 0 14px;}
+.coa-toolbar-r{margin-left:auto;display:flex;gap:8px;}
+.coa-search{padding:7px 12px 7px 32px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:12.5px;outline:none;transition:border .15s;background:#f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;width:200px;}
+.coa-search:focus{border-color:#2563eb;background-color:#fff;}
+.coa-filter{padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:12px;font-weight:600;color:#475569;outline:none;background:#f8fafc;cursor:pointer;}
+.coa-filter:focus{border-color:#2563eb;}
+
+/* Modern COA table row */
+.coa-tbl th{background:#f8fafc;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;border-bottom:1.5px solid #e2e8f0;padding:10px 12px;text-align:left;}
+.coa-tbl td{padding:10px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+.coa-tbl tr:hover td{background:#f8fafc;}
+.coa-tbl tr:last-child td{border-bottom:none;}
+.coa-cat-row td{background:#f0f4ff!important;font-weight:700;font-size:11px;color:#2563eb;padding:7px 12px!important;}
+.coa-bal{font-weight:700;font-size:13px;color:#0f172a;text-align:right;}
+.coa-actions{display:flex;gap:6px;justify-content:flex-end;}
+
+/* Donut chart area */
+.coa-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;}
+.coa-chart-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;}
+.coa-chart-card h4{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:16px;}
+@media(max-width:640px){.coa-charts{grid-template-columns:1fr;}}
+
+/* Operator panel */
+.op-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px;}
+.op-user-badge{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:12px 20px;border-radius:12px;margin-bottom:20px;}
+.op-avatar{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;}
+.op-stat{display:inline-flex;flex-direction:column;align-items:center;padding:14px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;min-width:100px;}
+.op-stat-val{font-size:22px;font-weight:800;color:#0f172a;}
+.op-stat-lbl{font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+.op-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+.op-tx-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9;}
+.op-tx-row:last-child{border-bottom:none;}
+.op-tx-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:#eff6ff;color:#2563eb;}
+.op-tx-badge.sell{background:#ecfdf5;color:#059669;}
+.op-tx-badge.buy{background:#fff7ed;color:#ea580c;}
+.op-tx-badge.exp{background:#fef2f2;color:#dc2626;}
+.op-tx-badge.jrn{background:#f5f3ff;color:#7c3aed;}
+
+/* Quick form modal */
+.qf-row{display:grid;gap:12px;margin-bottom:12px;}
+.qf-row-2{grid-template-columns:1fr 1fr;}
+.qf-row-3{grid-template-columns:1fr 1fr 1fr;}
+.qf-label{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.qf-input{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:13px;outline:none;transition:border .15s;box-sizing:border-box;}
+.qf-input:focus{border-color:#2563eb;}
+.qf-select{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:13px;outline:none;background:#fff;cursor:pointer;}
+.qf-tbl{width:100%;border-collapse:collapse;margin-top:8px;}
+.qf-tbl th{background:#f8fafc;font-size:11px;font-weight:700;color:#64748b;padding:8px 10px;text-align:left;border-bottom:1px solid #e2e8f0;}
+.qf-tbl td{padding:6px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+.qf-total-area{background:#f8fafc;border-radius:10px;padding:14px;margin-top:12px;}
+.qf-total-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;}
+.qf-grand{font-weight:800;font-size:15px;border-top:1.5px solid #e2e8f0;margin-top:8px;padding-top:8px;}
+
+
+/* ── COA Action Buttons ── */
+.coa-act-btn{display:inline-flex;align-items:center;gap:3px;padding:5px 10px;border:1.5px solid #e2e8f0;border-radius:7px;background:#fff;font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.coa-act-edit{color:#2563eb;border-color:#dbeafe;}
+.coa-act-edit:hover{background:#eff6ff;border-color:#2563eb;}
+.coa-act-del{color:#dc2626;border-color:#fee2e2;margin-left:4px;}
+.coa-act-del:hover{background:#fef2f2;border-color:#dc2626;}
+
+/* ── Topbar user badge — make it more visible ── */
+#user-badge{font-size:12px!important;font-weight:700!important;color:#fff!important;background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;padding:5px 12px!important;border-radius:20px!important;display:inline-flex;align-items:center;gap:6px;}
+
+/* ── Export/Import dropdown ── */
+.btn-dropdown{position:relative;display:inline-block;}
+.btn-dropdown-menu{position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:180px;z-index:100;display:none;overflow:hidden;}
+.btn-dropdown-menu.open{display:block;}
+.btn-dropdown-item{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:12.5px;font-weight:600;color:#0f172a;cursor:pointer;border-bottom:1px solid #f1f5f9;}
+.btn-dropdown-item:hover{background:#f8fafc;color:#2563eb;}
+.btn-dropdown-item:last-child{border-bottom:none;}
+.btn-dropdown-section{padding:6px 14px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;background:#f8fafc;border-bottom:1px solid #f1f5f9;}
+
 </style>
 </head>
 <body>
@@ -1334,6 +495,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
     <div class="nav-i" id="nav-settings" onclick="nav('settings')"><span class="ic">⚙️</span><span data-i18n="nav_settings">Settings & Export</span></div>
     <div class="nav-i" id="nav-users" style="display:none" onclick="nav('users')"><span class="ic">👥</span><span data-i18n="nav_users">User Management</span></div>
     <div class="nav-i" id="nav-audit" style="display:none" onclick="nav('audit')"><span class="ic">🔍</span><span data-i18n="nav_audit">Audit Trail</span></div>
+    <div class="nav-i" onclick="nav('operator')"><span class="ic">👤</span><span>Operator</span></div>
   </div>
 </div>
 
@@ -1388,6 +550,29 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
 <!-- MAIN -->
 <div class="main">
+  <!-- Quick Nav Bar — Kledo-style -->
+  <div id="quick-nav" style="display:flex;gap:6px;padding:8px 16px;background:#fff;border-bottom:1px solid #e2e8f0;align-items:center;flex-wrap:wrap;z-index:100;">
+    <button class="qnav-btn" onclick="openQuickForm('jual')" title="Tambah Tagihan Penjualan">
+      <span class="qnav-ic">🧾</span><span>Jual</span>
+    </button>
+    <button class="qnav-btn" onclick="openQuickForm('beli')" title="Tambah Tagihan Pembelian">
+      <span class="qnav-ic">🛒</span><span>Beli</span>
+    </button>
+    <button class="qnav-btn" onclick="openQuickForm('biaya')" title="Tambah Biaya/Pengeluaran">
+      <span class="qnav-ic">💳</span><span>Biaya</span>
+    </button>
+    <button class="qnav-btn qnav-btn-outline" onclick="nav('operator')" title="Panel Operator">
+      <span class="qnav-ic">👤</span><span>Operator</span>
+    </button>
+    <div style="flex:1;min-width:120px;max-width:280px;position:relative;margin-left:4px">
+      <input id="global-search" type="text" placeholder="🔍  Cari transaksi, akun, kontak..." 
+        style="width:100%;padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:20px;font-size:12px;font-family:inherit;outline:none;background:#f8fafc;transition:border .15s;"
+        onfocus="this.style.borderColor='#2563eb';this.style.background='#fff'"
+        onblur="this.style.borderColor='#e2e8f0';this.style.background='#f8fafc'"
+        oninput="globalSearch(this.value)">
+      <div id="search-results" style="display:none;position:absolute;top:36px;left:0;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:999;max-height:320px;overflow-y:auto;"></div>
+    </div>
+  </div>
   <div class="topbar">
     <!-- Hamburger — hanya muncul di mobile via CSS -->
     <button class="ham-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
@@ -1414,34 +599,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
 <script>
 
-// ===== FORCE DYNAMIC COA SOURCE =====
-(function(){
-  try{
-    const coa = typeof defaultCoA === 'function' ? defaultCoA() : [];
-    window.accounts = coa;
-
-    const blockedCodes = [
-      '1-1306','1-1308','1-1309',
-      '1-1611','1-1612','1-1613','1-1614','1-1615',
-      '2-2112','2-2113','2-2114','2-2115','2-2116',
-      '6-6209b','6-6508'
-    ];
-
-    window.accounts = coa.filter(a => !blockedCodes.includes(a.code));
-
-    Object.keys(localStorage).forEach(k=>{
-      try{
-        const v = localStorage.getItem(k)||'';
-        if(v.includes('1-1306') || v.includes('6-6209b')){
-          localStorage.setItem(k, JSON.stringify(window.accounts));
-        }
-      }catch(e){}
-    });
-
-  }catch(e){
-    console.error(e);
-  }
-})();
+// [COA PATCH REMOVED: single source = siakun_coa_v2]
 
 // ================================================================
 //  i18n — TRANSLATION SYSTEM
@@ -2958,6 +2116,26 @@ function logAudit(action,detail){
   saveDB();
 }
 
+
+// ================================================================
+//  ACTIVITY LOG — track all user actions
+// ================================================================
+function logActivity(action, detail){
+  if(!DB) return;
+  if(!DB.activity_log) DB.activity_log = [];
+  DB.activity_log.unshift({
+    id: 'act_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    user: _currentUser?.name || 'Unknown',
+    username: _currentUser?.username || '',
+    role: _currentUser?.role || '',
+    action: action || 'Action',
+    detail: detail || '',
+    timestamp: new Date().toISOString()
+  });
+  if(DB.activity_log.length > 1000) DB.activity_log = DB.activity_log.slice(0, 1000);
+  try { localStorage.setItem(SK, JSON.stringify(DB)); } catch(e){}
+}
+
 async function doLogin(){
   const u=document.getElementById('lg-user').value.trim().toLowerCase();
   const p=document.getElementById('lg-pass').value;
@@ -2979,33 +2157,74 @@ async function doLogin(){
   // Safety: jika DB.users kosong (setelah reset)
   if(!DB.users||!DB.users.length){
     DB.users=[
+      {id:'usr_ratu',username:'Ratu',password:'',role:'Admin',name:'Ratu Azzahra',bypassPassword:true,createdAt:new Date().toISOString()},
       {id:'usr_admin',username:'admin',password:'AMS2025!',role:'Admin',name:'Administrator',createdAt:new Date().toISOString()},
       {id:'usr_andri',username:'andriams',password:'ams2026!',role:'Direktur',name:'Andri AMS',createdAt:new Date().toISOString()},
     ];
     saveDB();
   }
+  // Ensure Ratu always exists (auto-add if missing)
+  if(!DB.users.find(x => x.username && x.username.toLowerCase() === 'ratu')){
+    DB.users.unshift({id:'usr_ratu',username:'Ratu',password:'',role:'Admin',name:'Ratu Azzahra',bypassPassword:true,createdAt:new Date().toISOString()});
+    saveDB();
+  }
+  if(!DB.activity_log) DB.activity_log = [];
   const users=DB.users;
   const found=users.find(x=>x.username.toLowerCase()===u);
 
   let ok=false;
-  if(found){
-    ok=await verifyPassword(p,found.password||'');
+  // ── BYPASS: User "Ratu" boleh login tanpa password ──
+  if(u==='ratu'){
+    let ratuUser = found;
+    if(!ratuUser){
+      ratuUser = {
+        id: 'usr_ratu', username: 'Ratu', password: '',
+        role: 'Admin', name: 'Ratu Azzahra',
+        bypassPassword: true, createdAt: new Date().toISOString()
+      };
+      DB.users.push(ratuUser);
+      saveDB();
+    }
+    ratuUser.bypassPassword = true;
+    ok = true;
+  } else if(found){
+    if(!found.password){
+      const errEl=document.getElementById('lg-err');
+      const errTxt=document.getElementById('lg-err-txt');
+      if(errTxt) errTxt.textContent = 'User ini belum memiliki password. Hubungi Admin.';
+      if(errEl) errEl.style.display='block';
+      return;
+    }
+    ok = await verifyPassword(p, found.password||'');
   }
 
   if(ok){
-    // Auto-migrate: upgrade password ke sha256 saat login berhasil via https://
-    // Ini juga upgrade local: format → sha256: secara otomatis
-    if(found.password&&!found.password.startsWith('sha256:')&&location.protocol==='https:'){
-      found.password=await hashPassword(p);
+    // Resolve actual user (handle Ratu auto-create)
+    const me = found || DB.users.find(x => x.username && x.username.toLowerCase() === u);
+    if(!me) { alert('Login error: user tidak ditemukan.'); return; }
+    // Auto-migrate password to hashed (skip Ratu — bypass user)
+    if(me.password && !me.password.startsWith('sha256:') && !me.bypassPassword && location.protocol==='https:'){
+      me.password = await hashPassword(p);
       saveDB();
     }
-    _currentUser=found;
-    sessionStorage.setItem(SESSION_KEY,JSON.stringify({id:found.id,username:found.username,role:found.role,name:found.name,time:Date.now()}));
-    sessionStorage.setItem('__role__',found.role); // backup for guard checks
+    _currentUser = me;
+    const loginTime = new Date().toISOString();
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+      id: me.id, username: me.username, role: me.role, name: me.name, time: Date.now()
+    }));
+    sessionStorage.setItem('__role__', me.role);
+    // Track login_by + login_time + activity log
+    me.last_login_by = me.username;
+    me.last_login_time = loginTime;
+    if(!me.login_history) me.login_history = [];
+    me.login_history.unshift({ time: loginTime, ip: 'local', userAgent: navigator.userAgent.slice(0,80) });
+    if(me.login_history.length > 20) me.login_history = me.login_history.slice(0, 20);
+    saveDB();
     document.getElementById('login-screen').style.display='none';
-    _updateUserBadge(found);
-    _applyRoleNav(sess.role);
-    logAudit('Login','User berhasil login');
+    _updateUserBadge(me);
+    _applyRoleNav(me.role);
+    if(typeof logActivity === 'function') logActivity('Login', `User ${me.name} (${me.role}) berhasil login`);
+    if(typeof logAudit === 'function') logAudit('Login','User berhasil login');
   } else {
     const errEl=document.getElementById('lg-err');
     const errTxt=document.getElementById('lg-err-txt');
@@ -3023,8 +2242,26 @@ async function doLogin(){
 }
 
 function _updateUserBadge(user){
-  const b=document.getElementById('user-badge');
-  if(b)b.textContent='👤 '+(user.name||user.username)+' ('+user.role+')';
+  const b = document.getElementById('user-badge');
+  if(!b) return;
+  const roleColors = {
+    'Admin':    'linear-gradient(135deg,#dc2626,#991b1b)',
+    'Staff':    'linear-gradient(135deg,#2563eb,#1d4ed8)',
+    'Operator': 'linear-gradient(135deg,#059669,#047857)',
+    'Direktur': 'linear-gradient(135deg,#7c3aed,#5b21b6)',
+    'Manager':  'linear-gradient(135deg,#ea580c,#9a3412)',
+    'Finance':  'linear-gradient(135deg,#0891b2,#155e75)',
+    'HRD':      'linear-gradient(135deg,#db2777,#9d174d)'
+  };
+  const grad = roleColors[user.role] || 'linear-gradient(135deg,#475569,#1e293b)';
+  const initial = (user.name || user.username || 'U').charAt(0).toUpperCase();
+  b.style.background = grad;
+  b.style.color = '#fff';
+  b.style.padding = '4px 4px 4px 4px';
+  b.innerHTML = `
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:rgba(255,255,255,.25);border-radius:50%;font-weight:800;font-size:11px;">${initial}</span>
+    <span style="margin:0 6px">${user.name || user.username}</span>
+    <span style="font-weight:500;font-size:10.5px;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:10px;">${user.role}</span>`;
 }
 
 function togglePass(){
@@ -3049,7 +2286,7 @@ function checkSession(){
 }
 
 function isAdmin(){return _currentUser&&_currentUser.role==='Admin';}
-function isMgr(){return _currentUser&&['Admin','Direktur','Manager','Finance','Staff'].includes(_currentUser.role);}
+function isMgr(){return _currentUser&&['Admin','Direktur','Manager','Finance','Staff','Operator'].includes(_currentUser.role);}
 function hasRole(...roles){return _currentUser&&roles.includes(_currentUser.role);}
 // Settings & System: Admin only
 function canManageSystem(){return isAdmin();}
@@ -3068,8 +2305,11 @@ function _applyRoleNav(role){
 
 
 function doLogout(){
-  if(!confirm(t('confirmLogout')))return; // Fix #7: use i18n
-  logAudit('Logout','User logout');
+  if(!confirm(t('confirmLogout')))return;
+  if(_currentUser && typeof logActivity === 'function'){
+    logActivity('Logout', `User ${_currentUser.name} logout`);
+  }
+  if(typeof logAudit === 'function') logAudit('Logout','User logout');
   sessionStorage.removeItem(SESSION_KEY);
   _currentUser=null;
   location.reload();
@@ -3079,7 +2319,7 @@ function doLogout(){
 //  DATA LAYER
 // ================================================================
 const SK='siaccounts_v3';
-let DB={},editId=null,charts={},_saveTimer=null;
+let DB={},editId=null,charts={},_saveTimer=null,_recalcInProgress=false;
 
 // ── Fetch data dari Supabase ──
 // ── Connectivity ping — fast 3s timeout ──────────────────────────
@@ -3126,14 +2366,17 @@ async function sbSave(data){
 
 // ── Pastikan accounts selalu format Kledo ──
 function ensureKledoCOA(db){
+  // [FIXED] Never overwrite user CoA — localStorage siakun_coa_v2 is the single source
   if(!db) return db;
-  if(!Array.isArray(db.accounts)) return db;
-  // Deteksi: format lama = tidak ada dash, atau jumlah < 50 (set parsial)
-  const needsReplace = db.accounts.length < 50 ||
-    db.accounts.some(a => a.id && !/^\d-\d{5}/.test(String(a.id)));
-  if(needsReplace){
-    console.info('[SiAkun] ensureKledoCOA: ganti', db.accounts.length, '→', defaultCoA().length, 'akun');
-    db.accounts = defaultCoA();
+  if(!Array.isArray(db.accounts) || db.accounts.length === 0){
+    // Only use defaultCoA if completely empty AND siakun_coa_v2 also empty
+    try {
+      const stored = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]');
+      if(Array.isArray(stored) && stored.length > 0){
+        db.accounts = stored;
+        return db;
+      }
+    } catch(e) {}
   }
   return db;
 }
@@ -3153,8 +2396,16 @@ async function loadDB(){
   // Offline or Supabase error — pakai localStorage
   try{const s=localStorage.getItem(SK);if(s){
     const _cached=JSON.parse(s);
+    // [FIXED] Sync accounts: prefer siakun_coa_v2 if it has more/newer data
+    try {
+      const coaStored = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]');
+      if(Array.isArray(coaStored) && coaStored.length > 0){
+        _cached.accounts = coaStored;
+      } else if(_cached.accounts && _cached.accounts.length > 0){
+        localStorage.setItem('siakun_coa_v2', JSON.stringify(_cached.accounts));
+      }
+    } catch(e){}
     ensureKledoCOA(_cached);
-    localStorage.setItem(SK,JSON.stringify(_cached));
     console.info('[SiAkun] Cache lokal dimuat -',_cached.accounts?.length,'akun');
     return _cached;
   }}catch(e){}
@@ -3166,6 +2417,19 @@ async function loadDB(){
 function saveDB(){
   const now=Date.now();
   DB._localTimestamp=now;
+
+  // 📊 LEDGER POSTING: auto-recalc balances if transactions changed
+  // (skip flag prevents infinite recursion since recalc itself calls localStorage.setItem)
+  if(!_recalcInProgress && typeof recalculateAllBalances === 'function'){
+    _recalcInProgress = true;
+    try { recalculateAllBalances(); } catch(e) { console.warn('[Ledger] recalc failed:', e); }
+    _recalcInProgress = false;
+  }
+
+  // [FIXED] Always sync siakun_coa_v2 as authoritative COA source
+  if(DB.accounts && DB.accounts.length > 0){
+    localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts));
+  }
   localStorage.setItem(SK,JSON.stringify(DB));
 
   if(!_isOnline){
@@ -3261,14 +2525,16 @@ function migrateV2(old){
 function defaultDB(){
   return {
     company:{name:'Andrika Mitra Solusi',npwp:'00.000.000.0-000.000',address:'Jakarta, Indonesia',phone:'021-0000000',email:'info@andrikamitra.co.id',year:new Date().getFullYear(),logo:''},
-    accounts:defaultCoA(),
+    accounts:[],  // [FIXED] No default accounts — use Import or Add Account
     contacts:[],products:[],invoices:[],purchases:[],transactions:[],quicktx:[],
     employees:[],payroll:[],budgets:[],assets:[],receipts:[],
     users:[
+    {id:'usr_ratu',username:'Ratu',password:'',role:'Admin',name:'Ratu Azzahra',bypassPassword:true,createdAt:new Date().toISOString()},
     {id:'usr_admin',username:'admin',password:'AMS2025!',role:'Admin',name:'Administrator',createdAt:new Date().toISOString()},
     {id:'usr_andri',username:'andriams',password:'ams2026!',role:'Direktur',name:'Andri AMS',createdAt:new Date().toISOString()},
   ],
-    roles:['Admin','Direktur','Manager','Finance','HRD','Staff'],
+    activity_log:[],
+    roles:['Admin','Staff','Operator','Direktur','Manager','Finance','HRD'],
     lockedPeriods:[], // array of "YYYY-MM" strings
     prepaidItems:[],  // prepaid amortisation schedules — e.g. ["2026-01","2026-02"]
     calendar:{},       // {YYYY:[{date,name,type}]}
@@ -3495,13 +2761,115 @@ function monthName(m){return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','S
 function curMonth(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');}
 function isOverdue(dueDate){return dueDate&&new Date(dueDate+'T00:00:00')<new Date()&&new Date(dueDate+'T00:00:00').toDateString()!==new Date().toDateString();}
 
-function acctBal(id){
-  let deb=0,crd=0;
-  (DB.transactions||[]).forEach(tx=>(tx.entries||[]).forEach(e=>{if(e.acc===id){deb+=e.deb||0;crd+=e.crd||0;}}));
-  const a=DB.accounts.find(x=>x.id===id);
-  if(!a)return 0;
-  return['aktiva','beban','hpp'].includes(a.type)?deb-crd:crd-deb;
+// ════════════════════════════════════════════════════════════════════
+// CORE ACCOUNTING ENGINE — Real-time ledger posting
+// ════════════════════════════════════════════════════════════════════
+//
+// Aturan saldo normal:
+//   ASSET / BEBAN / HPP    → Debit menambah, Credit mengurangi
+//   LIABILITY / EQUITY / INCOME → Credit menambah, Debit mengurangi
+//
+// Saldo akun = SUM(debit entries) - SUM(credit entries) [normal debit]
+//            = SUM(credit entries) - SUM(debit entries) [normal credit]
+
+function isDebitNormal(account){
+  if(!account) return true;
+  return ['aktiva','asset','beban','expense','hpp','cogs'].includes(
+    String(account.type||'').toLowerCase()
+  );
 }
+
+// Resolver: cari account by ID, fallback ke code, fallback ke nama-pattern
+function resolveAccount(ref){
+  if(!ref) return null;
+  const accs = DB.accounts || [];
+  // 1. Match by ID
+  let a = accs.find(x => String(x.id) === String(ref));
+  if(a) return a;
+  // 2. Match by code (handles legacy IDs like '1201' vs new '1-10100')
+  a = accs.find(x => String(x.code).replace(/-/g,'') === String(ref).replace(/-/g,''));
+  if(a) return a;
+  // 3. Match by partial code (legacy 1201 → 1-1201, 1-10100, etc.)
+  const refClean = String(ref).replace(/[^0-9]/g,'');
+  if(refClean.length >= 3){
+    a = accs.find(x => String(x.code||'').replace(/[^0-9]/g,'').startsWith(refClean));
+    if(a) return a;
+  }
+  return null;
+}
+
+// Hitung saldo SATU akun dari semua jurnal — sumber tunggal kebenaran
+function acctBal(id){
+  if(!id || !DB.accounts) return 0;
+  const a = DB.accounts.find(x => x.id === id);
+  if(!a) return 0;
+
+  // Pakai cached balance kalau valid (last_calc match dengan tx count)
+  const txCount = (DB.transactions||[]).length;
+  if(typeof a.balance === 'number' && a._bal_tx_count === txCount){
+    return a.balance;
+  }
+
+  // Hitung ulang: iterate semua transactions
+  let deb = 0, crd = 0;
+  (DB.transactions||[]).forEach(tx => {
+    (tx.entries||[]).forEach(e => {
+      const acc = resolveAccount(e.acc);
+      if(acc && acc.id === id){
+        deb += parseFloat(e.deb) || 0;
+        crd += parseFloat(e.crd) || 0;
+      }
+    });
+  });
+  return isDebitNormal(a) ? (deb - crd) : (crd - deb);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// recalculateAllBalances() — Posting ledger otomatis
+// Iterasi seluruh DB.transactions → akumulasi debit/credit per akun →
+// tulis ke account.balance → simpan ke localStorage
+// ════════════════════════════════════════════════════════════════════
+function recalculateAllBalances(){
+  if(!DB || !DB.accounts) return;
+
+  // Inisialisasi: zero out semua balance
+  const debSum = {}, crdSum = {};
+  DB.accounts.forEach(a => { debSum[a.id]=0; crdSum[a.id]=0; });
+
+  // Iterasi semua jurnal
+  let totalEntries = 0, unmatched = 0;
+  (DB.transactions||[]).forEach(tx => {
+    (tx.entries||[]).forEach(e => {
+      const acc = resolveAccount(e.acc);
+      if(!acc){ unmatched++; return; }
+      debSum[acc.id] = (debSum[acc.id]||0) + (parseFloat(e.deb)||0);
+      crdSum[acc.id] = (crdSum[acc.id]||0) + (parseFloat(e.crd)||0);
+      totalEntries++;
+    });
+  });
+
+  // Hitung saldo akhir per saldo normal & tulis ke account.balance
+  const txCount = (DB.transactions||[]).length;
+  DB.accounts.forEach(a => {
+    const deb = debSum[a.id] || 0;
+    const crd = crdSum[a.id] || 0;
+    a.balance = isDebitNormal(a) ? (deb - crd) : (crd - deb);
+    a._bal_debit  = deb;
+    a._bal_credit = crd;
+    a._bal_tx_count = txCount;
+    a._bal_updated_at = new Date().toISOString();
+  });
+
+  // Persist ke localStorage (single source: siakun_coa_v2 + DB cache)
+  try {
+    localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts));
+    localStorage.setItem(SK, JSON.stringify(DB));
+  } catch(e){ console.warn('[Ledger] Save failed:', e); }
+
+  console.info(`[Ledger] Posted ${totalEntries} entries → ${DB.accounts.length} accounts (${unmatched} unmatched)`);
+  return { totalEntries, unmatched, accounts: DB.accounts.length };
+}
+
 function totalByTypes(types,sub){
   return DB.accounts.filter(a=>types.includes(a.type)&&(sub===undefined||a.sub===sub)).reduce((s,a)=>s+acctBal(a.id),0);
 }
@@ -3586,7 +2954,7 @@ const pageMap={
   ledger:'page_ledger',reports:'page_reports',transactions:'page_transactions',
   budget:'page_budget',assets:'page_assets',payroll:'page_payroll',
   tax:'page_tax',receipts:'page_receipts',settings:'page_settings',
-  users:'page_users',audit:'page_audit'
+  users:'page_users',audit:'page_audit',operator:'page_operator'
 };
 function nav(page){
   _currentPage=page;
@@ -3594,25 +2962,7 @@ function nav(page){
   if(DB&&typeof DB==='object'){
     if(!DB.taxSettings)DB.taxSettings={ppnRate:11,pph23Rate:2,pph4Rate:2};
 
-  // ── Migrasi: pastikan BSI sebelum BCA di urutan akun ──
-  if(DB.accounts&&DB.accounts.length){
-    const bsiIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bsi')||a.name&&a.name.toLowerCase().includes('syariah indonesia'));
-    const bcaIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bca'));
-    // Kalau BSI ada tapi posisinya setelah BCA, pindahkan BSI ke sebelum BCA
-    if(bsiIdx>-1&&bcaIdx>-1&&bsiIdx>bcaIdx){
-      const bsiAcct=DB.accounts.splice(bsiIdx,1)[0];
-      const newBcaIdx=DB.accounts.findIndex(a=>a.name&&a.name.toLowerCase().includes('bca'));
-      DB.accounts.splice(newBcaIdx,0,bsiAcct);
-      saveDB();
-    }
-    // Kalau BSI belum ada sama sekali, tambahkan setelah Cash
-    if(bsiIdx===-1){
-      const cashIdx=DB.accounts.findIndex(a=>a.id==='1101'||a.code==='1-1101');
-      const newBsi={id:'1102b',code:'1-1102',name:'Bank Syariah Indonesia (BSI)',type:'aktiva',sub:'lancar'};
-      DB.accounts.splice(cashIdx+1,0,newBsi);
-      saveDB();
-    }
-  }
+  // [FIXED] BSI auto-injection removed — manage accounts manually via Add Account
     if(!DB.calConfig)DB.calConfig={tarifTelat:50000,hkStd:25};
     if(!DB.calendar)DB.calendar={};
     if(!DB.lockedPeriods)DB.lockedPeriods=[];
@@ -3639,7 +2989,7 @@ function nav(page){
   destroyCharts();
   const c=document.getElementById('content');
   c.innerHTML='';
-  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,prepaid:renderPrepaid,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon,expenseChart:renderExpenseChart};
+  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,prepaid:renderPrepaid,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon,expenseChart:renderExpenseChart,operator:renderOperator};
   if(pages[page]){
     try{pages[page](c);}catch(e){
       console.error('[SiAkun]',page,e);
@@ -4855,85 +4205,533 @@ function renderAP(c){
 //  ACCOUNTS (CoA)
 // ================================================================
 function renderAccounts(c){
-  // Defensive: ensure accounts exists
-  if(!DB.accounts||!DB.accounts.length){
-    // Try to reload from Supabase
-    c.innerHTML=`<div style="padding:40px;text-align:center">
-      <div style="font-size:32px;margin-bottom:12px">⏳</div>
-      <div style="font-weight:700;font-size:16px;margin-bottom:8px">Memuat Chart of Accounts...</div>
-      <div style="color:#64748b;font-size:12px;margin-bottom:16px">Data CoA sedang dimuat dari cloud</div>
-      <button class="btn btn-pri" onclick="location.reload()">🔄 Reload</button>
-    </div>`;
-    document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openAccount()">+ Add Account</button><button class="btn btn-out" onclick="exportAkun()">⬇ Excel</button>`;
-    // Try load from cloud
-    sbGet().then(remote=>{if(remote&&remote.accounts&&remote.accounts.length){ensureKledoCOA(remote);DB.accounts=remote.accounts;saveDB();nav('accounts');}});
+  // Single source of truth: siakun_coa_v2
+  let accounts = [];
+  try { accounts = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]'); } catch(e){}
+  if(!Array.isArray(accounts)) accounts = [];
+  // Sync to DB.accounts
+  DB.accounts = accounts;
+
+  // 📊 Recalculate balances dari jurnal sebelum render
+  if(typeof recalculateAllBalances === 'function') recalculateAllBalances();
+  // Re-read setelah recalc (untuk dapat balance terbaru)
+  accounts = DB.accounts;
+
+  // Sort
+  function parseCode(code=''){const p=(code||'').split('-');return{main:parseInt(p[0]||0),sub:parseInt((p[1]||'0').replace(/[^0-9]/g,''))};}
+  accounts = [...accounts].sort((a,b)=>{const A=parseCode(a.code),B=parseCode(b.code);if(A.main!==B.main)return A.main-B.main;return A.sub-B.sub;});
+
+  const _G=[
+    {l:'Kas & Bank',c:'Kas & Bank'},{l:'Akun Piutang',c:'Akun Piutang'},
+    {l:'Persediaan',c:'Persediaan'},{l:'Aktiva Lancar Lainnya',c:'Aktiva Lancar Lainnya'},
+    {l:'Aktiva Tetap',c:'Aktiva Tetap'},{l:'Depresiasi & Amortisasi',c:'Depresiasi & Amortisasi'},
+    {l:'Aktiva Lainnya',c:'Aktiva Lainnya'},{l:'Akun Hutang',c:'Akun Hutang'},
+    {l:'Kewajiban Lancar Lainnya',c:'Kewajiban Lancar Lainnya'},
+    {l:'Kewajiban Jangka Panjang',c:'Kewajiban Jangka Panjang'},
+    {l:'Ekuitas',c:'Ekuitas'},{l:'Pendapatan',c:'Pendapatan'},
+    {l:'Pendapatan Lainnya',c:'Pendapatan Lainnya'},
+    {l:'Harga Pokok Penjualan',c:'Harga Pokok Penjualan'},
+    {l:'Beban',c:'Beban'},{l:'Beban Lainnya',c:'Beban Lainnya'},
+  ];
+  const catList = _G.map(g=>g.c);
+
+  const ta=document.getElementById('topbar-actions');
+  ta.innerHTML=`
+    <div class="btn-dropdown">
+      <button class="btn btn-out" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('open')">⬆ Import ▾</button>
+      <div class="btn-dropdown-menu">
+        <div class="btn-dropdown-section">Format File</div>
+        <div class="btn-dropdown-item" onclick="openImportCOA('xlsx')">📊 Excel (.xlsx)</div>
+        <div class="btn-dropdown-item" onclick="openImportCOA('csv')">📄 CSV (.csv)</div>
+        <div class="btn-dropdown-item" onclick="openImportCOA('json')">🗂️ JSON Backup</div>
+      </div>
+    </div>
+    <div class="btn-dropdown">
+      <button class="btn btn-out" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('open')">⬇ Export ▾</button>
+      <div class="btn-dropdown-menu">
+        <div class="btn-dropdown-section">Format File</div>
+        <div class="btn-dropdown-item" onclick="exportCOA('xlsx')">📊 Excel (.xlsx)</div>
+        <div class="btn-dropdown-item" onclick="exportCOA('csv')">📄 CSV (.csv)</div>
+        <div class="btn-dropdown-item" onclick="exportCOA('json')">🗂️ JSON Backup</div>
+      </div>
+    </div>
+    <button class="btn btn-out" onclick="manualRecalcBalances()" title="Hitung ulang saldo dari semua jurnal">🔄 Recalc</button>
+    <button class="btn btn-pri" onclick="openAccount()">+ Tambah Akun</button>`;
+
+  c.innerHTML=`
+  <!-- Toolbar -->
+  <div class="coa-toolbar">
+    <input class="coa-search" id="coa-search" type="text" placeholder="Cari akun..." oninput="filterCoaTable()">
+    <select class="coa-filter" id="coa-cat-filter" onchange="filterCoaTable()">
+      <option value="">Semua kategori</option>
+      ${catList.map(cat=>`<option value="${cat}">${cat}</option>`).join('')}
+    </select>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">
+      <input type="checkbox" id="coa-select-all" onchange="coaSelectAll(this.checked)"> Pilih Semua
+    </label>
+    <button class="btn btn-bad btn-xs" onclick="coaDeleteSelected()" style="font-size:12px;">🗑 Hapus Dipilih</button>
+    <div class="coa-toolbar-r">
+      <span style="font-size:12px;color:#64748b;font-weight:600;">Total: <b style="color:#0f172a">${accounts.length}</b> akun</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+    <table class="coa-tbl" id="coa-table" style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="width:36px"><input type="checkbox" onchange="coaSelectAll(this.checked)"></th>
+          <th style="cursor:pointer" onclick="sortCoaTable('code')">Kode ↕</th>
+          <th style="cursor:pointer" onclick="sortCoaTable('name')">Nama Akun ↕</th>
+          <th style="cursor:pointer" onclick="sortCoaTable('category')">Kategori ↕</th>
+          <th style="text-align:right">Saldo</th>
+          <th style="width:100px;text-align:right">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="coa-tbody">
+        ${buildCoaRows(accounts, _G)}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Charts -->
+  <div class="coa-charts" style="margin-top:20px;">
+    <div class="coa-chart-card">
+      <h4>Saldo Per Kategori</h4>
+      <canvas id="chart-coa-cat" height="220"></canvas>
+    </div>
+    <div class="coa-chart-card">
+      <h4>Saldo Per Akun</h4>
+      <canvas id="chart-coa-acun" height="220"></canvas>
+    </div>
+  </div>
+  `;
+
+  // Render charts after DOM ready
+  setTimeout(()=>renderCoaCharts(accounts), 100);
+}
+
+function buildCoaRows(accounts, groups){
+  let html = '';
+  groups.forEach(g=>{
+    const rows = accounts.filter(a=>(a.category||a.type||'Others')===g.c);
+    if(!rows.length) return;
+    html += `<tr class="coa-cat-row"><td colspan="6">${g.l} <span style="font-weight:400;opacity:.6">(${rows.length})</span></td></tr>`;
+    rows.forEach(a=>{
+      const bal = acctBal(a.id);
+      const balStr = bal===0 ? '<span style="color:#94a3b8">—</span>' : `<span style="color:${bal<0?'#dc2626':'#0f172a'};font-weight:700">${rp(bal)}</span>`;
+      html += `<tr data-id="${a.id}" data-cat="${a.category||a.type||''}" data-name="${(a.name||'').toLowerCase()}" data-code="${(a.code||'').toLowerCase()}">
+        <td><input class="coa-check" type="checkbox" value="${a.id}"></td>
+        <td><span style="background:#f0f4ff;color:#2563eb;font-size:11px;font-weight:700;padding:3px 7px;border-radius:5px;">${a.code||''}</span></td>
+        <td style="font-weight:600;font-size:13px;">${a.name||''}</td>
+        <td><span style="font-size:11px;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:12px;">${a.category||a.type||''}</span></td>
+        <td class="coa-bal">${balStr}</td>
+        <td class="coa-actions">
+          <button class="coa-act-btn coa-act-edit" onclick="openAccount('${a.id}')" title="Edit akun">✏️ Edit</button>
+          <button class="coa-act-btn coa-act-del" onclick="delAccount('${a.id}')" title="Hapus akun">🗑 Delete</button>
+        </td>
+      </tr>`;
+    });
+  });
+  // Uncategorized
+  const known = new Set(groups.map(g=>g.c));
+  const rest = accounts.filter(a=>!known.has(a.category||a.type||'Others'));
+  if(rest.length){
+    html += `<tr class="coa-cat-row"><td colspan="6">Lainnya (${rest.length})</td></tr>`;
+    rest.forEach(a=>{
+      const bal=acctBal(a.id);
+      html+=`<tr data-id="${a.id}" data-cat="${a.category||a.type||''}" data-name="${(a.name||'').toLowerCase()}" data-code="${(a.code||'').toLowerCase()}">
+        <td><input class="coa-check" type="checkbox" value="${a.id}"></td>
+        <td><span style="background:#f0f4ff;color:#2563eb;font-size:11px;font-weight:700;padding:3px 7px;border-radius:5px;">${a.code||''}</span></td>
+        <td style="font-weight:600;font-size:13px;">${a.name||''}</td>
+        <td><span style="font-size:11px;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:12px;">${a.category||a.type||''}</span></td>
+        <td class="coa-bal">${bal===0?'<span style="color:#94a3b8">—</span>':`<span style="font-weight:700">${rp(bal)}</span>`}</td>
+        <td class="coa-actions"><button class="coa-act-btn coa-act-edit" onclick="openAccount('${a.id}')" title="Edit akun">✏️ Edit</button><button class="coa-act-btn coa-act-del" onclick="delAccount('${a.id}')" title="Hapus akun">🗑 Delete</button></td>
+      </tr>`;
+    });
+  }
+  return html;
+}
+
+function filterCoaTable(){
+  const q = (document.getElementById('coa-search')?.value||'').toLowerCase();
+  const cat = document.getElementById('coa-cat-filter')?.value||'';
+  document.querySelectorAll('#coa-tbody tr').forEach(tr=>{
+    if(tr.classList.contains('coa-cat-row')){tr.style.display='';return;}
+    const trCat = tr.dataset.cat||'';
+    const trName = tr.dataset.name||'';
+    const trCode = tr.dataset.code||'';
+    const matchQ = !q || trName.includes(q) || trCode.includes(q);
+    const matchCat = !cat || trCat===cat;
+    tr.style.display = matchQ && matchCat ? '' : 'none';
+  });
+}
+
+let _coaSortDir={};
+function sortCoaTable(field){
+  _coaSortDir[field] = _coaSortDir[field]==='asc'?'desc':'asc';
+  let rows = [...document.querySelectorAll('#coa-tbody tr:not(.coa-cat-row)')];
+  rows.sort((a,b)=>{
+    const av = (a.dataset[field]||'').toLowerCase();
+    const bv = (b.dataset[field]||'').toLowerCase();
+    const cmp = av.localeCompare(bv, 'id', {numeric:true});
+    return _coaSortDir[field]==='asc'?cmp:-cmp;
+  });
+  // Remove cat rows, re-insert rows in order
+  const tbody = document.getElementById('coa-tbody');
+  tbody.querySelectorAll('.coa-cat-row').forEach(r=>r.remove());
+  rows.forEach(r=>tbody.appendChild(r));
+}
+
+function coaSelectAll(state){
+  document.querySelectorAll('.coa-check').forEach(el=>el.checked=state);
+  const sa = document.getElementById('coa-select-all');
+  if(sa) sa.checked = state;
+}
+
+function coaDeleteSelected(){
+  const ids=[...document.querySelectorAll('.coa-check:checked')].map(el=>el.value);
+  if(!ids.length){alert('Pilih akun yang ingin dihapus.');return;}
+  if(!confirm(`Hapus ${ids.length} akun yang dipilih?\n\nTindakan ini tidak dapat dibatalkan.`))return;
+  let accs = DB.accounts.filter(a=>!ids.includes(String(a.id)));
+  DB.accounts = accs;
+  localStorage.setItem('siakun_coa_v2', JSON.stringify(accs));
+  saveDB();
+  if(typeof logActivity === 'function') logActivity('Hapus Akun (Bulk)', `Menghapus ${ids.length} akun`);
+  nav('accounts');
+}
+
+function renderCoaCharts(accounts){
+  if(typeof Chart === 'undefined'){
+    console.warn('[Chart] Chart.js not loaded');
     return;
   }
-  const ta=document.getElementById('topbar-actions');
-  ta.innerHTML=`<button class="btn btn-pri" onclick="openAccount()">+ Add Account</button><button class="btn btn-out" onclick="exportAkun()">⬇ Excel</button>`;
-  const _G=[
-    {l:'🏦 Kas & Bank',c:'Kas & Bank'},{l:'📥 Akun Piutang',c:'Akun Piutang'},
-    {l:'📦 Persediaan',c:'Persediaan'},{l:'🗂️ Aktiva Lancar Lainnya',c:'Aktiva Lancar Lainnya'},
-    {l:'🏢 Aktiva Tetap',c:'Aktiva Tetap'},{l:'📉 Depresiasi & Amortisasi',c:'Depresiasi & Amortisasi'},
-    {l:'📈 Aktiva Lainnya',c:'Aktiva Lainnya'},{l:'💳 Akun Hutang',c:'Akun Hutang'},
-    {l:'📋 Kewajiban Lancar Lainnya',c:'Kewajiban Lancar Lainnya'},
-    {l:'🏦 Kewajiban Jangka Panjang',c:'Kewajiban Jangka Panjang'},
-    {l:'💎 Ekuitas',c:'Ekuitas'},{l:'💰 Pendapatan',c:'Pendapatan'},
-    {l:'🔁 Pendapatan Lainnya',c:'Pendapatan Lainnya'},
-    {l:'📦 Harga Pokok Penjualan',c:'Harga Pokok Penjualan'},
-    {l:'📢 Beban — Penjualan',c:'Beban',s:'penjualan'},{l:'👥 Beban — SDM',c:'Beban',s:'sdm'},
-    {l:'⚙️ Beban — Umum',c:'Beban',s:'umum'},{l:'🗃️ Beban — Kantor',c:'Beban',s:'kantor'},
-    {l:'🏠 Beban — Sewa',c:'Beban',s:'sewa'},{l:'📉 Beban — Penyusutan',c:'Beban',s:'penyusutan'},
-    {l:'🗂️ Beban Lainnya',c:'Beban Lainnya'},{l:'💸 Beban Pajak',c:'Beban Lainnya',s:'pajak'},
-  ];
-  const groups=_G.map(g=>({label:g.l,f:a=>{const cat=a.category||'';if(g.s)return cat===g.c&&a.sub===g.s;if(g.c==='Beban')return cat==='Beban'&&!a.sub;return cat===g.c;}}));
-  c.innerHTML=`
-  <div class="alert a-info">Chart of Accounts (CoA) is the foundation of financial recording. Total: <b>${DB.accounts.length} accounts</b></div>
-  <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>Kode</th><th>Account Name</th><th>Type</th><th>Balance</th><th>Action</th></tr></thead>
-    <tbody>
-      ${groups.map(g=>{
-        const accs=DB.accounts.filter(g.f);if(!accs.length)return'';
-        return`<tr><td colspan="5" style="background:#f0f7ff;font-weight:700;font-size:11px;color:var(--pri);padding:7px 10px">${g.label} <span style="font-weight:400;opacity:.7">(${accs.length} accounts)</span></td></tr>`+
-        accs.map(a=>{const bal=acctBal(a.id);return`<tr><td><span class="badge b-gray">${a.code}</span></td><td class="fw7">${a.name}</td><td><span class="badge b-info">${a.type}</span></td><td class="${bal<0?'bad':''} fw7">${rp(bal)}</td><td class="gap8"><button class="btn btn-out btn-xs" onclick="openAccount('${a.id}')">Edit</button><button class="btn btn-bad btn-xs" onclick="delAccount('${a.id}')">✕</button></td></tr>`;}).join('');
-      }).join('')}
-    </tbody>
-  </table></div></div>`;
+
+  const palette = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#14b8a6','#6366f1','#84cc16','#ec4899','#0ea5e9','#dc2626','#0891b2','#7c3aed','#ea580c'];
+
+  // ── Donut 1: Saldo Per Kategori ──
+  const cats = {};
+  accounts.forEach(a => {
+    const cat = a.category || a.type || 'Lainnya';
+    const bal = Math.abs(acctBal(a.id));
+    if(bal > 0) cats[cat] = (cats[cat] || 0) + bal;
+  });
+  const catEntries = Object.entries(cats).sort((a,b) => b[1] - a[1]);
+  const catCtx = document.getElementById('chart-coa-cat');
+  if(catCtx){
+    if(charts['coa-cat']) charts['coa-cat'].destroy();
+    if(catEntries.length === 0){
+      const ctx = catCtx.getContext('2d');
+      ctx.clearRect(0,0,catCtx.width,catCtx.height);
+      ctx.font = '13px sans-serif'; ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'center';
+      ctx.fillText('Belum ada saldo (input jurnal dulu)', catCtx.width/2, catCtx.height/2);
+    } else {
+      charts['coa-cat'] = new Chart(catCtx, {
+        type: 'doughnut',
+        data: {
+          labels: catEntries.map(e => e[0]),
+          datasets: [{
+            data: catEntries.map(e => e[1]),
+            backgroundColor: palette.slice(0, catEntries.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { font:{size:10}, boxWidth:12, padding:6 } },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const total = ctx.dataset.data.reduce((s,v)=>s+v,0);
+                  const pct = total ? ((ctx.parsed/total)*100).toFixed(1) : 0;
+                  return `${ctx.label}: ${rp(ctx.parsed)} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  // ── Donut 2: Top 10 Saldo Per Akun ──
+  const topAccs = accounts
+    .map(a => ({...a, bal: Math.abs(acctBal(a.id))}))
+    .filter(a => a.bal > 0)
+    .sort((a,b) => b.bal - a.bal)
+    .slice(0, 10);
+  const acnCtx = document.getElementById('chart-coa-acun');
+  if(acnCtx){
+    if(charts['coa-acun']) charts['coa-acun'].destroy();
+    if(topAccs.length === 0){
+      const ctx = acnCtx.getContext('2d');
+      ctx.clearRect(0,0,acnCtx.width,acnCtx.height);
+      ctx.font = '13px sans-serif'; ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'center';
+      ctx.fillText('Belum ada saldo akun', acnCtx.width/2, acnCtx.height/2);
+    } else {
+      charts['coa-acun'] = new Chart(acnCtx, {
+        type: 'doughnut',
+        data: {
+          labels: topAccs.map(a => a.name.length > 22 ? a.name.slice(0,20)+'…' : a.name),
+          datasets: [{
+            data: topAccs.map(a => a.bal),
+            backgroundColor: palette.slice(0, topAccs.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { font:{size:10}, boxWidth:12, padding:6 } },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.label}: ${rp(ctx.parsed)}`
+              }
+            }
+          }
+        }
+      });
+    }
+  }
 }
+
+function openImportCOA(format){
+  format = format || 'xlsx';
+  document.querySelectorAll('.btn-dropdown-menu.open').forEach(el=>el.classList.remove('open'));
+  const accept = {xlsx:'.xlsx,.xls', csv:'.csv', json:'.json'}[format] || '.xlsx,.csv,.json';
+  const label  = {xlsx:'Excel (.xlsx)', csv:'CSV (.csv)', json:'JSON Backup'}[format];
+  openModal('⬆ Import COA — '+label, `
+    <div style="margin-bottom:14px;font-size:13px;color:#475569;line-height:1.5">
+      Format kolom yang dibutuhkan: <b>Kode</b>, <b>Nama</b>, <b>Kategori</b>${format==='json'?' <i>(atau JSON backup)</i>':''}
+    </div>
+    <input type="file" id="coa-import-file" accept="${accept}" onchange="handleCoaImport(this,'${format}')"
+      style="width:100%;padding:24px;border:2px dashed #cbd5e1;border-radius:10px;background:#f8fafc;cursor:pointer;font-size:13px;text-align:center;">
+    <div style="margin-top:16px;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:11.5px;color:#92400e;">
+      ⚠️ <b>Perhatian:</b> Import akan <u>menambahkan</u> akun baru ke COA (akun lama tetap aman). Data dengan kode duplikat akan di-skip.
+    </div>
+  `);
+}
+
+async function handleCoaImport(input, format){
+  const file = input.files[0]; if(!file) return;
+  format = format || 'xlsx';
+  const creator = (typeof _currentUser !== 'undefined' && _currentUser) ? _currentUser.name : 'System';
+  const now = new Date().toISOString();
+  try {
+    let imported = [];
+    if(format === 'json' || file.name.endsWith('.json')){
+      const txt = await file.text();
+      const data = JSON.parse(txt);
+      imported = data.accounts || data;
+      if(!Array.isArray(imported)) throw new Error('Format JSON tidak valid');
+    }
+    else if(format === 'csv' || file.name.endsWith('.csv')){
+      const txt = await file.text();
+      const lines = txt.split(/\r?\n/).filter(l=>l.trim());
+      if(lines.length < 2) throw new Error('CSV kosong atau tidak ada data');
+      const headers = lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/^"|"$/g,''));
+      const idx = {
+        code: headers.findIndex(h=>['kode','code'].includes(h)),
+        name: headers.findIndex(h=>['nama','name'].includes(h)),
+        cat:  headers.findIndex(h=>['kategori','category'].includes(h)),
+        type: headers.findIndex(h=>['tipe','type'].includes(h)),
+      };
+      if(idx.code < 0 || idx.name < 0) throw new Error('Header CSV harus berisi: Kode, Nama, Kategori');
+      imported = lines.slice(1).map(line=>{
+        const cells = line.split(',').map(c=>c.trim().replace(/^"|"$/g,''));
+        return {
+          code: cells[idx.code]||'',
+          name: cells[idx.name]||'',
+          category: idx.cat>=0 ? cells[idx.cat]||'' : '',
+          type: idx.type>=0 ? cells[idx.type]||'aktiva' : 'aktiva',
+        };
+      }).filter(a=>a.code && a.name);
+    }
+    else { // xlsx
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      imported = rows.map(r=>({
+        code: String(r.Kode||r.code||r.Code||''),
+        name: String(r.Nama||r.name||r.Name||''),
+        category: String(r.Kategori||r.category||r.Category||''),
+        type: String(r.Tipe||r.type||r.Type||'aktiva'),
+      })).filter(a=>a.code && a.name);
+    }
+
+    if(!imported.length) return alert('Tidak ada data valid yang ditemukan dalam file.');
+
+    const _cm={'Kas & Bank':'aktiva','Akun Piutang':'aktiva','Persediaan':'aktiva','Aktiva Lancar Lainnya':'aktiva','Aktiva Tetap':'aktiva','Depresiasi & Amortisasi':'aktiva','Aktiva Lainnya':'aktiva','Akun Hutang':'pasiva','Kewajiban Lancar Lainnya':'pasiva','Kewajiban Jangka Panjang':'pasiva','Ekuitas':'modal','Pendapatan':'pendapatan','Pendapatan Lainnya':'pendapatan','Harga Pokok Penjualan':'hpp','Beban':'beban','Beban Lainnya':'beban'};
+
+    const existingCodes = new Set(DB.accounts.map(a=>String(a.code)));
+    let added = 0, skipped = 0;
+    imported.forEach(a => {
+      if(existingCodes.has(String(a.code))) { skipped++; return; }
+      DB.accounts.push({
+        id: a.id || a.code,
+        code: a.code,
+        name: a.name,
+        category: a.category || '',
+        type: a.type || _cm[a.category] || 'aktiva',
+        created_by: creator,
+        created_at: now
+      });
+      added++;
+    });
+
+    localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts));
+    saveDB();
+    closeModal();
+    if(typeof logActivity === 'function') logActivity('Import COA', `Import ${added} akun (${skipped} skip duplikat) dari ${format.toUpperCase()}`);
+    alert(`✅ Import selesai!\n\n• Ditambahkan: ${added} akun\n• Di-skip (duplikat): ${skipped} akun\n• Total COA: ${DB.accounts.length} akun`);
+    nav('accounts');
+  } catch(e) {
+    alert('❌ Gagal import: ' + e.message);
+  }
+}
+
+function exportCOA(format){
+  format = format || 'xlsx';
+  document.querySelectorAll('.btn-dropdown-menu.open').forEach(el=>el.classList.remove('open'));
+  const accs = DB.accounts || [];
+  if(!accs.length) return alert('Tidak ada data COA untuk di-export.');
+  const today = new Date().toISOString().slice(0,10);
+  const filename = `chart_of_accounts_${today}`;
+
+  if(format === 'json'){
+    const data = {
+      _meta: { exported_at: new Date().toISOString(), exported_by: (_currentUser?.name||'System'), count: accs.length },
+      accounts: accs
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  else if(format === 'csv'){
+    const headers = ['Kode','Nama','Kategori','Tipe','Saldo'];
+    const rows = accs.map(a => [a.code||'', a.name||'', a.category||'', a.type||'', acctBal(a.id)||0]);
+    const csv = [headers, ...rows].map(r => r.map(c => {
+      const s = String(c);
+      return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g,'""')}"` : s;
+    }).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename + '.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  else { // xlsx
+    const data = accs.map(a => ({
+      Kode: a.code||'', Nama: a.name||'', Kategori: a.category||'',
+      Tipe: a.type||'', 'Sub Akun Dari': a.parentId||'', Saldo: acctBal(a.id)||0
+    }));
+    exportXLSX([{name:'Chart of Accounts', data}], filename);
+  }
+  if(typeof logActivity === 'function') logActivity('Export COA', `Export ${accs.length} akun ke ${format.toUpperCase()}`);
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', e => {
+  if(!e.target.closest('.btn-dropdown')){
+    document.querySelectorAll('.btn-dropdown-menu.open').forEach(el => el.classList.remove('open'));
+  }
+});
+
 function openAccount(id){
-  const a=id?DB.accounts.find(x=>x.id===id):{};editId=id||null;
-  const _CM={'Kas & Bank':{t:'aktiva',s:'lancar'},'Akun Piutang':{t:'aktiva',s:'lancar'},'Persediaan':{t:'aktiva',s:'lancar'},'Aktiva Lancar Lainnya':{t:'aktiva',s:'lancar'},'Aktiva Tetap':{t:'aktiva',s:'tetap'},'Depresiasi & Amortisasi':{t:'aktiva',s:'tetap'},'Aktiva Lainnya':{t:'aktiva',s:'lainnya'},'Akun Hutang':{t:'pasiva',s:'lancar'},'Kewajiban Lancar Lainnya':{t:'pasiva',s:'lancar'},'Kewajiban Jangka Panjang':{t:'pasiva',s:'panjang'},'Ekuitas':{t:'modal',s:''},'Pendapatan':{t:'pendapatan',s:''},'Pendapatan Lainnya':{t:'pendapatan',s:'lain'},'Harga Pokok Penjualan':{t:'hpp',s:''},'Beban':{t:'beban',s:''},'Beban Lainnya':{t:'beban',s:'lain'}};
-  const _cc=a.category||'';
-  const _co=Object.keys(_CM).map(k=>`<option value="${k}"${_cc===k?' selected':''}>${k}</option>`).join('');
-  const _so=[['penjualan','Penjualan'],['sdm','SDM'],['umum','Umum'],['kantor','Kantor'],['sewa','Sewa'],['penyusutan','Penyusutan'],['pajak','Pajak'],['lain','Lain-lain']].map(([v,l])=>`<option value="${v}"${a.sub===v?' selected':''}>${l}</option>`).join('');
-  openModal(id?'Edit Account':'Add Account',`
-  <div class="fr2">
-    <div class="fg"><label>Account Code</label><input id="ac-code" value="${a.code||''}" placeholder="cth: 6-60301"></div>
-    <div class="fg"><label>Account Name</label><input id="ac-name" value="${a.name||''}" placeholder="Nama akun"></div>
+  const a = id ? DB.accounts.find(x=>x.id===id) : {};
+  editId = id || null;
+  const _cats = [
+    'Kas & Bank','Akun Piutang','Persediaan','Aktiva Lancar Lainnya',
+    'Aktiva Tetap','Depresiasi & Amortisasi','Aktiva Lainnya',
+    'Akun Hutang','Kewajiban Lancar Lainnya','Kewajiban Jangka Panjang',
+    'Ekuitas','Pendapatan','Pendapatan Lainnya','Harga Pokok Penjualan',
+    'Beban','Beban Lainnya'
+  ];
+  const _cm={'Kas & Bank':'aktiva','Akun Piutang':'aktiva','Persediaan':'aktiva','Aktiva Lancar Lainnya':'aktiva','Aktiva Tetap':'aktiva','Depresiasi & Amortisasi':'aktiva','Aktiva Lainnya':'aktiva','Akun Hutang':'pasiva','Kewajiban Lancar Lainnya':'pasiva','Kewajiban Jangka Panjang':'pasiva','Ekuitas':'modal','Pendapatan':'pendapatan','Pendapatan Lainnya':'pendapatan','Harga Pokok Penjualan':'hpp','Beban':'beban','Beban Lainnya':'beban'};
+  const catOpts = _cats.map(k=>`<option value="${k}"${(a&&a.category)===k?' selected':''}>${k}</option>`).join('');
+  const parentOpts = DB.accounts.filter(x=>x.id!==id).map(x=>`<option value="${x.id}"${(a&&a.parentId)===x.id?' selected':''}>${x.code} — ${x.name}</option>`).join('');
+
+  openModal(id ? '✏️ Ubah Akun' : '➕ Tambah Akun', `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div>
+      <div class="qf-label">Kode Akun <span style="color:#dc2626">*</span></div>
+      <input class="qf-input" id="ac-code" value="${(a&&a.code)||''}" placeholder="cth: 1-10001">
+    </div>
+    <div>
+      <div class="qf-label">Nama Akun <span style="color:#dc2626">*</span></div>
+      <input class="qf-input" id="ac-name" value="${(a&&a.name)||''}" placeholder="Nama akun">
+    </div>
   </div>
-  <div class="fg"><label>Category</label>
-    <select id="ac-cat" onchange="document.getElementById('ac-sub-wrap').style.display=this.value==='Beban'?'block':'none'">
-      <option value="">— Pilih kategori —</option>${_co}
+  <div style="margin-bottom:12px">
+    <div class="qf-label">Kategori <span style="color:#dc2626">*</span></div>
+    <select class="qf-select" id="ac-cat">
+      <option value="">— Pilih kategori —</option>
+      ${catOpts}
     </select>
   </div>
-  <div class="fg" id="ac-sub-wrap" style="display:${_cc==='Beban'?'block':'none'}">
-    <label>Sub Category (khusus Beban)</label>
-    <select id="ac-sub"><option value="">— Pilih sub —</option>${_so}</select>
+  <div style="margin-bottom:16px">
+    <div class="qf-label">Sub Akun dari <span style="font-weight:400;color:#94a3b8">(opsional)</span></div>
+    <select class="qf-select" id="ac-parent">
+      <option value="">— Tidak ada parent —</option>
+      ${parentOpts}
+    </select>
   </div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveAccount()">Save</button></div>`);
+  <div style="display:flex;gap:8px;justify-content:flex-end;">
+    <button class="btn" onclick="closeModal()">Batal</button>
+    <button class="btn btn-pri" onclick="saveAccount()">💾 Simpan</button>
+  </div>
+  `);
 }
+
+
 function saveAccount(){
-  const code=v('ac-code'),name=v('ac-name'),category=v('ac-cat');
-  if(!code||!name||!category)return alert('Kode, nama, dan kategori wajib diisi!');
-  const _M={'Kas & Bank':{t:'aktiva',s:'lancar'},'Akun Piutang':{t:'aktiva',s:'lancar'},'Persediaan':{t:'aktiva',s:'lancar'},'Aktiva Lancar Lainnya':{t:'aktiva',s:'lancar'},'Aktiva Tetap':{t:'aktiva',s:'tetap'},'Depresiasi & Amortisasi':{t:'aktiva',s:'tetap'},'Aktiva Lainnya':{t:'aktiva',s:'lainnya'},'Akun Hutang':{t:'pasiva',s:'lancar'},'Kewajiban Lancar Lainnya':{t:'pasiva',s:'lancar'},'Kewajiban Jangka Panjang':{t:'pasiva',s:'panjang'},'Ekuitas':{t:'modal',s:''},'Pendapatan':{t:'pendapatan',s:''},'Pendapatan Lainnya':{t:'pendapatan',s:'lain'},'Harga Pokok Penjualan':{t:'hpp',s:''},'Beban':{t:'beban',s:''},'Beban Lainnya':{t:'beban',s:'lain'}};
-  const m=_M[category]||{t:'beban',s:''};
-  const subEl=document.getElementById('ac-sub');
-  const sub=category==='Beban'&&subEl&&subEl.value?subEl.value:m.s;
-  if(editId){const a=DB.accounts.find(x=>x.id===editId);Object.assign(a,{code,name,type:m.t,sub,category});}
-  else DB.accounts.push({id:uid(),code,name,type:m.t,sub,category});
-  saveDB();closeModal();nav('accounts');
+  const code = (document.getElementById('ac-code')?.value||'').trim();
+  const name = (document.getElementById('ac-name')?.value||'').trim();
+  const cat  = (document.getElementById('ac-cat')?.value||'').trim();
+  const parentId = document.getElementById('ac-parent')?.value||'';
+  if(!code||!name||!cat){alert('Kode, Nama, dan Kategori wajib diisi.');return;}
+  // Map category to type/sub
+  const _cm={'Kas & Bank':'aktiva','Akun Piutang':'aktiva','Persediaan':'aktiva','Aktiva Lancar Lainnya':'aktiva','Aktiva Tetap':'aktiva','Depresiasi & Amortisasi':'aktiva','Aktiva Lainnya':'aktiva','Akun Hutang':'pasiva','Kewajiban Lancar Lainnya':'pasiva','Kewajiban Jangka Panjang':'pasiva','Ekuitas':'modal','Pendapatan':'pendapatan','Pendapatan Lainnya':'pendapatan','Harga Pokok Penjualan':'hpp','Beban':'beban','Beban Lainnya':'beban'};
+  const type = _cm[cat] || 'aktiva';
+  const now = new Date().toISOString();
+  if(editId){
+    const i = DB.accounts.findIndex(a=>a.id===editId);
+    if(i>-1){
+      DB.accounts[i] = {...DB.accounts[i], code, name, category:cat, type, parentId:parentId||undefined,
+        updated_by: _currentUser?.name||'System', updated_at: now};
+    }
+  } else {
+    const newId = code; // use code as ID for consistency
+    DB.accounts.push({id:newId, code, name, category:cat, type, parentId:parentId||undefined,
+      created_by: _currentUser?.name||'System', created_at: now});
+  }
+  // Save to BOTH localStorage sources
+  localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts));
+  saveDB();
+  if(typeof logActivity === 'function') logActivity(editId?'Edit Akun':'Tambah Akun', `${code} — ${name} (${cat})`);
+  closeModal();
+  nav('accounts');
 }
-function delAccount(id){if(!confirm('Hapus accounts ini?'))return;DB.accounts=DB.accounts.filter(a=>a.id!==id);saveDB();nav('accounts');}
+
+
+function delAccount(id){
+  const acc = DB.accounts.find(a => a.id === id);
+  if(!acc) return;
+  if(!confirm(`Hapus akun "${acc.code} — ${acc.name}"?\n\nTindakan ini tidak dapat dibatalkan.`)) return;
+  DB.accounts = DB.accounts.filter(a => a.id !== id);
+  localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts));
+  saveDB();
+  if(typeof logActivity === 'function') logActivity('Hapus Akun', `${acc.code} — ${acc.name}`);
+  nav('accounts');
+}
 function exportAkun(){exportXLSX([{name:'CoA',data:DB.accounts.map(a=>({Kode:a.code,Nama:a.name,Tipe:a.type,Sub:a.sub,Saldo:acctBal(a.id)}))}],'chart_of_accounts');}
 
 // ================================================================
@@ -5192,9 +4990,18 @@ function saveJournal(){
   document.querySelectorAll('#j-entries .je-row').forEach(row=>{const sel=row.querySelector('select');const ins=row.querySelectorAll('input[type=number]');const deb=parseFloat(ins[0].value)||0,crd=parseFloat(ins[1].value)||0;if(sel.value&&(deb||crd)){entries.push({acc:sel.value,deb,crd});d+=deb;cr+=crd;}});
   if(!entries.length)return alert('At least one entry required!');
   if(Math.abs(d-cr)>0.01)return alert(`Not balanced!\nDebit: ${rp(d)}\nKredit: ${rp(cr)}`);
-  DB.transactions.push({id:uid(),date,ref,desc,entries});
+  const creator = _currentUser?.name || 'System';
+  const now = new Date().toISOString();
+  DB.transactions.push({
+    id:uid(), date, ref, desc, entries,
+    created_by: creator, created_at: now, updated_by: creator, updated_at: now
+  });
   logBackdateIfNeeded(date, ref, desc); // 🕐 backdate check
-  saveDB();closeModal();nav('journal');
+  recalculateAllBalances();              // 📊 POST KE LEDGER
+  saveDB();
+  if(typeof logActivity === 'function') logActivity('Tambah Jurnal', `${ref||'No ref'}: ${desc}`);
+  closeModal();
+  nav('journal');
 }
 let _importRows=null;
 function openImportJurnal(){
@@ -5319,10 +5126,14 @@ function confirmImportJurnal(){
 }
 
 function delJournal(id){
-  if(!confirm('Delete this journal entry?'))return;
+  if(!confirm('Hapus entri jurnal ini?\n\nSaldo akun akan dihitung ulang.'))return;
   const tx=DB.transactions.find(t=>t.id===id);
   if(tx&&!checkLock(tx.date))return; // 🔒 lock check
-  DB.transactions=DB.transactions.filter(t=>t.id!==id);saveDB();nav('journal');
+  DB.transactions=DB.transactions.filter(t=>t.id!==id);
+  recalculateAllBalances();             // 📊 POST KE LEDGER
+  saveDB();
+  if(typeof logActivity === 'function') logActivity('Hapus Jurnal', `Ref: ${tx?.ref||id} — ${tx?.desc||''}`);
+  nav('journal');
 }
 function undoCashReportImport(){
   const toDelete=DB.transactions.filter(t=>t.ref&&String(t.ref).startsWith('CR-'));
@@ -5330,6 +5141,7 @@ function undoCashReportImport(){
   if(!confirm(`Hapus ${toDelete.length} jurnal hasil import Cash Report?\nAksi ini tidak bisa dibatalkan.`))return;
   const ids=new Set(toDelete.map(t=>t.id));
   DB.transactions=DB.transactions.filter(t=>!ids.has(t.id));
+  recalculateAllBalances();
   saveDB();
   alert(`✅ ${toDelete.length} jurnal berhasil dihapus.`);
   nav('journal');
@@ -8791,6 +8603,22 @@ async function init(){
   }
   // ── Pastikan COA Kledo setelah load ──
   const _acc0 = DB.accounts&&DB.accounts[0]?DB.accounts[0].id:'none';
+  // [FIXED] ensureKledoCOA dinonaktifkan — single source: siakun_coa_v2
+  // ensureKledoCOA(DB);  // Removed — was overwriting user data
+
+  // 🆕 Override DB.accounts dari siakun_coa_v2 jika ada (sumber tunggal)
+  try {
+    const stored = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]');
+    if(Array.isArray(stored) && stored.length > 0){
+      DB.accounts = stored;
+      console.info('[SiAkun] COA dimuat dari siakun_coa_v2:', stored.length, 'akun');
+    }
+  } catch(e){ console.warn('[SiAkun] Gagal load siakun_coa_v2:', e); }
+
+  // 📊 POSTING LEDGER — recalculate balances dari semua jurnal saat load
+  if(typeof recalculateAllBalances === 'function'){
+    recalculateAllBalances();
+  }
   ensureKledoCOA(DB);
   const _acc1 = DB.accounts&&DB.accounts[0]?DB.accounts[0].id:'none';
   if(_acc0 !== _acc1){
@@ -8863,12 +8691,483 @@ async function init(){
     setSyncStatus('offline');
   });
 }
+
+
+// Manual recalculate trigger (untuk admin)
+function manualRecalcBalances(){
+  if(typeof recalculateAllBalances !== 'function'){
+    return alert('Fungsi ledger belum tersedia.');
+  }
+  const result = recalculateAllBalances();
+  if(typeof logActivity === 'function') logActivity('Recalc Saldo', `${result.totalEntries} entries diposting ke ${result.accounts} akun`);
+  saveDB();
+  alert(`✅ Posting ledger selesai!\n\n• ${result.totalEntries} entries diposting\n• ${result.accounts} akun di-update\n• ${result.unmatched} entries unmatched (akun tidak ditemukan)\n\nKlik OK untuk refresh tampilan.`);
+  nav('accounts');
+}
+
+// ================================================================
+//  OPERATOR PANEL — Multi-user activity dashboard
+// ================================================================
+function renderOperator(c){
+  const user = _currentUser || {};
+  const allTx = [
+    ...(DB.invoices||[]).map(x=>({...x,_type:'Penjualan',_badge:'sell',_label:'Invoice',_no:x.no,_contact:x.contactId,_ts:x.createdAt||x.date})),
+    ...(DB.purchases||[]).map(x=>({...x,_type:'Pembelian',_badge:'buy',_label:'Purchase',_no:x.no,_contact:x.contactId,_ts:x.createdAt||x.date})),
+    ...(DB.transactions||[]).map(x=>({...x,_type:'Kas/Bank',_badge:'exp',_label:'Transaksi',_no:x.id,_contact:'',_ts:x.createdAt||x.date})),
+    ...(DB.journal||[]).map(x=>({...x,_type:'Jurnal',_badge:'jrn',_label:'Jurnal',_no:x.no||x.id,_contact:'',_ts:x.createdAt||x.date})),
+  ].sort((a,b)=>new Date(b._ts||0)-new Date(a._ts||0));
+
+  // Filter by current user if not admin
+  const isAdm = isAdmin();
+  const myTx = isAdm ? allTx : allTx.filter(x=>x.created_by===user.name||x.updated_by===user.name);
+
+  // Stats
+  const todayStr = new Date().toISOString().slice(0,10);
+  const todayTx = myTx.filter(x=>(x._ts||'').startsWith(todayStr));
+
+  const contacts = DB.contacts||[];
+  function getContact(id){return (contacts.find(c=>c.id===id)||{}).name||'—';}
+
+  document.getElementById('topbar-actions').innerHTML='';
+
+  c.innerHTML=`
+  <!-- User Badge -->
+  <div class="op-user-badge">
+    <div class="op-avatar">${(user.name||'U')[0]}</div>
+    <div>
+      <div style="font-weight:800;font-size:15px">${user.name||'Unknown'}</div>
+      <div style="font-size:11px;opacity:.8">${user.role||''} · ${user.username||''}</div>
+    </div>
+    <div style="margin-left:auto;font-size:11px;opacity:.7">Session aktif: ${new Date().toLocaleString('id-ID')}</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="op-stats">
+    <div class="op-stat">
+      <div class="op-stat-val">${myTx.length}</div>
+      <div class="op-stat-lbl">Total Transaksi</div>
+    </div>
+    <div class="op-stat">
+      <div class="op-stat-val" style="color:#2563eb">${todayTx.length}</div>
+      <div class="op-stat-lbl">Hari Ini</div>
+    </div>
+    <div class="op-stat">
+      <div class="op-stat-val" style="color:#059669">${myTx.filter(x=>x._badge==='sell').length}</div>
+      <div class="op-stat-lbl">Penjualan</div>
+    </div>
+    <div class="op-stat">
+      <div class="op-stat-val" style="color:#ea580c">${myTx.filter(x=>x._badge==='buy').length}</div>
+      <div class="op-stat-lbl">Pembelian</div>
+    </div>
+    <div class="op-stat">
+      <div class="op-stat-val" style="color:#dc2626">${myTx.filter(x=>x._badge==='exp').length}</div>
+      <div class="op-stat-lbl">Biaya/Kas</div>
+    </div>
+    <div class="op-stat">
+      <div class="op-stat-val" style="color:#7c3aed">${myTx.filter(x=>x._badge==='jrn').length}</div>
+      <div class="op-stat-lbl">Jurnal</div>
+    </div>
+  </div>
+
+  ${isAdm ? `
+  <!-- All Users Activity Summary (Admin only) -->
+  <div class="op-card" style="margin-bottom:16px">
+    <div style="font-weight:700;font-size:13px;margin-bottom:12px">👥 Ringkasan Aktivitas Per User</div>
+    ${(() => {
+      const users = DB.users||[];
+      return users.map(u=>{
+        const utx = allTx.filter(x=>x.created_by===u.name||x.updated_by===u.name);
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;">
+          <div><span style="font-weight:600">${u.name}</span> <span style="font-size:11px;color:#64748b">${u.role}</span></div>
+          <div style="font-size:12px;color:#2563eb;font-weight:700">${utx.length} transaksi</div>
+        </div>`;
+      }).join('');
+    })()}
+  </div>` : ''}
+
+  <!-- Login History -->
+  <div class="op-card" style="margin-bottom:16px">
+    <div style="font-weight:700;font-size:13px;margin-bottom:12px">🔐 Histori Login Saya</div>
+    ${(user.login_history||[]).slice(0,5).map(lh => `
+      <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px solid #f1f5f9;align-items:center">
+        <span style="color:#64748b">${new Date(lh.time).toLocaleString('id-ID')}</span>
+        <span style="font-size:10.5px;color:#94a3b8;font-family:monospace;max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(lh.userAgent||'').slice(0,40)}</span>
+      </div>
+    `).join('') || '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:12px">Belum ada histori login.</div>'}
+  </div>
+
+  ${isAdm ? `
+  <!-- Activity Log (Admin only) -->
+  <div class="op-card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <div style="font-weight:700;font-size:13px">📜 Activity Log Sistem</div>
+      <span style="font-size:11px;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:12px">${(DB.activity_log||[]).length} aktivitas</span>
+    </div>
+    ${(DB.activity_log||[]).slice(0,30).map(log => {
+      const colors = log.action==='Login'?'#ecfdf5;color:#059669':
+                     log.action==='Logout'?'#fef2f2;color:#dc2626':
+                     (log.action||'').includes('COA')||(log.action||'').includes('Akun')?'#eff6ff;color:#2563eb':
+                     '#f5f3ff;color:#7c3aed';
+      return `<div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:8px 0;font-size:12px;border-bottom:1px solid #f1f5f9;align-items:center">
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${colors}">${log.action}</span>
+        <div>
+          <div style="font-weight:600">${log.user} <span style="color:#94a3b8;font-weight:400;font-size:11px">(${log.role||'—'})</span></div>
+          <div style="font-size:11px;color:#64748b">${log.detail||''}</div>
+        </div>
+        <span style="font-size:10.5px;color:#94a3b8;white-space:nowrap">${new Date(log.timestamp).toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+      </div>`;
+    }).join('')}
+    ${!(DB.activity_log||[]).length?'<div style="color:#94a3b8;font-size:12px;text-align:center;padding:12px">Belum ada aktivitas tercatat.</div>':''}
+  </div>` : ''}
+
+  <!-- Transaction History -->
+  <div class="op-card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px">📋 Histori Input Transaksi ${isAdm?'(Semua User)':'(Saya)'}</div>
+      <span style="font-size:11px;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:12px;">${myTx.length} records</span>
+    </div>
+    ${myTx.slice(0,50).map(tx=>`
+      <div class="op-tx-row">
+        <span class="op-tx-badge ${tx._badge}">${tx._type}</span>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:12.5px">${tx._no||tx.id||'—'} ${tx._contact?`· ${getContact(tx._contact)}`:''}</div>
+          <div style="font-size:11px;color:#64748b">${tx.description||tx.desc||tx.memo||''}</div>
+        </div>
+        <div style="text-align:right;font-size:11px;color:#94a3b8;">
+          <div>${tx._ts?new Date(tx._ts).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):'—'}</div>
+          <div style="color:#64748b">${tx.created_by||tx.updated_by||'—'}</div>
+        </div>
+        ${tx.total?`<div style="font-weight:700;font-size:12.5px;min-width:90px;text-align:right">${rp(tx.total)}</div>`:''}
+      </div>
+    `).join('')}
+    ${myTx.length===0?'<div style="text-align:center;padding:32px;color:#94a3b8;font-size:13px">Belum ada transaksi yang diinput.</div>':''}
+    ${myTx.length>50?`<div style="text-align:center;padding:12px;font-size:12px;color:#64748b">Menampilkan 50 dari ${myTx.length} transaksi terbaru</div>`:''}
+  </div>
+  `;
+}
+
+// ================================================================
+//  QUICK FORMS — Jual / Beli / Biaya modal forms
+// ================================================================
+function openQuickForm(type){
+  const contacts = DB.contacts||[];
+  const products = DB.products||[];
+  const cashAccs = DB.accounts.filter(a=>a.category==='Kas & Bank'||a.type==='aktiva'&&a.sub==='lancar'&&(a.name||'').toLowerCase().match(/kas|bank/));
+  const expAccs  = DB.accounts.filter(a=>a.category==='Beban'||a.type==='beban');
+
+  const contactOpts = contacts.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  const cashOpts    = cashAccs.map(a=>`<option value="${a.id}">${a.code} — ${a.name}</option>`).join('');
+  const expOpts     = expAccs.map(a=>`<option value="${a.id}">${a.code} — ${a.name}</option>`).join('');
+  const today       = new Date().toISOString().slice(0,10);
+  const dueDate     = new Date(Date.now()+30*864e5).toISOString().slice(0,10);
+
+  if(type==='jual'){
+    // Next invoice number
+    const lastInv = (DB.invoices||[]).length;
+    const invNo = 'INV/' + String(lastInv+1).padStart(5,'0');
+    openModal('➕ Tambah Tagihan Penjualan', `
+    <div class="qf-row qf-row-2">
+      <div><div class="qf-label">Pelanggan <span style="color:#dc2626">*</span></div>
+        <select class="qf-select" id="qf-contact"><option value="">Pilih kontak</option>${contactOpts}</select></div>
+      <div><div class="qf-label">Nomor</div>
+        <input class="qf-input" id="qf-no" value="${invNo}"></div>
+    </div>
+    <div class="qf-row qf-row-3">
+      <div><div class="qf-label">Tgl Transaksi</div><input class="qf-input" id="qf-date" type="date" value="${today}"></div>
+      <div><div class="qf-label">Jatuh Tempo</div><input class="qf-input" id="qf-due" type="date" value="${dueDate}"></div>
+      <div><div class="qf-label">Termin</div>
+        <select class="qf-select" id="qf-term">
+          <option value="net30">Net 30</option><option value="net14">Net 14</option>
+          <option value="net7">Net 7</option><option value="cash">Cash</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="qf-label">Produk / Deskripsi</div>
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+        <table class="qf-tbl">
+          <thead><tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Jumlah</th><th></th></tr></thead>
+          <tbody id="qf-items">
+            <tr id="qf-row-0">
+              <td><input class="qf-input" id="qf-item-0" placeholder="Nama produk/jasa" style="min-width:140px"></td>
+              <td><input class="qf-input" id="qf-qty-0" type="number" value="1" min="1" style="width:60px" oninput="qfCalcRow(0)"></td>
+              <td><input class="qf-input" id="qf-price-0" type="number" value="0" min="0" style="width:100px" oninput="qfCalcRow(0)"></td>
+              <td id="qf-sub-0" style="font-weight:700;min-width:80px">0</td>
+              <td><button onclick="qfRemoveRow(0)" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px">✕</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <button class="btn btn-out btn-xs" style="margin-top:8px" onclick="qfAddRow('jual')">+ Tambah baris</button>
+    </div>
+    <div class="qf-total-area">
+      <div class="qf-total-row"><span style="color:#64748b">Sub Total</span><span id="qf-subtotal">Rp 0</span></div>
+      <div class="qf-total-row qf-grand"><span>Total Tagihan</span><span id="qf-grand" style="color:#2563eb">Rp 0</span></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn" onclick="closeModal()">Batal</button>
+      <button class="btn btn-out" onclick="saveQuickForm('jual','draft')">💾 Simpan</button>
+      <button class="btn btn-pri" onclick="saveQuickForm('jual','sent')">📤 Simpan & Kirim</button>
+    </div>
+    `);
+
+  } else if(type==='beli'){
+    const lastPO = (DB.purchases||[]).length;
+    const poNo = 'PI/' + String(lastPO+1).padStart(5,'0');
+    openModal('➕ Tambah Tagihan Pembelian', `
+    <div class="qf-row qf-row-2">
+      <div><div class="qf-label">Vendor <span style="color:#dc2626">*</span></div>
+        <select class="qf-select" id="qf-contact"><option value="">Pilih kontak</option>${contactOpts}</select></div>
+      <div><div class="qf-label">Nomor</div><input class="qf-input" id="qf-no" value="${poNo}"></div>
+    </div>
+    <div class="qf-row qf-row-3">
+      <div><div class="qf-label">Tgl Transaksi</div><input class="qf-input" id="qf-date" type="date" value="${today}"></div>
+      <div><div class="qf-label">Jatuh Tempo</div><input class="qf-input" id="qf-due" type="date" value="${dueDate}"></div>
+      <div><div class="qf-label">Termin</div>
+        <select class="qf-select" id="qf-term">
+          <option value="net30">Net 30</option><option value="net14">Net 14</option>
+          <option value="net7">Net 7</option><option value="cash">Cash</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="qf-label">Item Pembelian</div>
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+        <table class="qf-tbl">
+          <thead><tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Jumlah</th><th></th></tr></thead>
+          <tbody id="qf-items">
+            <tr id="qf-row-0">
+              <td><input class="qf-input" id="qf-item-0" placeholder="Nama produk/item" style="min-width:140px"></td>
+              <td><input class="qf-input" id="qf-qty-0" type="number" value="1" min="1" style="width:60px" oninput="qfCalcRow(0)"></td>
+              <td><input class="qf-input" id="qf-price-0" type="number" value="0" style="width:100px" oninput="qfCalcRow(0)"></td>
+              <td id="qf-sub-0" style="font-weight:700">0</td>
+              <td><button onclick="qfRemoveRow(0)" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px">✕</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <button class="btn btn-out btn-xs" style="margin-top:8px" onclick="qfAddRow('beli')">+ Tambah baris</button>
+    </div>
+    <div class="qf-total-area">
+      <div class="qf-total-row"><span style="color:#64748b">Sub Total</span><span id="qf-subtotal">Rp 0</span></div>
+      <div class="qf-total-row qf-grand"><span>Sisa Tagihan</span><span id="qf-grand" style="color:#ea580c">Rp 0</span></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn" onclick="closeModal()">Batal</button>
+      <button class="btn btn-pri" onclick="saveQuickForm('beli','draft')">💾 Simpan</button>
+    </div>
+    `);
+
+  } else if(type==='biaya'){
+    const lastExp = (DB.transactions||[]).filter(t=>t.no&&t.no.startsWith('EXP')).length;
+    const expNo = 'EXP/' + String(lastExp+1).padStart(5,'0');
+    openModal('➕ Tambah Biaya / Pengeluaran', `
+    <div class="qf-row qf-row-2">
+      <div><div class="qf-label">Dibayar Dari <span style="color:#dc2626">*</span></div>
+        <select class="qf-select" id="qf-cash">${cashOpts}</select></div>
+      <div><div class="qf-label">Nomor</div><input class="qf-input" id="qf-no" value="${expNo}"></div>
+    </div>
+    <div class="qf-row qf-row-2">
+      <div><div class="qf-label">Penerima</div>
+        <select class="qf-select" id="qf-contact"><option value="">Pilih penerima (opsional)</option>${contactOpts}</select></div>
+      <div><div class="qf-label">Tgl Transaksi</div><input class="qf-input" id="qf-date" type="date" value="${today}"></div>
+    </div>
+    <div class="qf-row">
+      <div><div class="qf-label">Akun Biaya <span style="color:#dc2626">*</span></div>
+        <select class="qf-select" id="qf-exp-acct"><option value="">Pilih akun biaya</option>${expOpts}</select></div>
+    </div>
+    <div class="qf-row qf-row-2">
+      <div><div class="qf-label">Deskripsi</div><input class="qf-input" id="qf-desc" placeholder="Keterangan biaya"></div>
+      <div><div class="qf-label">Total <span style="color:#dc2626">*</span></div>
+        <input class="qf-input" id="qf-total" type="number" value="0" min="0" placeholder="0" oninput="document.getElementById('qf-grand').textContent=rp(+this.value||0)"></div>
+    </div>
+    <div class="qf-total-area">
+      <div class="qf-total-row qf-grand"><span>Total Pengeluaran</span><span id="qf-grand" style="color:#dc2626">Rp 0</span></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn" onclick="closeModal()">Batal</button>
+      <button class="btn btn-pri" onclick="saveQuickForm('biaya','done')">💾 Simpan</button>
+    </div>
+    `);
+  }
+}
+
+let _qfRowCount = 1;
+function qfAddRow(type){
+  const i = _qfRowCount++;
+  const tr = document.createElement('tr');
+  tr.id = 'qf-row-'+i;
+  tr.innerHTML = `
+    <td><input class="qf-input" id="qf-item-${i}" placeholder="Nama item" style="min-width:140px"></td>
+    <td><input class="qf-input" id="qf-qty-${i}" type="number" value="1" min="1" style="width:60px" oninput="qfCalcRow(${i})"></td>
+    <td><input class="qf-input" id="qf-price-${i}" type="number" value="0" style="width:100px" oninput="qfCalcRow(${i})"></td>
+    <td id="qf-sub-${i}" style="font-weight:700">0</td>
+    <td><button onclick="qfRemoveRow(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px">✕</button></td>`;
+  document.getElementById('qf-items').appendChild(tr);
+}
+function qfRemoveRow(i){const tr=document.getElementById('qf-row-'+i);if(tr)tr.remove();qfUpdateTotal();}
+function qfCalcRow(i){
+  const qty = parseFloat(document.getElementById('qf-qty-'+i)?.value)||0;
+  const price = parseFloat(document.getElementById('qf-price-'+i)?.value)||0;
+  const sub = document.getElementById('qf-sub-'+i);
+  if(sub)sub.textContent=rp(qty*price);
+  qfUpdateTotal();
+}
+function qfUpdateTotal(){
+  let total=0;
+  document.querySelectorAll('[id^="qf-qty-"]').forEach(el=>{
+    const i=el.id.replace('qf-qty-','');
+    const qty=parseFloat(el.value)||0;
+    const price=parseFloat(document.getElementById('qf-price-'+i)?.value)||0;
+    total+=qty*price;
+  });
+  const sub=document.getElementById('qf-subtotal');if(sub)sub.textContent=rp(total);
+  const grand=document.getElementById('qf-grand');if(grand)grand.textContent=rp(total);
+}
+
+function saveQuickForm(type, action){
+  const no      = document.getElementById('qf-no')?.value||'';
+  const date    = document.getElementById('qf-date')?.value||new Date().toISOString().slice(0,10);
+  const dueDate = document.getElementById('qf-due')?.value||'';
+  const contactId= document.getElementById('qf-contact')?.value||'';
+  const now     = new Date().toISOString();
+  const creator = _currentUser?.name||'System';
+
+  // Helper: cari akun dengan pattern matching (untuk Piutang/Hutang/Pendapatan)
+  function findAccByPattern(patterns){
+    for(const p of patterns){
+      const a = DB.accounts.find(x =>
+        (x.name||'').toLowerCase().includes(p.toLowerCase()) ||
+        (x.category||'').toLowerCase().includes(p.toLowerCase())
+      );
+      if(a) return a;
+    }
+    return null;
+  }
+
+  if(type==='jual'){
+    const items=[]; let total=0;
+    document.querySelectorAll('[id^="qf-qty-"]').forEach(el=>{
+      const i=el.id.replace('qf-qty-','');
+      const name=(document.getElementById('qf-item-'+i)?.value||'').trim();
+      const qty=parseFloat(el.value)||0; const price=parseFloat(document.getElementById('qf-price-'+i)?.value)||0;
+      if(name||qty*price>0){items.push({name,qty,price,subtotal:qty*price});total+=qty*price;}
+    });
+    if(!contactId){alert('Pilih pelanggan terlebih dahulu.');return;}
+    if(total<=0){alert('Total harus lebih dari 0.');return;}
+
+    // Push invoice record
+    const invId = uid();
+    DB.invoices.push({id:invId,no,date,dueDate,contactId,items,total,status:action==='sent'?'sent':'draft',
+      created_by:creator,created_at:now,updated_by:creator,updated_at:now});
+
+    // 📊 Buat jurnal: Debit Piutang Usaha, Credit Pendapatan
+    const piutang = findAccByPattern(['piutang usaha','piutang dagang','accounts receivable']) || findAccByPattern(['piutang']);
+    const pendapatan = findAccByPattern(['pendapatan jasa','pendapatan penjualan','sales revenue']) || findAccByPattern(['pendapatan']);
+    if(piutang && pendapatan){
+      DB.transactions.push({
+        id: uid(), date, ref: no, desc: `Penjualan ${no}`,
+        entries: [
+          {acc: piutang.id, deb: total, crd: 0},
+          {acc: pendapatan.id, deb: 0, crd: total}
+        ],
+        source: 'invoice', sourceId: invId,
+        created_by: creator, created_at: now, updated_by: creator, updated_at: now
+      });
+    } else {
+      console.warn('[Quick Form] Akun Piutang/Pendapatan tidak ditemukan — jurnal tidak dibuat otomatis');
+    }
+
+  } else if(type==='beli'){
+    const items=[]; let total=0;
+    document.querySelectorAll('[id^="qf-qty-"]').forEach(el=>{
+      const i=el.id.replace('qf-qty-','');
+      const name=(document.getElementById('qf-item-'+i)?.value||'').trim();
+      const qty=parseFloat(el.value)||0; const price=parseFloat(document.getElementById('qf-price-'+i)?.value)||0;
+      if(name||qty*price>0){items.push({name,qty,price,subtotal:qty*price});total+=qty*price;}
+    });
+    if(!contactId){alert('Pilih vendor terlebih dahulu.');return;}
+    if(total<=0){alert('Total harus lebih dari 0.');return;}
+
+    const poId = uid();
+    DB.purchases.push({id:poId,no,date,dueDate,contactId,items,total,status:'draft',payments:[],
+      created_by:creator,created_at:now,updated_by:creator,updated_at:now});
+
+    // 📊 Buat jurnal: Debit Persediaan/Beban, Credit Hutang Usaha
+    const persediaan = findAccByPattern(['persediaan barang','persediaan','inventory']);
+    const hutang = findAccByPattern(['hutang usaha','hutang dagang','accounts payable']) || findAccByPattern(['hutang']);
+    const debitAcc = persediaan || findAccByPattern(['beban pembelian','pembelian']);
+    if(debitAcc && hutang){
+      DB.transactions.push({
+        id: uid(), date, ref: no, desc: `Pembelian ${no}`,
+        entries: [
+          {acc: debitAcc.id, deb: total, crd: 0},
+          {acc: hutang.id, deb: 0, crd: total}
+        ],
+        source: 'purchase', sourceId: poId,
+        created_by: creator, created_at: now, updated_by: creator, updated_at: now
+      });
+    } else {
+      console.warn('[Quick Form] Akun Persediaan/Hutang tidak ditemukan — jurnal tidak dibuat otomatis');
+    }
+
+  } else if(type==='biaya'){
+    const cashId=document.getElementById('qf-cash')?.value||'';
+    const expId=document.getElementById('qf-exp-acct')?.value||'';
+    const desc=document.getElementById('qf-desc')?.value||'';
+    const total=parseFloat(document.getElementById('qf-total')?.value)||0;
+    if(!cashId||!expId){alert('Pilih akun kas dan akun biaya.');return;}
+    if(total<=0){alert('Total harus lebih dari 0.');return;}
+
+    // 📊 Buat jurnal: Debit Akun Biaya, Credit Kas/Bank
+    DB.transactions.push({
+      id: uid(), no, date, desc: desc || 'Biaya', ref: no,
+      entries: [
+        {acc: expId, deb: total, crd: 0},        // Debit beban (asset/expense rule: deb tambah)
+        {acc: cashId, deb: 0, crd: total}        // Credit kas (asset rule: crd kurang)
+      ],
+      source: 'expense', amount: total, contactId,
+      created_by: creator, created_at: now, updated_by: creator, updated_at: now
+    });
+  }
+
+  // 📊 POST KE LEDGER — recalculate all balances after every quick form save
+  recalculateAllBalances();
+  saveDB();
+  closeModal();
+  _qfRowCount=1;
+  const labels={'jual':'Penjualan','beli':'Pembelian','biaya':'Biaya'};
+  if(typeof logActivity === 'function') logActivity('Tambah '+(labels[type]||'Transaksi'), `${labels[type]} oleh ${creator}`);
+  const dest={'jual':'invoices','beli':'purchases','biaya':'transactions'};
+  nav(dest[type]||'dashboard');
+}
+
+// ================================================================
+//  GLOBAL SEARCH
+// ================================================================
+function globalSearch(q){
+  const box = document.getElementById('search-results');
+  if(!box) return;
+  if(!q||q.length<2){box.style.display='none';return;}
+  const qL=q.toLowerCase();
+  const results=[];
+  (DB.invoices||[]).forEach(x=>{const c=(DB.contacts||[]).find(c=>c.id===x.contactId);if((x.no||'').toLowerCase().includes(qL)||(c&&c.name.toLowerCase().includes(qL)))results.push({icon:'🧾',label:x.no,sub:(c?.name||'')+' · '+rp(x.total),action:`nav('invoices')`});});
+  (DB.purchases||[]).forEach(x=>{const c=(DB.contacts||[]).find(c=>c.id===x.contactId);if((x.no||'').toLowerCase().includes(qL)||(c&&c.name.toLowerCase().includes(qL)))results.push({icon:'🛒',label:x.no,sub:(c?.name||'')+' · '+rp(x.total),action:`nav('purchases')`});});
+  (DB.contacts||[]).forEach(x=>{if((x.name||'').toLowerCase().includes(qL))results.push({icon:'👤',label:x.name,sub:x.type||'Kontak',action:`nav('contacts')`});});
+  (DB.accounts||[]).forEach(x=>{if((x.name||'').toLowerCase().includes(qL)||(x.code||'').toLowerCase().includes(qL))results.push({icon:'📒',label:x.code+' — '+x.name,sub:x.category||x.type,action:`nav('accounts')`});});
+  if(!results.length){box.innerHTML='<div style="padding:14px;text-align:center;color:#94a3b8;font-size:12px">Tidak ditemukan hasil untuk "'+q+'"</div>';box.style.display='block';return;}
+  box.innerHTML=results.slice(0,8).map(r=>`<div onclick="${r.action};document.getElementById('global-search').value='';document.getElementById('search-results').style.display='none'" style="display:flex;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;align-items:center" onmouseenter="this.style.background='#f0f7ff'" onmouseleave="this.style.background=''"><span style="font-size:16px">${r.icon}</span><div><div style="font-size:12.5px;font-weight:600">${r.label}</div><div style="font-size:11px;color:#64748b">${r.sub}</div></div></div>`).join('');
+  box.style.display='block';
+}
+document.addEventListener('click',e=>{const box=document.getElementById('search-results');if(box&&!box.contains(e.target)&&e.target.id!=='global-search')box.style.display='none';});
+
+
 window.onload=init;
 
 // ================================================================
 //  USER MANAGEMENT (Admin only)
 // ================================================================
-function getRoles(){return DB.roles&&DB.roles.length?DB.roles:['Admin','Direktur','Manager','Finance','HRD','Staff'];}
+function getRoles(){return DB.roles&&DB.roles.length?DB.roles:['Admin','Staff','Operator','Direktur','Manager','Finance','HRD'];}
 function roleOptions(selected){return getRoles().map(r=>`<option value="${r}" ${r===selected?'selected':''}>${r}</option>`).join('');}
 
 function renderUsers(c){
@@ -9641,7 +9940,7 @@ function _expRenderTable(rows) {
 /* ── END EXPENSE ANALYTICS ── */
 
 
-/* ===== FULL DYNAMIC COA PATCH ===== */
+/* ===== COA UTILITIES (fixed - single source: siakun_coa_v2) ===== */
 
 function parseAccountCode(code=''){
   const p = code.split('-');
@@ -9672,15 +9971,12 @@ function getDynamicAccounts(){
   }catch(e){}
 
   if(!Array.isArray(accs) || !accs.length){
-    accs = (window.accounts || DB.accounts || []);
+    // [FIXED] No fallback to defaultCoA — return empty array if siakun_coa_v2 is empty
+    accs = [];
   }
 
   accs = accs.filter(a=>a && a.code && a.name);
-
   accs = sortAccounts(accs);
-
-  localStorage.setItem('siakun_coa_v2', JSON.stringify(accs));
-
   return accs;
 }
 
@@ -9826,69 +10122,7 @@ window.addEventListener('load',()=>{
 
 </script>
 
-<script>
-/* ===== FIX MISSING COA ===== */
-(function(){
 
-const missingAccounts = [
-{id:'10200',code:'10200',name:'Persediaan Barang',category:'Persediaan',type:'Asset'},
-{id:'20601',code:'20601',name:'Kewajiban Lancar Lainnya',category:'Liability',type:'Liability'},
-{id:'30200',code:'30200',name:'Deviden',category:'Equity',type:'Equity'},
-{id:'30999',code:'30999',name:'Ekuitas Saldo Awal',category:'Equity',type:'Equity'},
-{id:'40000',code:'40000',name:'Pendapatan',category:'Revenue',type:'Revenue'},
-{id:'40200',code:'40200',name:'Retur Penjualan',category:'Revenue',type:'Revenue'},
-{id:'40201',code:'40201',name:'Pendapatan Belum Ditagih',category:'Revenue',type:'Revenue'},
-{id:'60210',code:'60210',name:'Beban Manfaat Karyawan',category:'Expense',type:'Expense'},
-{id:'60213',code:'60213',name:'Beban Piutang Tak Tertagih',category:'Expense',type:'Expense'},
-{id:'60300',code:'60300',name:'Beban Kantor',category:'Expense',type:'Expense'},
-{id:'70000',code:'70000',name:'Pendapatan Lainnya',category:'Other Income',type:'Revenue'},
-{id:'70001',code:'70001',name:'Pendapatan Bunga',category:'Other Income',type:'Revenue'},
-{id:'70002',code:'70002',name:'Keuntungan Selisih Kurs',category:'Other Income',type:'Revenue'},
-{id:'70099',code:'70099',name:'Pendapatan Lain-lain',category:'Other Income',type:'Revenue'},
-{id:'70100',code:'70100',name:'Pendapatan Non Operasional',category:'Other Income',type:'Revenue'},
-{id:'80000',code:'80000',name:'Beban Lainnya',category:'Other Expense',type:'Expense'},
-{id:'80999',code:'80999',name:'Beban Lain-lain',category:'Other Expense',type:'Expense'},
-{id:'90000',code:'90000',name:'Pajak Penghasilan',category:'Tax',type:'Expense'},
-{id:'90001',code:'90001',name:'Pajak Final',category:'Tax',type:'Expense'}
-];
-
-function ensureMissingAccounts(){
-
-  let accs = [];
-
-  try{
-    accs = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]');
-  }catch(e){
-    accs = [];
-  }
-
-  if(!Array.isArray(accs)) accs = [];
-
-  const existingCodes = new Set(
-    accs.map(a => String(a.code || '').replace(/[^0-9]/g,''))
-  );
-
-  missingAccounts.forEach(acc=>{
-    if(!existingCodes.has(acc.code)){
-      accs.push(acc);
-    }
-  });
-
-  localStorage.setItem('siakun_coa_v2', JSON.stringify(accs));
-
-  if(window.DB){
-    DB.accounts = accs;
-  }
-
-  window.accounts = accs;
-}
-
-window.addEventListener('load', ()=>{
-  setTimeout(ensureMissingAccounts, 800);
-});
-
-})();
-</script>
 
 
 
