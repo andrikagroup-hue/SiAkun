@@ -2936,7 +2936,9 @@ function recalculateAllBalances(){
   let totalEntries = 0, unmatched = 0;
   (DB.transactions||[]).forEach(tx => {
     (tx.entries||[]).forEach(e => {
-      const acc = resolveAccount(e.acc || e.account || e.accountId);
+      const acc = resolveAccount(
+  e.acc || e.account || e.accountId || e.akun
+);
       if(!acc){ unmatched++; return; }
       debSum[acc.id] = (debSum[acc.id]||0) + (parseFloat(e.deb)||0);
       crdSum[acc.id] = (crdSum[acc.id]||0) + (parseFloat(e.crd)||0);
