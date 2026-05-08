@@ -1347,7 +1347,6 @@ const match=siakuBankEntries.find(e=>
   Math.abs(e.amount-row.amount)<1 &&
   e.flow===row.flow
 );
-});
     row.status=match?'matched':'open';
     row.matchedWith=match?`${match.ref||''} ${match.desc||''}`.trim():'';
   });
