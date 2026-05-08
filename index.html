@@ -2883,7 +2883,10 @@ function resolveAccount(ref){
   let a = accs.find(x => String(x.id) === String(ref));
   if(a) return a;
   // 2. Match by code (handles legacy IDs like '1201' vs new '1-10100')
-  a = accs.find(x => String(x.code).replace(/-/g,'') === String(ref).replace(/-/g,''));
+  a = accs.find(x =>
+  String(x.code||'').replace(/[^0-9]/g,'') ===
+  String(ref||'').replace(/[^0-9]/g,'')
+);
   if(a) return a;
   // 3. Match by partial code (legacy 1201 → 1-1201, 1-10100, etc.)
   const refClean = String(ref).replace(/[^0-9]/g,'');
