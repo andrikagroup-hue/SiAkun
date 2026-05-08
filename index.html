@@ -2059,7 +2059,7 @@ async function parseBSICSV(file){
     const amtStr=parts[4]||parts[3]||'0';
     const amount=parseFloat(amtStr.replace(/[^0-9.,]/g,'').replace(/,(?=\d{3})/g,'').replace(',','.'))||0;
     const flow=parts[5]==='DB'||parts[5]==='CR'?parts[5]:'DB';
-    if(date&&desc&&amount>0){
+    if(date && amount>0){
       rows.push({date,desc,amount,flow,status:'open',addedAt:new Date().toISOString()});
     }
   });
