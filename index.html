@@ -2866,8 +2866,8 @@ function recalculateAllBalances(){
     localStorage.setItem(SK, JSON.stringify(DB));
   } catch(e){ console.warn('[Ledger] Save failed:', e); }
 
-  console.info(`[Ledger] Posted ${totalEntries} entries → ${DB.accounts.length} accounts (${unmatched} unmatched)`);
-  return { totalEntries, unmatched, accounts: DB.accounts.length };
+  console.info(`[Ledger] Posted ${totalEntries} entries (${unmatched} unmatched)`);
+  return { totalEntries, unmatched };
 }
 
 function totalByTypes(types,sub){
