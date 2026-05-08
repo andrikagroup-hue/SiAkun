@@ -1979,6 +1979,14 @@ let current = null;
     // Cari kolom tanggal (format YYYY-MM-DD atau date object)
     let date='',desc='',amount=0,flow='DB';
 
+const firstCell = String(row[0]||'').trim();
+
+if(/^\d{4}-\d{2}-\d{2}/.test(firstCell)){
+
+  date = firstCell.substring(0,10);
+
+}
+
     // BSI Excel biasanya: Date | FT | Description | Currency | Amount | DB/CR | Balance
     const col0=String(row[0]||'').trim();
     const col2=String(row[2]||'').trim();
