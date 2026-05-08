@@ -10127,6 +10127,42 @@ window.addEventListener('load',()=>{
   }catch(e){}
 });
 
+  function editCoA(id){
+
+  const acc = DB.accounts.find(a=>a.id===id);
+
+  if(!acc) return;
+
+  const newName = prompt('Nama akun:', acc.name || '');
+
+  if(newName===null) return;
+
+  const newCode = prompt('Kode akun:', acc.code || '');
+
+  if(newCode===null) return;
+
+  acc.name = newName;
+  acc.code = newCode;
+
+  localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts));
+
+  renderAccountsDynamic();
+
+  alert('Akun berhasil diupdate');
+
+}
+
+function deleteCoA(id){
+  if(confirm('Delete akun ini?')){
+    DB.accounts = DB.accounts.filter(a=>a.id!==id);
+
+    localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts));
+
+    renderAccountsDynamic();
+
+    alert('Akun berhasil dihapus');
+  }
+}
 </script>
 
 
