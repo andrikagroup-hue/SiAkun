@@ -1320,7 +1320,7 @@ function openRekonDetail(id){
   const siakuTxs=DB.transactions.filter(t=>t.date>=fromDate&&t.date<=toDate);
 
   // Cari semua entry yang menyentuh akun kas/bank
-  const kasAccIds=['1101','1102','1103','1104','1105','1106','1107','1108','1109','1110'];
+  const kasAccIds=['1-10001','1-10002','1-10003'];
   const siakuBankEntries=[];
   siakuTxs.forEach(tx=>{
     tx.entries.forEach(e=>{
