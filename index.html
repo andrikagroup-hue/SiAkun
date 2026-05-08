@@ -10293,7 +10293,7 @@ function saveEditCoA(){
 
     (tx.entries || []).forEach(e=>{
 
-      if(e.acc === acc.id){
+      if(String(e.acc) === String(acc.id)){
 
         debit += Number(e.deb || 0);
         credit += Number(e.crd || 0);
