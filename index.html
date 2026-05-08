@@ -2003,9 +2003,23 @@ if(matchDate){
     } else continue;
 
     desc=col2||String(row[1]||'').trim();
-    const amtRaw=parseFloat(String(col4).replace(/[^0-9.,]/g,'').replace(/,(?=\d{3})/g,'').replace(',','.'))||0;
-    amount=amtRaw;
-    flow=col5==='DB'||col5==='CR'?col5:'DB';
+    const amtText = row.join(' ');
+
+const amtMatch = amtText.match(/(\d[\d,\.]+)\s*(DB|CR)/i);
+
+let amtRaw = 0;
+
+if(amtMatch){
+
+  amtRaw = parseFloat(
+    amtMatch[1].replace(/,/g,'')
+  );
+
+  flow = amtMatch[2].toUpperCase();
+
+}
+
+amount = amtRaw;
 
   if(date){
 
