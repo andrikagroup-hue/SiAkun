@@ -10061,6 +10061,8 @@ function renderAccountsDynamic(){
                 <th>Account Name</th>
                 <th>Category</th>
                 <th>Balance</th>
+                <th>Action</th>
+
               </tr>
             </thead>
 
@@ -10076,6 +10078,11 @@ function renderAccountsDynamic(){
                   <td>${acc.name || ''}</td>
                   <td>${dynamicCategory(acc)}</td>
                   <td>Rp 0</td>
+
+                  <td>
+  <button onclick="editCoA('${acc.id}')">✏️</button>
+  <button onclick="deleteCoA('${acc.id}')">🗑️</button>
+</td>
                 </tr>
               `).join('')}
 
