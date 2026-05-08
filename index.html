@@ -2968,7 +2968,11 @@ function recalculateAllBalances(){
   } catch(e){ console.warn('[Ledger] Save failed:', e); }
 
   console.log(`[Ledger] Posted ${totalEntries} entries (${unmatched} unmatched)`);
-  return { totalEntries, unmatched };
+  return { 
+  totalEntries, 
+  unmatched,
+  accounts: DB.accounts.length
+};
 }
 
 function totalByTypes(types,sub){
