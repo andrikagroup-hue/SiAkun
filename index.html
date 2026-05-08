@@ -1325,8 +1325,8 @@ function openRekonDetail(id){
   siakuTxs.forEach(tx=>{
     tx.entries.forEach(e=>{
       if(kasAccIds.includes(e.acc)){
-        if(e.deb>0)siakuBankEntries.push({txId:tx.id,date:tx.date,ref:tx.ref,desc:tx.desc,amount:e.deb,flow:'CR'});
-        if(e.crd>0)siakuBankEntries.push({txId:tx.id,date:tx.date,ref:tx.ref,desc:tx.desc,amount:e.crd,flow:'DB'});
+        if(e.deb>0)siakuBankEntries.push({txId:tx.id,date:tx.date,ref:tx.ref,desc:tx.desc,amount:e.deb,flow:'DB'});
+if(e.crd>0)siakuBankEntries.push({txId:tx.id,date:tx.date,ref:tx.ref,desc:tx.desc,amount:e.crd,flow:'CR'});
       }
     });
   });
