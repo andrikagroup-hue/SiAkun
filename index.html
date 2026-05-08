@@ -1334,7 +1334,15 @@ function openRekonDetail(id){
   // Auto-match tiap row
   s.rows.forEach(row=>{
     if(row.status==='unmatched')return; // skip yang sudah ditandai manual
-    const match=siakuBankEntries.find(e=>e.date===row.date&&Math.abs(e.amount-row.amount)<1&&e.flow===row.flow);
+    const match=siakuBankEntries.find(e=>
+  e.date===row.date &&
+  Math.abs(e.amount-row.amount)<1 &&
+  e.flow===row.flow &&
+  (
+    (e.desc||'').toLowerCase().includes((row.desc||'').toLowerCase()) ||
+    (row.desc||'').toLowerCase().includes((e.desc||'').toLowerCase())
+  )
+);
     row.status=match?'matched':'open';
     row.matchedWith=match?`${match.ref||''} ${match.desc||''}`.trim():'';
   });
