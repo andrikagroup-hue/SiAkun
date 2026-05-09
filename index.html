@@ -4448,11 +4448,11 @@ function renderAccounts(c){
   if(statAsset){
     const totalAsset = withBal
       .filter(a=>{
-        const t = (a.type||a.category||'').toLowerCase();
-        return t.includes('aktiva') || t.includes('asset');
+        // Akun aktiva = kode dimulai dengan "1-" (standar PSAK)
+        const code = (a.code||'').toString();
+        return code.startsWith('1-') || code.startsWith('1');
       })
-      .reduce((s,a)=>s+a._bal, 0);
-    statAsset.textContent = rp(totalAsset);
+      .reduce((s,a)=>s+a._bal, 0);    statAsset.textContent = rp(totalAsset);
   }
 
   // ── Chart 1: Saldo Per Kategori ──
