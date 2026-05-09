@@ -4369,7 +4369,19 @@ function renderAccounts(c){
       <span style="font-size:12px;color:#64748b;font-weight:600;">Total: <b style="color:#0f172a">${accounts.length}</b> akun</span>
     </div>
   </div>
+<div class="coa-charts">
 
+  <div class="coa-chart-card">
+    <h4>Saldo Per Kategori</h4>
+    <canvas id="coaCategoryChart"></canvas>
+  </div>
+
+  <div class="coa-chart-card">
+    <h4>Saldo Per Akun</h4>
+    <canvas id="coaAccountChart"></canvas>
+  </div>
+
+</div>
   <!-- Table -->
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
     <table class="coa-tbl" id="coa-table" style="width:100%;border-collapse:collapse;">
@@ -10193,6 +10205,7 @@ function renderAccountsDynamic(){
   if(content){
     content.innerHTML=html;
   }
+  renderCoaCharts();
 }
 
 const _oldNav = window.nav;
@@ -10403,7 +10416,96 @@ z-index:9999;
 
 </div>
 
+function renderCoaCharts(){
 
+  const accounts = DB.accounts || [];
+
+  // =========================
+  // CATEGORY TOTAL
+  // =========================
+  const catMap = {};
+
+  accounts.forEach(acc=>{
+
+    const cat = acc.category || 'Lainnya';
+    const bal = Math.abs(acc.balance || 0);
+
+    if(!catMap[cat]){
+      catMap[cat] = 0;
+    }
+
+    catMap[cat] += bal;
+
+  });
+
+  // =========================
+  // TOP ACCOUNT
+  // =========================
+  const topAccounts = [...accounts]
+    .filter(a => Math.abs(a.balance || 0) > 0)
+    .sort((a,b)=>Math.abs(b.balance)-Math.abs(a.balance))
+    .slice(0,10);
+
+  // =========================
+  // DESTROY OLD CHART
+  // =========================
+  if(window.coaCategoryChartObj){
+    window.coaCategoryChartObj.destroy();
+  }
+
+  if(window.coaAccountChartObj){
+    window.coaAccountChartObj.destroy();
+  }
+
+  // =========================
+  // CATEGORY CHART
+  // =========================
+  window.coaCategoryChartObj = new Chart(
+    document.getElementById('coaCategoryChart'),
+    {
+      type:'doughnut',
+      data:{
+        labels:Object.keys(catMap),
+        datasets:[{
+          data:Object.values(catMap)
+        }]
+      },
+      options:{
+        responsive:true,
+        plugins:{
+          legend:{
+            position:'right'
+          }
+        }
+      }
+    }
+  );
+
+  // =========================
+  // ACCOUNT CHART
+  // =========================
+  window.coaAccountChartObj = new Chart(
+    document.getElementById('coaAccountChart'),
+    {
+      type:'doughnut',
+      data:{
+        labels:topAccounts.map(a=>a.name),
+        datasets:[{
+          data:topAccounts.map(a=>Math.abs(a.balance || 0))
+        }]
+      },
+      options:{
+        responsive:true,
+        plugins:{
+          legend:{
+            position:'right'
+          }
+        }
+      }
+    }
+  );
+
+}
 
 </body>
 </html>
