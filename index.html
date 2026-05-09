@@ -1101,7 +1101,54 @@ function renderPerubahanModal(){
 // ================================================================
 //  AGING AR / AP REPORT
 // ================================================================
-function renderAgingARAPReport(){
+function calcAgingBuckets(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const daysOverdue = (dueDate) => {
+    if(!dueDate) return 999;
+    const due = new Date(dueDate + 'T00:00:00');
+    return Math.floor((today - due) / (1000 * 60 * 60 * 24));
+  };
+  const bucketize = (items, getRem, getDue) => {
+    const b = { current:[], d1_30:[], d31_60:[], d61_90:[], gt90:[] };
+    items.forEach(it => {
+      const rem = getRem(it);
+      if(rem <= 0) return;
+      const days = daysOverdue(getDue(it));
+      const entry = { ...it, rem, days };
+      if(days <= 0) b.current.push(entry);
+      else if(days <= 30) b.d1_30.push(entry);
+      else if(days <= 60) b.d31_60.push(entry);
+      else if(days <= 90) b.d61_90.push(entry);
+      else b.gt90.push(entry);
+    });
+    return b;
+  };
+  const unpaidInv = DB.invoices.filter(i =>
+    ['unpaid','partial','overdue'].includes(invStatus(i))
+  );
+  const ar = bucketize(
+    unpaidInv,
+    inv => inv.total - (inv.payments || []).reduce((s,p) => s + p.amount, 0),
+    inv => inv.dueDate
+  );
+  const unpaidPO = DB.purchases.filter(p => p.status !== 'draft');
+  const ap = bucketize(
+    unpaidPO,
+    po => po.total - (po.payments || []).reduce((s,p) => s + p.amount, 0),
+    po => po.dueDate || po.date
+  );
+  const sumBucket = (b) => Object.fromEntries(
+    Object.entries(b).map(([k, arr]) => [k, arr.reduce((s,i) => s + i.rem, 0)])
+  );
+  return {
+    ar, ap,
+    arTotals: sumBucket(ar),
+    apTotals: sumBucket(ap),
+    arGrandTotal: Object.values(ar).flat().reduce((s,i) => s + i.rem, 0),
+    apGrandTotal: Object.values(ap).flat().reduce((s,i) => s + i.rem, 0),
+  };
+}
+  function renderAgingARAPReport(){
   const isID=_lang==='id';
   const today=new Date(); today.setHours(0,0,0,0);
 
