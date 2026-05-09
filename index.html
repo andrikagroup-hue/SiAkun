@@ -1148,7 +1148,16 @@ function calcAgingBuckets(){
     apGrandTotal: Object.values(ap).flat().reduce((s,i) => s + i.rem, 0),
   };
 }
-  function renderAgingWidgetHTML(){
+  function gotoAgingReport(){
+  // Helper navigasi: buka Financial Reports → klik tab Aging
+  nav('reports');
+  setTimeout(() => {
+    const tab = document.querySelector('.tab[onclick*="agingar"]');
+    if(tab) tab.click();
+  }, 100);
+}
+
+function renderAgingWidgetHTML(){
   const isID = _lang === 'id';
   const data = calcAgingBuckets();
   
@@ -1159,10 +1168,49 @@ function calcAgingBuckets(){
   const colors = ['#059669','#f59e0b','#f97316','#ef4444','#dc2626'];
   const bucketKeys = ['current','d1_30','d31_60','d61_90','gt90'];
 
+  // Inject CSS sekali per session — hover effect + responsive grid
+  if(!document.getElementById('aging-widget-styles')){
+    const style = document.createElement('style');
+    style.id = 'aging-widget-styles';
+    style.textContent = `
+      .aging-widget-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+      .aging-card {
+        background: #fff;
+        border: 1px solid var(--bdr);
+        border-radius: 12px;
+        padding: 16px;
+        cursor: pointer;
+        transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+      }
+      .aging-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,.08);
+        border-color: #cbd5e1;
+      }
+      .aging-card-link {
+        font-size: 10.5px;
+        color: #94a3b8;
+        margin-top: 8px;
+        text-align: right;
+        font-weight: 600;
+      }
+      .aging-card:hover .aging-card-link {
+        color: #2563eb;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   const renderCard = (title, icon, totals, grandTotal, accentColor) => {
+    // Empty state — gak ada outstanding
     if(grandTotal === 0){
       return `
-        <div style="background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:16px;">
+        <div class="aging-card" onclick="gotoAgingReport()">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <div style="font-size:13px;font-weight:700;">${icon} ${title}</div>
             <div style="font-size:11px;color:var(--muted);">${isID?'Tidak ada outstanding':'No outstanding'}</div>
@@ -1170,10 +1218,12 @@ function calcAgingBuckets(){
           <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">
             ✨ ${isID?'Semua lunas!':'All settled!'}
           </div>
+          <div class="aging-card-link">${isID?'Lihat detail':'View detail'} →</div>
         </div>
       `;
     }
 
+    // Render bar per bucket — relative ke grand total
     const bars = bucketKeys.map((key, i) => {
       const value = totals[key];
       const pct = grandTotal > 0 ? (value / grandTotal * 100) : 0;
@@ -1192,7 +1242,7 @@ function calcAgingBuckets(){
     }).join('');
 
     return `
-      <div style="background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:16px;">
+      <div class="aging-card" onclick="gotoAgingReport()">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f1f5f9;">
           <div>
             <div style="font-size:13px;font-weight:700;">${icon} ${title}</div>
@@ -1200,12 +1250,13 @@ function calcAgingBuckets(){
           </div>
         </div>
         ${bars}
+        <div class="aging-card-link">${isID?'Lihat detail':'View detail'} →</div>
       </div>
     `;
   };
 
   return `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+    <div class="aging-widget-grid">
       ${renderCard(
         isID ? 'Aging Piutang (AR)' : 'Aging Receivables (AR)',
         '📥',
