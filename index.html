@@ -421,6 +421,18 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 .qf-input{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:13px;outline:none;transition:border .15s;box-sizing:border-box;}
 .qf-input:focus{border-color:#2563eb;}
 .qf-select{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:13px;outline:none;background:#fff;cursor:pointer;}
+.ss-wrap{position:relative}
+.ss-disp{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-family:var(--font);min-height:36px}
+.ss-disp:hover{border-color:#cbd5e1}
+.ss-drop{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:10000;max-height:260px;overflow:hidden;display:none;flex-direction:column}
+.ss-drop.open{display:flex}
+.ss-srch{padding:10px 12px;border:none;border-bottom:1px solid #e2e8f0;font-size:13px;outline:none;font-family:var(--font);width:100%;box-sizing:border-box}
+.ss-list{overflow-y:auto;max-height:210px}
+.ss-opt{padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background .1s}
+.ss-opt:hover{background:#f1f5f9}
+.ss-opt.sel{background:#dbeafe;color:#1e40af;font-weight:600}
+.ss-empty{padding:16px;text-align:center;color:#94a3b8;font-size:12px}
+.ss-txt{flex:1;text-align:left;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}  
 .qf-tbl{width:100%;border-collapse:collapse;margin-top:8px;}
 .qf-tbl th{background:#f8fafc;font-size:11px;font-weight:700;color:#64748b;padding:8px 10px;text-align:left;border-bottom:1px solid #e2e8f0;}
 .qf-tbl td{padding:6px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
@@ -4780,23 +4792,99 @@ function openAccount(id){
   </div>
   <div style="margin-bottom:12px">
     <div class="qf-label">Kategori <span style="color:#dc2626">*</span></div>
-    <select class="qf-select" id="ac-cat">
-      <option value="">— Pilih kategori —</option>
-      ${catOpts}
-    </select>
+    <div id="ac-cat-wrap" class="ss-wrap"></div>
   </div>
   <div style="margin-bottom:16px">
     <div class="qf-label">Sub Akun dari <span style="font-weight:400;color:#94a3b8">(opsional)</span></div>
-    <select class="qf-select" id="ac-parent">
-      <option value="">— Tidak ada parent —</option>
-      ${parentOpts}
-    </select>
+    <div id="ac-parent-wrap" class="ss-wrap"></div>
   </div>
   <div style="display:flex;gap:8px;justify-content:flex-end;">
     <button class="btn" onclick="closeModal()">Batal</button>
     <button class="btn btn-pri" onclick="saveAccount()">💾 Simpan</button>
   </div>
-  `);
+`);
+
+  // Searchable dropdown builder
+  const _ssBuild = (wrapId, hiddenId, opts, selVal) => {
+    const w = document.getElementById(wrapId);
+    if(!w) return;
+    const sel = opts.find(o => o.value === selVal);
+    w.innerHTML = `
+      <input type="hidden" id="${hiddenId}" value="${selVal||''}">
+      <div class="ss-disp">
+        <span class="ss-txt">${sel ? sel.label : '— Pilih —'}</span>
+        <span style="color:#94a3b8;font-size:10px;margin-left:8px">▼</span>
+      </div>
+      <div class="ss-drop">
+        <input class="ss-srch" placeholder="Ketik untuk mencari...">
+        <div class="ss-list"></div>
+      </div>
+    `;
+    const drop = w.querySelector('.ss-drop');
+    const srch = w.querySelector('.ss-srch');
+    const list = w.querySelector('.ss-list');
+    const txt  = w.querySelector('.ss-txt');
+    const hid  = w.querySelector('input[type="hidden"]');
+
+    const render = (q='') => {
+      const f = q.toLowerCase();
+      const ls = opts.filter(o => o.label.toLowerCase().includes(f));
+      if(!ls.length){ list.innerHTML='<div class="ss-empty">Tidak ditemukan</div>'; return; }
+      list.innerHTML = ls.map(o =>
+        `<div class="ss-opt${o.value===hid.value?' sel':''}" data-v="${o.value}">${o.label}</div>`
+      ).join('');
+      list.querySelectorAll('.ss-opt').forEach(el => {
+        el.onclick = () => {
+          hid.value = el.getAttribute('data-v');
+          txt.textContent = el.textContent;
+          drop.classList.remove('open');
+          hid.dispatchEvent(new Event('change',{bubbles:true}));
+        };
+      });
+    };
+
+    w.querySelector('.ss-disp').onclick = (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.ss-drop.open').forEach(d => d.classList.remove('open'));
+      drop.classList.add('open');
+      srch.value = '';
+      render('');
+      setTimeout(() => srch.focus(), 50);
+    };
+    srch.oninput = () => render(srch.value);
+    srch.onclick = e => e.stopPropagation();
+  };
+
+  if(!window._ssClickListener){
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.ss-drop.open').forEach(d => d.classList.remove('open'));
+    });
+    window._ssClickListener = true;
+  }
+
+  setTimeout(() => {
+    _ssBuild('ac-cat-wrap','ac-cat',
+      [{value:'',label:'— Pilih kategori —'}].concat(_cats.map(k => ({value:k,label:k}))),
+      (a&&a.category)||''
+    );
+
+    const _catPfx = {'Kas & Bank':'1','Akun Piutang':'1','Persediaan':'1','Aktiva Lancar Lainnya':'1','Aktiva Tetap':'1','Depresiasi & Amortisasi':'1','Aktiva Lainnya':'1','Akun Hutang':'2','Kewajiban Lancar Lainnya':'2','Kewajiban Jangka Panjang':'2','Ekuitas':'3','Pendapatan':'4','Pendapatan Lainnya':'7','Harga Pokok Penjualan':'5','Beban':'6','Beban Lainnya':'8'};
+
+    const buildParent = (cat) => {
+      let pool = DB.accounts.filter(x => x.id !== id);
+      const pfx = _catPfx[cat];
+      if(pfx) pool = pool.filter(x => (x.code||'').startsWith(pfx + '-'));
+      return [{value:'',label:'— Tidak ada parent —'}].concat(
+        pool.map(x => ({value:x.id, label:`${x.code} — ${x.name}`}))
+      );
+    };
+
+    _ssBuild('ac-parent-wrap','ac-parent', buildParent((a&&a.category)||''), (a&&a.parentId)||'');
+
+    document.getElementById('ac-cat').addEventListener('change', () => {
+      _ssBuild('ac-parent-wrap','ac-parent', buildParent(document.getElementById('ac-cat').value), '');
+    });
+  }, 50);
 }
 
 
