@@ -4382,9 +4382,6 @@ function renderAccounts(c){
   </div>
 
 </div>
-<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px;">
-  <canvas id="coaChart" height="120"></canvas>
-</div>
   
   <!-- Table -->
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
@@ -10317,7 +10314,7 @@ setTimeout(()=>{
   });
 
   new Chart(
-    document.getElementById('coaChart'),
+    document.getElementById('coaCategoryChart'),
     {
       type:'doughnut',
       data:{
