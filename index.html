@@ -4415,7 +4415,7 @@ function renderAccounts(c){
   `;
 
   // Render charts after DOM ready
-  setTimeout(()=>renderCoaCharts(accounts), 100);
+
 }
 
 function buildCoaRows(accounts, groups){
@@ -10093,7 +10093,7 @@ function renderAccountsDynamic(){
   if(content){
     content.innerHTML=html;
   }
-  renderCoaCharts();
+  
 }
 
 const _oldNav = window.nav;
@@ -10304,7 +10304,6 @@ z-index:9999;
 
 </div>
 
-function renderCoaCharts(){
 
   const accounts = DB.accounts || [];
 
