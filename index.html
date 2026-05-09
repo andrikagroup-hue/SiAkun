@@ -1225,45 +1225,10 @@ function calcAgingBuckets(){
 }
   function renderAgingARAPReport(){
   const isID=_lang==='id';
-  const today=new Date(); today.setHours(0,0,0,0);
-
-  // Helper: hitung hari keterlambatan
-  function agingBucket(dueDate){
-    if(!dueDate)return 999;
-    const due=new Date(dueDate+'T00:00:00');
-    return Math.floor((today-due)/(1000*60*60*24));
-  }
-
-  // AGING AR — Invoice belum lunas
-  const unpaidInv=DB.invoices.filter(i=>['unpaid','partial','overdue'].includes(invStatus(i)));
-  const arBuckets={current:[],d1_30:[],d31_60:[],d61_90:[],gt90:[]};
-  unpaidInv.forEach(inv=>{
-    const paid=(inv.payments||[]).reduce((s,p)=>s+p.amount,0);
-    const rem=inv.total-paid;
-    const days=agingBucket(inv.dueDate);
-    if(days<=0)arBuckets.current.push({...inv,rem,days});
-    else if(days<=30)arBuckets.d1_30.push({...inv,rem,days});
-    else if(days<=60)arBuckets.d31_60.push({...inv,rem,days});
-    else if(days<=90)arBuckets.d61_90.push({...inv,rem,days});
-    else arBuckets.gt90.push({...inv,rem,days});
-  });
-
-  // AGING AP — Purchase Order belum lunas
-  const unpaidPO=DB.purchases.filter(p=>{
-    const paid=(p.payments||[]).reduce((s,x)=>s+x.amount,0);
-    return paid<p.total&&p.status!=='draft';
-  });
-  const apBuckets={current:[],d1_30:[],d31_60:[],d61_90:[],gt90:[]};
-  unpaidPO.forEach(po=>{
-    const paid=(po.payments||[]).reduce((s,p)=>s+p.amount,0);
-    const rem=po.total-paid;
-    const days=agingBucket(po.dueDate||po.date);
-    if(days<=0)apBuckets.current.push({...po,rem,days});
-    else if(days<=30)apBuckets.d1_30.push({...po,rem,days});
-    else if(days<=60)apBuckets.d31_60.push({...po,rem,days});
-    else if(days<=90)apBuckets.d61_90.push({...po,rem,days});
-    else apBuckets.gt90.push({...po,rem,days});
-  });
+  // Refactored: pakai calcAgingBuckets() sebagai single source of truth
+  const _agingData = calcAgingBuckets();
+  const arBuckets = _agingData.ar;
+  const apBuckets = _agingData.ap;
 
   function bucketTotal(bucket){return bucket.reduce((s,i)=>s+i.rem,0);}
   function agingTable(buckets,type){
