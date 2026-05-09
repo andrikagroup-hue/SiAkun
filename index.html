@@ -4388,8 +4388,146 @@ function renderAccounts(c){
         ${buildCoaRows(accounts, _G)}
       </tbody>
     </table>
+ </div>
+
+  <!-- 📊 CoA Summary & Charts -->
+  <div style="margin-top:20px">
+
+    <!-- Stat cards -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+        <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Total Akun</div>
+        <div style="font-size:26px;font-weight:800;color:#0f172a;margin-top:4px">${accounts.length}</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+        <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Akun Bersaldo</div>
+        <div style="font-size:26px;font-weight:800;color:#16a34a;margin-top:4px" id="coa-stat-active">—</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+        <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Total Saldo Aktiva</div>
+        <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:6px" id="coa-stat-asset">—</div>
+      </div>
+    </div>
+
+    <!-- Doughnut Charts -->
+    <div class="coa-charts">
+      <div class="coa-chart-card">
+        <h4 style="text-align:left;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">📊 Saldo Per Kategori</h4>
+        <p style="font-size:11px;color:#94a3b8;margin:0 0 12px">Distribusi saldo dari jurnal</p>
+        <div style="position:relative;height:260px"><canvas id="coaCategoryChart"></canvas></div>
+      </div>
+      <div class="coa-chart-card">
+        <h4 style="text-align:left;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">🏆 Top 10 Akun by Saldo</h4>
+        <p style="font-size:11px;color:#94a3b8;margin:0 0 12px">Akun dengan saldo terbesar</p>
+        <div style="position:relative;height:260px"><canvas id="coaAccountChart"></canvas></div>
+      </div>
+    </div>
+
   </div>
-`; }
+
+`;
+  setTimeout(()=>renderCoaCharts(accounts), 150);
+}
+  function renderCoaCharts(accounts){
+  if(typeof Chart==='undefined') return;
+
+  const PALETTE=[
+    '#f87171','#fb923c','#fbbf24','#a3e635','#34d399',
+    '#22d3ee','#60a5fa','#a78bfa','#f472b6','#94a3b8',
+    '#e879f9','#2dd4bf','#f97316','#14b8a6','#8b5cf6','#ec4899'
+  ];
+
+  // Hitung balances pakai acctBal() → real data dari jurnal
+  const withBal = accounts.map(a=>({...a, _bal: Math.abs(acctBal(a.id))}));
+  const active = withBal.filter(a=>a._bal>0);
+
+  // Update stat cards
+  const statActive = document.getElementById('coa-stat-active');
+  const statAsset  = document.getElementById('coa-stat-asset');
+  if(statActive) statActive.textContent = active.length;
+  if(statAsset){
+    const totalAsset = withBal
+      .filter(a=>(a.category||'').toLowerCase().includes('aktiva'))
+      .reduce((s,a)=>s+a._bal, 0);
+    statAsset.textContent = rp(totalAsset);
+  }
+
+  // ── Chart 1: Saldo Per Kategori ──
+  const catMap={};
+  active.forEach(a=>{
+    const cat = a.category||'Lainnya';
+    catMap[cat]=(catMap[cat]||0)+a._bal;
+  });
+  const catLabels=Object.keys(catMap).sort((a,b)=>catMap[b]-catMap[a]);
+  const catData=catLabels.map(k=>catMap[k]);
+
+  const cv1=document.getElementById('coaCategoryChart');
+  if(cv1){
+    const ex=Chart.getChart(cv1); if(ex) ex.destroy();
+    new Chart(cv1,{
+      type:'doughnut',
+      data:{
+        labels:catLabels,
+        datasets:[{
+          data:catData,
+          backgroundColor:catLabels.map((_,i)=>PALETTE[i%PALETTE.length]),
+          borderWidth:2,
+          borderColor:'#fff',
+          hoverOffset:8
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        cutout:'60%',
+        plugins:{
+          legend:{
+            position:'right',
+            labels:{font:{size:11},boxWidth:12,padding:8,color:'#475569'}
+          },
+          tooltip:{
+            callbacks:{label:c=>` ${c.label}: ${rp(c.raw)}`}
+          }
+        }
+      }
+    });
+  }
+
+  // ── Chart 2: Top 10 Akun by Saldo ──
+  const top10=active.sort((a,b)=>b._bal-a._bal).slice(0,10);
+
+  const cv2=document.getElementById('coaAccountChart');
+  if(cv2){
+    const ex=Chart.getChart(cv2); if(ex) ex.destroy();
+    new Chart(cv2,{
+      type:'doughnut',
+      data:{
+        labels:top10.map(a=>a.name||a.code||a.id),
+        datasets:[{
+          data:top10.map(a=>a._bal),
+          backgroundColor:top10.map((_,i)=>PALETTE[i%PALETTE.length]),
+          borderWidth:2,
+          borderColor:'#fff',
+          hoverOffset:8
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        cutout:'60%',
+        plugins:{
+          legend:{
+            position:'right',
+            labels:{font:{size:11},boxWidth:12,padding:8,color:'#475569'}
+          },
+          tooltip:{
+            callbacks:{label:c=>` ${c.label}: ${rp(c.raw)}`}
+          }
+        }
+      }
+    });
+  }
+}
 function buildCoaRows(accounts, groups){
   let html = '';
   groups.forEach(g=>{
