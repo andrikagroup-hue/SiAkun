@@ -4874,6 +4874,8 @@ function openAccount(id){
       let pool = DB.accounts.filter(x => x.id !== id);
       const pfx = _catPfx[cat];
       if(pfx) pool = pool.filter(x => (x.code||'').startsWith(pfx + '-'));
+      // Sort by kode (ascending) — biar urut rapih
+      pool.sort((a,b) => (a.code||'').localeCompare(b.code||'', undefined, {numeric:true}));
       return [{value:'',label:'— Tidak ada parent —'}].concat(
         pool.map(x => ({value:x.id, label:`${x.code} — ${x.name}`}))
       );
