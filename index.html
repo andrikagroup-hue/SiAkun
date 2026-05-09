@@ -2861,7 +2861,7 @@ function uid(){
     ? crypto.randomUUID().replace(/-/g,'')
     : Date.now().toString(36)+Math.random().toString(36).substr(2,8);
 }
-function rp(n){return 'Rp '+Math.abs(n||0).toLocaleString('id-ID');}
+function rp(n){return 'Rp '+Math.abs(n||0).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fDate(d){return d?new Date(d+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):'-';}
 function today(){return new Date().toISOString().split('T')[0];}
 function addDays(d,n){const dt=new Date(d+'T00:00:00');dt.setDate(dt.getDate()+n);return dt.toISOString().split('T')[0];}
@@ -8053,7 +8053,7 @@ function crAmsMapAccount(accCode, desc){
 // ================================================================
 //  EXPORT FINANCIAL REPORT — Styled Excel (Neraca + P&L)
 // ================================================================
-function rpFmt(n){if(!n||n===0)return'-';return'Rp '+Math.abs(Math.round(n)).toLocaleString('id-ID');}
+function rpFmt(n){if(!n||n===0)return'-';return'Rp '+Math.abs(n).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
 function exportFinancialReport(){
   const lr=labaRugiCalc();
@@ -8492,7 +8492,7 @@ const pdf_css_placeholder = `
 .pdf-net-profit .val { font-size: 20px; font-weight: 800; }
 `;
 
-function rp2(n){if(!n||n===0)return'—';const s=n<0?'(':'';const e=n<0?')':'';return s+'Rp '+Math.abs(Math.round(n)).toLocaleString('id-ID')+e;}
+function rp2(n){if(!n||n===0)return'—';const s=n<0?'(':'';const e=n<0?')':'';return s+'Rp '+Math.abs(n).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2})+e;}
 function valClass(n){return n<0?'neg':n>0?'pos':'';}
 
 function buildCoverHdr(co,today_str,reportTitle,lang){
