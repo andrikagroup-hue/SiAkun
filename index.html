@@ -4382,6 +4382,10 @@ function renderAccounts(c){
   </div>
 
 </div>
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px;">
+  <canvas id="coaChart" height="120"></canvas>
+</div>
+  
   <!-- Table -->
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
     <table class="coa-tbl" id="coa-table" style="width:100%;border-collapse:collapse;">
@@ -4400,23 +4404,6 @@ function renderAccounts(c){
       </tbody>
     </table>
   </div>
-
-  <!-- Charts -->
-  <div class="coa-charts" style="margin-top:20px;">
-    <div class="coa-chart-card">
-      <h4>Saldo Per Kategori</h4>
-      <canvas id="chart-coa-cat" height="220"></canvas>
-    </div>
-    <div class="coa-chart-card">
-      <h4>Saldo Per Akun</h4>
-      <canvas id="chart-coa-acun" height="220"></canvas>
-    </div>
-  </div>
-  `;
-
-  // Render charts after DOM ready
-
-}
 
 function buildCoaRows(accounts, groups){
   let html = '';
@@ -10306,6 +10293,52 @@ z-index:9999;
 
 
 
-  
+ <script>
+
+setTimeout(()=>{
+
+  if(!window.DB || !DB.accounts) return;
+
+  const map = {};
+
+  DB.accounts.forEach(acc=>{
+
+    const cat = acc.category || 'Lainnya';
+    const bal = Math.abs(acc.balance || 0);
+
+    if(bal <= 0) return;
+
+    if(!map[cat]){
+      map[cat] = 0;
+    }
+
+    map[cat] += bal;
+
+  });
+
+  new Chart(
+    document.getElementById('coaChart'),
+    {
+      type:'doughnut',
+      data:{
+        labels:Object.keys(map),
+        datasets:[{
+          data:Object.values(map)
+        }]
+      },
+      options:{
+        responsive:true,
+        plugins:{
+          legend:{
+            position:'right'
+          }
+        }
+      }
+    }
+  );
+
+},500);
+
+</script> 
 </body>
 </html>
