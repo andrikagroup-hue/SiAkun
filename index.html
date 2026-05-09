@@ -4447,7 +4447,10 @@ function renderAccounts(c){
   if(statActive) statActive.textContent = active.length;
   if(statAsset){
     const totalAsset = withBal
-      .filter(a=>(a.category||'').toLowerCase().includes('aktiva'))
+      .filter(a=>{
+        const t = (a.type||a.category||'').toLowerCase();
+        return t.includes('aktiva') || t.includes('asset');
+      })
       .reduce((s,a)=>s+a._bal, 0);
     statAsset.textContent = rp(totalAsset);
   }
