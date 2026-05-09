@@ -3062,6 +3062,30 @@ function acctBal(id){
   });
   return isDebitNormal(a) ? (deb - crd) : (crd - deb);
 }
+  // ════════════════════════════════════════════════════════════════════
+// balanceAsOfDate(accountId, dateStr)
+// Hitung saldo akun pada tanggal tertentu (inclusive).
+// Foundation untuk semua chart trend (Cash/Bank/Giro/etc).
+// ════════════════════════════════════════════════════════════════════
+function balanceAsOfDate(accountId, dateStr){
+  if(!accountId || !DB.accounts) return 0;
+  const a = DB.accounts.find(x => x.id === accountId);
+  if(!a) return 0;
+  
+  let deb = 0, crd = 0;
+  (DB.transactions || []).forEach(tx => {
+    if(!tx.date || tx.date > dateStr) return;
+    (tx.entries || []).forEach(e => {
+      const acc = resolveAccount(e.acc || e.account || e.accountId || e.akun);
+      if(acc && acc.id === accountId){
+        deb += parseFloat(e.deb) || 0;
+        crd += parseFloat(e.crd) || 0;
+      }
+    });
+  });
+  
+  return isDebitNormal(a) ? (deb - crd) : (crd - deb);
+}
 
 // ════════════════════════════════════════════════════════════════════
 // recalculateAllBalances() — Posting ledger otomatis
