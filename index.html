@@ -4398,7 +4398,7 @@ function buildCoaRows(accounts, groups){
     html += "TEST";
     rows.forEach(a=>{
       const bal = acctBal(a.id);
-      const balStr = bal===0 ? `<span style="color:#94a3b8">—</span>` : `<span style="color:${bal<0?'#dc2626':'#0f172a'};font-weight:700">${rp(bal)}</span>`;
+      const balStr = bal===0 ? `<span style="color:#94a3b8">—</span>` : `<span style="color:${bal<0 ? '#dc2626' : '#0f172a'};font-weight:700">${rp(bal)}</span>`;
       html += `<tr data-id="${a.id}" data-cat="${a.category||a.type||''}" data-name="${(a.name||'').toLowerCase()}" data-code="${(a.code||'').toLowerCase()}">
         <td><input class="coa-check" type="checkbox" value="${a.id}"></td>
         <td><span style="background:#f0f4ff;color:#2563eb;font-size:11px;font-weight:700;padding:3px 7px;border-radius:5px;">${a.code||''}</span></td>
