@@ -4805,10 +4805,35 @@ function saveAccount(){
   const name = (document.getElementById('ac-name')?.value||'').trim();
   const cat  = (document.getElementById('ac-cat')?.value||'').trim();
   const parentId = document.getElementById('ac-parent')?.value||'';
+
+  // 1) Required fields
   if(!code||!name||!cat){alert('Kode, Nama, dan Kategori wajib diisi.');return;}
+
+  // 2) Format kode: harus "N-XXXXX" (1 digit angka, dash, 4-6 digit angka)
+  if(!/^[1-9]-\d{4,6}$/.test(code)){
+    alert('Format kode salah!\n\nGunakan format: N-XXXXX\nContoh: 1-10001, 2-20100, 6-60101\n\nKeterangan angka pertama:\n1=Aktiva, 2=Pasiva, 3=Modal,\n4=Pendapatan, 5=HPP, 6=Beban,\n7=Pendapatan Lain, 8=Beban Lain, 9=Pajak');
+    return;
+  }
+
+  // 3) Cek duplikat kode (kecuali sedang edit akun yang sama)
+  const dup = DB.accounts.find(a=>a.code===code && a.id!==editId);
+  if(dup){
+    alert(`Kode "${code}" sudah dipakai oleh akun:\n"${dup.name}"\n\nSilakan pakai kode lain.`);
+    return;
+  }
+
+  // 4) Validasi kode awal vs kategori (cegah mismatch)
+  const _typeByCode = {'1':'aktiva','2':'pasiva','3':'modal','4':'pendapatan','5':'hpp','6':'beban','7':'pendapatan','8':'beban','9':'beban'};
   // Map category to type/sub
   const _cm={'Kas & Bank':'aktiva','Akun Piutang':'aktiva','Persediaan':'aktiva','Aktiva Lancar Lainnya':'aktiva','Aktiva Tetap':'aktiva','Depresiasi & Amortisasi':'aktiva','Aktiva Lainnya':'aktiva','Akun Hutang':'pasiva','Kewajiban Lancar Lainnya':'pasiva','Kewajiban Jangka Panjang':'pasiva','Ekuitas':'modal','Pendapatan':'pendapatan','Pendapatan Lainnya':'pendapatan','Harga Pokok Penjualan':'hpp','Beban':'beban','Beban Lainnya':'beban'};
   const type = _cm[cat] || 'aktiva';
+
+  // 5) Cross-check: kode awal vs tipe kategori
+  const codeType = _typeByCode[code[0]];
+  if(codeType && codeType !== type){
+    const ok = confirm(`⚠️ Kode "${code}" mengindikasikan tipe ${codeType.toUpperCase()}, tapi kategori "${cat}" tipe ${type.toUpperCase()}.\n\nIni biasanya tidak konsisten dan bisa bikin laporan salah.\n\nLanjutkan tetap simpan?`);
+    if(!ok) return;
+  }
   const now = new Date().toISOString();
   if(editId){
     const i = DB.accounts.findIndex(a=>a.id===editId);
