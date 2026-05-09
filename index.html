@@ -10161,16 +10161,23 @@ function renderAccountsDynamic(){
         </div>
 
         <div class="tbl-wrap">
-          <table>
+          <table style="width:100%;table-layout:fixed">
+            <colgroup>
+              <col style="width:48px">
+              <col style="width:120px">
+              <col style="width:auto">
+              <col style="width:140px">
+              <col style="width:160px">
+              <col style="width:90px">
+            </colgroup>
             <thead>
               <tr>
                 <th></th>
                 <th>Kode</th>
                 <th>Account Name</th>
                 <th>Category</th>
-                <th>Balance</th>
+                <th style="text-align:right">Balance</th>
                 <th>Action</th>
-
               </tr>
             </thead>
 
@@ -10200,7 +10207,7 @@ function renderAccountsDynamic(){
                     const t=map[c]||{label:'-',bg:'#f1f5f9',fg:'#64748b'};
                     return `<span style="font-size:11px;font-weight:600;background:${t.bg};color:${t.fg};padding:3px 10px;border-radius:12px">${t.label}</span>`;
                   })()}</td>
-                  <td>${rpFmt(acc.balance || 0)}</td>
+                  <td style="text-align:right;font-variant-numeric:tabular-nums">${rpFmt(acc.balance || 0)}</td>
 
                   <td>
   <button onclick="editCoA('${acc.id}')">✏️</button>
