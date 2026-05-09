@@ -10202,7 +10202,43 @@ function renderAccountsDynamic(){
 
   if(content){
     content.innerHTML=html;
+
+    const cs=document.createElement('div');
+    cs.style.cssText='padding:0 16px 24px';
+    cs.innerHTML=`
+      <div style="margin-top:16px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+            <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">Total Akun</div>
+            <div style="font-size:26px;font-weight:800;color:#0f172a;margin-top:4px">${(DB.accounts||[]).length}</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+            <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">Akun Bersaldo</div>
+            <div style="font-size:26px;font-weight:800;color:#16a34a;margin-top:4px" id="coa-stat-active">—</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+            <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">Total Saldo Aktiva</div>
+            <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:6px" id="coa-stat-asset">—</div>
+          </div>
+        </div>
+        <div class="coa-charts">
+          <div class="coa-chart-card">
+            <h4 style="text-align:left;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">📊 Saldo Per Kategori</h4>
+            <p style="font-size:11px;color:#94a3b8;margin:0 0 12px">Distribusi saldo dari jurnal</p>
+            <div style="position:relative;height:260px"><canvas id="coaCategoryChart"></canvas></div>
+          </div>
+          <div class="coa-chart-card">
+            <h4 style="text-align:left;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">🏆 Top 10 Akun by Saldo</h4>
+            <p style="font-size:11px;color:#94a3b8;margin:0 0 12px">Akun dengan saldo terbesar</p>
+            <div style="position:relative;height:260px"><canvas id="coaAccountChart"></canvas></div>
+          </div>
+        </div>
+      </div>`;
+    content.appendChild(cs);
+    setTimeout(()=>renderCoaCharts(DB.accounts||[]),200);
   }
+
+}
   
 }
 
