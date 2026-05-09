@@ -4395,7 +4395,7 @@ function buildCoaRows(accounts, groups){
   groups.forEach(g=>{
     const rows = accounts.filter(a=>(a.category||a.type||'Others')===g.c);
     if(!rows.length) return;
-    html += `<tr><td colspan="6">${g.l}</td></tr>`;
+    html += "TEST";
     rows.forEach(a=>{
       const bal = acctBal(a.id);
       const balStr = bal===0 ? '<span style="color:#94a3b8">—</span>' : `<span style="color:${bal<0?'#dc2626':'#0f172a'};font-weight:700">${rp(bal)}</span>`;
