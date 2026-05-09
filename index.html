@@ -10172,7 +10172,7 @@ function renderAccountsDynamic(){
                   <td>${acc.code || ''}</td>
                   <td>${acc.name || ''}</td>
                   <td>${acc.subCategory || ''}</td>
-                  <td>${rpFmt(getAccountBalance(acc) || 0)}</td>
+                  <td>${rpFmt(acc.balance || 0)}</td>
 
                   <td>
   <button onclick="editCoA('${acc.id}')">✏️</button>
