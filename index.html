@@ -1148,6 +1148,81 @@ function calcAgingBuckets(){
     apGrandTotal: Object.values(ap).flat().reduce((s,i) => s + i.rem, 0),
   };
 }
+  function renderAgingWidgetHTML(){
+  const isID = _lang === 'id';
+  const data = calcAgingBuckets();
+  
+  const labels = isID
+    ? ['Belum Jatuh Tempo', '1-30 Hari', '31-60 Hari', '61-90 Hari', '> 90 Hari']
+    : ['Not Yet Due', '1-30 Days', '31-60 Days', '61-90 Days', '> 90 Days'];
+  
+  const colors = ['#059669','#f59e0b','#f97316','#ef4444','#dc2626'];
+  const bucketKeys = ['current','d1_30','d31_60','d61_90','gt90'];
+
+  const renderCard = (title, icon, totals, grandTotal, accentColor) => {
+    if(grandTotal === 0){
+      return `
+        <div style="background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div style="font-size:13px;font-weight:700;">${icon} ${title}</div>
+            <div style="font-size:11px;color:var(--muted);">${isID?'Tidak ada outstanding':'No outstanding'}</div>
+          </div>
+          <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">
+            ✨ ${isID?'Semua lunas!':'All settled!'}
+          </div>
+        </div>
+      `;
+    }
+
+    const bars = bucketKeys.map((key, i) => {
+      const value = totals[key];
+      const pct = grandTotal > 0 ? (value / grandTotal * 100) : 0;
+      if(value === 0) return '';
+      return `
+        <div style="margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">
+            <span style="color:#475569;font-weight:600;">${labels[i]}</span>
+            <span style="color:${colors[i]};font-weight:700;">${rp(value)}</span>
+          </div>
+          <div style="height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${colors[i]};border-radius:3px;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div style="background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f1f5f9;">
+          <div>
+            <div style="font-size:13px;font-weight:700;">${icon} ${title}</div>
+            <div style="font-size:18px;font-weight:800;color:${accentColor};margin-top:2px;">${rp(grandTotal)}</div>
+          </div>
+        </div>
+        ${bars}
+      </div>
+    `;
+  };
+
+  return `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+      ${renderCard(
+        isID ? 'Aging Piutang (AR)' : 'Aging Receivables (AR)',
+        '📥',
+        data.arTotals,
+        data.arGrandTotal,
+        '#2563eb'
+      )}
+      ${renderCard(
+        isID ? 'Aging Hutang (AP)' : 'Aging Payables (AP)',
+        '📤',
+        data.apTotals,
+        data.apGrandTotal,
+        '#dc2626'
+      )}
+    </div>
+  `;
+}
   function renderAgingARAPReport(){
   const isID=_lang==='id';
   const today=new Date(); today.setHours(0,0,0,0);
