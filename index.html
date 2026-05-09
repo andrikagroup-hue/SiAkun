@@ -3397,6 +3397,7 @@ function renderDashboard(c){
     <div class="stat r"><div class="stat-lbl">${t('db_ap')}</div><div class="stat-val">${rp(totalAP)}</div></div>
     <div class="stat ${lowStock?'r':'g'}"><div class="stat-lbl">${t('db_lowstock')}</div><div class="stat-val">${lowStock}</div><div class="stat-sub">${t('db_products')}</div></div>
   </div>
+  ${renderAgingWidgetHTML()}
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
     <div style="background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:16px"><div style="font-size:13px;font-weight:700;margin-bottom:10px">${t('db_plSummary')}</div><canvas id="ch-lr"></canvas><div id="ch-lr-legend" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:2px"></div></div>
     <div style="background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:16px"><div style="font-size:13px;font-weight:700;margin-bottom:10px">📈 Revenue 6 Bulan</div><canvas id="ch-trend"></canvas></div>
