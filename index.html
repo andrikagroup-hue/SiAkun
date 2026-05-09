@@ -10506,6 +10506,81 @@ function renderCoaCharts(){
   );
 
 }
+function renderCoaCharts(){
 
+  const accounts = DB.accounts || [];
+
+  const catMap = {};
+
+  accounts.forEach(acc=>{
+
+    const cat = acc.category || 'Lainnya';
+    const bal = Math.abs(acc.balance || 0);
+
+    if(!catMap[cat]){
+      catMap[cat] = 0;
+    }
+
+    catMap[cat] += bal;
+
+  });
+
+  const topAccounts = [...accounts]
+    .filter(a => Math.abs(a.balance || 0) > 0)
+    .sort((a,b)=>Math.abs(b.balance)-Math.abs(a.balance))
+    .slice(0,10);
+
+  if(window.coaCategoryChartObj){
+    window.coaCategoryChartObj.destroy();
+  }
+
+  if(window.coaAccountChartObj){
+    window.coaAccountChartObj.destroy();
+  }
+
+  window.coaCategoryChartObj = new Chart(
+    document.getElementById('coaCategoryChart'),
+    {
+      type:'doughnut',
+      data:{
+        labels:Object.keys(catMap),
+        datasets:[{
+          data:Object.values(catMap)
+        }]
+      },
+      options:{
+        responsive:true,
+        plugins:{
+          legend:{
+            position:'right'
+          }
+        }
+      }
+    }
+  );
+
+  window.coaAccountChartObj = new Chart(
+    document.getElementById('coaAccountChart'),
+    {
+      type:'doughnut',
+      data:{
+        labels:topAccounts.map(a=>a.name),
+        datasets:[{
+          data:topAccounts.map(a=>Math.abs(a.balance || 0))
+        }]
+      },
+      options:{
+        responsive:true,
+        plugins:{
+          legend:{
+            position:'right'
+          }
+        }
+      }
+    }
+  );
+
+}
+  
 </body>
 </html>
