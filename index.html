@@ -10184,7 +10184,22 @@ function renderAccountsDynamic(){
 
                   <td>${acc.code || ''}</td>
                   <td>${acc.name || ''}</td>
-                  <td>${acc.subCategory || ''}</td>
+                  <td>${(()=>{
+                    const c=(acc.code||'').toString()[0];
+                    const map={
+                      '1':{label:'Aktiva',  bg:'#dbeafe',fg:'#1e40af'},
+                      '2':{label:'Pasiva',  bg:'#fee2e2',fg:'#991b1b'},
+                      '3':{label:'Modal',   bg:'#fef3c7',fg:'#92400e'},
+                      '4':{label:'Pendapatan',bg:'#dcfce7',fg:'#166534'},
+                      '5':{label:'HPP',     bg:'#fce7f3',fg:'#9d174d'},
+                      '6':{label:'Beban',   bg:'#fed7aa',fg:'#9a3412'},
+                      '7':{label:'Pend. Lain',bg:'#d1fae5',fg:'#065f46'},
+                      '8':{label:'Beban Lain',bg:'#ffedd5',fg:'#7c2d12'},
+                      '9':{label:'Pajak',   bg:'#e9d5ff',fg:'#6b21a8'}
+                    };
+                    const t=map[c]||{label:'-',bg:'#f1f5f9',fg:'#64748b'};
+                    return `<span style="font-size:11px;font-weight:600;background:${t.bg};color:${t.fg};padding:3px 10px;border-radius:12px">${t.label}</span>`;
+                  })()}</td>
                   <td>${rpFmt(acc.balance || 0)}</td>
 
                   <td>
