@@ -3086,7 +3086,47 @@ function balanceAsOfDate(accountId, dateStr){
   
   return isDebitNormal(a) ? (deb - crd) : (crd - deb);
 }
+// ════════════════════════════════════════════════════════════════════
+// dailyBalanceSeries(accountId, fromDate, toDate)
+// Return [{date:'YYYY-MM-DD', balance:Number}] tiap hari dalam range.
+// Single-pass: pakai carry-over saldo awal + akumulasi delta per tanggal.
+// Efisien O(transactions + days), aman buat range besar.
+// ════════════════════════════════════════════════════════════════════
+function dailyBalanceSeries(accountId, fromDate, toDate){
+  if(!accountId || !fromDate || !toDate || !DB.accounts) return [];
+  const a = DB.accounts.find(x => x.id === accountId);
+  if(!a) return [];
+  const isDebNormal = isDebitNormal(a);
 
+  // Saldo awal: posisi 1 hari sebelum fromDate (carry-over dari masa lalu)
+  const prev = new Date(fromDate);
+  prev.setUTCDate(prev.getUTCDate() - 1);
+  let running = balanceAsOfDate(accountId, prev.toISOString().slice(0, 10));
+
+  // Akumulasi net delta per tanggal — hanya untuk akun ini
+  const deltaByDate = {};
+  (DB.transactions || []).forEach(tx => {
+    if(!tx.date || tx.date < fromDate || tx.date > toDate) return;
+    (tx.entries || []).forEach(e => {
+      const acc = resolveAccount(e.acc || e.account || e.accountId || e.akun);
+      if(!acc || acc.id !== accountId) return;
+      const deb = parseFloat(e.deb) || 0;
+      const crd = parseFloat(e.crd) || 0;
+      deltaByDate[tx.date] = (deltaByDate[tx.date] || 0)
+        + (isDebNormal ? (deb - crd) : (crd - deb));
+    });
+  });
+
+  // Bangun deret harian: looping dari fromDate ke toDate
+  const out = [];
+  const end = new Date(toDate);
+  for(let d = new Date(fromDate); d <= end; d.setUTCDate(d.getUTCDate() + 1)){
+    const ds = d.toISOString().slice(0, 10);
+    if(deltaByDate[ds]) running += deltaByDate[ds];
+    out.push({ date: ds, balance: running });
+  }
+  return out;
+}
 // ════════════════════════════════════════════════════════════════════
 // recalculateAllBalances() — Posting ledger otomatis
 // Iterasi seluruh DB.transactions → akumulasi debit/credit per akun →
