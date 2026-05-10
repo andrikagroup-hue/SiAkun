@@ -1274,6 +1274,126 @@ function renderAgingWidgetHTML(){
     </div>
   `;
 }
+  // ════════════════════════════════════════════════════════════════════
+// renderCashBankTrendsHTML()
+// Widget cards untuk akun Kas & Bank: nama akun + saldo + mini chart.
+// Style mirip Kledo: card grid responsive, hover effect, clickable.
+// ════════════════════════════════════════════════════════════════════
+function renderCashBankTrendsHTML(){
+  const isID = _lang === 'id';
+  const cashAccounts = (DB.accounts || []).filter(a => a.category === 'Kas & Bank');
+  if(cashAccounts.length === 0) return '';
+
+  const cards = cashAccounts.map((a, idx) => {
+    const bal = acctBal(a.id);
+    return `
+      <div class="cashbank-card" onclick="nav('accounts')" title="${isID ? 'Klik untuk detail akun' : 'Click for account details'}">
+        <div class="cashbank-card-header">
+          <div class="cashbank-card-meta">
+            <div class="cashbank-card-code">${a.code || a.id}</div>
+            <div class="cashbank-card-name">${a.name}</div>
+          </div>
+          <div class="cashbank-card-balance">${rp(bal)}</div>
+        </div>
+        <div class="cashbank-card-chart-wrap">
+          <canvas id="cashbank-chart-${idx}" data-account-id="${a.id}"></canvas>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="cashbank-trends-section">
+      <div class="cashbank-trends-header">
+        <h3 class="cashbank-trends-title">${isID ? '💰 Saldo Kas & Bank' : '💰 Cash & Bank Balance'}</h3>
+        <span class="cashbank-trends-subtitle">${isID ? '6 bulan terakhir' : 'Last 6 months'}</span>
+      </div>
+      <div class="cashbank-cards-grid">${cards}</div>
+    </div>
+    <style>
+      .cashbank-trends-section{margin:16px 0;}
+      .cashbank-trends-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;padding:0 4px;}
+      .cashbank-trends-title{margin:0;font-size:15px;font-weight:600;color:#1f2937;}
+      .cashbank-trends-subtitle{font-size:12px;color:#6b7280;}
+      .cashbank-cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+      .cashbank-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;}
+      .cashbank-card:hover{border-color:#3b82f6;box-shadow:0 4px 12px rgba(59,130,246,.1);transform:translateY(-1px);}
+      .cashbank-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px;}
+      .cashbank-card-meta{flex:1;min-width:0;}
+      .cashbank-card-code{font-size:11px;color:#6b7280;font-weight:500;}
+      .cashbank-card-name{font-size:13px;color:#1f2937;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .cashbank-card-balance{font-size:15px;font-weight:700;color:#111827;white-space:nowrap;}
+      .cashbank-card-chart-wrap{height:60px;position:relative;}
+      @media(max-width:640px){.cashbank-cards-grid{grid-template-columns:1fr;}}
+    </style>
+  `;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// initCashBankTrendCharts()
+// Render Chart.js area chart kecil untuk tiap canvas di widget.
+// Range: 6 bulan terakhir dari today. Decimated biar smooth.
+// ════════════════════════════════════════════════════════════════════
+function initCashBankTrendCharts(){
+  if(typeof Chart === 'undefined') return;
+  const canvases = document.querySelectorAll('canvas[id^="cashbank-chart-"]');
+  if(!canvases.length) return;
+
+  // Range dinamis: 6 bulan ke belakang dari today
+  const today = new Date();
+  const fromDate = new Date(today);
+  fromDate.setMonth(fromDate.getMonth() - 6);
+  fromDate.setDate(1);
+  const fromStr = fromDate.toISOString().slice(0, 10);
+  const toStr   = today.toISOString().slice(0, 10);
+
+  canvases.forEach(canvas => {
+    const accId = canvas.getAttribute('data-account-id');
+    if(!accId) return;
+
+    const series = dailyBalanceSeries(accId, fromStr, toStr);
+    if(!series.length) return;
+
+    // Decimate: max ~60 points biar chart smooth & ringan
+    const step = Math.max(1, Math.floor(series.length / 60));
+    const points = series.filter((_, i) => i % step === 0 || i === series.length - 1);
+
+    new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: points.map(p => p.date),
+        datasets: [{
+          data: points.map(p => p.balance),
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.15)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.35,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => rp(ctx.parsed.y),
+              title: items => items[0].label,
+            }
+          }
+        },
+        scales: {
+          x: { display: false },
+          y: { display: false, beginAtZero: false }
+        },
+        interaction: { mode: 'nearest', intersect: false }
+      }
+    });
+  });
+}
   function renderAgingARAPReport(){
   const isID=_lang==='id';
   // Refactored: pakai calcAgingBuckets() sebagai single source of truth
