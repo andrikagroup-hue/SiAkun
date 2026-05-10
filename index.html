@@ -1393,7 +1393,13 @@ function initCashBankTrendCharts(){
           tooltip: {
             callbacks: {
               label: ctx => rp(ctx.parsed.y),
-              title: items => items[0].label,
+              title: items => {
+                const d = new Date(items[0].label);
+                const months = _lang === 'id'
+                  ? ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']
+                  : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+              },
             }
           }
         },
