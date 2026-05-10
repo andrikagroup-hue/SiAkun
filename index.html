@@ -1283,9 +1283,26 @@ function renderCashBankTrendsHTML(){
   const isID = _lang === 'id';
   const cashAccounts = (DB.accounts || []).filter(a => a.category === 'Kas & Bank');
   if(cashAccounts.length === 0) return '';
-
+// Helper: hitung trend dari awal periode (3 bulan ke belakang) sampai sekarang
+  function _calcTrend(accId){
+    const today = new Date();
+    const start = new Date(today);
+    start.setMonth(start.getMonth() - 3);
+    const startStr = start.toISOString().slice(0, 10);
+    const todayStr = today.toISOString().slice(0, 10);
+    const startBal = balanceAsOfDate(accId, startStr);
+    const endBal = balanceAsOfDate(accId, todayStr);
+    if(startBal === 0 && endBal === 0) return { dir: 'flat', pct: 0 };
+    if(startBal === 0) return { dir: 'up', pct: 100 };
+    const pct = ((endBal - startBal) / Math.abs(startBal)) * 100;
+    return { dir: pct > 0.1 ? 'up' : (pct < -0.1 ? 'down' : 'flat'), pct };
+  }
   const cards = cashAccounts.map((a, idx) => {
     const bal = acctBal(a.id);
+    const trend = _calcTrend(a.id);
+    const trendCls = trend.dir === 'up' ? 'trend-up' : (trend.dir === 'down' ? 'trend-down' : 'trend-flat');
+    const trendArrow = trend.dir === 'up' ? '↗' : (trend.dir === 'down' ? '↘' : '→');
+    const trendPct = trend.dir === 'flat' ? '±0,0%' : (trend.pct >= 0 ? '+' : '') + trend.pct.toFixed(1).replace('.', ',') + '%';
     return `
       <div class="cashbank-card" onclick="nav('accounts')" title="${isID ? 'Klik untuk detail akun' : 'Click for account details'}">
         <div class="cashbank-card-header">
@@ -1293,7 +1310,10 @@ function renderCashBankTrendsHTML(){
             <div class="cashbank-card-code">${a.code || a.id}</div>
             <div class="cashbank-card-name">${a.name}</div>
           </div>
-          <div class="cashbank-card-balance">${rp(bal)}</div>
+          <div class="cashbank-card-right">
+            <div class="cashbank-card-balance">${rp(bal)}</div>
+            <div class="cashbank-card-trend ${trendCls}">${trendArrow} ${trendPct}</div>
+          </div>
         </div>
         <div class="cashbank-card-chart-wrap">
           <canvas id="cashbank-chart-${idx}" data-account-id="${a.id}"></canvas>
@@ -1323,6 +1343,11 @@ function renderCashBankTrendsHTML(){
       .cashbank-card-code{font-size:11px;color:#6b7280;font-weight:500;}
       .cashbank-card-name{font-size:13px;color:#1f2937;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
       .cashbank-card-balance{font-size:15px;font-weight:700;color:#111827;white-space:nowrap;}
+      .cashbank-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+      .cashbank-card-trend{font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;white-space:nowrap;}
+      .trend-up{background:#dcfce7;color:#166534;}
+      .trend-down{background:#fee2e2;color:#991b1b;}
+      .trend-flat{background:#f3f4f6;color:#6b7280;}
       .cashbank-card-chart-wrap{height:60px;position:relative;}
       @media(max-width:640px){.cashbank-cards-grid{grid-template-columns:1fr;}}
     </style>
