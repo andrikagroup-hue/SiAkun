@@ -1306,7 +1306,7 @@ function renderCashBankTrendsHTML(){
     <div class="cashbank-trends-section">
       <div class="cashbank-trends-header">
         <h3 class="cashbank-trends-title">${isID ? '💰 Saldo Kas & Bank' : '💰 Cash & Bank Balance'}</h3>
-        <span class="cashbank-trends-subtitle">${isID ? '6 bulan terakhir' : 'Last 6 months'}</span>
+        <span class="cashbank-trends-subtitle">${isID ? 'Riwayat saldo' : 'Balance history'}</span>
       </div>
       <div class="cashbank-cards-grid">${cards}</div>
     </div>
@@ -1332,20 +1332,32 @@ function renderCashBankTrendsHTML(){
 // ════════════════════════════════════════════════════════════════════
 // initCashBankTrendCharts()
 // Render Chart.js area chart kecil untuk tiap canvas di widget.
-// Range: 6 bulan terakhir dari today. Decimated biar smooth.
+// Range: ikut earliest tx (cap 12 bulan), decimated biar smooth.
 // ════════════════════════════════════════════════════════════════════
 function initCashBankTrendCharts(){
   if(typeof Chart === 'undefined') return;
   const canvases = document.querySelectorAll('canvas[id^="cashbank-chart-"]');
   if(!canvases.length) return;
 
-  // Range dinamis: 6 bulan ke belakang dari today
+  // Range dinamis: ikut earliest tx (cap 12 bulan), end = today
   const today = new Date();
-  const fromDate = new Date(today);
-  fromDate.setMonth(fromDate.getMonth() - 6);
-  fromDate.setDate(1);
-  const fromStr = fromDate.toISOString().slice(0, 10);
-  const toStr   = today.toISOString().slice(0, 10);
+  const toStr = today.toISOString().slice(0, 10);
+  let earliest = null;
+  (DB.transactions || []).forEach(tx => {
+    if(tx.date && (!earliest || tx.date < earliest)) earliest = tx.date;
+  });
+  // Cap maksimum 12 bulan ke belakang biar gak terlalu padat
+  const cap = new Date(today);
+  cap.setMonth(cap.getMonth() - 12);
+  const capStr = cap.toISOString().slice(0, 10);
+  // Fallback 6 bulan kalau belum ada tx sama sekali
+  let fromStr;
+  if(!earliest){
+    const half = new Date(today); half.setMonth(half.getMonth() - 6);
+    fromStr = half.toISOString().slice(0, 10);
+  } else {
+    fromStr = earliest < capStr ? capStr : earliest;
+  }
 
   canvases.forEach(canvas => {
     const accId = canvas.getAttribute('data-account-id');
