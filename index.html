@@ -1815,7 +1815,7 @@ function detectBSIAccount(desc,flow){
 function detectBSIDuplicates(row, bankAccId){
   const rowDate  = new Date(row.date + 'T00:00:00');
   const DAY_MS   = 86400000;
-  const CASH_IDS = new Set([bankAccId, '1101', '1102', '1-10001']); // BSI + semua kas
+  const CASH_IDS = new Set([bankAccId, '1-10001', '1-10002', '1-10001']); // BSI + semua kas
 
   return DB.transactions.filter(tx => {
     if(!tx.date) return false;
@@ -1853,7 +1853,7 @@ async function openBSIJournalImport(input){
   // Resolve BSI account id once
   const bankAccs=DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='lancar'&&
     (a.name.toLowerCase().includes('bsi')||a.name.toLowerCase().includes('bank syariah')));
-  const bankAccId=bankAccs.length?bankAccs[0].id:'1102';
+  const bankAccId=bankAccs.length?bankAccs[0].id:'1-10002';
 
   window._bsiJournalRows=rows.map((r,i)=>{
     const detected=detectBSIAccount(r.desc,r.flow);
@@ -1872,7 +1872,7 @@ function renderBSIJournalPreview(fileName){
   const rows=window._bsiJournalRows||[];
   const bankAccs=DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='lancar'&&
     (a.name.toLowerCase().includes('bsi')||a.name.toLowerCase().includes('bank syariah')));
-  const bankAccId=bankAccs.length?bankAccs[0].id:'1102';
+  const bankAccId=bankAccs.length?bankAccs[0].id:'1-10002';
 
   const needManual  = rows.filter(r=>!r.contraAcc).length;
   const dupRows     = rows.filter(r=>r.dups&&r.dups.length>0);
@@ -3350,7 +3350,7 @@ function labaRugiCalc(){
   const pendapatan=totalByTypes(['pendapatan']);
   const hpp=totalByTypes(['hpp']);
   const beban=(DB.accounts||[])
-    .filter(a=>a.type==='beban'&&a.id!=='6503')
+    .filter(a=>a.type==='beban'&&a.id!=='9-90000')
     .reduce((s,a)=>s+acctBal(a.id),0);
   const labaKotor=pendapatan-hpp;
   const labaUsaha=labaKotor-beban;
@@ -6280,7 +6280,7 @@ function openAddPrepaid(){
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Batal</button><button class="btn btn-pri" onclick="savePrepaid()">💾 Simpan & Generate Jadwal</button></div>`,'modal-wide');
   setTimeout(()=>{
     const accSel=document.getElementById('pp-acc'),expSel=document.getElementById('pp-exp');
-    if(accSel)[...accSel.options].forEach((o,i)=>{if(o.value==='1306')accSel.selectedIndex=i;});
+    if(accSel)[...accSel.options].forEach((o,i)=>{if(o.value==='1-10500')accSel.selectedIndex=i;});
     if(expSel)[...expSel.options].forEach((o,i)=>{if(o.value==='6-60400')expSel.selectedIndex=i;});
     calcPrepaidPreview();
   },50);
@@ -6954,10 +6954,10 @@ function saveEditPayroll(id,count){
   Object.assign(p,{date,bankAcc,totalGaji,totalPPh,totalBPJS,totalNet});
   const txRef=`PAY-${p.year}${String(p.month).padStart(2,'0')}`;p.txRef=txRef;
   const entries=[];
-  p.slips.forEach(s=>entries.push({acc:'6101',deb:s.totalPendapatan||0,crd:0}));
+  p.slips.forEach(s=>entries.push({acc:'6-60101',deb:s.totalPendapatan||0,crd:0}));
   entries.push({acc:bankAcc,deb:0,crd:totalNet});
   if(totalPPh>0)entries.push({acc:'2-20500',deb:0,crd:totalPPh});
-  if(totalBPJS>0)entries.push({acc:'2108',deb:0,crd:totalBPJS});
+  if(totalBPJS>0)entries.push({acc:'2-20701',deb:0,crd:totalBPJS});
   DB.transactions.push({id:uid(),date,ref:txRef,desc:`Gaji ${monthName(p.month)} ${p.year}`,entries});
   saveDB();closeModal();logAudit('Edit Payroll',`${monthName(p.month)} ${p.year}`);renderPayrollHist();
 }
@@ -7209,16 +7209,16 @@ function runPayroll(){
   });
   // ── Jurnal Akrual Gaji ──
   DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Beban Gaji ${monthName(m)} ${y}`,entries:[
-    {acc:'6101',deb:totGross,crd:0},
+    {acc:'6-60101',deb:totGross,crd:0},
     {acc:'2-20201',deb:0,crd:totNet},        // Utang Gaji
     {acc:'2-20501',deb:0,crd:totPPh},        // Utang PPh 21
-    {acc:'2109',deb:0,crd:totBPJS},       // Utang BPJS karyawan
+    {acc:'2-20702',deb:0,crd:totBPJS},       // Utang BPJS karyawan
   ]});
   // ── Jurnal Beban BPJS Perusahaan ──
   if(totBpjsEmp>0){
     DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Beban BPJS Perusahaan ${monthName(m)} ${y}`,entries:[
-      {acc:'6103',deb:totBpjsEmp,crd:0},  // Beban BPJS Perusahaan
-      {acc:'2109',deb:0,crd:totBpjsEmp},  // Utang BPJS
+      {acc:'6-60111',deb:totBpjsEmp,crd:0},  // Beban BPJS Perusahaan
+      {acc:'2-20702',deb:0,crd:totBpjsEmp},  // Utang BPJS
     ]});
   }
   // ── Jurnal Pembayaran Gaji ──
@@ -7618,9 +7618,9 @@ function renderTax(c){
   <div id="tax-pph25" class="tabcnt">
     <div class="alert a-info"><b>PPh 25 — Angsuran Bulanan PPh Badan.</b> Dibayar setiap bulan paling lambat <b>tanggal 15</b> bulan berikutnya. Besarnya = PPh Badan terutang tahun lalu ÷ 12. Berfungsi sebagai kredit pajak untuk mengurangi PPh 29.</div>
     <div class="stats">
-      <div class="stat b"><div class="stat-lbl">Total PPh 25 Dibayar</div><div class="stat-val">${rp(acctBal('1504'))}</div><div class="stat-sub">Akumulasi angsuran</div></div>
+      <div class="stat b"><div class="stat-lbl">Total PPh 25 Dibayar</div><div class="stat-val">${rp(acctBal('1-10503'))}</div><div class="stat-sub">Akumulasi angsuran</div></div>
       <div class="stat y"><div class="stat-lbl">Estimasi Per Bulan</div><div class="stat-val">${rp(Math.round(pphBadan/12))}</div><div class="stat-sub">PPh Badan ÷ 12</div></div>
-      <div class="stat ${pphBadan-acctBal('1504')>0?'r':'g'}"><div class="stat-lbl">Sisa Estimasi PPh 29</div><div class="stat-val">${rp(Math.max(0,pphBadan-acctBal('1504')))}</div><div class="stat-sub">Perlu dilunasi di SPT</div></div>
+      <div class="stat ${pphBadan-acctBal('1-10503')>0?'r':'g'}"><div class="stat-lbl">Sisa Estimasi PPh 29</div><div class="stat-val">${rp(Math.max(0,pphBadan-acctBal('1-10503')))}</div><div class="stat-sub">Perlu dilunasi di SPT</div></div>
     </div>
     <div class="card"><div class="card-hd">Cara Mencatat PPh 25</div>
       <div class="alert a-warn" style="margin-bottom:8px">
@@ -7640,8 +7640,8 @@ function renderTax(c){
     <div class="alert a-info"><b>PPh 29 — Kurang Bayar.</b> Selisih antara PPh terutang setahun dikurangi PPh yang sudah dibayar (PPh 25 angsuran). Dibayar sebelum lapor SPT Tahunan Badan (paling lambat akhir April).</div>
     <div class="stats">
       <div class="stat r"><div class="stat-lbl">Hutang PPh 29</div><div class="stat-val">${rp(pph29)}</div><div class="stat-sub">Estimasi kurang bayar</div></div>
-      <div class="stat b"><div class="stat-lbl">PPh 25 Dibayar</div><div class="stat-val">${rp(acctBal('1504'))}</div><div class="stat-sub">Angsuran bulanan</div></div>
-      <div class="stat ${pphBadan-acctBal('1504')>0?'r':'g'}"><div class="stat-lbl">Estimasi PPh 29</div><div class="stat-val">${rp(Math.max(0,pphBadan-acctBal('1504')))}</div></div>
+      <div class="stat b"><div class="stat-lbl">PPh 25 Dibayar</div><div class="stat-val">${rp(acctBal('1-10503'))}</div><div class="stat-sub">Angsuran bulanan</div></div>
+      <div class="stat ${pphBadan-acctBal('1-10503')>0?'r':'g'}"><div class="stat-lbl">Estimasi PPh 29</div><div class="stat-val">${rp(Math.max(0,pphBadan-acctBal('1-10503')))}</div></div>
     </div>
     <div class="alert a-warn">⚠️ Angka ini estimasi saja. Konsultasikan dengan konsultan pajak untuk perhitungan final SPT Tahunan.</div>
   </div>
@@ -7922,9 +7922,9 @@ function autoMapAccount(desc,type){
   const d=(desc||'').toLowerCase();
   const maps=[
     // beban SDM
-    [/gaji|salary|upah|thr\b/,'6101'],
+    [/gaji|salary|upah|thr\b/,'6-60101'],
     [/tunjangan|allowance/,'6-60110'],
-    [/bpjs/,'6103'],
+    [/bpjs/,'6-60111'],
     // beban operasional
     [/sewa|rent(?!al)|rental/,'6-60400'],
     [/listrik|pln|kwh/,'6-60217'],
@@ -7939,20 +7939,20 @@ function autoMapAccount(desc,type){
     [/komisi|commission/,'6-60002'],
     [/kirim|ekspedisi|ongkir|pengiriman|delivery|jne|jnt|sicepat|pos/,'5-50300'],
     // beban lain
-    [/admin bank|biaya bank|transfer fee|bi fast/,'6501'],
-    [/bunga pinjaman|interest|cicilan/,'6502'],
-    [/pajak|ppn|pph/,'6503'],
+    [/admin bank|biaya bank|transfer fee|bi fast/,'6-60306'],
+    [/bunga pinjaman|interest|cicilan/,'8-80000'],
+    [/pajak|ppn|pph/,'9-90000'],
     [/denda|penalti/,'6-60215'],
     // pendapatan
     [/penjualan|jual|sales|omset|revenue/,'4-40000'],
-    [/jasa|service|konsultan|consulting|fee jasa|honorarium/,'4102'],
-    [/bunga deposito|bunga tabungan|interest income|profit sharing|bagi hasil/,'4201'],
-    [/sewa gedung|sewa aset/,'4202'],
+    [/jasa|service|konsultan|consulting|fee jasa|honorarium/,'4-40300'],
+    [/bunga deposito|bunga tabungan|interest income|profit sharing|bagi hasil/,'7-70000'],
+    [/sewa gedung|sewa aset/,'7-70200'],
   ];
   for(const [pat,accId] of maps){
     if(pat.test(d))return accId;
   }
-  return type==='in'?'4204':'6506'; // pendapatan lain / beban lain
+  return type==='in'?'7-70099':'8-80999'; // pendapatan lain / beban lain
 }
 
 function autoRefNo(type,i){
@@ -8358,14 +8358,14 @@ function crAmsFindCash(){
   });
   if(a)return a.id;
   // 2. Try by code 1-1101
-  a=DB.accounts.find(function(x){return x.code==='1-1101';});
+  a=DB.accounts.find(function(x){return x.code==='1-10001';});
   if(a)return a.id;
   // 3. Fallback to petty cash
   a=DB.accounts.find(function(x){return x.name.toLowerCase().indexOf('petty')>-1&&x.type==='aktiva';});
   if(a)return a.id;
   // 4. First aktiva lancar
   a=DB.accounts.find(function(x){return x.type==='aktiva'&&x.sub==='lancar';});
-  return a?a.id:'1101';
+  return a?a.id:'1-10001';
 }
 function crAmsFindModal(){
   var tries=['modal disetor','modal saham','modal'];
@@ -8374,7 +8374,7 @@ function crAmsFindModal(){
     if(a)return a.id;
   }
   var a2=DB.accounts.find(function(x){return x.type==='modal';});
-  return a2?a2.id:'3101';
+  return a2?a2.id:'3-30000';
 }
 
 function crAmsMapAccount(accCode, desc){
@@ -8390,32 +8390,32 @@ function crAmsMapAccount(accCode, desc){
   }
   // By acc code pattern first
   var codeMap={
-    'CR.60101': byCode('6-6101')||byName('Beban Gaji')||'6101',
-    'CR.60103': byCode('6-6204')||byName('Transportasi')||'6-60202',
-    'CR.60201': byCode('6-6501')||byName('Administrasi')||'6501',
-    'CR.60207': byCode('6-6506')||byName('Lain-lain')||'6506',
-    'CR.60301': byCode('6-6205')||byName('Perlengkapan')||'6-60301',
-    'CR.60303': byCode('6-6207')||byName('Kebersihan')||byName('Keamanan')||'6-60303',
-    'CR.30010': byCode('6-6101')||byName('Beban Gaji')||'6101',
+    'CR.60101': byCode('6-60101')||byName('Beban Gaji')||'6-60101',
+    'CR.60103': byCode('6-60202')||byName('Transportasi')||'6-60202',
+    'CR.60201': byCode('6-60306')||byName('Administrasi')||'6-60306',
+    'CR.60207': byCode('8-80999')||byName('Lain-lain')||'8-80999',
+    'CR.60301': byCode('6-60301')||byName('Perlengkapan')||'6-60301',
+    'CR.60303': byCode('6-60303')||byName('Kebersihan')||byName('Keamanan')||'6-60303',
+    'CR.30010': byCode('6-60101')||byName('Beban Gaji')||'6-60101',
   };
   if(codeMap&&codeMap[accCode])return codeMap[accCode];
   // By description keywords — lookup by code string for reliability
-  if(/salary|gaji|upah/.test(d))return byCode('6-6101')||byName('Beban Gaji')||'6101';
-  if(/atk|alat tulis|stamp|stapler|kertas|pen |notes|gunting|solasi|kwitansi|fotokopi|clip|calculator|binder|file rack|dekorasi|pengharum/.test(d))return byCode('6-6205')||byName('Beban Perlengkapan')||'6-60301';
-  if(/kebersihan|toilet|tissue|gayung|keset|filter keran/.test(d))return byCode('6-6207')||byName('Keamanan')||byName('Kebersihan')||'6-60303';
-  if(/transport|bbm|bensin/.test(d))return byCode('6-6204')||byName('Transportasi')||'6-60202';
-  if(/konsumsi|air mineral|coffe|coffee|tea |makan/.test(d))return byCode('6-6506')||'6506';
-  if(/hp samsung|inventaris kantor/.test(d))return byCode('1-1605')||byName('Inventaris')||'1605';
-  if(/website/.test(d))return byCode('1-1702')||byName('Tidak Berwujud')||byName('Aktiva Lain')||'1702';
-  if(/notaris|akta|adm\.|administrasi/.test(d))return byCode('6-6501')||byName('Administrasi')||'6501';
-  if(/ipl|pengelolaan lingkungan/.test(d))return byCode('6-6201')||byName('Sewa')||'6-60400';
-  if(/token listrik|listrik/.test(d))return byCode('6-6202')||byName('Listrik')||'6-60217';
-  if(/pulsa|telepon|internet|getcontact|get contact/.test(d))return byCode('6-6203')||byName('Telepon')||byName('Internet')||'6-60206';
-  if(/keamanan|rw|thr/.test(d))return byCode('6-6207')||byName('Keamanan')||'6-60303';
-  if(/subscription|subscr|chat gpt|iuran/.test(d))return byCode('6-6506')||byName('Lain-lain')||'6506';
-  if(/opr\.|operasional|misc\./.test(d))return byCode('6-6506')||byName('Lain-lain')||'6506';
+  if(/salary|gaji|upah/.test(d))return byCode('6-60101')||byName('Beban Gaji')||'6-60101';
+  if(/atk|alat tulis|stamp|stapler|kertas|pen |notes|gunting|solasi|kwitansi|fotokopi|clip|calculator|binder|file rack|dekorasi|pengharum/.test(d))return byCode('6-60301')||byName('Beban Perlengkapan')||'6-60301';
+  if(/kebersihan|toilet|tissue|gayung|keset|filter keran/.test(d))return byCode('6-60303')||byName('Keamanan')||byName('Kebersihan')||'6-60303';
+  if(/transport|bbm|bensin/.test(d))return byCode('6-60202')||byName('Transportasi')||'6-60202';
+  if(/konsumsi|air mineral|coffe|coffee|tea |makan/.test(d))return byCode('8-80999')||'8-80999';
+  if(/hp samsung|inventaris kantor/.test(d))return byCode('1-10705')||byName('Inventaris')||'1-10705';
+  if(/website/.test(d))return byCode('1-10707')||byName('Tidak Berwujud')||byName('Aktiva Lain')||'1-10707';
+  if(/notaris|akta|adm\.|administrasi/.test(d))return byCode('6-60306')||byName('Administrasi')||'6-60306';
+  if(/ipl|pengelolaan lingkungan/.test(d))return byCode('6-60400')||byName('Sewa')||'6-60400';
+  if(/token listrik|listrik/.test(d))return byCode('6-60217')||byName('Listrik')||'6-60217';
+  if(/pulsa|telepon|internet|getcontact|get contact/.test(d))return byCode('6-60206')||byName('Telepon')||byName('Internet')||'6-60206';
+  if(/keamanan|rw|thr/.test(d))return byCode('6-60303')||byName('Keamanan')||'6-60303';
+  if(/subscription|subscr|chat gpt|iuran/.test(d))return byCode('8-80999')||byName('Lain-lain')||'8-80999';
+  if(/opr\.|operasional|misc\./.test(d))return byCode('8-80999')||byName('Lain-lain')||'8-80999';
   // Also use crAmsFindAcc for kas kecil and modal
-  return byCode('6-6506')||byName('Lain-lain')||byName('Beban')||DB.accounts.find(function(x){return x.type==='beban';})?.id||'6506';
+  return byCode('8-80999')||byName('Lain-lain')||byName('Beban')||DB.accounts.find(function(x){return x.type==='beban';})?.id||'8-80999';
 }
 
 
@@ -8526,7 +8526,7 @@ function buildBalanceSheet(lr,co,today_str){
     let sec=0;
     accs.forEach(a=>{
       const bal=acctBal(a.id);
-      const netBal=a.id==='1699'?-bal:bal;
+      const netBal=(a.name||'').toLowerCase().includes('akumulasi penyusutan')?-bal:bal;
       leftRows.push({type:'item',label:a.name,val:netBal});
       sec+=netBal;totalAssets+=netBal;
     });
@@ -8924,7 +8924,7 @@ function buildNePDF(lr,co,today_str,lang){
       let secTotal=0;
       html2+=`<div style="background:${g.bg};color:white;padding:6px 12px;font-weight:700;font-size:11px;margin-top:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${g.label}</div>`;
       accs.forEach((a,i)=>{
-        const bal=acctBal(a.id);const netBal=a.id==='1699'?-bal:bal;secTotal+=netBal;
+        const bal=acctBal(a.id);const netBal=(a.name||'').toLowerCase().includes('akumulasi penyusutan')?-bal:bal;secTotal+=netBal;
         html2+=`<div style="display:flex;justify-content:space-between;padding:5px 12px;border-bottom:1px solid #E2E8F0;background:${i%2===0?'#F8FAFC':'white'};font-size:11px">
           <span style="color:#1E293B">${a.name}</span>
           <span style="font-weight:600;color:${netBal<0?'#DC2626':netBal>0?'#1E293B':'#94A3B8'}">${rp2(netBal)}</span>
