@@ -1815,7 +1815,7 @@ function detectBSIAccount(desc,flow){
 function detectBSIDuplicates(row, bankAccId){
   const rowDate  = new Date(row.date + 'T00:00:00');
   const DAY_MS   = 86400000;
-  const CASH_IDS = new Set([bankAccId, '1101', '1102', '1107']); // BSI + semua kas
+  const CASH_IDS = new Set([bankAccId, '1101', '1102', '1-10001']); // BSI + semua kas
 
   return DB.transactions.filter(tx => {
     if(!tx.date) return false;
@@ -4275,11 +4275,11 @@ function _confirmInvoice(inv){
   inv.items.forEach(item=>{
     if(item.productId){const p=DB.products.find(x=>x.id===item.productId);if(p)p.stock=Math.max(0,(p.stock||0)-item.qty);}
   });
-  const entries=[{acc:'1201',deb:inv.total,crd:0}];
-  entries.push({acc:'4101',deb:0,crd:inv.dpp||inv.subtotal});
-  if(inv.ppn)entries.push({acc:'2105',deb:0,crd:inv.ppnAmt});
-  if(inv.pph23)entries.push({acc:'2114',deb:0,crd:inv.pph23Amt});
-  if(inv.pph4)entries.push({acc:'2112',deb:0,crd:inv.pph4Amt});
+  const entries=[{acc:'1-10100',deb:inv.total,crd:0}];
+  entries.push({acc:'4-40000',deb:0,crd:inv.dpp||inv.subtotal});
+  if(inv.ppn)entries.push({acc:'2-20500',deb:0,crd:inv.ppnAmt});
+  if(inv.pph23)entries.push({acc:'1-10502',deb:0,crd:inv.pph23Amt});
+  if(inv.pph4)entries.push({acc:'2-20505',deb:0,crd:inv.pph4Amt});
   DB.transactions.push({id:uid(),date:inv.date,ref:inv.no,desc:`Invoice ${inv.no}`,entries});
   logBackdateIfNeeded(inv.date,inv.no,`Invoice ${inv.no}`);
   inv.status='confirmed';
@@ -4305,7 +4305,7 @@ function saveInvPayment(id){
   const remaining=inv.total-invPaid(inv);
   if(amount>remaining+0.01)return alert(`Melebihi sisa: ${rp(remaining)}`);
   inv.payments.push({id:uid(),date,amount,bankAcc,note:v('pay-note')});
-  DB.transactions.push({id:uid(),date,ref:inv.no,desc:`Pembayaran Invoice ${inv.no}`,entries:[{acc:bankAcc,deb:amount,crd:0},{acc:'1201',deb:0,crd:amount}]});
+  DB.transactions.push({id:uid(),date,ref:inv.no,desc:`Pembayaran Invoice ${inv.no}`,entries:[{acc:bankAcc,deb:amount,crd:0},{acc:'1-10100',deb:0,crd:amount}]});
   logBackdateIfNeeded(date,inv.no,`Pembayaran ${inv.no}`);
   saveDB();closeModal();nav('invoices');
 }
@@ -4608,9 +4608,9 @@ function receivePO(id){
   // Update stock
   po.items.forEach(item=>{if(item.productId){const p=DB.products.find(x=>x.id===item.productId);if(p)p.stock+=item.qty;}});
   // Journal: Dr Persediaan (+VAT Input), Cr Hutang Usaha
-  const entries=[{acc:'1301',deb:po.subtotal,crd:0}];
-  if(po.ppn)entries.push({acc:'1401',deb:po.ppnAmt,crd:0});
-  entries.push({acc:'2101',deb:0,crd:po.total});
+  const entries=[{acc:'1-10200',deb:po.subtotal,crd:0}];
+  if(po.ppn)entries.push({acc:'1-10500',deb:po.ppnAmt,crd:0});
+  entries.push({acc:'2-20100',deb:0,crd:po.total});
   DB.transactions.push({id:uid(),date:po.date,ref:po.no,desc:`Penerimaan PO ${po.no}`,entries});
   logBackdateIfNeeded(po.date, po.no, `Penerimaan PO ${po.no}`); // 🕐 backdate check
   po.status='received';saveDB();nav('purchases');
@@ -4635,7 +4635,7 @@ function savePOPayment(id){
   if(!checkLock(date))return; // 🔒 lock check
   po.payments.push({id:uid(),date,amount,bankAcc});
   // Journal: Dr Hutang Usaha, Cr Bank
-  DB.transactions.push({id:uid(),date,ref:po.no,desc:`Pembayaran PO ${po.no}`,entries:[{acc:'2101',deb:amount,crd:0},{acc:bankAcc,deb:0,crd:amount}]});
+  DB.transactions.push({id:uid(),date,ref:po.no,desc:`Pembayaran PO ${po.no}`,entries:[{acc:'2-20100',deb:amount,crd:0},{acc:bankAcc,deb:0,crd:amount}]});
   logBackdateIfNeeded(date, po.no, `Pembayaran PO ${po.no}`); // 🕐 backdate check
   const paid=(po.payments).reduce((s,p)=>s+p.amount,0);
   if(paid>=po.total)po.status='paid';
@@ -6077,12 +6077,12 @@ function saveQT(type){
   let entries=[];
   if(type==='in'){
     entries=[{acc:payAcc,deb:totalAmt,crd:0},{acc:catAcc,deb:0,crd:amount}];
-    if(hasPPN)entries.push({acc:'2105',deb:0,crd:ppnAmt});
+    if(hasPPN)entries.push({acc:'2-20500',deb:0,crd:ppnAmt});
   } else {
     entries=[{acc:catAcc,deb:amount,crd:0}];
-    if(hasPPN)entries.push({acc:'1401',deb:ppnAmt,crd:0});
-    if(hasPPh23)entries.push({acc:'2114',deb:0,crd:pph23Amt});
-    if(hasPPh4a2)entries.push({acc:'2112',deb:0,crd:pph4a2Amt});
+    if(hasPPN)entries.push({acc:'1-10500',deb:ppnAmt,crd:0});
+    if(hasPPh23)entries.push({acc:'1-10502',deb:0,crd:pph23Amt});
+    if(hasPPh4a2)entries.push({acc:'2-20505',deb:0,crd:pph4a2Amt});
     entries.push({acc:payAcc,deb:0,crd:totalAmt});
   }
   const txId=uid();
@@ -6157,12 +6157,12 @@ function saveEditQT(id,type){
   let entries=[];
   if(type==='in'){
     entries=[{acc:payAcc,deb:totalAmt,crd:0},{acc:catAcc,deb:0,crd:amount}];
-    if(hasPPN)entries.push({acc:'2105',deb:0,crd:ppnAmt});
+    if(hasPPN)entries.push({acc:'2-20500',deb:0,crd:ppnAmt});
   } else {
     entries=[{acc:catAcc,deb:amount,crd:0}];
-    if(hasPPN)entries.push({acc:'1401',deb:ppnAmt,crd:0});
-    if(hasPPh23)entries.push({acc:'2114',deb:0,crd:pph23Amt});
-    if(hasPPh4a2)entries.push({acc:'2112',deb:0,crd:pph4a2Amt});
+    if(hasPPN)entries.push({acc:'1-10500',deb:ppnAmt,crd:0});
+    if(hasPPh23)entries.push({acc:'1-10502',deb:0,crd:pph23Amt});
+    if(hasPPh4a2)entries.push({acc:'2-20505',deb:0,crd:pph4a2Amt});
     entries.push({acc:payAcc,deb:0,crd:totalAmt});
   }
   const newTxId=uid();
@@ -6281,7 +6281,7 @@ function openAddPrepaid(){
   setTimeout(()=>{
     const accSel=document.getElementById('pp-acc'),expSel=document.getElementById('pp-exp');
     if(accSel)[...accSel.options].forEach((o,i)=>{if(o.value==='1306')accSel.selectedIndex=i;});
-    if(expSel)[...expSel.options].forEach((o,i)=>{if(o.value==='6201')expSel.selectedIndex=i;});
+    if(expSel)[...expSel.options].forEach((o,i)=>{if(o.value==='6-60400')expSel.selectedIndex=i;});
     calcPrepaidPreview();
   },50);
 }
@@ -6956,7 +6956,7 @@ function saveEditPayroll(id,count){
   const entries=[];
   p.slips.forEach(s=>entries.push({acc:'6101',deb:s.totalPendapatan||0,crd:0}));
   entries.push({acc:bankAcc,deb:0,crd:totalNet});
-  if(totalPPh>0)entries.push({acc:'2105',deb:0,crd:totalPPh});
+  if(totalPPh>0)entries.push({acc:'2-20500',deb:0,crd:totalPPh});
   if(totalBPJS>0)entries.push({acc:'2108',deb:0,crd:totalBPJS});
   DB.transactions.push({id:uid(),date,ref:txRef,desc:`Gaji ${monthName(p.month)} ${p.year}`,entries});
   saveDB();closeModal();logAudit('Edit Payroll',`${monthName(p.month)} ${p.year}`);renderPayrollHist();
@@ -7210,8 +7210,8 @@ function runPayroll(){
   // ── Jurnal Akrual Gaji ──
   DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Beban Gaji ${monthName(m)} ${y}`,entries:[
     {acc:'6101',deb:totGross,crd:0},
-    {acc:'2102',deb:0,crd:totNet},        // Utang Gaji
-    {acc:'2103',deb:0,crd:totPPh},        // Utang PPh 21
+    {acc:'2-20201',deb:0,crd:totNet},        // Utang Gaji
+    {acc:'2-20501',deb:0,crd:totPPh},        // Utang PPh 21
     {acc:'2109',deb:0,crd:totBPJS},       // Utang BPJS karyawan
   ]});
   // ── Jurnal Beban BPJS Perusahaan ──
@@ -7223,7 +7223,7 @@ function runPayroll(){
   }
   // ── Jurnal Pembayaran Gaji ──
   DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Pembayaran Gaji ${monthName(m)} ${y}`,entries:[
-    {acc:'2102',deb:totNet,crd:0},
+    {acc:'2-20201',deb:totNet,crd:0},
     {acc:bankAcc,deb:0,crd:totNet},
   ]});
   const rec={id:uid(),year:y,month:m,date,bankAcc,slips,
@@ -7518,17 +7518,17 @@ function exportPayroll(){
 //  TAX
 // ================================================================
 function renderTax(c){
-  const ppnMasukan=acctBal('1401'),ppnKeluaran=acctBal('2105'),kpkn=ppnKeluaran-ppnMasukan;
+  const ppnMasukan=acctBal('1-10500'),ppnKeluaran=acctBal('2-20500'),kpkn=ppnKeluaran-ppnMasukan;
   const totalPPh21=DB.payroll.reduce((s,p)=>s+p.totalPPh,0);
   const lr=labaRugiCalc();const pphBadan=lr.labaUsaha>0?lr.labaUsaha*0.22:0;
   // PPh 4(2) — dari jurnal manual akun 2112
-  const pph4a2=acctBal('2112');
+  const pph4a2=acctBal('2-20505');
   // PPh 22 — akun 2113
-  const pph22=acctBal('2113');
+  const pph22=acctBal('2-20502');
   // PPh 23 — akun 2114
-  const pph23=acctBal('2114');
+  const pph23=acctBal('1-10502');
   // PPh 29 — akun 2115
-  const pph29=acctBal('2115');
+  const pph29=acctBal('2-20504');
 
   c.innerHTML=`
   <div class="tabs">
@@ -7923,28 +7923,28 @@ function autoMapAccount(desc,type){
   const maps=[
     // beban SDM
     [/gaji|salary|upah|thr\b/,'6101'],
-    [/tunjangan|allowance/,'6102'],
+    [/tunjangan|allowance/,'6-60110'],
     [/bpjs/,'6103'],
     // beban operasional
-    [/sewa|rent(?!al)|rental/,'6201'],
-    [/listrik|pln|kwh/,'6202'],
-    [/telepon|telp|internet|wifi|pulsa|speedy/,'6203'],
-    [/transport|bbm|bensin|solar|tol|parkir|grab|gojek|taksi/,'6204'],
-    [/atk|alat tulis|perlengkapan|stationery|supplies/,'6205'],
-    [/perawatan|maintenance|service ac|perbaikan|servis/,'6206'],
-    [/kebersihan|cleaning|keamanan|satpam|security/,'6207'],
-    [/asuransi|insurance|premi/,'6208'],
+    [/sewa|rent(?!al)|rental/,'6-60400'],
+    [/listrik|pln|kwh/,'6-60217'],
+    [/telepon|telp|internet|wifi|pulsa|speedy/,'6-60206'],
+    [/transport|bbm|bensin|solar|tol|parkir|grab|gojek|taksi/,'6-60202'],
+    [/atk|alat tulis|perlengkapan|stationery|supplies/,'6-60301'],
+    [/perawatan|maintenance|service ac|perbaikan|servis/,'6-60203'],
+    [/kebersihan|cleaning|keamanan|satpam|security/,'6-60303'],
+    [/asuransi|insurance|premi/,'6-60208'],
     // beban penjualan
-    [/iklan|marketing|promosi|advertis|digital ads|facebook|google ads/,'6301'],
-    [/komisi|commission/,'6302'],
-    [/kirim|ekspedisi|ongkir|pengiriman|delivery|jne|jnt|sicepat|pos/,'6303'],
+    [/iklan|marketing|promosi|advertis|digital ads|facebook|google ads/,'6-60001'],
+    [/komisi|commission/,'6-60002'],
+    [/kirim|ekspedisi|ongkir|pengiriman|delivery|jne|jnt|sicepat|pos/,'5-50300'],
     // beban lain
     [/admin bank|biaya bank|transfer fee|bi fast/,'6501'],
     [/bunga pinjaman|interest|cicilan/,'6502'],
     [/pajak|ppn|pph/,'6503'],
-    [/denda|penalti/,'6504'],
+    [/denda|penalti/,'6-60215'],
     // pendapatan
-    [/penjualan|jual|sales|omset|revenue/,'4101'],
+    [/penjualan|jual|sales|omset|revenue/,'4-40000'],
     [/jasa|service|konsultan|consulting|fee jasa|honorarium/,'4102'],
     [/bunga deposito|bunga tabungan|interest income|profit sharing|bagi hasil/,'4201'],
     [/sewa gedung|sewa aset/,'4202'],
@@ -8391,27 +8391,27 @@ function crAmsMapAccount(accCode, desc){
   // By acc code pattern first
   var codeMap={
     'CR.60101': byCode('6-6101')||byName('Beban Gaji')||'6101',
-    'CR.60103': byCode('6-6204')||byName('Transportasi')||'6204',
+    'CR.60103': byCode('6-6204')||byName('Transportasi')||'6-60202',
     'CR.60201': byCode('6-6501')||byName('Administrasi')||'6501',
     'CR.60207': byCode('6-6506')||byName('Lain-lain')||'6506',
-    'CR.60301': byCode('6-6205')||byName('Perlengkapan')||'6205',
-    'CR.60303': byCode('6-6207')||byName('Kebersihan')||byName('Keamanan')||'6207',
+    'CR.60301': byCode('6-6205')||byName('Perlengkapan')||'6-60301',
+    'CR.60303': byCode('6-6207')||byName('Kebersihan')||byName('Keamanan')||'6-60303',
     'CR.30010': byCode('6-6101')||byName('Beban Gaji')||'6101',
   };
   if(codeMap&&codeMap[accCode])return codeMap[accCode];
   // By description keywords — lookup by code string for reliability
   if(/salary|gaji|upah/.test(d))return byCode('6-6101')||byName('Beban Gaji')||'6101';
-  if(/atk|alat tulis|stamp|stapler|kertas|pen |notes|gunting|solasi|kwitansi|fotokopi|clip|calculator|binder|file rack|dekorasi|pengharum/.test(d))return byCode('6-6205')||byName('Beban Perlengkapan')||'6205';
-  if(/kebersihan|toilet|tissue|gayung|keset|filter keran/.test(d))return byCode('6-6207')||byName('Keamanan')||byName('Kebersihan')||'6207';
-  if(/transport|bbm|bensin/.test(d))return byCode('6-6204')||byName('Transportasi')||'6204';
+  if(/atk|alat tulis|stamp|stapler|kertas|pen |notes|gunting|solasi|kwitansi|fotokopi|clip|calculator|binder|file rack|dekorasi|pengharum/.test(d))return byCode('6-6205')||byName('Beban Perlengkapan')||'6-60301';
+  if(/kebersihan|toilet|tissue|gayung|keset|filter keran/.test(d))return byCode('6-6207')||byName('Keamanan')||byName('Kebersihan')||'6-60303';
+  if(/transport|bbm|bensin/.test(d))return byCode('6-6204')||byName('Transportasi')||'6-60202';
   if(/konsumsi|air mineral|coffe|coffee|tea |makan/.test(d))return byCode('6-6506')||'6506';
   if(/hp samsung|inventaris kantor/.test(d))return byCode('1-1605')||byName('Inventaris')||'1605';
   if(/website/.test(d))return byCode('1-1702')||byName('Tidak Berwujud')||byName('Aktiva Lain')||'1702';
   if(/notaris|akta|adm\.|administrasi/.test(d))return byCode('6-6501')||byName('Administrasi')||'6501';
-  if(/ipl|pengelolaan lingkungan/.test(d))return byCode('6-6201')||byName('Sewa')||'6201';
-  if(/token listrik|listrik/.test(d))return byCode('6-6202')||byName('Listrik')||'6202';
-  if(/pulsa|telepon|internet|getcontact|get contact/.test(d))return byCode('6-6203')||byName('Telepon')||byName('Internet')||'6203';
-  if(/keamanan|rw|thr/.test(d))return byCode('6-6207')||byName('Keamanan')||'6207';
+  if(/ipl|pengelolaan lingkungan/.test(d))return byCode('6-6201')||byName('Sewa')||'6-60400';
+  if(/token listrik|listrik/.test(d))return byCode('6-6202')||byName('Listrik')||'6-60217';
+  if(/pulsa|telepon|internet|getcontact|get contact/.test(d))return byCode('6-6203')||byName('Telepon')||byName('Internet')||'6-60206';
+  if(/keamanan|rw|thr/.test(d))return byCode('6-6207')||byName('Keamanan')||'6-60303';
   if(/subscription|subscr|chat gpt|iuran/.test(d))return byCode('6-6506')||byName('Lain-lain')||'6506';
   if(/opr\.|operasional|misc\./.test(d))return byCode('6-6506')||byName('Lain-lain')||'6506';
   // Also use crAmsFindAcc for kas kecil and modal
