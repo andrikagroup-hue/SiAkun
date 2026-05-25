@@ -479,7 +479,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
         <span style="font-size:13px;font-weight:800;color:var(--acc);letter-spacing:2.5px;line-height:1">AKUN</span>
       </div>
       <div style="font-size:8px;color:#64748b;letter-spacing:2px;font-weight:600;margin-bottom:6px">Financial</div>
-      <div id="sb-coname" style="color:#475569;font-size:10px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <div id="sb-coname" style="color:#475569;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px"></div>
     </div>
   </div>
 
@@ -3395,7 +3395,7 @@ function updateSidebarLogo(){
   if(!w)return;
   if(DB.company.logo){
     w.style.display='block';
-    w.innerHTML=`<img src="${DB.company.logo}" style="width:52px;height:52px;object-fit:contain;border-radius:10px;background:#ffffff;padding:5px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.25);">`;
+    w.innerHTML=`<img src="${DB.company.logo}" style="width:68px;height:68px;object-fit:contain;border-radius:12px;background:#ffffff;padding:6px;display:block;border:1px solid #e2e8f0;box-shadow:0 2px 8px rgba(20,184,166,.12);">`;
   } else {
     w.style.display='none';
     w.innerHTML='';
