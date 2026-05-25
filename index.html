@@ -5086,7 +5086,7 @@ async function handleCoaImport(input, format){
 function exportCOA(format){
   format = format || 'xlsx';
   document.querySelectorAll('.btn-dropdown-menu.open').forEach(el=>el.classList.remove('open'));
-  const accs = DB.accounts || [];
+  const accs = (DB.accounts || []).slice().sort((a,b) => (a.code||'').localeCompare(b.code||'', undefined, {numeric:true}));
   if(!accs.length) return alert('Tidak ada data COA untuk di-export.');
   const today = new Date().toISOString().slice(0,10);
   const filename = `chart_of_accounts_${today}`;
