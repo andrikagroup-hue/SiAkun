@@ -582,7 +582,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_system">Sistem</div>
-    onmouseenter="showFlyout('system',this)" setTimeout(hideFlyout,400) onclick="nav('settings')"><span class="ic">⚙️</span><span data-i18n="nav_settings">Settings & Export</span></div>
+    <div class="nav-i" onmouseenter="showFlyout('system',this)" onclick="nav('settings')"><span class="ic">⚙️</span><span data-i18n="nav_settings">Settings & Export</span></div>
     <div class="nav-i" id="nav-users" style="display:none" onclick="nav('users')"><span class="ic">👥</span><span data-i18n="nav_users">User Management</span></div>
     <div class="nav-i" id="nav-audit" style="display:none" onclick="nav('audit')"><span class="ic">🔍</span><span data-i18n="nav_audit">Audit Trail</span></div>
     <div class="nav-i" onclick="nav('operator')"><span class="ic">👤</span><span>Operator</span></div>
