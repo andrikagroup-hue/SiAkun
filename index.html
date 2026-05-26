@@ -3594,6 +3594,7 @@ function nav(page){
     if(!DB.payroll)DB.payroll=[];
     if(!DB.assets)DB.assets=[];
     if(!DB.auditLog)DB.auditLog=[];
+    if(!DB.basts)DB.basts=[];
     if(!DB.budgets)DB.budgets=[];
     if(!DB.receipts)DB.receipts=[];
     if(!DB.quicktx)DB.quicktx=[];
@@ -9389,6 +9390,7 @@ async function init(){
   if(!DB.rekonBank)DB.rekonBank=[];
   if(!DB.lockedPeriods)DB.lockedPeriods=[];
   if(!DB.auditLog)DB.auditLog=[];
+  if(!DB.basts)DB.basts=[];
   if(!DB.roles||!DB.roles.length)DB.roles=['Admin','Direktur','Manager','Finance','HRD','Staff'];
   setSyncStatus(_isOnline?'synced':'offline');
   if(isAdmin()){
