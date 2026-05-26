@@ -9464,7 +9464,27 @@ function manualRecalcBalances(){
 //  OPERATOR PANEL — Multi-user activity dashboard
 // ================================================================
 function renderBasts(c){
-  const basts = DB.basts || [];
+  if(!DB.basts) DB.basts = [];
+  const state = window._bastFilter = window._bastFilter || {q:'',type:'all',status:'all',dateFrom:'',dateTo:''};
+  const TYPE_LABELS = {proyek:'📐 Proyek/Jasa', barang:'📦 Barang', aset:'🏢 Aset', karyawan:'👤 Karyawan'};
+  const TYPE_COLORS = {proyek:'#a78bfa', barang:'#fb923c', aset:'#22d3ee', karyawan:'#f472b6'};
+  const STATUS_LABELS = {draft:'Draft', signed:'Signed', cancelled:'Cancelled'};
+  const STATUS_COLORS = {draft:'#94a3b8', signed:'#10b981', cancelled:'#ef4444'};
+  const STATUS_BG = {draft:'#f1f5f9', signed:'#d1fae5', cancelled:'#fee2e2'};
+  
+  const filtered = DB.basts.filter(b => {
+    if(state.type !== 'all' && b.type !== state.type) return false;
+    if(state.status !== 'all' && b.status !== state.status) return false;
+    if(state.dateFrom && b.tanggal < state.dateFrom) return false;
+    if(state.dateTo && b.tanggal > state.dateTo) return false;
+    if(state.q){
+      const q = state.q.toLowerCase();
+      const hay = ((b.id||'')+' '+(b.pihak2?.nama||'')+' '+(b.pihak2?.perusahaan||'')+' '+(b.items||[]).map(i=>i.deskripsi||'').join(' ')).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  filtered.sort((a,b) => (b.tanggal||'').localeCompare(a.tanggal||''));
   
   c.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px">
@@ -9474,28 +9494,124 @@ function renderBasts(c){
       </div>
       <button class="btn btn-pri" onclick="newBast()">+ Buat BAST Baru</button>
     </div>
-    ${basts.length === 0 ? `
+    ${DB.basts.length === 0 ? `
       <div style="background:#fff;border:1.5px dashed #cbd5e1;border-radius:12px;padding:60px 24px;text-align:center">
         <div style="font-size:54px;margin-bottom:14px">🗂️</div>
         <div style="font-weight:700;font-size:17px;color:#0f172a;margin-bottom:6px">Belum ada BAST</div>
-        <div style="color:#64748b;font-size:13px;max-width:380px;margin:0 auto 22px;line-height:1.5">
-          Buat BAST pertama kamu untuk dokumentasi serah terima proyek, barang, aset tetap, atau karyawan resign.
-        </div>
+        <div style="color:#64748b;font-size:13px;max-width:380px;margin:0 auto 22px;line-height:1.5">Buat BAST pertama kamu untuk dokumentasi serah terima proyek, barang, aset tetap, atau karyawan resign.</div>
         <button class="btn btn-pri" onclick="newBast()">+ Buat BAST Pertama</button>
+        <div style="margin-top:24px;font-size:11px;color:#94a3b8">💡 Test pakai dummy data: ketik <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">addDummyBasts()</code> di console (F12)</div>
       </div>
     ` : `
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px">
-        <div style="color:#64748b;font-size:13px">⏳ Table view coming in Sesi 6C-2. Total BAST tersimpan: <strong>${basts.length}</strong></div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:14px;display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:10px;align-items:end">
+        <div>
+          <label style="display:block;font-size:11px;color:#64748b;font-weight:600;margin-bottom:4px">SEARCH</label>
+          <input type="text" value="${state.q}" onchange="_bastFilter.q=this.value;renderBasts(document.getElementById('content'))" placeholder="No / nama / deskripsi..." style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:#64748b;font-weight:600;margin-bottom:4px">TYPE</label>
+          <select onchange="_bastFilter.type=this.value;renderBasts(document.getElementById('content'))" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:#fff">
+            <option value="all" ${state.type==='all'?'selected':''}>Semua Type</option>
+            <option value="proyek" ${state.type==='proyek'?'selected':''}>📐 Proyek/Jasa</option>
+            <option value="barang" ${state.type==='barang'?'selected':''}>📦 Barang</option>
+            <option value="aset" ${state.type==='aset'?'selected':''}>🏢 Aset</option>
+            <option value="karyawan" ${state.type==='karyawan'?'selected':''}>👤 Karyawan</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:#64748b;font-weight:600;margin-bottom:4px">STATUS</label>
+          <select onchange="_bastFilter.status=this.value;renderBasts(document.getElementById('content'))" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:#fff">
+            <option value="all" ${state.status==='all'?'selected':''}>Semua Status</option>
+            <option value="draft" ${state.status==='draft'?'selected':''}>Draft</option>
+            <option value="signed" ${state.status==='signed'?'selected':''}>Signed</option>
+            <option value="cancelled" ${state.status==='cancelled'?'selected':''}>Cancelled</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:#64748b;font-weight:600;margin-bottom:4px">FROM</label>
+          <input type="date" value="${state.dateFrom}" onchange="_bastFilter.dateFrom=this.value;renderBasts(document.getElementById('content'))" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:#64748b;font-weight:600;margin-bottom:4px">TO</label>
+          <input type="date" value="${state.dateTo}" onchange="_bastFilter.dateTo=this.value;renderBasts(document.getElementById('content'))" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="margin-bottom:10px;color:#64748b;font-size:12px">
+        Showing <strong style="color:#0f172a">${filtered.length}</strong> of ${DB.basts.length} BAST
+        ${filtered.length !== DB.basts.length ? `<button onclick="window._bastFilter={q:'',type:'all',status:'all',dateFrom:'',dateTo:''};renderBasts(document.getElementById('content'))" style="margin-left:8px;background:none;border:none;color:#0d9488;font-size:12px;cursor:pointer;text-decoration:underline">Reset filter</button>` : ''}
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">
+        ${filtered.length === 0 ? `
+          <div style="padding:50px 20px;text-align:center;color:#94a3b8;font-size:13px">🔍 Gak ada BAST yang match filter</div>
+        ` : `
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
+              <tr>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:#64748b;letter-spacing:.5px">NO. BAST</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:#64748b;letter-spacing:.5px">TANGGAL</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:#64748b;letter-spacing:.5px">TYPE</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:#64748b;letter-spacing:.5px">PIHAK 2</th>
+                <th style="text-align:right;padding:10px 12px;font-size:11px;font-weight:600;color:#64748b;letter-spacing:.5px">NILAI</th>
+                <th style="text-align:center;padding:10px 12px;font-size:11px;font-weight:600;color:#64748b;letter-spacing:.5px">STATUS</th>
+                <th style="text-align:center;padding:10px 12px;font-size:11px;font-weight:600;color:#64748b;letter-spacing:.5px">AKSI</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map(b => {
+                const totalNilai = (b.items||[]).reduce((s,i)=>s+(Number(i.nilai)||0)*(Number(i.qty)||1),0);
+                const typeBg = TYPE_COLORS[b.type]||'#94a3b8';
+                const stColor = STATUS_COLORS[b.status]||'#94a3b8';
+                const stBg = STATUS_BG[b.status]||'#f1f5f9';
+                return `<tr style="border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+                  <td style="padding:11px 12px;font-weight:600;color:#0f172a">${b.id}</td>
+                  <td style="padding:11px 12px;color:#475569">${b.tanggal||'-'}</td>
+                  <td style="padding:11px 12px"><span style="background:${typeBg}22;color:${typeBg};padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600">${TYPE_LABELS[b.type]||b.type||'-'}</span></td>
+                  <td style="padding:11px 12px;color:#0f172a"><div>${b.pihak2?.nama||'-'}</div><div style="font-size:11px;color:#94a3b8">${b.pihak2?.perusahaan||''}</div></td>
+                  <td style="padding:11px 12px;text-align:right;color:#0f172a;font-variant-numeric:tabular-nums">${totalNilai?'Rp '+totalNilai.toLocaleString('id-ID'):'-'}</td>
+                  <td style="padding:11px 12px;text-align:center"><span style="background:${stBg};color:${stColor};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">${STATUS_LABELS[b.status]||b.status||'-'}</span></td>
+                  <td style="padding:11px 12px;text-align:center;white-space:nowrap"><button onclick="viewBast('${b.id}')" title="View" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">👁️</button><button onclick="editBast('${b.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button><button onclick="delBast('${b.id}')" title="Delete" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        `}
       </div>
     `}
   `;
 }
 
 function newBast(){
-  alert('🚧 Form BAST akan dibuat di Sesi 6D!\n\nSekarang masih placeholder — page list aja yang ready.');
+  alert('🚧 Form BAST coming in Sesi 6D!\n\n💡 Sekarang test pakai dummy data:\nF12 → Console → ketik addDummyBasts()');
 }
-  
-  
+
+function viewBast(id){
+  alert('👁️ View BAST: '+id+'\n\nDetail/PDF preview coming in Sesi 6E.');
+}
+
+function editBast(id){
+  alert('✏️ Edit BAST: '+id+'\n\nForm coming in Sesi 6D.');
+}
+
+function delBast(id){
+  if(!confirm('Hapus BAST '+id+' permanen?')) return;
+  DB.basts = (DB.basts||[]).filter(b=>b.id!==id);
+  if(typeof saveDB==='function') saveDB();
+  renderBasts(document.getElementById('content'));
+}
+
+function addDummyBasts(){
+  DB.basts = DB.basts || [];
+  const dummies = [
+    {id:'BAST-2026-0001',tanggal:'2026-05-20',type:'proyek',status:'signed',pihak2:{nama:'Budi Santoso',perusahaan:'PT Maju Jaya'},items:[{deskripsi:'Renovasi ruang meeting',qty:1,satuan:'paket',nilai:50000000}]},
+    {id:'BAST-2026-0002',tanggal:'2026-05-22',type:'barang',status:'draft',pihak2:{nama:'Siti Aminah',perusahaan:'CV Sumber Rejeki'},items:[{deskripsi:'Laptop Dell Latitude 7430',qty:5,satuan:'unit',nilai:15000000}]},
+    {id:'BAST-2026-0003',tanggal:'2026-05-24',type:'aset',status:'signed',pihak2:{nama:'Ahmad Fauzi',perusahaan:'Internal - HRD'},items:[{deskripsi:'Mesin Fotokopi Canon iR2625',qty:1,satuan:'unit',nilai:25000000}]},
+    {id:'BAST-2026-0004',tanggal:'2026-05-25',type:'karyawan',status:'cancelled',pihak2:{nama:'Rina Wati',perusahaan:'Resign'},items:[{deskripsi:'Laptop + ID card',qty:2,satuan:'item'}]}
+  ];
+  DB.basts.push(...dummies);
+  if(typeof saveDB==='function') saveDB();
+  if(typeof nav==='function') nav('basts');
+  console.log('✅ Added 4 dummy BAST entries');
+}
   function renderOperator(c){
   const user = _currentUser || {};
   const allTx = [
