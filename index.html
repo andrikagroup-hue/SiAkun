@@ -788,16 +788,21 @@ function showFlyout(key,el){
 }
 
 function hideFlyout(){
-  const box=document.getElementById('nav-flyout');
+  const box = document.getElementById('nav-flyout');
   if(!box) return;
 
   setTimeout(()=>{
-    if(!box.matches(':hover')){
+    const navHover =
+      document.querySelector('.nav-i:hover');
+
+    const flyoutHover =
+      box.matches(':hover');
+
+    if(!navHover && !flyoutHover){
       box.classList.remove('open');
     }
   },300);
 }
-
   const LANG_KEY='siakun_lang';
 let _lang=localStorage.getItem(LANG_KEY)||'id';
 
