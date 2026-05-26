@@ -565,6 +565,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
   <div class="nav-sec">
     <div class="nav-i" data-tip="Sistem" onmouseenter="showFlyout('system',this)" onclick="nav('settings')"><span class="ic">⚙️</span><span>Sistem</span></div>
+    </div>
+
+  <div class="nav-sec">
+    <div class="nav-i" data-tip="Dokumen" onmouseenter="showFlyout('docs',this)" onclick="nav('basts')"><span class="ic">📃</span><span>Dokumen</span></div>
   </div>
 </div><div id="nav-flyout" class="flyout"></div>
 <!-- LOGIN SCREEN -->
@@ -745,7 +749,15 @@ items:[
 ['👥','Manajemen Pengguna',"nav('users')"],
 ['🔍','Jejak Audit',"nav('audit')"],
 ['👤','Operator',"nav('operator')"]
-]}
+]},
+  docs:{
+  title:'DOKUMEN',
+  items:[
+    ['📄','BAST',"nav('basts')"],
+    ['🧾','Kwitansi',"nav('receipts')"],
+    ['📑','SPH (Coming Soon)',"alert('Coming soon')"]
+  ]
+}
 };
 
 function showFlyout(key,el){
