@@ -798,6 +798,7 @@ function hideFlyout(){
     box.classList.remove('open');
   }
 }
+document.addEventListener('mousemove', hideFlyout);
   const LANG_KEY='siakun_lang';
 let _lang=localStorage.getItem(LANG_KEY)||'id';
 
