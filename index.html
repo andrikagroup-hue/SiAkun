@@ -509,6 +509,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 .sb::-webkit-scrollbar{width:5px;}
 .sb::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
 .sb::-webkit-scrollbar-track{background:transparent;}
+  /* === SIDEBAR TOOLTIP (Kledo-style hover label) === */
+.nav-i{position:relative;}
+.nav-i[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:#0f172a;color:#fff;font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:6px;white-space:nowrap;z-index:1000;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.15);}
+.nav-i[data-tip]:hover::before{content:"";position:absolute;left:calc(100% + 4px);top:50%;transform:translateY(-50%);border:5px solid transparent;border-right-color:#0f172a;z-index:1000;pointer-events:none;}
 </style>
 </head>
 <body>
@@ -533,66 +537,37 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   </div>
 
   <div class="nav-sec">
-    <div class="nav-lbl" data-i18n="nav_main">Utama</div>
-    <div class="nav-i active" onclick="nav('dashboard')"><span class="ic">🏠</span><span data-i18n="nav_dashboard">Home</span></div>
+    <div class="nav-i active" data-tip="Home" onclick="nav('dashboard')"><span class="ic">🏠</span><span data-i18n="nav_dashboard">Home</span></div>
   </div>
 
   <div class="nav-sec">
-    <div class="nav-lbl" data-i18n="nav_sales">Sales</div>
-    <div class="nav-i"  onmouseenter="showFlyout('sales',this)"  setTimeout(hideFlyout,400)  onclick="nav('invoices')"><span class="ic">🧾</span><span data-i18n="nav_invoices">Invoice & Sales</span></div>
-    <div class="nav-i" onclick="nav('ar')"><span class="ic">📥</span><span data-i18n="nav_ar">Receivables (AR)</span></div>
+    <div class="nav-i" data-tip="Penjualan" onmouseenter="showFlyout('sales',this)" onclick="nav('invoices')"><span class="ic">🧾</span><span>Penjualan</span></div>
   </div>
 
   <div class="nav-sec">
-    <div class="nav-lbl" data-i18n="nav_purchase">Pembelian</div>
-    <div class="nav-i"  onmouseenter="showFlyout('purchase',this)"  setTimeout(hideFlyout,400)  onclick="nav('purchases')"><span class="ic">🛒</span><span data-i18n="nav_purchases">Purchase Order</span></div>
-    <div class="nav-i" onclick="nav('ap')"><span class="ic">📤</span><span data-i18n="nav_ap">Payables (AP)</span></div>
+    <div class="nav-i" data-tip="Pembelian" onmouseenter="showFlyout('purchase',this)" onclick="nav('purchases')"><span class="ic">🛒</span><span>Pembelian</span></div>
   </div>
 
   <div class="nav-sec">
-    <div class="nav-lbl" data-i18n="nav_inventory">Inventori</div>
-    <div class="nav-i"  onmouseenter="showFlyout('inventory',this)"  setTimeout(hideFlyout,400)  onclick="nav('products')"><span class="ic">🗃️</span><span data-i18n="nav_products">Stock & Products</span></div>
-    
+    <div class="nav-i" data-tip="Inventori" onmouseenter="showFlyout('inventory',this)" onclick="nav('products')"><span class="ic">📦</span><span>Inventori</span></div>
   </div>
 
   <div class="nav-sec">
-    <div class="nav-lbl" data-i18n="nav_accounting">Akuntansi</div>
-    <div class="nav-i"  onmouseenter="showFlyout('accounting',this)"  setTimeout(hideFlyout,400)  onclick="nav('accounts')"><span class="ic">📒</span><span data-i18n="nav_accounts">Chart of Accounts (CoA)</span></div>
-    <div class="nav-i" onclick="nav('journal')"><span class="ic">📝</span><span data-i18n="nav_journal">General Journal</span></div>
-    <div class="nav-i" onclick="nav('ledger')"><span class="ic">📖</span><span data-i18n="nav_ledger">General Ledger</span></div>
-    <div class="nav-i" onclick="nav('reports')"><span class="ic">📊</span><span data-i18n="nav_reports">Financial Reports</span></div>
+    <div class="nav-i" data-tip="Akuntansi" onmouseenter="showFlyout('accounting',this)" onclick="nav('accounts')"><span class="ic">📒</span><span>Akuntansi</span></div>
   </div>
 
   <div class="nav-sec">
-    <div class="nav-lbl" data-i18n="nav_operational">Operational</div>
-    <div class="nav-i"  onmouseenter="showFlyout('operational',this)"  setTimeout(hideFlyout,400)  onclick="nav('transactions')"><span class="ic">💸</span><span data-i18n="nav_transactions">Income & Expenses</span></div>
-    <div class="nav-i" onmouseenter="showFlyout('expenseChart',this)" setTimeout(hideFlyout,400) onclick="nav('expenseChart')"><span class="ic">📊</span><span>Expense Analytics</span></div>
-
-<div class="nav-i" onmouseenter="showFlyout('budget',this)" setTimeout(hideFlyout,400) onclick="nav('budget')"><span class="ic">🎯</span><span data-i18n="nav_budget">Budget & Planning</span></div>
-
-<div class="nav-i" onmouseenter="showFlyout('assets',this)" setTimeout(hideFlyout,400) onclick="nav('assets')"><span class="ic">🏢</span><span data-i18n="nav_assets">Fixed Assets</span></div>
-
-<div class="nav-i" onmouseenter="showFlyout('prepaid',this)" setTimeout(hideFlyout,400) onclick="nav('prepaid')"><span class="ic">📆</span><span>Prepaid & Amortisasi</span></div>
+    <div class="nav-i" data-tip="Operasional" onmouseenter="showFlyout('operational',this)" onclick="nav('transactions')"><span class="ic">💸</span><span>Operasional</span></div>
   </div>
 
   <div class="nav-sec">
-    <div class="nav-lbl" data-i18n="nav_hr">SDM & Pajak</div>
-    <div class="nav-i"  onmouseenter="showFlyout('hr',this)"  setTimeout(hideFlyout,400)  onclick="nav('payroll')"><span class="ic">👥</span><span data-i18n="nav_payroll">Payroll</span></div>
-    <div class="nav-i" id="nav-calendar" onclick="nav('calendar')"><span class="ic">📅</span><span>Kalender Kerja</span></div>
-    <div class="nav-i" onclick="nav('tax')"><span class="ic">💹</span><span data-i18n="nav_tax">Tax (VAT & PPh)</span></div>
-    <div class="nav-i" onclick="nav('receipts')"><span class="ic">🖨️</span><span data-i18n="nav_receipts">Receipt</span></div>
-    <div class="nav-i" onclick="nav('rekon')"><span class="ic">🏦</span><span data-i18n="nav_rekon">Rekonsiliasi Bank</span></div>
+    <div class="nav-i" data-tip="SDM & Pajak" onmouseenter="showFlyout('hr',this)" onclick="nav('payroll')"><span class="ic">👥</span><span>SDM & Pajak</span></div>
   </div>
 
   <div class="nav-sec">
-    <div class="nav-lbl" data-i18n="nav_system">Sistem</div>
-    <div class="nav-i" onmouseenter="showFlyout('system',this)" onclick="nav('settings')"><span class="ic">⚙️</span><span data-i18n="nav_settings">Settings & Export</span></div>
-    <div class="nav-i" id="nav-users" style="display:none" onclick="nav('users')"><span class="ic">👥</span><span data-i18n="nav_users">User Management</span></div>
-    <div class="nav-i" id="nav-audit" style="display:none" onclick="nav('audit')"><span class="ic">🔍</span><span data-i18n="nav_audit">Audit Trail</span></div>
-    <div class="nav-i" onclick="nav('operator')"><span class="ic">👤</span><span>Operator</span></div>
+    <div class="nav-i" data-tip="Sistem" onmouseenter="showFlyout('system',this)" onclick="nav('settings')"><span class="ic">⚙️</span><span>Sistem</span></div>
   </div>
-</div>
-<div id="nav-flyout" class="flyout"></div>
+</div><div id="nav-flyout" class="flyout"></div>
 <!-- LOGIN SCREEN -->
 <div id="login-screen" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#14b8a6 0%,#0F172A 100%);display:flex;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.3);">
