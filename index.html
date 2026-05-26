@@ -31,13 +31,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);display:flex;
 .sb-logo{padding:10px 0 8px;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:10;background:var(--sb);text-align:center;}
 .sb-logo > *{display:none;}
 .sb-logo::before{content:"Si";display:flex;align-items:center;justify-content:center;width:36px;height:36px;margin:0 auto;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#fff;border-radius:8px;font-size:13px;font-weight:800;letter-spacing:1px;}
-.nav-sec{padding:6px 0;border-top:1px solid #f1f5f9;}
+.nav-sec{padding:8px 0;border-top:none;}
 .nav-sec:first-of-type{border-top:none;}
 .nav-lbl{display:none;}
 .nav-i{position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px;margin:2px auto;border-radius:8px;cursor:pointer;color:#64748b;transition:all .15s;user-select:none;}
 .nav-i:hover{background:#f1f5f9;color:#0f172a;}
 .nav-i.active{background:#ccfbf1;color:#0d9488;}
-.nav-i.active::before{content:"";position:absolute;left:-8px;top:8px;bottom:8px;width:3px;background:var(--acc);border-radius:0 3px 3px 0;}
+.nav-i.active::before{display:none;}
 .nav-i .ic{font-size:18px;width:auto;}
 .nav-i > span:not(.ic){display:none;}
 .nav-i[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:52px;top:50%;transform:translateY(-50%);background:#0f172a;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;white-space:nowrap;z-index:1000;pointer-events:none;}
