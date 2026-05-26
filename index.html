@@ -524,25 +524,25 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_sales">Sales</div>
-    <div class="nav-i" onclick="nav('invoices')"><span class="ic">🧾</span><span data-i18n="nav_invoices">Invoice & Sales</span></div>
+    <div class="nav-i"  onmouseenter="showFlyout('sales',this)"  onmouseleave="setTimeout(hideFlyout,150)"  onclick="nav('invoices')"><span class="ic">🧾</span><span data-i18n="nav_invoices">Invoice & Sales</span></div>
     <div class="nav-i" onclick="nav('ar')"><span class="ic">📥</span><span data-i18n="nav_ar">Receivables (AR)</span></div>
   </div>
 
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_purchase">Pembelian</div>
-    <div class="nav-i" onclick="nav('purchases')"><span class="ic">🛒</span><span data-i18n="nav_purchases">Purchase Order</span></div>
+    <div class="nav-i"  onmouseenter="showFlyout('purchase',this)"  onmouseleave="setTimeout(hideFlyout,150)"  onclick="nav('purchases')"><span class="ic">🛒</span><span data-i18n="nav_purchases">Purchase Order</span></div>
     <div class="nav-i" onclick="nav('ap')"><span class="ic">📤</span><span data-i18n="nav_ap">Payables (AP)</span></div>
   </div>
 
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_inventory">Inventori</div>
-    <div class="nav-i" onclick="nav('products')"><span class="ic">📦</span><span data-i18n="nav_products">Stock & Products</span></div>
+    <div class="nav-i"  onmouseenter="showFlyout('inventory',this)"  onmouseleave="setTimeout(hideFlyout,150)"  onclick="nav('products')"><span class="ic">📦</span><span data-i18n="nav_products">Stock & Products</span></div>
     <div class="nav-i" onclick="nav('contacts')"><span class="ic">👤</span><span data-i18n="nav_contacts">Contacts</span></div>
   </div>
 
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_accounting">Akuntansi</div>
-    <div class="nav-i" onclick="nav('accounts')"><span class="ic">📒</span><span data-i18n="nav_accounts">Chart of Accounts (CoA)</span></div>
+    <div class="nav-i"  onmouseenter="showFlyout('accounting',this)"  onmouseleave="setTimeout(hideFlyout,150)"  onclick="nav('accounts')"><span class="ic">📒</span><span data-i18n="nav_accounts">Chart of Accounts (CoA)</span></div>
     <div class="nav-i" onclick="nav('journal')"><span class="ic">📝</span><span data-i18n="nav_journal">General Journal</span></div>
     <div class="nav-i" onclick="nav('ledger')"><span class="ic">📖</span><span data-i18n="nav_ledger">General Ledger</span></div>
     <div class="nav-i" onclick="nav('reports')"><span class="ic">📊</span><span data-i18n="nav_reports">Financial Reports</span></div>
@@ -550,7 +550,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_operational">Operational</div>
-    <div class="nav-i" onclick="nav('transactions')"><span class="ic">💸</span><span data-i18n="nav_transactions">Income & Expenses</span></div>
+    <div class="nav-i"  onmouseenter="showFlyout('operational',this)"  onmouseleave="setTimeout(hideFlyout,150)"  onclick="nav('transactions')"><span class="ic">💸</span><span data-i18n="nav_transactions">Income & Expenses</span></div>
     <div class="nav-i" onclick="nav('expenseChart')"><span class="ic">📊</span><span>Expense Analytics</span></div>
     <div class="nav-i" onclick="nav('budget')"><span class="ic">🎯</span><span data-i18n="nav_budget">Budget & Planning</span></div>
     <div class="nav-i" onclick="nav('assets')"><span class="ic">🏢</span><span data-i18n="nav_assets">Fixed Assets</span></div>
@@ -559,7 +559,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_hr">SDM & Pajak</div>
-    <div class="nav-i" onclick="nav('payroll')"><span class="ic">👥</span><span data-i18n="nav_payroll">Payroll</span></div>
+    <div class="nav-i"  onmouseenter="showFlyout('hr',this)"  onmouseleave="setTimeout(hideFlyout,150)"  onclick="nav('payroll')"><span class="ic">👥</span><span data-i18n="nav_payroll">Payroll</span></div>
     <div class="nav-i" id="nav-calendar" onclick="nav('calendar')"><span class="ic">📅</span><span>Kalender Kerja</span></div>
     <div class="nav-i" onclick="nav('tax')"><span class="ic">💹</span><span data-i18n="nav_tax">Tax (VAT & PPh)</span></div>
     <div class="nav-i" onclick="nav('receipts')"><span class="ic">🖨️</span><span data-i18n="nav_receipts">Receipt</span></div>
@@ -568,7 +568,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_system">Sistem</div>
-    <div class="nav-i" id="nav-settings" onclick="nav('settings')"><span class="ic">⚙️</span><span data-i18n="nav_settings">Settings & Export</span></div>
+    onmouseenter="showFlyout('system',this)" onmouseleave="setTimeout(hideFlyout,150)" onclick="nav('settings')"><span class="ic">⚙️</span><span data-i18n="nav_settings">Settings & Export</span></div>
     <div class="nav-i" id="nav-users" style="display:none" onclick="nav('users')"><span class="ic">👥</span><span data-i18n="nav_users">User Management</span></div>
     <div class="nav-i" id="nav-audit" style="display:none" onclick="nav('audit')"><span class="ic">🔍</span><span data-i18n="nav_audit">Audit Trail</span></div>
     <div class="nav-i" onclick="nav('operator')"><span class="ic">👤</span><span>Operator</span></div>
@@ -690,7 +690,93 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 // ================================================================
 //  i18n — TRANSLATION SYSTEM
 // ================================================================
-const LANG_KEY='siakun_lang';
+const FLYOUT_MAP={
+
+sales:{
+title:'PENJUALAN',
+items:[
+['➕','Tambah Faktur',"openQuickForm('jual')"],
+['📋','Daftar Faktur',"nav('invoices')"],
+['📥','Piutang AR',"nav('ar')"],
+['👥','Pelanggan',"nav('contacts')"],
+['🖨️','Receipt',"nav('receipts')"]
+]},
+
+purchase:{
+title:'PEMBELIAN',
+items:[
+['➕','Tambah Faktur Beli',"openQuickForm('beli')"],
+['📋','Purchase Order',"nav('purchases')"],
+['📤','Hutang AP',"nav('ap')"],
+['👥','Supplier',"nav('contacts')"]
+]},
+
+inventory:{
+title:'INVENTORI',
+items:[
+['📦','Stock & Produk',"nav('products')"],
+['👤','Kontak',"nav('contacts')"]
+]},
+
+accounting:{
+title:'AKUNTANSI',
+items:[
+['📒','CoA',"nav('accounts')"],
+['📝','Jurnal',"nav('journal')"],
+['📖','Buku Besar',"nav('ledger')"],
+['📊','Laporan',"nav('reports')"]
+]},
+
+operational:{
+title:'OPERASIONAL',
+items:[
+['💸','Pemasukan & Pengeluaran',"nav('transactions')"],
+['📊','Expense Analytics',"nav('expenseChart')"],
+['🎯','Budget',"nav('budget')"],
+['🏢','Aset Tetap',"nav('assets')"],
+['📆','Prepaid',"nav('prepaid')"]
+]},
+
+hr:{
+title:'SDM & PAJAK',
+items:[
+['👥','Payroll',"nav('payroll')"],
+['📅','Kalender',"nav('calendar')"],
+['💹','Pajak',"nav('tax')"],
+['🏦','Rekonsiliasi',"nav('rekon')"]
+]},
+
+system:{
+title:'SISTEM',
+items:[
+['⚙️','Settings',"nav('settings')"],
+['👤','Operator',"nav('operator')]
+]}
+};
+
+function showFlyout(key,el){
+ const cfg=FLYOUT_MAP[key];
+ const box=document.getElementById('nav-flyout');
+ if(!cfg||!box)return;
+
+ box.innerHTML=
+ '<div class="flyout-title">'+cfg.title+'</div>'+
+ cfg.items.map(i=>
+ '<div class="flyout-item" onclick="'+i[2]+';hideFlyout()">'+
+ '<span class="fi-ic">'+i[0]+'</span>'+
+ '<span>'+i[1]+'</span></div>'
+ ).join('');
+
+ const r=el.getBoundingClientRect();
+ box.style.left=(r.right+8)+'px';
+ box.style.top=r.top+'px';
+ box.classList.add('open');
+}
+
+function hideFlyout(){
+ document.getElementById('nav-flyout')?.classList.remove('open');
+}
+  const LANG_KEY='siakun_lang';
 let _lang=localStorage.getItem(LANG_KEY)||'id';
 
 const TR={
