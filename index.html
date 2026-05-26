@@ -40,7 +40,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--txt);display:flex;
 .nav-i.active::before{display:none;}
 .nav-i .ic{font-size:18px;width:auto;}
 .nav-i > span:not(.ic){display:none;}
-.nav-i[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:52px;top:50%;transform:translateY(-50%);background:#0f172a;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;white-space:nowrap;z-index:1000;pointer-events:none;}
 
 /* ─── FLYOUT PANEL (Kledo-style submenu) ─── */
 .flyout{
@@ -510,7 +509,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 .sb::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
 .sb::-webkit-scrollbar-track{background:transparent;}
   /* === SIDEBAR TOOLTIP (Kledo-style hover label) === */
-.nav-i{position:relative;}
+
 .nav-i[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:#0f172a;color:#fff;font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:6px;white-space:nowrap;z-index:1000;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.15);}
 .nav-i[data-tip]:hover::before{content:"";position:absolute;left:calc(100% + 4px);top:50%;transform:translateY(-50%);border:5px solid transparent;border-right-color:#0f172a;z-index:1000;pointer-events:none;}
 </style>
