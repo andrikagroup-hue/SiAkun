@@ -791,17 +791,12 @@ function hideFlyout(){
   const box = document.getElementById('nav-flyout');
   if(!box) return;
 
-  setTimeout(()=>{
-    const navHover =
-      document.querySelector('.nav-i:hover');
+  const navHover = document.querySelector('.nav-i:hover');
+  const flyoutHover = box.matches(':hover');
 
-    const flyoutHover =
-      box.matches(':hover');
-
-    if(!navHover && !flyoutHover){
-      box.classList.remove('open');
-    }
-  },300);
+  if(!navHover && !flyoutHover){
+    box.classList.remove('open');
+  }
 }
   const LANG_KEY='siakun_lang';
 let _lang=localStorage.getItem(LANG_KEY)||'id';
