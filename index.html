@@ -3622,7 +3622,7 @@ function nav(page){
   destroyCharts();
   const c=document.getElementById('content');
   c.innerHTML='';
-  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,prepaid:renderPrepaid,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon,expenseChart:renderExpenseChart,operator:renderOperator};
+  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,prepaid:renderPrepaid,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon,expenseChart:renderExpenseChart,operator:renderOperator,basts:renderBasts};
   if(pages[page]){
     try{pages[page](c);}catch(e){
       console.error('[SiAkun]',page,e);
@@ -9462,7 +9462,40 @@ function manualRecalcBalances(){
 // ================================================================
 //  OPERATOR PANEL — Multi-user activity dashboard
 // ================================================================
-function renderOperator(c){
+function renderBasts(c){
+  const basts = DB.basts || [];
+  
+  c.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="margin:0;font-size:20px;font-weight:700;color:#0f172a">🗂️ Berita Acara Serah Terima</h2>
+        <div style="color:#64748b;font-size:12px;margin-top:3px">Dokumentasi serah terima proyek, barang, aset, & karyawan</div>
+      </div>
+      <button class="btn btn-pri" onclick="newBast()">+ Buat BAST Baru</button>
+    </div>
+    ${basts.length === 0 ? `
+      <div style="background:#fff;border:1.5px dashed #cbd5e1;border-radius:12px;padding:60px 24px;text-align:center">
+        <div style="font-size:54px;margin-bottom:14px">🗂️</div>
+        <div style="font-weight:700;font-size:17px;color:#0f172a;margin-bottom:6px">Belum ada BAST</div>
+        <div style="color:#64748b;font-size:13px;max-width:380px;margin:0 auto 22px;line-height:1.5">
+          Buat BAST pertama kamu untuk dokumentasi serah terima proyek, barang, aset tetap, atau karyawan resign.
+        </div>
+        <button class="btn btn-pri" onclick="newBast()">+ Buat BAST Pertama</button>
+      </div>
+    ` : `
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px">
+        <div style="color:#64748b;font-size:13px">⏳ Table view coming in Sesi 6C-2. Total BAST tersimpan: <strong>${basts.length}</strong></div>
+      </div>
+    `}
+  `;
+}
+
+function newBast(){
+  alert('🚧 Form BAST akan dibuat di Sesi 6D!\n\nSekarang masih placeholder — page list aja yang ready.');
+}
+  
+  
+  function renderOperator(c){
   const user = _currentUser || {};
   const allTx = [
     ...(DB.invoices||[]).map(x=>({...x,_type:'Penjualan',_badge:'sell',_label:'Invoice',_no:x.no,_contact:x.contactId,_ts:x.createdAt||x.date})),
