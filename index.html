@@ -551,10 +551,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   <div class="nav-sec">
     <div class="nav-lbl" data-i18n="nav_operational">Operational</div>
     <div class="nav-i"  onmouseenter="showFlyout('operational',this)"  onmouseleave="setTimeout(hideFlyout,150)"  onclick="nav('transactions')"><span class="ic">💸</span><span data-i18n="nav_transactions">Income & Expenses</span></div>
-    <div class="nav-i" onclick="nav('expenseChart')"><span class="ic">📊</span><span>Expense Analytics</span></div>
-    <div class="nav-i" onclick="nav('budget')"><span class="ic">🎯</span><span data-i18n="nav_budget">Budget & Planning</span></div>
-    <div class="nav-i" onclick="nav('assets')"><span class="ic">🏢</span><span data-i18n="nav_assets">Fixed Assets</span></div>
-    <div class="nav-i" onclick="nav('prepaid')"><span class="ic">📆</span><span>Prepaid & Amortisasi</span></div>
+    <div class="nav-i" onmouseenter="showFlyout('expenseChart',this)" onmouseleave="setTimeout(hideFlyout,150)" onclick="nav('expenseChart')"><span class="ic">📊</span><span>Expense Analytics</span></div>
+
+<div class="nav-i" onmouseenter="showFlyout('budget',this)" onmouseleave="setTimeout(hideFlyout,150)" onclick="nav('budget')"><span class="ic">🎯</span><span data-i18n="nav_budget">Budget & Planning</span></div>
+
+<div class="nav-i" onmouseenter="showFlyout('assets',this)" onmouseleave="setTimeout(hideFlyout,150)" onclick="nav('assets')"><span class="ic">🏢</span><span data-i18n="nav_assets">Fixed Assets</span></div>
+
+<div class="nav-i" onmouseenter="showFlyout('prepaid',this)" onmouseleave="setTimeout(hideFlyout,150)" onclick="nav('prepaid')"><span class="ic">📆</span><span>Prepaid & Amortisasi</span></div>
   </div>
 
   <div class="nav-sec">
