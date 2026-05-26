@@ -564,12 +564,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   </div>
 
   <div class="nav-sec">
+    <div class="nav-i" data-tip="Dokumen" onmouseenter="showFlyout('docs',this)" onclick="nav('basts')"><span class="ic">🗂️</span><span>Dokumen</span></div>
+  </div>
+  
+  <div class="nav-sec">
     <div class="nav-i" data-tip="Sistem" onmouseenter="showFlyout('system',this)" onclick="nav('settings')"><span class="ic">⚙️</span><span>Sistem</span></div>
     </div>
 
-  <div class="nav-sec">
-    <div class="nav-i" data-tip="Dokumen" onmouseenter="showFlyout('docs',this)" onclick="nav('basts')"><span class="ic">📃</span><span>Dokumen</span></div>
-  </div>
+  
 </div><div id="nav-flyout" class="flyout"></div>
 <!-- LOGIN SCREEN -->
 <div id="login-screen" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#14b8a6 0%,#0F172A 100%);display:flex;align-items:center;justify-content:center;">
