@@ -10114,7 +10114,7 @@ function printBast(id){
     .ttd-box p.name{font-size:12px;font-weight:700;margin-top:6px}
     .ttd-box p.sub{font-size:11px;color:#475569}
     /* FOOTER */
-    .footer{margin-top:20px;padding-top:10px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8}
+    .footer{position:fixed;bottom:8mm;left:14mm;right:14mm;padding-top:6px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8}
     /* PRINT BUTTON */
     .print-bar{position:fixed;bottom:20px;right:20px;display:flex;gap:8px;z-index:999}
     .print-bar button{padding:10px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600}
@@ -10233,7 +10233,7 @@ function printBast(id){
 
     <!-- FOOTER -->
     <div class="footer">
-      <span>Digenerate oleh SiAkun — ${co.name||''}</span>
+      <span>${co.name||'PT. Andrika Mitra Solusi'}</span>
       <span>${b.id} | ${b.status?.toUpperCase()}</span>
     </div>
   </div>
