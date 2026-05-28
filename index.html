@@ -9647,6 +9647,7 @@ function viewBast(id){
         </table>
       </div>
       ${b.kondisi_catatan?`<div><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:3px">CATATAN KONDISI</div><div style="color:#475569">${b.kondisi_catatan}</div></div>`:''}
+      ${b.notes_internal?`<div style="background:#fefce8;border:1px solid #fef08a;border-radius:6px;padding:10px"><div style="font-size:10px;color:#a16207;font-weight:600;margin-bottom:3px">🔒 CATATAN INTERNAL</div><div style="color:#713f12;font-size:13px">${b.notes_internal}</div></div>`:''}
     </div>
     <div class="modal-ft">
       <button class="btn btn-out" onclick="closeModal()">Tutup</button>
