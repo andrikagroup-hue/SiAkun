@@ -4209,8 +4209,9 @@ function renderInvoices(c){
 
 let invItemCount=0;
 
-function openAddInvoice(){
+function openAddInvoice(prefill=null){
   invItemCount=1;
+  window._bastSourceId=prefill?.bastId||null; // track source BAST untuk linking
   const tx=DB.taxSettings||{ppnRate:11,pph23Rate:2,pph4Rate:2};
   const no='INV-'+today().replace(/-/g,'')+'-'+(DB.invoices.length+1).toString().padStart(3,'0');
   openModal('Buat Invoice Baru',`
@@ -4277,13 +4278,46 @@ function openAddInvoice(){
     <button class="btn btn-pri" onclick="saveInvoice('confirm')">✅ Terbitkan</button>
   </div>`,'modal-wide');
   calcInvTotals();
+  // Prefill dari BAST (jika ada)
+  if(prefill){
+    setTimeout(()=>{
+      if(prefill.contactId){
+        const sel=document.getElementById('inv-contact');
+        if(sel)sel.value=prefill.contactId;
+      }
+      if(prefill.note){
+        const nt=document.getElementById('inv-note');
+        if(nt)nt.value=prefill.note;
+      }
+      if(prefill.items&&prefill.items.length){
+        const wrap=document.getElementById('inv-items');
+        if(wrap){
+          wrap.innerHTML='';invItemCount=0;
+          prefill.items.forEach(it=>{
+            wrap.insertAdjacentHTML('beforeend',invItemRow(invItemCount++));
+            const row=document.getElementById('invr-'+(invItemCount-1));
+            if(!row)return;
+            const descInp=row.querySelector('.inv-desc');
+            const nums=row.querySelectorAll('input[type=number]');
+            if(descInp)descInp.value=it.deskripsi||'';
+            if(nums[0])nums[0].value=Number(it.qty)||1;
+            if(nums[1])nums[1].value=Number(it.nilai)||0;
+          });
+          calcInvTotals();
+        }
+      }
+    },50);
+  }
 }
 
 function invItemRow(i){
   return`<div class="inv-row" id="invr-${i}" style="display:grid;grid-template-columns:2fr 55px 105px 90px 75px 90px 26px;gap:4px;margin-bottom:4px;align-items:center">
-    <select style="font-size:11px;padding:3px 6px;border:1px solid var(--bdr);border-radius:5px" onchange="fillInvProduct(${i},this)">
-      <option value="">— Produk / manual —</option>${productOptions()}
-    </select>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <select style="font-size:11px;padding:3px 6px;border:1px solid var(--bdr);border-radius:5px" onchange="fillInvProduct(${i},this)">
+        <option value="">— Produk / manual —</option>${productOptions()}
+      </select>
+      <input type="text" class="inv-desc" placeholder="Deskripsi manual (opsional)" style="font-size:10px;padding:2px 5px;border:1px solid var(--bdr);border-radius:5px;color:#64748b;width:100%;box-sizing:border-box">
+    </div>
     <input type="number" value="1" min="0.01" step="any" oninput="calcInvTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
     <input type="number" value="0" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px" placeholder="Harga">
     <input type="number" value="0" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;color:#059669" placeholder="Disc Rp" title="Diskon nominal">
@@ -4342,7 +4376,8 @@ function saveInvoice(action){
       const line=qty*price;
       const disc=Math.min(line,discRp+Math.round((line-discRp)*discPct/100));
       const net=Math.max(0,Math.round(line-disc));
-      items.push({productId:sel.value||null,qty,price,discRp,discPct,discount:discPct,subtotal:net});
+      const desc=row.querySelector('.inv-desc')?.value||'';
+      items.push({productId:sel.value||null,desc,qty,price,discRp,discPct,discount:discPct,subtotal:net});
       subtotal+=line;totalDisc+=disc;
     }
   });
@@ -4364,9 +4399,37 @@ function saveInvoice(action){
     pph4:hasPPh4,pph4Rate,pph4Amt,total:Math.round(total),
     note:v('inv-note'),status:'draft',payments:[]};
   DB.invoices.push(inv);
+  // Link balik ke BAST kalau invoice ini dibuat dari BAST
+  if(window._bastSourceId){
+    const srcBast=(DB.basts||[]).find(x=>x.id===window._bastSourceId);
+    if(srcBast){srcBast.link_invoice_id=inv.id;srcBast.updated_at=Date.now();}
+    window._bastSourceId=null;
+  }
   if(action==='confirm'){_confirmInvoice(inv);logAudit('Buat Invoice',`${inv.no} — Total: ${rp(inv.total)}`);}
   saveDB();closeModal();nav('invoices');
 }
+// ── Buat Invoice dari BAST (Sesi 6F) ──
+function openInvoiceFromBast(bastId){
+  const b=(DB.basts||[]).find(x=>x.id===bastId);
+  if(!b)return alert('BAST tidak ditemukan.');
+  // Kalau sudah pernah buat invoice, konfirmasi dulu
+  if(b.link_invoice_id){
+    const existing=DB.invoices.find(x=>x.id===b.link_invoice_id);
+    const invNo=existing?existing.no:b.link_invoice_id;
+    if(!confirm(`BAST ini sudah terhubung ke Invoice ${invNo}.\nTetap buat invoice baru?`))return;
+  }
+  // Bangun prefill dari data BAST
+  const note='Berdasarkan '+b.id+(b.pihak2?.perusahaan?' — '+b.pihak2.perusahaan:'')
+    +'\n\nItems:\n'+(b.items||[]).map((it,i)=>`${i+1}. ${it.deskripsi||'-'} (${it.qty||1} ${it.satuan||'unit'})`).join('\n');
+  const prefill={
+    bastId,
+    contactId: b.pihak2?.contact_id||'',
+    note,
+    items: b.items||[]
+  };
+  openAddInvoice(prefill);
+}
+
 function openEditInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);
   if(!inv||inv.status!=='draft')return alert('Hanya invoice Draft yang bisa diedit.');
@@ -9572,7 +9635,7 @@ function renderBasts(c){
                   <td style="padding:11px 12px;color:#0f172a"><div>${b.pihak2?.nama||'-'}</div><div style="font-size:11px;color:#94a3b8">${b.pihak2?.perusahaan||''}</div></td>
                   <td style="padding:11px 12px;text-align:right;color:#0f172a;font-variant-numeric:tabular-nums">${totalNilai?'Rp '+totalNilai.toLocaleString('id-ID'):'-'}</td>
                   <td style="padding:11px 12px;text-align:center"><span style="background:${stBg};color:${stColor};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">${STATUS_LABELS[b.status]||b.status||'-'}</span></td>
-                  <td style="padding:11px 12px;text-align:center;white-space:nowrap"><button onclick="viewBast('${b.id}')" title="Lihat Detail" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">👁️</button><button onclick="editBast('${b.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button><button onclick="printBast('${b.id}')" title="Print / PDF" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🖨️</button><button onclick="delBast('${b.id}')" title="Delete" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button></td>
+                  <td style="padding:11px 12px;text-align:center;white-space:nowrap"><button onclick="viewBast('${b.id}')" title="Lihat Detail" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">👁️</button><button onclick="editBast('${b.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button><button onclick="printBast('${b.id}')" title="Print / PDF" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🖨️</button>${(b.type==='proyek'||b.type==='barang')&&b.status==='signed'?b.link_invoice_id?`<button onclick="nav('invoices')" title="Lihat Invoice Terhubung" style="background:none;border:1px solid #bbf7d0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#15803d;margin-right:3px">🔗</button>`:`<button onclick="openInvoiceFromBast('${b.id}')" title="Buat Invoice dari BAST ini" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;font-weight:600;margin-right:3px">📄 Invoice</button>`:''}<button onclick="delBast('${b.id}')" title="Delete" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button></td>
                 </tr>`;
               }).join('')}
             </tbody>
