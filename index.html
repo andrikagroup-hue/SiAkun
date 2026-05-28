@@ -3548,7 +3548,8 @@ function coHeader(subtitle){
       </div>
       <div style="font-size:6px;color:#f59e0b;letter-spacing:1.5px;margin-top:1px;font-family:sans-serif">FINANCIAL</div>
     </div>`;
-  return`<div class="rep-hd">${logoHtml}<div class="rep-hd-txt"><h3>${co.name}</h3><p>NPWP: ${co.npwp} | ${co.address}</p><div class="rep-title">${subtitle}</div></div></div>`;
+  const bankLine=co.bank&&co.norek?`<p>Bank: ${co.bank} | No. Rek: ${co.norek}${co.atasnama?' a/n '+co.atasnama:''}</p>`:'';
+  return`<div class="rep-hd">${logoHtml}<div class="rep-hd-txt"><h3>${co.name}</h3><p>NPWP: ${co.npwp} | ${co.address}</p>${bankLine}<div class="rep-title">${subtitle}</div></div></div>`;
 }
 function updateSidebarLogo(){
   const w=document.getElementById('sb-logo-img-wrap');
@@ -7959,6 +7960,8 @@ function renderSettings(c){
         <div class="fg"><label>${t('set_address')}</label><input id="co-addr" value="${co.address}"></div>
         <div class="fr2"><div class="fg"><label>${t('lbl_phone')}</label><input id="co-phone" value="${co.phone}"></div><div class="fg"><label>${t('lbl_email')}</label><input id="co-email" value="${co.email}"></div></div>
         <div class="fg"><label>Nama Penanda Tangan Default (HRD/Finance Manager)</label><input id="co-signatory" value="${co.signatory||''}" placeholder="contoh: Dedi Candra — bisa diedit langsung di slip saat print"></div>
+        <div class="fr2"><div class="fg"><label>🏦 Nama Bank</label><input id="co-bank" value="${co.bank||''}" placeholder="contoh: BSI, BCA, Mandiri..."></div><div class="fg"><label>No. Rekening</label><input id="co-norek" value="${co.norek||''}" placeholder="contoh: 1234567890"></div></div>
+        <div class="fg"><label>Atas Nama Rekening</label><input id="co-atasnama" value="${co.atasnama||''}" placeholder="Nama pemilik rekening"></div>
         <div class="fg"><label>${t('set_fiscalYear')}</label><input type="number" id="co-year" value="${co.year}"></div>
         <button class="btn btn-pri" onclick="saveCompany()">${t('set_saveProfile')}</button>
       </div>
@@ -8033,7 +8036,7 @@ function renderSettings(c){
 }
 
 function saveCompany(){
-  DB.company={...DB.company,name:v('co-name'),npwp:v('co-npwp'),address:v('co-addr'),phone:v('co-phone'),email:v('co-email'),signatory:v('co-signatory'),year:parseInt(v('co-year'))||new Date().getFullYear()};
+  DB.company={...DB.company,name:v('co-name'),npwp:v('co-npwp'),address:v('co-addr'),phone:v('co-phone'),email:v('co-email'),signatory:v('co-signatory'),bank:v('co-bank'),norek:v('co-norek'),atasnama:v('co-atasnama'),year:parseInt(v('co-year'))||new Date().getFullYear()};
   saveDB();document.getElementById('sb-coname').textContent=DB.company.name;updateSidebarLogo();alert('Profil disimpan!');
 function saveTaxSettings(){
   if(!DB.taxSettings)DB.taxSettings={};
@@ -10049,8 +10052,8 @@ function printBast(id){
   const fD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}):'-';
 
   const logoHtml=co.logo
-    ?`<img src="${co.logo}" style="width:64px;height:64px;object-fit:contain;border-radius:6px">`
-    :`<div style="width:64px;height:64px;background:#0f172a;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:13px;color:#fff;font-weight:800">Si</span><span style="font-size:8px;color:#f59e0b;letter-spacing:1px">AKUN</span></div>`;
+    ?`<img src="${co.logo}" style="width:120px;height:120px;object-fit:contain;border-radius:8px">`
+    :`<div style="width:120px;height:120px;background:#0f172a;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:22px;color:#fff;font-weight:800">Si</span><span style="font-size:13px;color:#f59e0b;letter-spacing:1px">AKUN</span></div>`;
 
   const metaHtml=(()=>{
     const m=b.meta||{};
@@ -10129,6 +10132,7 @@ function printBast(id){
         ${co.address?`<p>${co.address}</p>`:''}
         ${co.phone?`<p>Telp: ${co.phone}${co.email?' | '+co.email:''}</p>`:''}
         ${co.npwp?`<p>NPWP: ${co.npwp}</p>`:''}
+        ${co.bank&&co.norek?`<p style="color:#0d9488;font-weight:600">Bank: ${co.bank} | No. Rek: ${co.norek}${co.atasnama?' a/n '+co.atasnama:''}</p>`:''}
       </div>
     </div>
     <p style="text-align:right;font-size:10px;color:#94a3b8;margin:4px 0 12px">Dicetak: ${new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}</p>
@@ -10240,10 +10244,7 @@ function printBast(id){
     <button class="btn-save" onclick="window.print()">🖨️ Print / Save PDF</button>
   </div>
 
-  <script>
-    // Auto-open print dialog kalau dibuka langsung
-    // window.onload=()=>setTimeout(()=>window.print(),600);
-  <\/script>
+
   <\/body><\/html>`;
 
   const w=window.open('','_blank','width=860,height=900');
