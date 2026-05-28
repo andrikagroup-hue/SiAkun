@@ -9569,7 +9569,7 @@ function renderBasts(c){
                   <td style="padding:11px 12px;color:#0f172a"><div>${b.pihak2?.nama||'-'}</div><div style="font-size:11px;color:#94a3b8">${b.pihak2?.perusahaan||''}</div></td>
                   <td style="padding:11px 12px;text-align:right;color:#0f172a;font-variant-numeric:tabular-nums">${totalNilai?'Rp '+totalNilai.toLocaleString('id-ID'):'-'}</td>
                   <td style="padding:11px 12px;text-align:center"><span style="background:${stBg};color:${stColor};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">${STATUS_LABELS[b.status]||b.status||'-'}</span></td>
-                  <td style="padding:11px 12px;text-align:center;white-space:nowrap"><button onclick="viewBast('${b.id}')" title="View" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">👁️</button><button onclick="editBast('${b.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button><button onclick="delBast('${b.id}')" title="Delete" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button></td>
+                  <td style="padding:11px 12px;text-align:center;white-space:nowrap"><button onclick="viewBast('${b.id}')" title="Lihat Detail" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">👁️</button><button onclick="editBast('${b.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button><button onclick="printBast('${b.id}')" title="Print / PDF" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🖨️</button><button onclick="delBast('${b.id}')" title="Delete" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button></td>
                 </tr>`;
               }).join('')}
             </tbody>
@@ -9651,6 +9651,7 @@ function viewBast(id){
     </div>
     <div class="modal-ft">
       <button class="btn btn-out" onclick="closeModal()">Tutup</button>
+      <button class="btn btn-out" onclick="printBast('${b.id}')" style="border-color:#1d4ed8;color:#1d4ed8">🖨️ Print / PDF</button>
       <button class="btn btn-pri" onclick="closeModal();editBast('${b.id}')">✏️ Edit</button>
     </div>
   `,'modal-wide');
@@ -10036,6 +10037,220 @@ function saveBastSigned(){
 }
 
 // ——— DELETE & DUMMY (tidak berubah) ———
+
+function printBast(id){
+  const b=(DB.basts||[]).find(x=>x.id===id);
+  if(!b){alert('BAST tidak ditemukan.');return;}
+  const co=DB.company||{};
+  const TL={proyek:'Proyek / Jasa',barang:'Barang',aset:'Aset',karyawan:'Karyawan'};
+  const SL={out:'diserahkan kepada',in:'diterima dari'};
+  const total=(b.items||[]).reduce((s,i)=>s+(Number(i.nilai)||0)*(Number(i.qty)||1),0);
+  const fRp=n=>n?'Rp '+Number(n).toLocaleString('id-ID'):'-';
+  const fD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}):'-';
+
+  const logoHtml=co.logo
+    ?`<img src="${co.logo}" style="width:64px;height:64px;object-fit:contain;border-radius:6px">`
+    :`<div style="width:64px;height:64px;background:#0f172a;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:13px;color:#fff;font-weight:800">Si</span><span style="font-size:8px;color:#f59e0b;letter-spacing:1px">AKUN</span></div>`;
+
+  const metaHtml=(()=>{
+    const m=b.meta||{};
+    if(b.type==='proyek'&&m.proyek) return `<p style="margin:3px 0"><b>Periode:</b> ${fD(m.proyek.periode_mulai)} s/d ${fD(m.proyek.periode_selesai)}</p>`;
+    if(b.type==='barang'&&m.barang?.po_ref) return `<p style="margin:3px 0"><b>Ref. PO:</b> ${m.barang.po_ref}</p>`;
+    if(b.type==='aset'&&m.aset) return `<p style="margin:3px 0"><b>Serial:</b> ${m.aset.serial||'-'} | <b>Asset Tag:</b> ${m.aset.asset_tag||'-'}</p><p style="margin:3px 0"><b>Lokasi:</b> ${m.aset.lokasi_awal||'-'} → ${m.aset.lokasi_tujuan||'-'}</p>`;
+    if(b.type==='karyawan'&&m.karyawan?.nik) return `<p style="margin:3px 0"><b>NIK:</b> ${m.karyawan.nik}</p>`;
+    return '';
+  })();
+
+  const itemRows=(b.items||[]).map((it,i)=>`
+    <tr style="border-bottom:1px solid #e2e8f0">
+      <td style="padding:7px 10px;text-align:center">${i+1}</td>
+      <td style="padding:7px 10px">${it.deskripsi||'-'}</td>
+      <td style="padding:7px 10px;text-align:center">${it.qty||1}</td>
+      <td style="padding:7px 10px;text-align:center">${it.satuan||'-'}</td>
+      <td style="padding:7px 10px;text-align:center">${it.kondisi||'-'}</td>
+      <td style="padding:7px 10px;text-align:right">${fRp(it.nilai)}</td>
+    </tr>`).join('');
+
+  const html=`<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8">
+  <title>BAST ${b.id}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Arial',sans-serif;font-size:13px;color:#1e293b;background:#fff;padding:0}
+    @page{size:A4;margin:20mm 18mm 20mm 18mm}
+    @media print{.no-print{display:none!important}}
+    .page{max-width:800px;margin:0 auto;padding:24px}
+    /* KOP SURAT */
+    .kop{display:flex;align-items:center;gap:16px;padding-bottom:12px;border-bottom:3px solid #0f172a;margin-bottom:6px}
+    .kop-text h1{font-size:18px;font-weight:700;color:#0f172a;margin-bottom:2px}
+    .kop-text p{font-size:11px;color:#475569;margin:1px 0}
+    /* JUDUL */
+    .judul{text-align:center;margin:18px 0 14px}
+    .judul h2{font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0f172a}
+    .judul p{font-size:12px;color:#475569;margin-top:3px}
+    /* INFO BOX */
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+    .info-box{border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px}
+    .info-box h3{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+    .info-box p{font-size:12px;color:#1e293b;margin:2px 0}
+    /* META */
+    .meta-row{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;margin-bottom:16px;font-size:12px}
+    /* TABEL ITEMS */
+    table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    thead tr{background:#0f172a;color:#fff}
+    th{padding:8px 10px;font-size:11px;font-weight:600;text-align:left}
+    tbody tr:nth-child(even){background:#f8fafc}
+    .total-row td{font-weight:700;border-top:2px solid #0f172a;padding:9px 10px;background:#f1f5f9}
+    /* CATATAN */
+    .catatan{border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;margin-bottom:20px;font-size:12px}
+    .catatan h3{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+    /* TANDA TANGAN — 3 KOLOM */
+    .ttd-wrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px}
+    .ttd-box{text-align:center}
+    .ttd-box p.label{font-size:11px;color:#475569;margin-bottom:4px}
+    .ttd-box .space{height:64px;border-bottom:1px solid #1e293b;margin:0 8px}
+    .ttd-box p.name{font-size:12px;font-weight:700;margin-top:6px}
+    .ttd-box p.sub{font-size:11px;color:#475569}
+    /* FOOTER */
+    .footer{margin-top:20px;padding-top:10px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8}
+    /* PRINT BUTTON */
+    .print-bar{position:fixed;bottom:20px;right:20px;display:flex;gap:8px;z-index:999}
+    .print-bar button{padding:10px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600}
+    .btn-save{background:#1d4ed8;color:#fff}
+    .btn-close{background:#f1f5f9;color:#475569}
+  </style>
+  </head><body>
+  <div class="page">
+
+    <!-- KOP SURAT -->
+    <div class="kop">
+      ${logoHtml}
+      <div class="kop-text">
+        <h1>${co.name||'Perusahaan'}</h1>
+        ${co.address?`<p>${co.address}</p>`:''}
+        ${co.phone?`<p>Telp: ${co.phone}${co.email?' | '+co.email:''}</p>`:''}
+        ${co.npwp?`<p>NPWP: ${co.npwp}</p>`:''}
+      </div>
+    </div>
+    <p style="text-align:right;font-size:10px;color:#94a3b8;margin:4px 0 12px">Dicetak: ${new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}</p>
+
+    <!-- JUDUL -->
+    <div class="judul">
+      <h2>Berita Acara Serah Terima</h2>
+      <p>${TL[b.type]||b.type} — ${b.id}</p>
+    </div>
+
+    <!-- INFO BARIS: No, Tanggal, Type, Status -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;font-size:12px">
+      <div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px"><span style="font-size:10px;color:#64748b;display:block;font-weight:600;margin-bottom:2px">NO. BAST</span><strong>${b.id}</strong></div>
+      <div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px"><span style="font-size:10px;color:#64748b;display:block;font-weight:600;margin-bottom:2px">TANGGAL</span>${fD(b.tanggal)}</div>
+      <div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px"><span style="font-size:10px;color:#64748b;display:block;font-weight:600;margin-bottom:2px">TYPE</span>${TL[b.type]||b.type}</div>
+      <div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px"><span style="font-size:10px;color:#64748b;display:block;font-weight:600;margin-bottom:2px">STATUS</span>${(b.status||'').toUpperCase()}</div>
+    </div>
+
+    <!-- PEMBUKA -->
+    <p style="margin-bottom:14px;font-size:12px;line-height:1.7">
+      Pada hari ini, <strong>${fD(b.tanggal)}</strong>, yang bertanda tangan di bawah ini telah melaksanakan serah terima ${(TL[b.type]||b.type).toLowerCase()} ${SL[b.direction]||'kepada'} pihak yang bersangkutan, dengan rincian sebagai berikut:
+    </p>
+
+    <!-- PIHAK 1 & PIHAK 2 -->
+    <div class="info-grid">
+      <div class="info-box">
+        <h3>Pihak 1 — Yang ${b.direction==='in'?'Menerima':'Menyerahkan'}</h3>
+        <p><strong>${b.pihak1?.nama||'-'}</strong></p>
+        ${b.pihak1?.jabatan?`<p>${b.pihak1.jabatan}</p>`:''}
+        ${b.pihak1?.perusahaan?`<p>${b.pihak1.perusahaan}</p>`:''}
+        ${b.pihak1?.alamat?`<p style="color:#64748b;font-size:11px">${b.pihak1.alamat}</p>`:''}
+      </div>
+      <div class="info-box">
+        <h3>Pihak 2 — Yang ${b.direction==='in'?'Menyerahkan':'Menerima'}</h3>
+        <p><strong>${b.pihak2?.nama||'-'}</strong></p>
+        ${b.pihak2?.jabatan?`<p>${b.pihak2.jabatan}</p>`:''}
+        ${b.pihak2?.perusahaan?`<p>${b.pihak2.perusahaan}</p>`:''}
+        ${b.pihak2?.alamat?`<p style="color:#64748b;font-size:11px">${b.pihak2.alamat}</p>`:''}
+      </div>
+    </div>
+
+    <!-- META INFO -->
+    ${metaHtml?`<div class="meta-row">${metaHtml}</div>`:''}
+
+    <!-- TABEL ITEMS -->
+    <table>
+      <thead><tr>
+        <th style="width:5%;text-align:center">No</th>
+        <th style="width:38%">Deskripsi</th>
+        <th style="width:8%;text-align:center">Qty</th>
+        <th style="width:10%;text-align:center">Satuan</th>
+        <th style="width:14%;text-align:center">Kondisi</th>
+        <th style="width:15%;text-align:right">Nilai</th>
+      </tr></thead>
+      <tbody>
+        ${itemRows}
+        <tr class="total-row">
+          <td colspan="5" style="text-align:right;padding:9px 10px">TOTAL NILAI</td>
+          <td style="text-align:right;padding:9px 10px">${fRp(total)}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- CATATAN KONDISI -->
+    ${b.kondisi_catatan?`<div class="catatan"><h3>Catatan Kondisi</h3><p style="margin-top:4px;line-height:1.6">${b.kondisi_catatan}</p></div>`:''}
+
+    <!-- PERNYATAAN PENUTUP -->
+    <p style="font-size:12px;line-height:1.7;margin-bottom:8px">
+      Demikian Berita Acara Serah Terima ini dibuat dengan sebenarnya dan ditandatangani oleh para pihak sebagai bukti telah dilaksanakannya serah terima tersebut di atas.
+    </p>
+
+    <!-- TANDA TANGAN 3 KOLOM -->
+    <div class="ttd-wrap">
+      <div class="ttd-box">
+        <p class="label">Yang ${b.direction==='in'?'Menerima':'Menyerahkan'}</p>
+        <p class="label">Pihak 1</p>
+        <div class="space"></div>
+        <p class="name">${b.pihak1?.nama||'( ........................ )'}</p>
+        <p class="sub">${b.pihak1?.jabatan||''}</p>
+        <p class="sub">${b.pihak1?.perusahaan||''}</p>
+      </div>
+      <div class="ttd-box">
+        <p class="label">Saksi</p>
+        <p class="label">&nbsp;</p>
+        <div class="space"></div>
+        <p class="name">( ........................ )</p>
+        <p class="sub">Saksi</p>
+      </div>
+      <div class="ttd-box">
+        <p class="label">Yang ${b.direction==='in'?'Menyerahkan':'Menerima'}</p>
+        <p class="label">Pihak 2</p>
+        <div class="space"></div>
+        <p class="name">${b.pihak2?.nama||'( ........................ )'}</p>
+        <p class="sub">${b.pihak2?.jabatan||''}</p>
+        <p class="sub">${b.pihak2?.perusahaan||''}</p>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <span>Digenerate oleh SiAkun — ${co.name||''}</span>
+      <span>${b.id} | ${b.status?.toUpperCase()}</span>
+    </div>
+  </div>
+
+  <!-- TOMBOL PRINT (hilang saat print) -->
+  <div class="print-bar no-print">
+    <button class="btn-close" onclick="window.close()">✕ Tutup</button>
+    <button class="btn-save" onclick="window.print()">🖨️ Print / Save PDF</button>
+  </div>
+
+  <script>
+    // Auto-open print dialog kalau dibuka langsung
+    // window.onload=()=>setTimeout(()=>window.print(),600);
+  </script>
+  </body></html>`;
+
+  const w=window.open('','_blank','width=860,height=900');
+  if(!w){alert('Pop-up diblokir browser. Izinkan pop-up untuk situs ini.');return;}
+  w.document.write(html);
+  w.document.close();
+}
 
 function delBast(id){
   if(!confirm('Hapus BAST '+id+' permanen?')) return;
