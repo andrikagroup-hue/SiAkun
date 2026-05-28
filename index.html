@@ -9580,28 +9580,472 @@ function renderBasts(c){
   `;
 }
 
+// =====================================================================
+// BAST FORM — Sesi 6D
+// =====================================================================
+
+// Generate ID otomatis: BAST-{YEAR}-{0001}
+function genBastId(){
+  const yr=new Date().getFullYear();
+  const max=(DB.basts||[])
+    .filter(b=>b.id&&b.id.startsWith('BAST-'+yr))
+    .reduce((m,b)=>Math.max(m,parseInt(b.id.split('-').pop())||0),0);
+  return 'BAST-'+yr+'-'+String(max+1).padStart(4,'0');
+}
+
+// Debounce timer untuk auto-draft (800ms setelah input terakhir)
+let _bastDraftTimer=null;
+function bastScheduleDraft(){
+  clearTimeout(_bastDraftTimer);
+  _bastDraftTimer=setTimeout(()=>saveBastDraft(true),800);
+}
+
 function newBast(){
-  alert('🚧 Form BAST coming in Sesi 6D!\n\n💡 Sekarang test pakai dummy data:\nF12 → Console → ketik addDummyBasts()');
+  window._bastEditId=null;
+  window._bastNewId=genBastId();
+  openBastForm(null);
 }
 
 function viewBast(id){
-  alert('👁️ View BAST: '+id+'\n\nDetail/PDF preview coming in Sesi 6E.');
+  const b=(DB.basts||[]).find(x=>x.id===id);
+  if(!b){alert('BAST tidak ditemukan.');return;}
+  const TL={proyek:'📐 Proyek/Jasa',barang:'📦 Barang',aset:'🏢 Aset',karyawan:'👤 Karyawan'};
+  const SL={draft:'🟡 Draft',signed:'🟢 Signed',cancelled:'🔴 Cancelled'};
+  const total=(b.items||[]).reduce((s,i)=>s+(Number(i.nilai)||0)*(Number(i.qty)||1),0);
+  openModal('👁️ Detail BAST — '+b.id,`
+    <div style="display:grid;gap:14px;font-size:13px">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <div><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:2px">TANGGAL</div><div style="font-weight:600">${b.tanggal||'-'}</div></div>
+        <div><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:2px">TYPE</div><div>${TL[b.type]||b.type||'-'}</div></div>
+        <div><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:2px">STATUS</div><div>${SL[b.status]||b.status||'-'}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:#f0fdfa;border:1px solid #ccfbf1;border-radius:8px;padding:10px">
+          <div style="font-size:10px;color:#0d9488;font-weight:700;margin-bottom:6px">PIHAK 1</div>
+          <div style="font-weight:600">${b.pihak1?.nama||'-'}</div>
+          <div style="color:#64748b;font-size:11px">${b.pihak1?.jabatan||''}</div>
+          <div style="color:#64748b;font-size:11px">${b.pihak1?.perusahaan||''}</div>
+        </div>
+        <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px">
+          <div style="font-size:10px;color:#7c3aed;font-weight:700;margin-bottom:6px">PIHAK 2</div>
+          <div style="font-weight:600">${b.pihak2?.nama||'-'}</div>
+          <div style="color:#64748b;font-size:11px">${b.pihak2?.jabatan||''}</div>
+          <div style="color:#64748b;font-size:11px">${b.pihak2?.perusahaan||''}</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:6px">ITEMS — ${(b.items||[]).length} item · Total: ${total?'Rp '+total.toLocaleString('id-ID'):'-'}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f8fafc">${['Deskripsi','Qty','Satuan','Kondisi','Nilai'].map(h=>`<th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b;font-weight:600">${h}</th>`).join('')}</tr></thead>
+          <tbody>${(b.items||[]).map(it=>`<tr style="border-bottom:1px solid #f1f5f9">
+            <td style="padding:6px 8px">${it.deskripsi||'-'}</td>
+            <td style="padding:6px 8px">${it.qty||'-'}</td>
+            <td style="padding:6px 8px">${it.satuan||'-'}</td>
+            <td style="padding:6px 8px">${it.kondisi||'-'}</td>
+            <td style="padding:6px 8px;text-align:right">${it.nilai?'Rp '+Number(it.nilai).toLocaleString('id-ID'):'-'}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+      ${b.kondisi_catatan?`<div><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:3px">CATATAN KONDISI</div><div style="color:#475569">${b.kondisi_catatan}</div></div>`:''}
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-out" onclick="closeModal()">Tutup</button>
+      <button class="btn btn-pri" onclick="closeModal();editBast('${b.id}')">✏️ Edit</button>
+    </div>
+  `,'modal-wide');
 }
 
 function editBast(id){
-  alert('✏️ Edit BAST: '+id+'\n\nForm coming in Sesi 6D.');
+  const b=(DB.basts||[]).find(x=>x.id===id);
+  if(!b){alert('BAST tidak ditemukan.');return;}
+  if(b.status==='signed'&&!confirm('BAST ini sudah SIGNED.\nTetap edit?')) return;
+  window._bastEditId=id;
+  window._bastNewId=null;
+  openBastForm(b);
 }
+
+// ——— FORM BUILDER ———
+
+function openBastForm(b){
+  const id=b?b.id:window._bastNewId;
+  const today=new Date().toISOString().slice(0,10);
+  const type=b?.type||'proyek';
+  const dir=b?.direction||'out';
+  const contacts=DB.contacts||[];
+  const hasContactId=!!(b?.pihak2?.contact_id);
+
+  // Simpan items ke state global
+  window._bastItems=JSON.parse(JSON.stringify(
+    b?.items?.length ? b.items : [{deskripsi:'',qty:1,satuan:'unit',kondisi:'',nilai:''}]
+  ));
+
+  openModal(
+    b ? '✏️ Edit BAST — '+id : '📝 Buat BAST Baru',
+    `<div style="display:grid;gap:0">
+
+  <!-- ── BARIS 1: ID · Tanggal · Type · Direction ── -->
+  <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1.4fr;gap:10px;margin-bottom:14px">
+    <div>
+      <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">NO. BAST</label>
+      <input id="bf-id" value="${id}" readonly style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:#f8fafc;color:#475569;box-sizing:border-box;font-weight:700">
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">TANGGAL <span style="color:#ef4444">*</span></label>
+      <input type="date" id="bf-tanggal" value="${b?.tanggal||today}" oninput="bastScheduleDraft()" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box">
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">TYPE <span style="color:#ef4444">*</span></label>
+      <select id="bf-type" onchange="bastTypeChange()" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:#fff;box-sizing:border-box">
+        <option value="proyek" ${type==='proyek'?'selected':''}>📐 Proyek/Jasa</option>
+        <option value="barang" ${type==='barang'?'selected':''}>📦 Barang</option>
+        <option value="aset"   ${type==='aset'?'selected':''}>🏢 Aset</option>
+        <option value="karyawan" ${type==='karyawan'?'selected':''}>👤 Karyawan</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">DIRECTION</label>
+      <select id="bf-direction" oninput="bastScheduleDraft()" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:#fff;box-sizing:border-box">
+        <option value="out" ${dir==='out'?'selected':''}>⬆ Keluar (kita serahkan)</option>
+        <option value="in"  ${dir==='in'?'selected':''}>⬇ Masuk (kita terima)</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="border-top:1px solid #f1f5f9;margin-bottom:14px"></div>
+
+  <!-- ── BARIS 2: Pihak 1 & Pihak 2 ── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px">
+
+    <!-- PIHAK 1 -->
+    <div>
+      <div style="font-size:11px;font-weight:700;color:#0d9488;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Pihak 1 (Kita)</div>
+      <div style="display:grid;gap:7px">
+        <input id="bf-p1nama"      value="${b?.pihak1?.nama||''}"      placeholder="Nama"       oninput="bastScheduleDraft()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box">
+        <input id="bf-p1jabatan"   value="${b?.pihak1?.jabatan||''}"   placeholder="Jabatan"    oninput="bastScheduleDraft()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box">
+        <input id="bf-p1perusahaan" value="${b?.pihak1?.perusahaan||''}" placeholder="Perusahaan" oninput="bastScheduleDraft()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box">
+        <input id="bf-p1alamat"    value="${b?.pihak1?.alamat||''}"    placeholder="Alamat"     oninput="bastScheduleDraft()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box">
+      </div>
+    </div>
+
+    <!-- PIHAK 2 -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px">Pihak 2</div>
+        <div style="display:flex;gap:4px">
+          <button id="btn-p2-contact" onclick="bastP2Mode('contact')" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #7c3aed;background:${!hasContactId?'#7c3aed':'#fff'};color:${!hasContactId?'#fff':'#7c3aed'};cursor:pointer">📋 Kontak</button>
+          <button id="btn-p2-manual"  onclick="bastP2Mode('manual')"  style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #7c3aed;background:${hasContactId?'#7c3aed':'#fff'};color:${hasContactId?'#fff':'#7c3aed'};cursor:pointer">✏️ Manual</button>
+        </div>
+      </div>
+      <!-- Dropdown kontak -->
+      <div id="bf-p2-contact-block" style="display:${!hasContactId?'block':'none'};margin-bottom:7px">
+        <select id="bf-p2-contactid" onchange="bastP2FillFromContact()" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:#fff;box-sizing:border-box">
+          <option value="">-- Pilih dari Kontak --</option>
+          ${contacts.map(c=>`<option value="${c.id}" ${b?.pihak2?.contact_id===c.id?'selected':''}>${c.name}${c.type?' ('+c.type+')':''}</option>`).join('')}
+        </select>
+      </div>
+      <!-- Fields pihak 2 -->
+      <div style="display:grid;gap:7px">
+        <input id="bf-p2nama"       value="${b?.pihak2?.nama||''}"       placeholder="Nama *"      oninput="bastScheduleDraft()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box">
+        <input id="bf-p2jabatan"    value="${b?.pihak2?.jabatan||''}"    placeholder="Jabatan"     oninput="bastScheduleDraft()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box">
+        <input id="bf-p2perusahaan" value="${b?.pihak2?.perusahaan||''}" placeholder="Perusahaan"  oninput="bastScheduleDraft()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box">
+        <input id="bf-p2alamat"     value="${b?.pihak2?.alamat||''}"     placeholder="Alamat"      oninput="bastScheduleDraft()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── META SECTION (kondisional by type) ── -->
+  <div id="bf-meta" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:14px">
+    ${bastMetaHtml(type,b?.meta)}
+  </div>
+
+  <div style="border-top:1px solid #f1f5f9;margin-bottom:14px"></div>
+
+  <!-- ── ITEMS TABLE ── -->
+  <div style="margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Daftar Item / Barang / Jasa</div>
+      <button onclick="bastAddItem()" style="font-size:12px;padding:4px 12px;border-radius:6px;border:1px solid #0d9488;background:#0d9488;color:#fff;cursor:pointer">+ Tambah Baris</button>
+    </div>
+    <div id="bf-items-wrap">${bastItemsHtml(window._bastItems)}</div>
+  </div>
+
+  <!-- ── CATATAN ── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px">
+    <div>
+      <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">CATATAN KONDISI</label>
+      <textarea id="bf-kondisi" rows="3" placeholder="Kondisi barang/aset saat serah terima..." oninput="bastScheduleDraft()" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical">${b?.kondisi_catatan||''}</textarea>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px">CATATAN INTERNAL <span style="color:#94a3b8;font-weight:400">(tidak tampil di print)</span></label>
+      <textarea id="bf-notes" rows="3" placeholder="Catatan internal..." oninput="bastScheduleDraft()" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical">${b?.notes_internal||''}</textarea>
+    </div>
+  </div>
+
+  <!-- Draft status indicator -->
+  <div id="bf-draft-status" style="font-size:11px;color:#94a3b8;text-align:right;min-height:16px;margin-bottom:4px"></div>
+
+</div>
+
+<div class="modal-ft">
+  <button class="btn btn-out" onclick="closeModal()">Batal</button>
+  <button class="btn btn-out" onclick="saveBastDraft(false)" style="border-color:#f59e0b;color:#f59e0b">💾 Simpan Draft</button>
+  <button class="btn btn-pri" onclick="saveBastSigned()">✅ Tandatangani & Simpan</button>
+</div>`,
+    'modal-lg'
+  );
+}
+
+// ——— META HTML PER TYPE ———
+
+function bastMetaHtml(type,meta){
+  meta=meta||{};
+  const inp=(id,val,ph)=>`<input id="${id}" value="${val||''}" placeholder="${ph||''}" oninput="bastScheduleDraft()" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box">`;
+  const dateInp=(id,val)=>`<input type="date" id="${id}" value="${val||''}" oninput="bastScheduleDraft()" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box">`;
+  const lbl=txt=>`<label style="font-size:10px;color:#64748b;font-weight:600;display:block;margin-bottom:3px">${txt}</label>`;
+
+  if(type==='proyek') return `
+    <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:8px">📐 Info Proyek</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>${lbl('PERIODE MULAI')}${dateInp('bf-meta-mulai',meta.proyek?.periode_mulai)}</div>
+      <div>${lbl('PERIODE SELESAI')}${dateInp('bf-meta-selesai',meta.proyek?.periode_selesai)}</div>
+    </div>`;
+
+  if(type==='barang') return `
+    <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:8px">📦 Info Barang</div>
+    ${lbl('REFERENSI PO (opsional)')}${inp('bf-meta-po',meta.barang?.po_ref,'Nomor PO terkait...')}`;
+
+  if(type==='aset') return `
+    <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:8px">🏢 Info Aset</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>${lbl('SERIAL NUMBER')}${inp('bf-meta-serial',meta.aset?.serial)}</div>
+      <div>${lbl('ASSET TAG')}${inp('bf-meta-tag',meta.aset?.asset_tag)}</div>
+      <div>${lbl('LOKASI AWAL')}${inp('bf-meta-lokasi-awal',meta.aset?.lokasi_awal)}</div>
+      <div>${lbl('LOKASI TUJUAN')}${inp('bf-meta-lokasi-tujuan',meta.aset?.lokasi_tujuan)}</div>
+    </div>`;
+
+  if(type==='karyawan') return `
+    <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:8px">👤 Info Karyawan</div>
+    ${lbl('NIK KARYAWAN')}${inp('bf-meta-nik',meta.karyawan?.nik,'Nomor Induk Karyawan...')}`;
+
+  return '';
+}
+
+// ——— ITEMS TABLE ———
+
+function bastItemsHtml(items){
+  return `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
+      <th style="padding:7px 6px;text-align:left;font-size:10px;font-weight:600;color:#64748b;width:34%">DESKRIPSI</th>
+      <th style="padding:7px 6px;text-align:center;font-size:10px;font-weight:600;color:#64748b;width:9%">QTY</th>
+      <th style="padding:7px 6px;text-align:left;font-size:10px;font-weight:600;color:#64748b;width:12%">SATUAN</th>
+      <th style="padding:7px 6px;text-align:left;font-size:10px;font-weight:600;color:#64748b;width:18%">KONDISI</th>
+      <th style="padding:7px 6px;text-align:right;font-size:10px;font-weight:600;color:#64748b;width:20%">NILAI (Rp)</th>
+      <th style="padding:7px 6px;width:7%"></th>
+    </tr></thead>
+    <tbody id="bf-items-body">${items.map((it,i)=>bastItemRow(it,i)).join('')}</tbody>
+  </table>`;
+}
+
+function bastItemRow(it,i){
+  const s='padding:5px 4px';
+  const iStyle='width:100%;padding:6px 7px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;box-sizing:border-box';
+  return `<tr id="bf-row-${i}" style="border-bottom:1px solid #f1f5f9">
+    <td style="${s}"><input value="${(it.deskripsi||'').replace(/"/g,'&quot;')}" oninput="window._bastItems[${i}].deskripsi=this.value;bastScheduleDraft()" placeholder="Deskripsi item..." style="${iStyle}"></td>
+    <td style="${s}"><input type="number" min="0" value="${it.qty||1}" oninput="window._bastItems[${i}].qty=+this.value;bastScheduleDraft()" style="${iStyle};text-align:center"></td>
+    <td style="${s}"><input value="${it.satuan||''}" oninput="window._bastItems[${i}].satuan=this.value;bastScheduleDraft()" placeholder="unit/paket..." style="${iStyle}"></td>
+    <td style="${s}"><input value="${it.kondisi||''}" oninput="window._bastItems[${i}].kondisi=this.value;bastScheduleDraft()" placeholder="Baik/Rusak..." style="${iStyle}"></td>
+    <td style="${s}"><input type="number" min="0" value="${it.nilai||''}" oninput="window._bastItems[${i}].nilai=+this.value;bastScheduleDraft()" placeholder="0" style="${iStyle};text-align:right"></td>
+    <td style="${s};text-align:center"><button onclick="bastRemoveItem(${i})" title="Hapus baris" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 7px;font-size:11px;cursor:pointer;color:#ef4444">✕</button></td>
+  </tr>`;
+}
+
+function bastAddItem(){
+  window._bastItems=window._bastItems||[];
+  window._bastItems.push({deskripsi:'',qty:1,satuan:'unit',kondisi:'',nilai:''});
+  document.getElementById('bf-items-wrap').innerHTML=bastItemsHtml(window._bastItems);
+  bastScheduleDraft();
+}
+
+function bastRemoveItem(i){
+  if(!window._bastItems||window._bastItems.length<=1){alert('Minimal 1 item.');return;}
+  window._bastItems.splice(i,1);
+  document.getElementById('bf-items-wrap').innerHTML=bastItemsHtml(window._bastItems);
+  bastScheduleDraft();
+}
+
+// ——— TYPE CHANGE → refresh meta ———
+
+function bastTypeChange(){
+  const type=document.getElementById('bf-type').value;
+  // Re-render meta kosong (field berbeda per type, jadi reset is intentional)
+  document.getElementById('bf-meta').innerHTML=bastMetaHtml(type,null);
+  bastScheduleDraft();
+}
+
+// ——— PIHAK 2 MODE TOGGLE ———
+
+function bastP2Mode(mode){
+  const cb=document.getElementById('bf-p2-contact-block');
+  const btnC=document.getElementById('btn-p2-contact');
+  const btnM=document.getElementById('btn-p2-manual');
+  const purple='#7c3aed';
+  if(mode==='contact'){
+    cb.style.display='block';
+    btnC.style.background=purple;btnC.style.color='#fff';
+    btnM.style.background='#fff';btnM.style.color=purple;
+  } else {
+    cb.style.display='none';
+    btnM.style.background=purple;btnM.style.color='#fff';
+    btnC.style.background='#fff';btnC.style.color=purple;
+  }
+}
+
+// Auto-fill Pihak 2 dari dropdown kontak
+function bastP2FillFromContact(){
+  const cid=document.getElementById('bf-p2-contactid')?.value;
+  if(!cid) return;
+  const ct=(DB.contacts||[]).find(x=>x.id===cid);
+  if(!ct) return;
+  document.getElementById('bf-p2nama').value=ct.name||'';
+  document.getElementById('bf-p2jabatan').value=''; // contacts tidak punya jabatan
+  document.getElementById('bf-p2perusahaan').value=''; // isi manual
+  document.getElementById('bf-p2alamat').value=ct.address||'';
+  bastScheduleDraft();
+}
+
+// ——— COLLECT META ———
+
+function bastCollectMeta(){
+  const type=document.getElementById('bf-type')?.value||'proyek';
+  const g=id=>document.getElementById(id)?.value||'';
+  if(type==='proyek')   return {proyek:{periode_mulai:g('bf-meta-mulai'),periode_selesai:g('bf-meta-selesai')}};
+  if(type==='barang')   return {barang:{po_ref:g('bf-meta-po')}};
+  if(type==='aset')     return {aset:{serial:g('bf-meta-serial'),asset_tag:g('bf-meta-tag'),lokasi_awal:g('bf-meta-lokasi-awal'),lokasi_tujuan:g('bf-meta-lokasi-tujuan')}};
+  if(type==='karyawan') return {karyawan:{nik:g('bf-meta-nik')}};
+  return {};
+}
+
+// ——— COLLECT SELURUH FORM ———
+
+function bastCollect(){
+  const g=id=>document.getElementById(id)?.value||'';
+  return {
+    id:           g('bf-id'),
+    tanggal:      g('bf-tanggal'),
+    type:         g('bf-type'),
+    direction:    g('bf-direction'),
+    pihak1:{
+      nama:       g('bf-p1nama'),
+      jabatan:    g('bf-p1jabatan'),
+      perusahaan: g('bf-p1perusahaan'),
+      alamat:     g('bf-p1alamat')
+    },
+    pihak2:{
+      contact_id: g('bf-p2-contactid'),
+      nama:       g('bf-p2nama'),
+      jabatan:    g('bf-p2jabatan'),
+      perusahaan: g('bf-p2perusahaan'),
+      alamat:     g('bf-p2alamat')
+    },
+    meta:         bastCollectMeta(),
+    items:        JSON.parse(JSON.stringify(window._bastItems||[])),
+    kondisi_catatan: g('bf-kondisi'),
+    notes_internal:  g('bf-notes'),
+    lampiran:     [],
+    link_invoice_id: null,
+    link_po_id:   null
+  };
+}
+
+// ——— SAVE DRAFT (auto=true → silent, auto=false → tutup modal) ———
+
+function saveBastDraft(auto){
+  if(!document.getElementById('bf-id')) return; // modal sudah tertutup
+  const data={...bastCollect(), status:'draft', updated_at:Date.now()};
+  DB.basts=DB.basts||[];
+  const isEdit=window._bastEditId;
+  if(isEdit){
+    const idx=DB.basts.findIndex(x=>x.id===isEdit);
+    if(idx>=0){
+      const orig=DB.basts[idx];
+      DB.basts[idx]={...orig,...data,created_at:orig.created_at,created_by:orig.created_by};
+    } else {
+      DB.basts.push({...data,created_at:Date.now(),created_by:''});
+    }
+  } else {
+    // Cek apakah ID sudah ada (autosave ke-2 dst)
+    const exists=DB.basts.findIndex(x=>x.id===data.id);
+    if(exists>=0){
+      DB.basts[exists]={...DB.basts[exists],...data};
+    } else {
+      DB.basts.push({...data,created_at:Date.now(),created_by:''});
+    }
+    window._bastEditId=data.id; // switch ke mode edit setelah save pertama
+  }
+  saveDB();
+  if(auto){
+    // Update status indicator kecil di form
+    const el=document.getElementById('bf-draft-status');
+    if(el) el.textContent='💾 Draft tersimpan '+new Date().toLocaleTimeString('id-ID');
+  } else {
+    closeModal();
+    renderBasts(document.getElementById('content'));
+  }
+}
+
+// ——— SAVE SIGNED ———
+
+function saveBastSigned(){
+  if(!document.getElementById('bf-id')) return;
+  const data=bastCollect();
+  // Validasi minimal
+  if(!data.tanggal){alert('⚠️ Tanggal wajib diisi!');return;}
+  if(!data.pihak2.nama){alert('⚠️ Nama Pihak 2 wajib diisi!');return;}
+  if(!(data.items||[]).some(i=>i.deskripsi)){alert('⚠️ Minimal 1 item dengan deskripsi!');return;}
+  if(!confirm('Tandatangani BAST '+data.id+'?\n\nStatus akan berubah ke SIGNED.')) return;
+
+  const finalData={
+    ...data,
+    status:'signed',
+    signed_at:new Date().toISOString(),
+    updated_at:Date.now()
+  };
+
+  DB.basts=DB.basts||[];
+  const isEdit=window._bastEditId;
+  if(isEdit){
+    const idx=DB.basts.findIndex(x=>x.id===isEdit);
+    if(idx>=0){
+      const orig=DB.basts[idx];
+      DB.basts[idx]={...orig,...finalData,created_at:orig.created_at,created_by:orig.created_by};
+    } else {
+      DB.basts.push({...finalData,created_at:Date.now(),created_by:''});
+    }
+  } else {
+    const exists=DB.basts.findIndex(x=>x.id===finalData.id);
+    if(exists>=0){
+      DB.basts[exists]={...DB.basts[exists],...finalData};
+    } else {
+      DB.basts.push({...finalData,created_at:Date.now(),created_by:''});
+    }
+  }
+  saveDB();
+  closeModal();
+  renderBasts(document.getElementById('content'));
+}
+
+// ——— DELETE & DUMMY (tidak berubah) ———
 
 function delBast(id){
   if(!confirm('Hapus BAST '+id+' permanen?')) return;
-  DB.basts = (DB.basts||[]).filter(b=>b.id!==id);
+  DB.basts=(DB.basts||[]).filter(b=>b.id!==id);
   if(typeof saveDB==='function') saveDB();
   renderBasts(document.getElementById('content'));
 }
 
 function addDummyBasts(){
-  DB.basts = DB.basts || [];
-  const dummies = [
+  DB.basts=DB.basts||[];
+  const dummies=[
     {id:'BAST-2026-0001',tanggal:'2026-05-20',type:'proyek',status:'signed',pihak2:{nama:'Budi Santoso',perusahaan:'PT Maju Jaya'},items:[{deskripsi:'Renovasi ruang meeting',qty:1,satuan:'paket',nilai:50000000}]},
     {id:'BAST-2026-0002',tanggal:'2026-05-22',type:'barang',status:'draft',pihak2:{nama:'Siti Aminah',perusahaan:'CV Sumber Rejeki'},items:[{deskripsi:'Laptop Dell Latitude 7430',qty:5,satuan:'unit',nilai:15000000}]},
     {id:'BAST-2026-0003',tanggal:'2026-05-24',type:'aset',status:'signed',pihak2:{nama:'Ahmad Fauzi',perusahaan:'Internal - HRD'},items:[{deskripsi:'Mesin Fotokopi Canon iR2625',qty:1,satuan:'unit',nilai:25000000}]},
@@ -9612,6 +10056,7 @@ function addDummyBasts(){
   if(typeof nav==='function') nav('basts');
   console.log('✅ Added 4 dummy BAST entries');
 }
+
   function renderOperator(c){
   const user = _currentUser || {};
   const allTx = [
