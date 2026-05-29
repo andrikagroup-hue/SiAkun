@@ -4209,9 +4209,8 @@ function renderInvoices(c){
 
 let invItemCount=0;
 
-function openAddInvoice(prefill=null){
+function openAddInvoice(){
   invItemCount=1;
-  window._bastSourceId=prefill?.bastId||null;
   const tx=DB.taxSettings||{ppnRate:11,pph23Rate:2,pph4Rate:2};
   const no='INV-'+today().replace(/-/g,'')+'-'+(DB.invoices.length+1).toString().padStart(3,'0');
   openModal('Buat Invoice Baru',`
@@ -4278,39 +4277,13 @@ function openAddInvoice(prefill=null){
     <button class="btn btn-pri" onclick="saveInvoice('confirm')">✅ Terbitkan</button>
   </div>`,'modal-wide');
   calcInvTotals();
-  if(prefill){
-    setTimeout(()=>{
-      if(prefill.contactId){const sel=document.getElementById('inv-contact');if(sel)sel.value=prefill.contactId;}
-      if(prefill.note){const nt=document.getElementById('inv-note');if(nt)nt.value=prefill.note;}
-      if(prefill.items&&prefill.items.length){
-        const wrap=document.getElementById('inv-items');
-        if(wrap){
-          wrap.innerHTML='';invItemCount=0;
-          prefill.items.forEach(it=>{
-            wrap.insertAdjacentHTML('beforeend',invItemRow(invItemCount++));
-            const row=document.getElementById('invr-'+(invItemCount-1));
-            if(!row)return;
-            const descInp=row.querySelector('.inv-desc');
-            const nums=row.querySelectorAll('input[type=number]');
-            if(descInp)descInp.value=it.deskripsi||'';
-            if(nums[0])nums[0].value=Number(it.qty)||1;
-            if(nums[1])nums[1].value=Number(it.nilai)||0;
-          });
-          calcInvTotals();
-        }
-      }
-    },50);
-  }
 }
 
 function invItemRow(i){
   return`<div class="inv-row" id="invr-${i}" style="display:grid;grid-template-columns:2fr 55px 105px 90px 75px 90px 26px;gap:4px;margin-bottom:4px;align-items:center">
-    <div style="display:flex;flex-direction:column;gap:3px">
-      <select style="font-size:11px;padding:3px 6px;border:1px solid var(--bdr);border-radius:5px" onchange="fillInvProduct(${i},this)">
-        <option value="">— Produk / manual —</option>${productOptions()}
-      </select>
-      <input type="text" class="inv-desc" placeholder="Deskripsi manual (opsional)" style="font-size:10px;padding:2px 5px;border:1px solid var(--bdr);border-radius:5px;color:#64748b;width:100%;box-sizing:border-box">
-    </div>
+    <select style="font-size:11px;padding:3px 6px;border:1px solid var(--bdr);border-radius:5px" onchange="fillInvProduct(${i},this)">
+      <option value="">— Produk / manual —</option>${productOptions()}
+    </select>
     <input type="number" value="1" min="0.01" step="any" oninput="calcInvTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
     <input type="number" value="0" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px" placeholder="Harga">
     <input type="number" value="0" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;color:#059669" placeholder="Disc Rp" title="Diskon nominal">
@@ -4369,8 +4342,7 @@ function saveInvoice(action){
       const line=qty*price;
       const disc=Math.min(line,discRp+Math.round((line-discRp)*discPct/100));
       const net=Math.max(0,Math.round(line-disc));
-      const desc=row.querySelector('.inv-desc')?.value||'';
-      items.push({productId:sel.value||null,desc,qty,price,discRp,discPct,discount:discPct,subtotal:net});
+      items.push({productId:sel.value||null,qty,price,discRp,discPct,discount:discPct,subtotal:net});
       subtotal+=line;totalDisc+=disc;
     }
   });
@@ -4392,28 +4364,9 @@ function saveInvoice(action){
     pph4:hasPPh4,pph4Rate,pph4Amt,total:Math.round(total),
     note:v('inv-note'),status:'draft',payments:[]};
   DB.invoices.push(inv);
-  if(window._bastSourceId){
-    const srcBast=(DB.basts||[]).find(x=>x.id===window._bastSourceId);
-    if(srcBast){srcBast.link_invoice_id=inv.id;srcBast.updated_at=Date.now();}
-    window._bastSourceId=null;
-  }
   if(action==='confirm'){_confirmInvoice(inv);logAudit('Buat Invoice',`${inv.no} — Total: ${rp(inv.total)}`);}
   saveDB();closeModal();nav('invoices');
 }
-// ── Buat Invoice dari BAST (Sesi 6F) ──
-function openInvoiceFromBast(bastId){
-  const b=(DB.basts||[]).find(x=>x.id===bastId);
-  if(!b)return alert('BAST tidak ditemukan.');
-  if(b.link_invoice_id){
-    const existing=DB.invoices.find(x=>x.id===b.link_invoice_id);
-    const invNo=existing?existing.no:b.link_invoice_id;
-    if(!confirm('BAST ini sudah terhubung ke Invoice '+invNo+'.\nTetap buat invoice baru?'))return;
-  }
-  const note='Berdasarkan '+b.id+(b.pihak2?.perusahaan?' — '+b.pihak2.perusahaan:'')
-    +'\n\nItems:\n'+(b.items||[]).map((it,i)=>`${i+1}. ${it.deskripsi||'-'} (${it.qty||1} ${it.satuan||'unit'})`).join('\n');
-  openAddInvoice({bastId,contactId:b.pihak2?.contact_id||'',note,items:b.items||[]});
-}
-
 function openEditInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);
   if(!inv||inv.status!=='draft')return alert('Hanya invoice Draft yang bisa diedit.');
@@ -4528,8 +4481,6 @@ function delInvoice(id){
     if(inv.status!=='draft')inv.items.forEach(item=>{if(item.productId){const p=DB.products.find(x=>x.id===item.productId);if(p)p.stock=(p.stock||0)+item.qty;}});
   }
   DB.invoices=DB.invoices.filter(x=>x.id!==id);
-  // Bersihkan link_invoice_id di BAST yang terhubung (cegah orphan)
-  (DB.basts||[]).forEach(b=>{if(b.link_invoice_id===id){b.link_invoice_id=null;b.updated_at=Date.now();}});
   saveDB();logAudit('Hapus Invoice',`Invoice ${inv?inv.no:id} dihapus`);nav('invoices');
 }
 function buildInvTaxLines(inv){
@@ -7878,34 +7829,156 @@ function showTaxTab(id,el){
 // ================================================================
 //  RECEIPTS
 // ================================================================
+function genKwiId(){
+  const yr=new Date().getFullYear();
+  const nums=(DB.receipts||[]).map(r=>parseInt((r.noKwi||"").split("-")[2]||0)).filter(n=>!isNaN(n)&&n>0);
+  return"KWI-"+yr+"-"+String(nums.length?Math.max(...nums)+1:1).padStart(4,"0");
+}
+
 function renderReceipts(c){
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openAddReceipt()">+ Create Receipt</button>`;
-  c.innerHTML=`<div class="card"><div class="tbl-wrap"><table><thead><tr><th>Receipt No</th><th>Date</th><th>Dari / Untuk</th><th>Purpose</th><th>Amount</th><th>Action</th></tr></thead><tbody>
-    ${DB.receipts.length?[...DB.receipts].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(r=>`<tr><td class="fw7">${r.noKwi}</td><td>${fDate(r.date)}</td><td>${r.payer}</td><td>${r.desc}</td><td class="ok fw7">${rp(r.amount)}</td><td class="gap8"><button class="btn btn-pri btn-xs" onclick="printReceipt('${r.id}')">🖨</button><button class="btn btn-out btn-xs" onclick="openAddReceipt('${r.id}')">✏️ Edit</button><button class="btn btn-bad btn-xs" onclick="delReceipt('${r.id}')">✕</button></td></tr>`).join(''):`<tr><td colspan="6" class="tbl-empty">No receipts yet</td></tr>`}
-  </tbody></table></div></div>`;
+  DB.receipts=DB.receipts||[];
+  const fSearch=(window._rctSearch||'').toLowerCase();
+  const fStatus=window._rctStatus||'';
+  const fMetode=window._rctMetode||'';
+  let list=[...DB.receipts].sort((a,b)=>new Date(b.tanggal||b.date||0)-new Date(a.tanggal||a.date||0));
+  if(fSearch)list=list.filter(r=>(r.noKwi||'').toLowerCase().includes(fSearch)||(r.payer||'').toLowerCase().includes(fSearch)||(r.desc||'').toLowerCase().includes(fSearch));
+  if(fStatus)list=list.filter(r=>r.status===fStatus);
+  if(fMetode)list=list.filter(r=>r.metode===fMetode);
+  const mBadge=m=>({tunai:'<span style="background:#d1fae5;color:#065f46;font-size:10px;padding:2px 7px;border-radius:99px;font-weight:600">💵 Tunai</span>',transfer:'<span style="background:#dbeafe;color:#1e40af;font-size:10px;padding:2px 7px;border-radius:99px;font-weight:600">🏦 Transfer</span>',cek:'<span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 7px;border-radius:99px;font-weight:600">📝 Cek/Giro</span>',lainnya:'<span style="background:#f3f4f6;color:#374151;font-size:10px;padding:2px 7px;border-radius:99px;font-weight:600">Lainnya</span>'}[m]||'-');
+  const sBadge=s=>({draft:'<span style="background:#fef9c3;color:#854d0e;font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600">Draft</span>',issued:'<span style="background:#d1fae5;color:#065f46;font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600">Issued</span>'}[s]||'-');
+  document.getElementById('topbar-actions').innerHTML='';
+  c.innerHTML=`<div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
+    <div style="padding:20px 24px;border-bottom:1px solid #f1f5f9;display:flex;align-items:flex-start;justify-content:space-between">
+      <div><div style="font-size:18px;font-weight:700;color:#0f172a">🧾 Kwitansi</div><div style="font-size:12px;color:#94a3b8;margin-top:2px">Dokumen bukti pembayaran resmi</div></div>
+      <button class="btn btn-pri" onclick="openAddReceipt()">+ Buat Kwitansi</button>
+    </div>
+    <div style="padding:16px 24px;background:#f8fafc;border-bottom:1px solid #f1f5f9;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px;margin-bottom:5px">SEARCH</div>
+        <input placeholder="No / nama / keperluan..." value="${fSearch}"
+          oninput="window._rctSearch=this.value;renderReceipts(document.getElementById('content'))"
+          style="width:100%;padding:7px 11px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="min-width:140px">
+        <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px;margin-bottom:5px">STATUS</div>
+        <select onchange="window._rctStatus=this.value;renderReceipts(document.getElementById('content'))"
+          style="width:100%;padding:7px 11px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px">
+          <option value="">Semua Status</option>
+          <option value="draft" ${fStatus==='draft'?'selected':''}>Draft</option>
+          <option value="issued" ${fStatus==='issued'?'selected':''}>Issued</option>
+        </select>
+      </div>
+      <div style="min-width:155px">
+        <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px;margin-bottom:5px">METODE</div>
+        <select onchange="window._rctMetode=this.value;renderReceipts(document.getElementById('content'))"
+          style="width:100%;padding:7px 11px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px">
+          <option value="">Semua Metode</option>
+          <option value="tunai" ${fMetode==='tunai'?'selected':''}>Tunai</option>
+          <option value="transfer" ${fMetode==='transfer'?'selected':''}>Transfer Bank</option>
+          <option value="cek" ${fMetode==='cek'?'selected':''}>Cek/Giro</option>
+          <option value="lainnya" ${fMetode==='lainnya'?'selected':''}>Lainnya</option>
+        </select>
+      </div>
+    </div>
+    <div style="padding:10px 24px;font-size:12px;color:#64748b">Showing <b>${list.length}</b> of ${DB.receipts.length} Kwitansi</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
+        <th style="padding:11px 16px;text-align:left;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">NO. KWITANSI</th>
+        <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">TANGGAL</th>
+        <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">DARI / KEPADA</th>
+        <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">KEPERLUAN</th>
+        <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">METODE</th>
+        <th style="padding:11px 12px;text-align:right;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">JUMLAH</th>
+        <th style="padding:11px 12px;text-align:center;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">STATUS</th>
+        <th style="padding:11px 12px;text-align:center;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">AKSI</th>
+      </tr></thead>
+      <tbody>${list.length?list.map(r=>`<tr style="border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+        <td style="padding:11px 16px;font-weight:700;color:#0f172a">${r.noKwi}</td>
+        <td style="padding:11px 12px;color:#475569">${fDate(r.tanggal||r.date||'')}</td>
+        <td style="padding:11px 12px;font-weight:600;color:#1e293b">${r.payer||'-'}</td>
+        <td style="padding:11px 12px;color:#475569;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.desc||'-'}</td>
+        <td style="padding:11px 12px">${mBadge(r.metode)}</td>
+        <td style="padding:11px 12px;text-align:right;font-weight:700;color:#0f172a">${rp(r.amount)}</td>
+        <td style="padding:11px 12px;text-align:center">${sBadge(r.status)}</td>
+        <td style="padding:11px 12px;text-align:center;white-space:nowrap">
+          <button onclick="printReceipt('${r.id}')" title="Cetak" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🖨️</button>
+          <button onclick="openAddReceipt('${r.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button>
+          <button onclick="delReceipt('${r.id}')" title="Hapus" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button>
+        </td>
+      </tr>`).join(''):`<tr><td colspan="8" style="padding:40px;text-align:center;color:#94a3b8;font-size:13px">Belum ada kwitansi. Klik "+ Buat Kwitansi" untuk mulai.</td></tr>`}
+      </tbody>
+    </table></div>
+  </div>`;
 }
+
 function openAddReceipt(id){
-  const r=id?DB.receipts.find(x=>x.id===id):{};editId=id||null;
-  const no=id?r.noKwi:'KWI-'+String(DB.receipts.length+1).padStart(4,'0');
-  openModal(id?'Edit Receipt':'Create Receipt',`
-  ${id?'<div class="alert a-info">✏️ Mode edit — ubah data lalu simpan.</div>':''}
-  <div class="fr2"><div class="fg"><label>Receipt No</label><input id="rct-no" value="${no}"></div><div class="fg"><label>Date</label><input type="date" id="rct-date" value="${id?r.date:today()}"></div></div>
-  <div class="fg"><label>Received from / Issued to</label><input id="rct-payer" value="${id?r.payer:''}"></div>
-  <div class="fg"><label>Purpose</label><input id="rct-desc" value="${id?r.desc:''}"></div>
-  <div class="fr2"><div class="fg"><label>Amount (Rp)</label><input type="number" id="rct-amount" value="${id?r.amount:''}" placeholder="0"></div><div class="fg"><label>Signatory (Title)</label><input id="rct-ttd" value="${id?r.ttd:'Direktur'}"></div></div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveReceipt()">Simpan${id?'':' & Cetak'}</button></div>`);
+  const r=id?(DB.receipts||[]).find(x=>x.id===id):null;
+  const isEdit=!!r;
+  const noKwi=isEdit?r.noKwi:genKwiId();
+  // Opsi invoice confirmed/draft untuk di-link
+  const invOpts=(DB.invoices||[]).filter(x=>x.status==='confirmed'||x.status==='draft')
+    .sort((a,b)=>new Date(b.date)-new Date(a.date))
+    .map(x=>`<option value="${x.id}" ${isEdit&&r.link_invoice_id===x.id?'selected':''}>${x.no} — ${rp(x.total)}</option>`).join('');
+  openModal(isEdit?'Edit Kwitansi':'Buat Kwitansi Baru',`
+    ${isEdit?'<div class="alert a-info">✏️ Mode edit — ubah data lalu simpan.</div>':''}
+    <div class="fr2">
+      <div class="fg"><label>No. Kwitansi</label><input id="rct-no" value="${noKwi}"></div>
+      <div class="fg"><label>Tanggal</label><input type="date" id="rct-date" value="${isEdit?(r.tanggal||r.date||''):today()}"></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label>Diterima dari / Kepada</label><input id="rct-payer" value="${isEdit?r.payer:''}" placeholder="Nama orang / perusahaan"></div>
+      <div class="fg"><label>Metode Pembayaran</label>
+        <select id="rct-metode" style="width:100%;padding:8px 10px;border:1px solid var(--bdr);border-radius:6px;font-size:13px;font-family:var(--font)">
+          <option value="tunai" ${isEdit&&r.metode==='tunai'?'selected':''}>💵 Tunai</option>
+          <option value="transfer" ${isEdit&&r.metode==='transfer'?'selected':''}>🏦 Transfer Bank</option>
+          <option value="cek" ${isEdit&&r.metode==='cek'?'selected':''}>📝 Cek / Giro</option>
+          <option value="lainnya" ${isEdit&&r.metode==='lainnya'?'selected':''}>Lainnya</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label>Keperluan / Keterangan</label><input id="rct-desc" value="${isEdit?r.desc:''}" placeholder="Misal: Pembayaran jasa konsultasi bulan Mei"></div>
+    <div class="fr2">
+      <div class="fg"><label>Jumlah (Rp)</label><input type="number" id="rct-amount" value="${isEdit?r.amount:''}" placeholder="0"></div>
+      <div class="fg"><label>Penandatangan</label><input id="rct-ttd" value="${isEdit?(r.ttd||'Direktur'):'Direktur'}"></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label>Link Invoice <span style="font-size:10px;color:#94a3b8">(opsional)</span></label>
+        <select id="rct-inv" style="width:100%;padding:8px 10px;border:1px solid var(--bdr);border-radius:6px;font-size:13px;font-family:var(--font)">
+          <option value="">— Tidak terhubung —</option>${invOpts}
+        </select>
+      </div>
+      <div class="fg"><label>Status</label>
+        <select id="rct-status" style="width:100%;padding:8px 10px;border:1px solid var(--bdr);border-radius:6px;font-size:13px;font-family:var(--font)">
+          <option value="draft" ${isEdit&&r.status==='draft'?'selected':''}>Draft</option>
+          <option value="issued" ${!isEdit||r.status==='issued'?'selected':''}>Issued</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-out" onclick="closeModal()">Batal</button>
+      ${isEdit?'<button class="btn btn-pri" onclick="saveReceipt(''+id+'')">💾 Simpan</button>':'<button class="btn btn-out" onclick="saveReceipt(null,true)">💾 Draft</button><button class="btn btn-pri" onclick="saveReceipt(null,false)">✅ Terbitkan & Cetak</button>'}
+    </div>`);
 }
-function saveReceipt(){
-  const noKwi=v('rct-no'),date=v('rct-date'),payer=v('rct-payer'),desc=v('rct-desc'),amount=parseFloat(v('rct-amount'))||0,ttd=v('rct-ttd')||'Direktur';
-  if(!noKwi||!payer||!amount)return alert('Number, recipient & amount are required!');
+
+function saveReceipt(editId,asDraft){
+  const noKwi=v('rct-no'),tanggal=v('rct-date'),payer=v('rct-payer'),
+        desc=v('rct-desc'),amount=parseFloat(v('rct-amount'))||0,
+        ttd=v('rct-ttd')||'Direktur',metode=v('rct-metode')||'tunai',
+        link_invoice_id=v('rct-inv')||null,
+        status=editId?v('rct-status'):(asDraft?'draft':'issued');
+  if(!noKwi||!payer||!amount)return alert('No. Kwitansi, nama, dan jumlah wajib diisi!');
   if(editId){
-    const r=DB.receipts.find(x=>x.id===editId);
-    if(r)Object.assign(r,{noKwi,date,payer,desc,amount,ttd});
+    const r=(DB.receipts||[]).find(x=>x.id===editId);
+    if(r)Object.assign(r,{noKwi,tanggal,payer,desc,amount,ttd,metode,link_invoice_id,status,updated_at:Date.now()});
     saveDB();closeModal();nav('receipts');
   } else {
-    const r={id:uid(),noKwi,date,payer,desc,amount,ttd};DB.receipts.push(r);saveDB();closeModal();printReceipt(r.id);nav('receipts');
+    const r={id:uid(),noKwi,tanggal,date:tanggal,payer,desc,amount,ttd,metode,link_invoice_id,status,created_at:Date.now()};
+    DB.receipts.push(r);saveDB();closeModal();
+    if(status==='issued')printReceipt(r.id);
+    nav('receipts');
   }
 }
+
 function printReceipt(id){
   const r=DB.receipts.find(x=>x.id===id);if(!r)return;
   const co=DB.company;
@@ -7972,7 +8045,7 @@ function printReceipt(id){
     <button class="btn btn-pri" onclick="window.print()">🖨 ${t('btn_print')}</button>
   </div>`,'modal-lg');
 }
-function delReceipt(id){if(!confirm('Delete this receipt?'))return;DB.receipts=DB.receipts.filter(r=>r.id!==id);saveDB();nav('receipts');}
+function delReceipt(id){if(!confirm('Hapus kwitansi ini secara permanen?'))return;DB.receipts=(DB.receipts||[]).filter(r=>r.id!==id);saveDB();nav('receipts');}
 
 function terbilangRp(n){
   const sat=['','satu','dua','tiga','empat','lima','enam','tujuh','delapan','sembilan'];
@@ -9621,7 +9694,7 @@ function renderBasts(c){
                   <td style="padding:11px 12px;color:#0f172a"><div>${b.pihak2?.nama||'-'}</div><div style="font-size:11px;color:#94a3b8">${b.pihak2?.perusahaan||''}</div></td>
                   <td style="padding:11px 12px;text-align:right;color:#0f172a;font-variant-numeric:tabular-nums">${totalNilai?'Rp '+totalNilai.toLocaleString('id-ID'):'-'}</td>
                   <td style="padding:11px 12px;text-align:center"><span style="background:${stBg};color:${stColor};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">${STATUS_LABELS[b.status]||b.status||'-'}</span></td>
-                  <td style="padding:11px 12px;text-align:center;white-space:nowrap"><button onclick="viewBast('${b.id}')" title="Lihat Detail" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">👁️</button><button onclick="editBast('${b.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button><button onclick="printBast('${b.id}')" title="Print / PDF" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🖨️</button>${(b.type==='proyek'||b.type==='barang')&&b.status==='signed'?b.link_invoice_id?`<button onclick="nav('invoices')" title="Lihat Invoice Terhubung" style="background:none;border:1px solid #bbf7d0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#15803d;margin-right:3px">🔗</button>`:`<button onclick="openInvoiceFromBast('${b.id}')" title="Buat Invoice dari BAST ini" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;font-weight:600;margin-right:3px">📄 Invoice</button>`:''}<button onclick="delBast('${b.id}')" title="Delete" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button></td>
+                  <td style="padding:11px 12px;text-align:center;white-space:nowrap"><button onclick="viewBast('${b.id}')" title="Lihat Detail" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">👁️</button><button onclick="editBast('${b.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button><button onclick="printBast('${b.id}')" title="Print / PDF" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🖨️</button><button onclick="delBast('${b.id}')" title="Delete" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button></td>
                 </tr>`;
               }).join('')}
             </tbody>
@@ -9699,7 +9772,6 @@ function viewBast(id){
         </table>
       </div>
       ${b.kondisi_catatan?`<div><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:3px">CATATAN KONDISI</div><div style="color:#475569">${b.kondisi_catatan}</div></div>`:''}
-      ${b.link_invoice_id?(()=>{const inv=(DB.invoices||[]).find(x=>x.id===b.link_invoice_id);return`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:10px;color:#1d4ed8;font-weight:700;margin-bottom:2px">📄 INVOICE TERHUBUNG</div><div style="font-size:13px;color:#1e3a5f;font-weight:600">${inv?inv.no:b.link_invoice_id}</div>${inv?`<div style="font-size:11px;color:#475569;margin-top:1px">${rp(inv.total||0)} · ${inv.status||'-'}</div>`:''}</div><button onclick="closeModal();nav('invoices')" style="background:#1d4ed8;color:#fff;border:none;border-radius:5px;padding:5px 12px;font-size:11px;cursor:pointer;font-weight:600">Lihat Invoice →</button></div>`;})():''}
       ${b.notes_internal?`<div style="background:#fefce8;border:1px solid #fef08a;border-radius:6px;padding:10px"><div style="font-size:10px;color:#a16207;font-weight:600;margin-bottom:3px">🔒 CATATAN INTERNAL</div><div style="color:#713f12;font-size:13px">${b.notes_internal}</div></div>`:''}
     </div>
     <div class="modal-ft">
@@ -10304,18 +10376,9 @@ function printBast(id){
 }
 
 function delBast(id){
-  const b=(DB.basts||[]).find(x=>x.id===id);
-  if(!b)return;
-  if(b.link_invoice_id){
-    const inv=DB.invoices.find(x=>x.id===b.link_invoice_id);
-    const invNo=inv?inv.no:'(invoice sudah dihapus)';
-    const extraNote=inv?'Invoice dan jurnalnya TIDAK akan ikut terhapus.':'Invoice sudah tidak ada di sistem (link akan dibersihkan).';
-    if(!confirm('\u26a0\ufe0f BAST ini terhubung ke Invoice '+invNo+'.\n\n'+extraNote+'\nTetap hapus BAST '+id+'?'))return;
-  } else {
-    if(!confirm('Hapus BAST '+id+' permanen?'))return;
-  }
-  DB.basts=DB.basts.filter(x=>x.id!==id);
-  if(typeof saveDB==='function')saveDB();
+  if(!confirm('Hapus BAST '+id+' permanen?')) return;
+  DB.basts=(DB.basts||[]).filter(b=>b.id!==id);
+  if(typeof saveDB==='function') saveDB();
   renderBasts(document.getElementById('content'));
 }
 
