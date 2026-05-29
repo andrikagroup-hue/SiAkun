@@ -7981,70 +7981,101 @@ function saveReceipt(asDraft){
 }
 
 function printReceipt(id){
-  const r=DB.receipts.find(x=>x.id===id);if(!r)return;
-  const co=DB.company;
-  const isEN=getLang()==='en';
+  const r=(DB.receipts||[]).find(x=>x.id===id);if(!r)return;
+  const co=DB.company||{};
   const tb=terbilangRp(r.amount);
-  const tbFormatted=isEN?tb:tb.toUpperCase();
-  openModal(`${t('rct_official')} — ${r.noKwi}`,`
-  <div style="max-width:680px;margin:0 auto;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;font-family:inherit">
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);padding:20px 26px;-webkit-print-color-adjust:exact;print-color-adjust:exact">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div style="display:flex;align-items:center;gap:14px">
-          ${co.logo?`<img src="${co.logo}" style="width:80px;height:80px;object-fit:contain;border-radius:12px;background:white;padding:6px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.3);">`:''}
+  const tanggal=fDate(r.tanggal||r.date||'');
+  const logo=co.logo?`<img src="${co.logo}" style="width:70px;height:70px;object-fit:contain;border-radius:10px;background:#fff;padding:5px;box-shadow:0 2px 8px rgba(0,0,0,.15);">`:'';
+  const w=window.open('','_blank','width=800,height:650,scrollbars=yes');
+  if(!w)return alert('Pop-up diblokir browser. Izinkan pop-up untuk mencetak.');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Kwitansi ${r.noKwi}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f1f5f9;padding:30px;color:#1e293b;}
+    .wrap{max-width:640px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.12);}
+    .kop{background:linear-gradient(135deg,#0891b2 0%,#0d9488 100%);padding:20px 26px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .kop-inner{display:flex;justify-content:space-between;align-items:center;}
+    .kop-left{display:flex;align-items:center;gap:14px;}
+    .co-name{font-size:18px;font-weight:900;color:#fff;letter-spacing:-.3px;}
+    .co-detail{font-size:10px;color:#cffafe;margin-top:3px;line-height:1.5;}
+    .kop-right{text-align:right;flex-shrink:0;}
+    .kop-label{font-size:9px;letter-spacing:3px;color:#cffafe;text-transform:uppercase;margin-bottom:4px;}
+    .kop-title{font-size:22px;font-weight:900;letter-spacing:2px;color:#fde68a;}
+    .kop-no{font-size:11px;color:#cffafe;margin-top:3px;font-weight:600;}
+    .divider{height:2px;background:linear-gradient(90deg,#fde68a,#38bdf8,transparent);margin-top:14px;border-radius:1px;}
+    .body{padding:24px 28px;background:#fff;}
+    .info-grid{display:grid;grid-template-columns:150px 1fr;font-size:13px;margin-bottom:16px;}
+    .info-label{padding:6px 0;font-weight:700;color:#374151;}
+    .info-val{padding:6px 0;color:#1e293b;border-bottom:1px solid #f1f5f9;}
+    .amount-box{border:2px solid #0891b2;border-radius:8px;padding:14px 18px;margin:16px 0;background:linear-gradient(135deg,#ecfeff,#cffafe);display:flex;justify-content:space-between;align-items:center;}
+    .amount-label{font-size:11px;font-weight:700;color:#0e7490;text-transform:uppercase;letter-spacing:1px;}
+    .amount-num{font-size:22px;font-weight:900;color:#0e7490;text-align:right;}
+    .amount-words{font-size:10px;color:#0891b2;margin-top:3px;font-style:italic;text-align:right;}
+    .sig{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:32px;text-align:center;font-size:12px;color:#374151;}
+    .sig-label{font-weight:600;margin-bottom:44px;}
+    .sig-name{border-top:1.5px solid #0f172a;padding-top:6px;font-weight:700;color:#0f172a;}
+    .no-print{text-align:center;padding:16px;background:#f8fafc;border-top:1px solid #e2e8f0;}
+    .no-print button{padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;}
+    .btn-print{background:#0891b2;color:#fff;border:none;margin-left:8px;}
+    .btn-close{background:#fff;color:#475569;border:1px solid #e2e8f0;}
+    @media print{
+      body{background:#fff;padding:0;}
+      .wrap{box-shadow:none;border-radius:0;max-width:100%;}
+      .no-print{display:none;}
+    }
+  </style></head><body>
+  <div class="wrap">
+    <div class="kop">
+      <div class="kop-inner">
+        <div class="kop-left">
+          ${logo}
           <div>
-            <div style="font-size:20px;font-weight:900;color:#60A5FA;letter-spacing:-.3px">${co.name}</div>
-            <div style="font-size:10.5px;color:#93C5FD;margin-top:3px">📍 ${co.address}</div>
-            <div style="font-size:10.5px;color:#93C5FD;margin-top:2px">📞 ${co.phone} &nbsp;|&nbsp; ✉️ ${co.email}</div>
-            <div style="font-size:9.5px;color:#7DD3FC;margin-top:2px">NPWP: ${co.npwp}</div>
+            <div class="co-name">${co.name||''}</div>
+            <div class="co-detail">📍 ${co.address||''}<br>📞 ${co.phone||''} | ✉️ ${co.email||''}<br>NPWP: ${co.npwp||''}</div>
           </div>
         </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:9px;letter-spacing:3px;color:#93C5FD;text-transform:uppercase;margin-bottom:4px">${isEN?'OFFICIAL':'RESMI'}</div>
-          <div style="font-size:24px;font-weight:900;letter-spacing:2px;color:#f59e0b">${isEN?'RECEIPT':'KWITANSI'}</div>
-          <div style="font-size:12px;color:#93C5FD;margin-top:3px;font-weight:600">${r.noKwi}</div>
+        <div class="kop-right">
+          <div class="kop-label">RESMI</div>
+          <div class="kop-title">KWITANSI</div>
+          <div class="kop-no">${r.noKwi}</div>
         </div>
       </div>
-      <div style="height:2px;background:linear-gradient(90deg,#f59e0b,#3B82F6,transparent);margin-top:14px;border-radius:1px"></div>
+      <div class="divider"></div>
     </div>
-    <!-- Body -->
-    <div style="padding:20px 26px;background:white">
-      <div style="display:grid;grid-template-columns:140px 1fr;font-size:13px;gap:0;margin-bottom:14px">
-        <div style="padding:5px 0;font-weight:700;color:#374151">${t('rct_no')}</div>
-        <div style="padding:5px 0;color:#1e293b;border-bottom:1px solid #f1f5f9">: ${r.noKwi}</div>
-        <div style="padding:5px 0;font-weight:700;color:#374151">${t('lbl_date')}</div>
-        <div style="padding:5px 0;color:#1e293b;border-bottom:1px solid #f1f5f9">: ${fDate(r.date)}</div>
-        <div style="padding:5px 0;font-weight:700;color:#374151">${t('rct_from')}</div>
-        <div style="padding:5px 0;color:#1e293b;border-bottom:1px solid #f1f5f9">: <b>${r.payer}</b></div>
-        <div style="padding:5px 0;font-weight:700;color:#374151">${t('rct_purpose')}</div>
-        <div style="padding:5px 0;color:#1e293b;border-bottom:1px solid #f1f5f9">: ${r.desc}</div>
+    <div class="body">
+      <div class="info-grid">
+        <div class="info-label">No. Kwitansi</div><div class="info-val">: ${r.noKwi}</div>
+        <div class="info-label">Tanggal</div><div class="info-val">: ${tanggal}</div>
+        <div class="info-label">Diterima dari / Kepada</div><div class="info-val">: <b>${r.payer||'-'}</b></div>
+        <div class="info-label">Keperluan</div><div class="info-val">: ${r.desc||'-'}</div>
       </div>
-      <!-- Amount box - compact & elegant -->
-      <div style="border:2px solid #1e3a8a;border-radius:8px;padding:12px 16px;margin:14px 0;background:linear-gradient(135deg,#eff6ff,#dbeafe);display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:11px;font-weight:700;color:#1e3a8a;text-transform:uppercase;letter-spacing:1px">${t('lbl_amount')}</div>
-        <div style="text-align:right">
-          <div style="font-size:20px;font-weight:900;color:#1e3a8a">${rp(r.amount)}</div>
-          <div style="font-size:10.5px;color:#3b82f6;margin-top:2px;font-style:italic">${t('rct_inWords')}: <b>${tbFormatted}</b></div>
+      <div class="amount-box">
+        <div class="amount-label">JUMLAH (RP)</div>
+        <div>
+          <div class="amount-num">${rp(r.amount)}</div>
+          <div class="amount-words">Terbilang: <b>${tb.toUpperCase()}</b></div>
         </div>
       </div>
-      <!-- Signature -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:28px;text-align:center;font-size:12px;color:#374151">
+      <div class="sig">
         <div>
-          <div style="font-weight:600;margin-bottom:42px;color:#374151">${t('rct_payer')}</div>
-          <div style="border-top:1.5px solid #1e293b;padding-top:6px;font-weight:700;color:#1e293b">${r.payer}</div>
+          <div class="sig-label">Pembayar / Penerbit</div>
+          <div class="sig-name">${r.payer||'-'}</div>
         </div>
         <div>
-          <div style="font-weight:600;margin-bottom:42px;color:#374151">${fDate(r.date)}, ${t('rct_receivedBy')}</div>
-          <div style="border-top:1.5px solid #1e293b;padding-top:6px;font-weight:700;color:#1e293b">${r.ttd||'admin'}</div>
+          <div class="sig-label">${tanggal}, Diterima oleh</div>
+          <div class="sig-name">${r.ttd||'admin'}</div>
         </div>
       </div>
+    </div>
+    <div class="no-print">
+      <button class="btn-close" onclick="window.close()">✕ Tutup</button>
+      <button class="btn-print" onclick="window.print()">🖨 Cetak / PDF</button>
     </div>
   </div>
-  <div class="modal-ft no-print">
-    <button class="btn btn-out" onclick="closeModal()">${t('btn_close')}</button>
-    <button class="btn btn-pri" onclick="window.print()">🖨 ${t('btn_print')}</button>
-  </div>`,'modal-lg');
+  <\/body><\/html>`);
+  w.document.close();
+  w.focus();
 }
 function delReceipt(id){if(!confirm('Hapus kwitansi ini secara permanen?'))return;DB.receipts=(DB.receipts||[]).filter(r=>r.id!==id);saveDB();nav('receipts');}
 
