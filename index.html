@@ -9713,6 +9713,7 @@ function viewBast(id){
         </table>
       </div>
       ${b.kondisi_catatan?`<div><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:3px">CATATAN KONDISI</div><div style="color:#475569">${b.kondisi_catatan}</div></div>`:''}
+      ${b.link_invoice_id?(()=>{const inv=(DB.invoices||[]).find(x=>x.id===b.link_invoice_id);return`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:10px;color:#1d4ed8;font-weight:700;margin-bottom:2px">📄 INVOICE TERHUBUNG</div><div style="font-size:13px;color:#1e3a5f;font-weight:600">${inv?inv.no:b.link_invoice_id}</div>${inv?`<div style="font-size:11px;color:#475569;margin-top:1px">${rp(inv.total||0)} · ${inv.status||'-'}</div>`:''}</div><button onclick="closeModal();nav('invoices')" style="background:#1d4ed8;color:#fff;border:none;border-radius:5px;padding:5px 12px;font-size:11px;cursor:pointer;font-weight:600">Lihat Invoice →</button></div>`})():''}
       ${b.notes_internal?`<div style="background:#fefce8;border:1px solid #fef08a;border-radius:6px;padding:10px"><div style="font-size:10px;color:#a16207;font-weight:600;margin-bottom:3px">🔒 CATATAN INTERNAL</div><div style="color:#713f12;font-size:13px">${b.notes_internal}</div></div>`:''}
     </div>
     <div class="modal-ft">
