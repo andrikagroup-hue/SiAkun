@@ -7912,10 +7912,10 @@ function renderReceipts(c){
 }
 
 function openAddReceipt(id){
+  window._rctEditId=id||null;
   const r=id?(DB.receipts||[]).find(x=>x.id===id):null;
   const isEdit=!!r;
   const noKwi=isEdit?r.noKwi:genKwiId();
-  // Opsi invoice confirmed/draft untuk di-link
   const invOpts=(DB.invoices||[]).filter(x=>x.status==='confirmed'||x.status==='draft')
     .sort((a,b)=>new Date(b.date)-new Date(a.date))
     .map(x=>`<option value="${x.id}" ${isEdit&&r.link_invoice_id===x.id?'selected':''}>${x.no} — ${rp(x.total)}</option>`).join('');
@@ -7956,11 +7956,12 @@ function openAddReceipt(id){
     </div>
     <div class="modal-ft">
       <button class="btn btn-out" onclick="closeModal()">Batal</button>
-      ${isEdit?'<button class="btn btn-pri" onclick="saveReceipt(''+id+'')">💾 Simpan</button>':'<button class="btn btn-out" onclick="saveReceipt(null,true)">💾 Draft</button><button class="btn btn-pri" onclick="saveReceipt(null,false)">✅ Terbitkan & Cetak</button>'}
+      ${isEdit?'<button class="btn btn-pri" onclick="saveReceipt()">💾 Simpan</button>':'<button class="btn btn-out" onclick="saveReceipt(true)">💾 Draft</button><button class="btn btn-pri" onclick="saveReceipt(false)">✅ Terbitkan & Cetak</button>'}
     </div>`);
 }
 
-function saveReceipt(editId,asDraft){
+function saveReceipt(asDraft){
+  const editId=window._rctEditId||null;
   const noKwi=v('rct-no'),tanggal=v('rct-date'),payer=v('rct-payer'),
         desc=v('rct-desc'),amount=parseFloat(v('rct-amount'))||0,
         ttd=v('rct-ttd')||'Direktur',metode=v('rct-metode')||'tunai',
