@@ -7863,7 +7863,7 @@ function printReceipt(id){
   const tb=terbilangRp(r.amount);
   const tanggal=fDate(r.tanggal||r.date||'');
   const kota=co.kota||'Jakarta';
-  const logo=co.logo?`<img src="${co.logo}" style="width:90px;height:90px;object-fit:contain;border-radius:10px;background:#fff;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.1);">`:'';
+  const logo=co.logo?`<div style="display:flex;align-items:center;flex-shrink:0"><img src="${co.logo}" style="width:100px;height:100%;min-height:90px;object-fit:contain;border-radius:10px;background:#fff;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.1);"></div>`:'';
   const bankLine=(co.bank||co.norek)?`<span style="color:#0e7490;font-weight:700">${co.bank||''}</span>${co.norek?` &nbsp;|&nbsp; No. Rek: <b style="color:#0e7490">${co.norek}</b>`:''}${co.atasnama?` &nbsp;|&nbsp; a.n. ${co.atasnama}`:''}`:'' ;
   const w=window.open('','_blank','width=820,height=700,scrollbars=yes');
   if(!w)return alert('Pop-up diblokir browser. Izinkan pop-up untuk mencetak.');
@@ -7875,7 +7875,7 @@ function printReceipt(id){
     .wrap{max-width:660px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1.5px solid #0891b2;box-shadow:0 4px 20px rgba(0,0,0,.1);}
     .kop{border-bottom:2px solid #0891b2;padding:18px 26px 14px;}
     .kop-inner{display:flex;justify-content:space-between;align-items:flex-start;}
-    .kop-left{display:flex;align-items:flex-start;gap:14px;}
+    .kop-left{display:flex;align-items:stretch;gap:14px;}
     .co-name{font-size:16px;font-weight:700;color:#0e7490;}
     .co-detail{font-size:10px;color:#475569;margin-top:4px;line-height:1.8;}
     .kop-right{text-align:right;flex-shrink:0;padding-top:4px;}
