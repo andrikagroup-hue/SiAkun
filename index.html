@@ -4528,6 +4528,8 @@ function delInvoice(id){
     if(inv.status!=='draft')inv.items.forEach(item=>{if(item.productId){const p=DB.products.find(x=>x.id===item.productId);if(p)p.stock=(p.stock||0)+item.qty;}});
   }
   DB.invoices=DB.invoices.filter(x=>x.id!==id);
+  // Bersihkan link_invoice_id di BAST yang terhubung (cegah orphan)
+  (DB.basts||[]).forEach(b=>{if(b.link_invoice_id===id){b.link_invoice_id=null;b.updated_at=Date.now();}});
   saveDB();logAudit('Hapus Invoice',`Invoice ${inv?inv.no:id} dihapus`);nav('invoices');
 }
 function buildInvTaxLines(inv){
@@ -10306,8 +10308,9 @@ function delBast(id){
   if(!b)return;
   if(b.link_invoice_id){
     const inv=DB.invoices.find(x=>x.id===b.link_invoice_id);
-    const invNo=inv?inv.no:b.link_invoice_id;
-    if(!confirm('\u26a0\ufe0f BAST ini terhubung ke Invoice '+invNo+'.\n\nInvoice dan jurnalnya TIDAK akan ikut terhapus.\nTetap hapus BAST '+id+'?'))return;
+    const invNo=inv?inv.no:'(invoice sudah dihapus)';
+    const extraNote=inv?'Invoice dan jurnalnya TIDAK akan ikut terhapus.':'Invoice sudah tidak ada di sistem (link akan dibersihkan).';
+    if(!confirm('\u26a0\ufe0f BAST ini terhubung ke Invoice '+invNo+'.\n\n'+extraNote+'\nTetap hapus BAST '+id+'?'))return;
   } else {
     if(!confirm('Hapus BAST '+id+' permanen?'))return;
   }
