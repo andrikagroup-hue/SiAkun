@@ -4395,7 +4395,10 @@ function saveInvoice(action){
   DB.invoices.push(inv);
   if(window._sphSourceId){
     const srcSph=(DB.sphs||[]).find(x=>x.id===window._sphSourceId);
-    if(srcSph){srcSph.link_invoice_id=inv.id;srcSph.updated_at=Date.now();}
+    if(srcSph){
+      srcSph.link_invoice_id=inv.id;
+      srcSph.updated_at=Date.now();
+    }
     window._sphSourceId=null;
   }
   if(window._bastSourceId){
@@ -8432,9 +8435,8 @@ function openInvoiceFromSph(sphId){
   const s=(DB.sphs||[]).find(x=>x.id===sphId);if(!s)return;
   window._sphSourceId=sphId;
   const prefill={
-    payer:s.pihak,
-    desc:s.perihal,
-    items:(s.items||[]).map(i=>({desc:i.desc,qty:i.qty,price:i.harga,unit:i.satuan}))
+    note:s.perihal||(s.pihak?'Ref: '+s.noSph:''),
+    items:(s.items||[]).map(i=>({deskripsi:i.desc,qty:i.qty,nilai:i.harga,satuan:i.satuan}))
   };
   openAddInvoice(prefill);
 }
