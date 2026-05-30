@@ -54,7 +54,8 @@ z-index:9999;
 display:none;
 pointer-events:auto;
 }
-.flyout.open{display:block;}
+@keyframes flyoutIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.flyout.open{display:block;animation:flyoutIn .18s ease forwards;}
 .flyout-title{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;padding:4px 10px 8px;border-bottom:1px solid #f1f5f9;margin-bottom:4px;}
 .flyout-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:7px;font-size:13px;color:#0f172a;font-weight:500;cursor:pointer;transition:all .12s;}
 .flyout-item:hover{background:#f0fdfa;color:#0d9488;}
@@ -778,6 +779,8 @@ function showFlyout(key,el){
  const r=el.getBoundingClientRect();
  box.style.left=(r.right+8)+'px';
  box.style.top=r.top+'px';
+ box.classList.remove('open');
+ void box.offsetWidth;
  box.classList.add('open');
 }
 
