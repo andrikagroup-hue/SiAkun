@@ -8034,6 +8034,7 @@ function printReceipt(id){
   const tanggal=fDate(r.tanggal||r.date||'');
   const kota=co.kota||'';
   const logo=co.logo?`<div style="display:flex;align-items:center;flex-shrink:0"><img src="${co.logo}" style="width:100px;height:100%;min-height:90px;object-fit:contain;border-radius:10px;background:#fff;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.1);"></div>`:'';
+  const addr=(co.address||'').replace(/,\s*(Kota\s)/g,',<br>$1');
   const bankLine=(co.bank||co.norek)?`<span style="color:#0e7490;font-weight:700">${co.bank||''}</span>${co.norek?` &nbsp;|&nbsp; No. Rek: <b style="color:#0e7490">${co.norek}</b>`:''}${co.atasnama?` &nbsp;|&nbsp; a.n. ${co.atasnama}`:''}`:'' ;
   const w=window.open('','_blank','width=820,height=700,scrollbars=yes');
   if(!w)return alert('Pop-up diblokir browser. Izinkan pop-up untuk mencetak.');
@@ -8083,7 +8084,7 @@ function printReceipt(id){
           <div>
             <div class="co-name">${co.name||''}</div>
             <div class="co-detail">
-              ${co.address||''}<br>
+              ${addr}<br>
               ${co.phone||''} | ${co.email||''}<br>
               NPWP: ${co.npwp||''}
               ${bankLine?`<br>${bankLine}`:''}
