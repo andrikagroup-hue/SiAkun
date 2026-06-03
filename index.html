@@ -4936,42 +4936,50 @@ function renderAccounts(c){
 
   const ta=document.getElementById('topbar-actions');
   ta.innerHTML=`
+    <button class="btn btn-pri" onclick="openAccount()">+ Tambah Akun</button>
     <div class="btn-dropdown">
-      <button class="btn btn-out" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('open')">⬆ Import ▾</button>
+      <button class="btn btn-out" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('open')">⬆⬇ Import/Export ▾</button>
       <div class="btn-dropdown-menu">
-        <div class="btn-dropdown-section">Format File</div>
+        <div class="btn-dropdown-section">Import</div>
         <div class="btn-dropdown-item" onclick="openImportCOA('xlsx')">📊 Excel (.xlsx)</div>
         <div class="btn-dropdown-item" onclick="openImportCOA('csv')">📄 CSV (.csv)</div>
         <div class="btn-dropdown-item" onclick="openImportCOA('json')">🗂️ JSON Backup</div>
-      </div>
-    </div>
-    <div class="btn-dropdown">
-      <button class="btn btn-out" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('open')">⬇ Export ▾</button>
-      <div class="btn-dropdown-menu">
-        <div class="btn-dropdown-section">Format File</div>
+        <div class="btn-dropdown-section">Export</div>
         <div class="btn-dropdown-item" onclick="exportCOA('xlsx')">📊 Excel (.xlsx)</div>
         <div class="btn-dropdown-item" onclick="exportCOA('csv')">📄 CSV (.csv)</div>
         <div class="btn-dropdown-item" onclick="exportCOA('json')">🗂️ JSON Backup</div>
       </div>
     </div>
-    <button class="btn btn-out" onclick="manualRecalcBalances()" title="Hitung ulang saldo dari semua jurnal">🔄 Recalc</button>
-    <button class="btn btn-pri" onclick="openAccount()">+ Tambah Akun</button>`;
+    <div class="btn-dropdown">
+      <button class="btn btn-out" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('open')" title="Opsi lainnya">⋮</button>
+      <div class="btn-dropdown-menu" style="right:0;left:auto;min-width:180px">
+        <div class="btn-dropdown-item" onclick="manualRecalcBalances()">🔄 Recalc Saldo</div>
+        <div class="btn-dropdown-item" id="coa-menu-del-selected" style="display:none;color:#ef4444" onclick="coaDeleteSelected()">🗑 Hapus Dipilih</div>
+        <div class="btn-dropdown-item" style="color:#ef4444" onclick="deleteAllCOA()">🗑 Hapus Semua CoA</div>
+      </div>
+    </div>`;
 
   c.innerHTML=`
-  <!-- Toolbar -->
-  <div class="coa-toolbar">
-    <input class="coa-search" id="coa-search" type="text" placeholder="Cari akun..." oninput="filterCoaTable()">
-    <select class="coa-filter" id="coa-cat-filter" onchange="filterCoaTable()">
+  <!-- Filter bar Kledo-style -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+    <button class="btn btn-out" style="font-size:12px;display:flex;align-items:center;gap:5px;" onclick="toggleCoaCatFilter()">
+      ▼ Filter
+    </button>
+    <div style="flex:1"></div>
+    <input class="coa-search" id="coa-search" type="text" placeholder="🔍 Search" oninput="filterCoaTable()" style="width:220px;margin:0">
+  </div>
+  <!-- Category filter (hidden by default, toggleable) -->
+  <div id="coa-cat-bar" style="display:none;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+    <span style="font-size:12px;font-weight:600;color:#475569">Kategori:</span>
+    <select class="coa-filter" id="coa-cat-filter" onchange="filterCoaTable()" style="font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid #e2e8f0">
       <option value="">Semua kategori</option>
       ${catList.map(cat=>`<option value="${cat}">${cat}</option>`).join('')}
     </select>
-    <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">
-      <input type="checkbox" id="coa-select-all" onchange="coaSelectAll(this.checked)"> Pilih Semua
-    </label>
+  </div>
+  <!-- Delete bar (hidden, muncul saat checkbox dicentang) -->
+  <div id="coa-delete-bar" style="display:none;align-items:center;gap:8px;margin-bottom:14px;background:#fff3f3;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;">
+    <span id="coa-selected-count" style="font-size:12px;font-weight:600;color:#dc2626">0 akun dipilih</span>
     <button class="btn btn-bad btn-xs" onclick="coaDeleteSelected()" style="font-size:12px;">🗑 Hapus Dipilih</button>
-    <div class="coa-toolbar-r">
-      <span style="font-size:12px;color:#64748b;font-weight:600;">Total: <b style="color:#0f172a">${accounts.length}</b> akun</span>
-    </div>
   </div>
 
   
@@ -5145,7 +5153,7 @@ function buildCoaRows(accounts, groups){
       const bal = acctBal(a.id);
       const balStr = bal===0 ? `<span style="color:#94a3b8">—</span>` : `<span style="color:${bal<0 ? '#dc2626' : '#0f172a'};font-weight:700">${rp(bal)}</span>`;
       html += `<tr data-id="${a.id}" data-cat="${a.category||a.type||''}" data-name="${(a.name||'').toLowerCase()}" data-code="${(a.code||'').toLowerCase()}">
-        <td><input class="coa-check" type="checkbox" value="${a.id}"></td>
+        <td><input class="coa-check" type="checkbox" value="${a.id}" onchange="coaUpdateDeleteBar()"></td>
         <td><span style="background:#f0f4ff;color:#2563eb;font-size:11px;font-weight:700;padding:3px 7px;border-radius:5px;">${a.code||''}</span></td>
         <td style="font-weight:600;font-size:13px;">${a.name||''}</td>
         <td><span style="font-size:11px;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:12px;">${a.category||a.type||''}</span></td>
@@ -5165,7 +5173,7 @@ function buildCoaRows(accounts, groups){
     rest.forEach(a=>{
       const bal=acctBal(a.id);
       html+=`<tr data-id="${a.id}" data-cat="${a.category||a.type||''}" data-name="${(a.name||'').toLowerCase()}" data-code="${(a.code||'').toLowerCase()}">
-        <td><input class="coa-check" type="checkbox" value="${a.id}"></td>
+        <td><input class="coa-check" type="checkbox" value="${a.id}" onchange="coaUpdateDeleteBar()"></td>
         <td><span style="background:#f0f4ff;color:#2563eb;font-size:11px;font-weight:700;padding:3px 7px;border-radius:5px;">${a.code||''}</span></td>
         <td style="font-weight:600;font-size:13px;">${a.name||''}</td>
         <td><span style="font-size:11px;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:12px;">${a.category||a.type||''}</span></td>
@@ -5207,10 +5215,27 @@ function sortCoaTable(field){
   rows.forEach(r=>tbody.appendChild(r));
 }
 
+function toggleCoaCatFilter(){
+  const bar = document.getElementById('coa-cat-bar');
+  if(!bar) return;
+  bar.style.display = bar.style.display === 'none' ? 'flex' : 'none';
+}
+
+function coaUpdateDeleteBar(){
+  const checked = document.querySelectorAll('.coa-check:checked').length;
+  const bar = document.getElementById('coa-delete-bar');
+  const menuItem = document.getElementById('coa-menu-del-selected');
+  const countEl = document.getElementById('coa-selected-count');
+  if(bar) bar.style.display = checked > 0 ? 'flex' : 'none';
+  if(menuItem) menuItem.style.display = checked > 0 ? 'block' : 'none';
+  if(countEl) countEl.textContent = checked + ' akun dipilih';
+}
+
 function coaSelectAll(state){
   document.querySelectorAll('.coa-check').forEach(el=>el.checked=state);
   const sa = document.getElementById('coa-select-all');
   if(sa) sa.checked = state;
+  coaUpdateDeleteBar();
 }
 
 function coaDeleteSelected(){
@@ -12326,7 +12351,7 @@ function renderAccountsDynamic(){
               ${rows.map(acc=>`
                 <tr>
                   <td>
-                    <input class="coa-check" type="checkbox" value="${acc.id || ''}">
+                    <input class="coa-check" type="checkbox" value="${acc.id || ''}" onchange="coaUpdateDeleteBar()">
                   </td>
 
                   <td>${acc.code || ''}</td>
