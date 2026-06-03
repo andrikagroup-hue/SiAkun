@@ -3794,6 +3794,12 @@ function renderDashboard(c){
   const invs=DB.invoices||[];
   const totalAR=invs.filter(i=>invStatus(i)!=='paid'&&i.status!=='draft').reduce((s,i)=>s+i.total-invPaid(i),0);
   const totalAP=(DB.purchases||[]).filter(p=>p.status==='received'&&!p.paid).reduce((s,p)=>s+p.total-((p.payments||[]).reduce((x,q)=>x+q.amount,0)),0);
+  // Hitung AP display total di awal agar bisa dipakai di KPI cards
+  const _today0=new Date(); _today0.setHours(0,0,0,0);
+  const _poItems=(DB.purchases||[]).filter(p=>['received','partial'].includes(p.status));
+  let apDisplayTotal=0;
+  _poItems.forEach(p=>{const paid=(p.payments||[]).reduce((s,x)=>s+x.amount,0);const rem=p.total-paid;if(rem>0)apDisplayTotal+=rem;});
+  if(!apDisplayTotal){const a=(DB.accounts||[]).find(x=>x.code==='2-20100');apDisplayTotal=a?Math.abs(a.balance||0):0;}
   const overdueInv=invs.filter(i=>invStatus(i)==='overdue').length;
   const lowStock=(DB.products||[]).filter(p=>p.stock<=p.minStock).length;
   const recent=[...invs].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,7);
@@ -3853,12 +3859,12 @@ function renderDashboard(c){
   const daysOvr=(due)=>{if(!due)return 0;const d=new Date(due+'T00:00:00');return Math.floor((today0-d)/(864e5));};
   const poItems=(DB.purchases||[]).filter(p=>['received','partial'].includes(p.status));
   const apBucketsRaw={current:0,d1_30:0,d31_60:0,d61_90:0,gt90:0};
-  let apTotalCalc=0;
+  let apDisplayTotal=0;
   poItems.forEach(p=>{
     const paid=(p.payments||[]).reduce((s,x)=>s+x.amount,0);
     const rem=p.total-paid;
     if(rem<=0)return;
-    apTotalCalc+=rem;
+    apDisplayTotal+=rem;
     const days=daysOvr(p.dueDate||p.date);
     if(days<=0)apBucketsRaw.current+=rem;
     else if(days<=30)apBucketsRaw.d1_30+=rem;
@@ -3866,9 +3872,8 @@ function renderDashboard(c){
     else if(days<=90)apBucketsRaw.d61_90+=rem;
     else apBucketsRaw.gt90+=rem;
   });
-  // Jika DB.purchases kosong tapi ada saldo di akun AP, tampilkan dari akun
-  const apAccBal=(()=>{const a=(DB.accounts||[]).find(x=>x.code==='2-20100');return a?Math.abs(a.balance||0):0;})();
-  const apDisplayTotal=apTotalCalc||apAccBal;
+  // apDisplayTotal sudah dihitung di atas (sebelum KPI cards)
+  // apDisplayTotal = apDisplayTotal dari purchases atau saldo akun AP
   const apBuckets=[
     {label:'Belum JT',    val:apBucketsRaw.current||0, color:C.teal},
     {label:'1–30 Hari',  val:apBucketsRaw.d1_30||0,   color:C.yellow},
