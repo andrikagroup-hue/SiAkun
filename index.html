@@ -831,7 +831,7 @@ const TR={
     page_budget:'Anggaran & Perencanaan',page_assets:'Aset Tetap',
     page_payroll:'Penggajian',page_tax:'Pajak (PPN & PPh)',
     page_receipts:'Kwitansi',page_settings:'Pengaturan & Ekspor',
-    page_users:'Manajemen Pengguna',page_audit:'Jejak Audit',page_basts:'Berita Acara Serah Terima',
+    page_users:'Manajemen Pengguna',page_audit:'Jejak Audit',page_basts:'BAST',
     // Common buttons
     btn_save:'Simpan',btn_cancel:'Batal',btn_edit:'✏️ Edit',btn_delete:'✕ Hapus',
     btn_add:'+ Tambah',btn_close:'Tutup',btn_print:'🖨 Cetak',
@@ -10165,7 +10165,7 @@ function renderBasts(c){
   c.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px">
       <div>
-        <h2 style="margin:0;font-size:20px;font-weight:700;color:#0f172a">🗂️ Berita Acara Serah Terima</h2>
+        <h2 style="margin:0;font-size:20px;font-weight:700;color:#0f172a">🗂️ BAST</h2>
         <div style="color:#64748b;font-size:12px;margin-top:3px">Dokumentasi serah terima proyek, barang, aset, & karyawan</div>
       </div>
       <button class="btn btn-pri" onclick="newBast()">+ Buat BAST Baru</button>
@@ -10812,7 +10812,7 @@ function printBast(id){
 
     <!-- JUDUL -->
     <div class="judul">
-      <h2>BAST</h2>
+      <h2>Berita Acara Serah Terima</h2>
       <p>${TL[b.type]||b.type} — ${b.id}</p>
     </div>
 
