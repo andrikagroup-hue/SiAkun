@@ -4959,68 +4959,8 @@ function renderAccounts(c){
       </div>
     </div>`;
 
-  c.innerHTML=`
-  <!-- placeholder: diisi oleh renderAccountsDynamic() -->
-  <div id="coa-dynamic-root"></div>
-
-  
-  <!-- Table -->
-  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-    <table class="coa-tbl" id="coa-table" style="width:100%;border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th style="width:36px"><input type="checkbox" onchange="coaSelectAll(this.checked)"></th>
-          <th style="cursor:pointer" onclick="sortCoaTable('code')">Kode ↕</th>
-          <th style="cursor:pointer" onclick="sortCoaTable('name')">Nama Akun ↕</th>
-          <th style="cursor:pointer" onclick="sortCoaTable('category')">Kategori ↕</th>
-          <th style="text-align:right">Saldo</th>
-          <th style="width:100px;text-align:right">Aksi</th>
-        </tr>
-      </thead>
-      <tbody id="coa-tbody">
-        ${buildCoaRows(accounts, _G)}
-      </tbody>
-    </table>
- </div>
-
-  <!-- 📊 CoA Summary & Charts -->
-  <div style="margin-top:20px">
-
-    <!-- Stat cards -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
-        <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Total Akun</div>
-        <div style="font-size:26px;font-weight:800;color:#0f172a;margin-top:4px">${accounts.length}</div>
-      </div>
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
-        <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Akun Bersaldo</div>
-        <div style="font-size:26px;font-weight:800;color:#16a34a;margin-top:4px" id="coa-stat-active">—</div>
-      </div>
-      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
-        <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Total Saldo Aktiva</div>
-        <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:6px" id="coa-stat-asset">—</div>
-      </div>
-    </div>
-
-    <!-- Doughnut Charts -->
-    <div class="coa-charts">
-      <div class="coa-chart-card">
-        <h4 style="text-align:left;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">📊 Saldo Per Kategori</h4>
-        <p style="font-size:11px;color:#94a3b8;margin:0 0 12px">Distribusi saldo dari jurnal</p>
-        <div style="position:relative;height:260px"><canvas id="coaCategoryChart"></canvas></div>
-      </div>
-      <div class="coa-chart-card">
-        <h4 style="text-align:left;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">🏆 Top 10 Akun by Saldo</h4>
-        <p style="font-size:11px;color:#94a3b8;margin:0 0 12px">Akun dengan saldo terbesar</p>
-        <div style="position:relative;height:260px"><canvas id="coaAccountChart"></canvas></div>
-      </div>
-    </div>
-
-  </div>
-
-`;
+  c.innerHTML=`<div id="coa-dynamic-root"></div>`;
   renderAccountsDynamic();
-  setTimeout(()=>renderCoaCharts(accounts), 150);
 }
   function renderCoaCharts(accounts){
   if(typeof Chart==='undefined') return;
@@ -11841,7 +11781,7 @@ function makeSearchable(sel){
 
 function makeAllSearchable(){
   // Apply to all visible selects inside modal or content area
-  document.querySelectorAll('select:not([data-ss])').forEach(function(sel){
+  document.querySelectorAll('select:not([data-ss]):not([data-no-search])').forEach(function(sel){
     // Skip very small or hidden selects
     if(sel.options.length<2)return;
     makeSearchable(sel);
@@ -12317,7 +12257,7 @@ function renderAccountsDynamic(){
     <!-- Category filter (hidden by default) -->
     <div id="coa-cat-bar" style="display:none;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
       <span style="font-size:12px;font-weight:600;color:#475569">Kategori:</span>
-      <select class="coa-filter" id="coa-cat-filter" onchange="filterDynamicCoa()" style="font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid #e2e8f0">
+      <select class="coa-filter" id="coa-cat-filter" data-no-search onchange="filterDynamicCoa()" style="font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid #e2e8f0">
         <option value="">Semua kategori</option>
         ${[...new Set(accounts.map(a=>a.subCategory||dynamicCategory(a)))].sort().map(cat=>`<option value="${cat}" ${catF===cat?'selected':''}>${cat}</option>`).join('')}
       </select>
