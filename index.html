@@ -3821,7 +3821,7 @@ function renderDashboard(c){
     </div>`).join('');
 
   // ── Cash/Bank area charts ──
-  const cashBankAccs=(DB.accounts||[]).filter(a=>a.category==='Kas & Bank'&&(a.balance||0)!==0).slice(0,4);
+  const cashBankAccs=(DB.accounts||[]).filter(a=>a.category==='Kas & Bank').slice(0,6);
   const cashBankHTML=cashBankAccs.length?cashBankAccs.map((a,i)=>{
     const colors=[C.pink,C.yellow,C.teal,C.purple];
     const col=colors[i%colors.length];
@@ -3843,21 +3843,22 @@ function renderDashboard(c){
 
   // ── Aging widget Kledo-style ──
   const aging=calcAgingBuckets();
-  const arTotal=Object.values(aging.ar).reduce((s,v)=>s+v,0);
-  const apTotal=Object.values(aging.ap).reduce((s,v)=>s+v,0);
+  const at=aging.arTotals, apt=aging.apTotals;
+  const arTotal=aging.arGrandTotal||0;
+  const apTotal=aging.apGrandTotal||0;
   const arBuckets=[
-    {label:'Belum JT',     val:aging.ar.current, color:C.teal},
-    {label:'1–30 Hari',   val:aging.ar.d30,     color:C.yellow},
-    {label:'31–60 Hari',  val:aging.ar.d60,     color:'#f59e0b'},
-    {label:'61–90 Hari',  val:aging.ar.d90,     color:C.pink},
-    {label:'>90 Hari',    val:aging.ar.d90plus,  color:'#dc2626'},
+    {label:'Belum JT',    val:at.current||0, color:C.teal},
+    {label:'1–30 Hari',  val:at.d1_30||0,   color:C.yellow},
+    {label:'31–60 Hari', val:at.d31_60||0,  color:'#f59e0b'},
+    {label:'61–90 Hari', val:at.d61_90||0,  color:C.pink},
+    {label:'>90 Hari',   val:at.gt90||0,    color:'#dc2626'},
   ].filter(b=>b.val>0);
   const apBuckets=[
-    {label:'Belum JT',     val:aging.ap.current, color:C.teal},
-    {label:'1–30 Hari',   val:aging.ap.d30,     color:C.yellow},
-    {label:'31–60 Hari',  val:aging.ap.d60,     color:'#f59e0b'},
-    {label:'61–90 Hari',  val:aging.ap.d90,     color:C.pink},
-    {label:'>90 Hari',    val:aging.ap.d90plus,  color:'#dc2626'},
+    {label:'Belum JT',    val:apt.current||0, color:C.teal},
+    {label:'1–30 Hari',  val:apt.d1_30||0,   color:C.yellow},
+    {label:'31–60 Hari', val:apt.d31_60||0,  color:'#f59e0b'},
+    {label:'61–90 Hari', val:apt.d61_90||0,  color:C.pink},
+    {label:'>90 Hari',   val:apt.gt90||0,    color:'#dc2626'},
   ].filter(b=>b.val>0);
 
   const agingBarHTML=(buckets,total)=>buckets.map(b=>{
@@ -3951,6 +3952,57 @@ function renderDashboard(c){
       <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">${invs.length} invoice</div>
       <canvas id="ch-inv" height="130"></canvas>
     </div>
+  </div>
+
+  <!-- Row 3b: Fixed Asset -->
+  <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:800;color:#0f172a">🏗️ Aset Tetap</div>
+      <button onclick="nav('assets')" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Kelola aset →</button>
+    </div>
+    ${(()=>{
+      const assets=DB.assets||[];
+      if(!assets.length) return '<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px">Belum ada aset tetap. <span style="color:#0eb5a8;cursor:pointer;font-weight:600" onclick="nav('assets')">+ Tambah aset</span></div>';
+      const totVal=assets.reduce((s,a)=>s+a.value,0);
+      const totAkum=assets.reduce((s,a)=>{
+        const p=calcPenyusutan(a);return s+(p.akum||0);
+      },0);
+      const totBook=totVal-totAkum;
+      const cats=[...new Set(assets.map(a=>a.cat))];
+      const catColors=['#0eb5a8','#f45b7a','#f5a623','#7c5cbf','#4a90d9'];
+      return\`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+        <div style="background:#f0fdf9;border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0eb5a8;margin-bottom:4px">Nilai Perolehan</div>
+          <div style="font-size:16px;font-weight:800;color:#0f172a">\${rp(totVal)}</div>
+        </div>
+        <div style="background:#fef2f2;border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#f45b7a;margin-bottom:4px">Akum. Penyusutan</div>
+          <div style="font-size:16px;font-weight:800;color:#0f172a">\${rp(totAkum)}</div>
+        </div>
+        <div style="background:#fafaf0;border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#f5a623;margin-bottom:4px">Nilai Buku</div>
+          <div style="font-size:16px;font-weight:800;color:#0f172a">\${rp(totBook)}</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #f1f5f9">
+          <th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Nama Aset</th>
+          <th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Kategori</th>
+          <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Nilai Perolehan</th>
+          <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Akum. Penyusutan</th>
+          <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Nilai Buku</th>
+        </tr></thead>
+        <tbody>\${assets.slice(0,5).map((a,i)=>{const p=calcPenyusutan(a);const col=catColors[i%catColors.length];return\`<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background='#fafbff'" onmouseout="this.style.background='transparent'">
+          <td style="padding:9px 10px;font-weight:700;color:#334155">\${a.name}</td>
+          <td style="padding:9px 10px"><span style="background:\${col}20;color:\${col};border-radius:99px;padding:2px 9px;font-size:10px;font-weight:700">\${a.cat}</span></td>
+          <td style="padding:9px 10px;text-align:right;font-weight:600;color:#0f172a">\${rp(a.value)}</td>
+          <td style="padding:9px 10px;text-align:right;color:#f45b7a;font-weight:600">\${rp(p.akum||0)}</td>
+          <td style="padding:9px 10px;text-align:right;font-weight:800;color:#0eb5a8">\${rp(p.bookVal||0)}</td>
+        </tr>\`;}).join('')}
+        \${assets.length>5?\`<tr><td colspan="5" style="padding:8px 10px;text-align:center;color:#0eb5a8;font-size:12px;cursor:pointer;font-weight:600" onclick="nav('assets')">Lihat semua \${assets.length} aset →</td></tr>\`:''}
+        </tbody>
+      </table></div>\`;
+    })()}
   </div>
 
   <!-- Row 4: Invoice terkini -->
