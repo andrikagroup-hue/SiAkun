@@ -3791,159 +3791,307 @@ function renderLockPeriodCard(){
 // ================================================================
 function renderDashboard(c){
   const lr=labaRugiCalc();
-  const invs=DB.invoices;
+  const invs=DB.invoices||[];
   const totalAR=invs.filter(i=>invStatus(i)!=='paid'&&i.status!=='draft').reduce((s,i)=>s+i.total-invPaid(i),0);
-  const totalAP=DB.purchases.filter(p=>p.status==='received'&&!p.paid).reduce((s,p)=>s+p.total-((p.payments||[]).reduce((x,q)=>x+q.amount,0)),0);
+  const totalAP=(DB.purchases||[]).filter(p=>p.status==='received'&&!p.paid).reduce((s,p)=>s+p.total-((p.payments||[]).reduce((x,q)=>x+q.amount,0)),0);
   const overdueInv=invs.filter(i=>invStatus(i)==='overdue').length;
-  const lowStock=DB.products.filter(p=>p.stock<=p.minStock).length;
-  const recent=[...DB.invoices].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  const lowStock=(DB.products||[]).filter(p=>p.stock<=p.minStock).length;
+  const recent=[...invs].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,7);
+  const isID=getLang()==='id';
+
+  // ── Kledo-style color palette ──
+  const C={teal:'#0eb5a8',pink:'#f45b7a',yellow:'#f5a623',purple:'#7c5cbf',blue:'#4a90d9',green:'#27ae60'};
+
+  // ── KPI summary cards ──
+  const kpis=[
+    {label:t('db_revenue'),    val:lr.pendapatan, sub:t('db_curYear'),   color:C.teal,   icon:'💰'},
+    {label:t('db_expenses'),   val:lr.beban+lr.hpp, sub:'HPP + Operasional', color:C.pink, icon:'📉'},
+    {label:t('db_netprofit'),  val:lr.labaBersih, sub:'',                color:lr.labaBersih>=0?C.teal:C.pink, icon:'📊'},
+    {label:t('db_ar'),         val:totalAR,       sub:overdueInv+' '+t('db_overdue'), color:C.yellow, icon:'📋'},
+    {label:t('db_ap'),         val:totalAP,       sub:'',                color:C.purple, icon:'🏦'},
+    {label:t('db_lowstock'),   val:lowStock,       sub:t('db_products'), color:lowStock?C.pink:C.green, icon:'📦', isCount:true},
+  ];
+
+  const kpiHTML=kpis.map(k=>`
+    <div style="background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7;position:relative;overflow:hidden;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04)'">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${k.color};border-radius:14px 14px 0 0"></div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;margin-bottom:10px">${k.icon} ${k.label}</div>
+      <div style="font-size:${k.isCount?'32px':'22px'};font-weight:800;color:${k.isCount?k.color:'#0f172a'};line-height:1.15">${k.isCount?k.val:rp(k.val)}</div>
+      ${k.sub?`<div style="font-size:11px;color:#94a3b8;margin-top:5px;font-weight:500">${k.sub}</div>`:''}
+    </div>`).join('');
+
+  // ── Cash/Bank area charts ──
+  const cashBankAccs=(DB.accounts||[]).filter(a=>a.category==='Kas & Bank'&&(a.balance||0)!==0).slice(0,4);
+  const cashBankHTML=cashBankAccs.length?cashBankAccs.map((a,i)=>{
+    const colors=[C.pink,C.yellow,C.teal,C.purple];
+    const col=colors[i%colors.length];
+    const bal=a.balance||0;
+    const pct=bal>0?'+':'';
+    return`<div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+        <div>
+          <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px">${a.code}</div>
+          <div style="font-size:13px;font-weight:700;color:#334155;margin-top:2px">${a.name}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:18px;font-weight:800;color:#0f172a">${rp(bal)}</div>
+        </div>
+      </div>
+      <canvas id="cb-chart-${a.id}" height="60"></canvas>
+    </div>`;
+  }).join(''):`<div style="background:#fff;border-radius:14px;padding:32px;text-align:center;color:#94a3b8;box-shadow:0 1px 4px rgba(0,0,0,.07)">Belum ada saldo kas & bank</div>`;
+
+  // ── Aging widget Kledo-style ──
+  const aging=calcAgingBuckets();
+  const arTotal=Object.values(aging.ar).reduce((s,v)=>s+v,0);
+  const apTotal=Object.values(aging.ap).reduce((s,v)=>s+v,0);
+  const arBuckets=[
+    {label:'Belum JT',     val:aging.ar.current, color:C.teal},
+    {label:'1–30 Hari',   val:aging.ar.d30,     color:C.yellow},
+    {label:'31–60 Hari',  val:aging.ar.d60,     color:'#f59e0b'},
+    {label:'61–90 Hari',  val:aging.ar.d90,     color:C.pink},
+    {label:'>90 Hari',    val:aging.ar.d90plus,  color:'#dc2626'},
+  ].filter(b=>b.val>0);
+  const apBuckets=[
+    {label:'Belum JT',     val:aging.ap.current, color:C.teal},
+    {label:'1–30 Hari',   val:aging.ap.d30,     color:C.yellow},
+    {label:'31–60 Hari',  val:aging.ap.d60,     color:'#f59e0b'},
+    {label:'61–90 Hari',  val:aging.ap.d90,     color:C.pink},
+    {label:'>90 Hari',    val:aging.ap.d90plus,  color:'#dc2626'},
+  ].filter(b=>b.val>0);
+
+  const agingBarHTML=(buckets,total)=>buckets.map(b=>{
+    const pct=total>0?Math.round(b.val/total*100):0;
+    return`<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="font-weight:600;color:#475569">${b.label}</span>
+        <span style="font-weight:700;color:#0f172a">${rp(b.val)}</span>
+      </div>
+      <div style="background:#f1f5f9;border-radius:99px;height:7px">
+        <div style="background:${b.color};width:${pct}%;height:100%;border-radius:99px;transition:width .4s"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── Revenue trend (6 bulan) ──
+  const now=new Date();
+  const trendLabels=[],trendRev=[],trendPaid=[];
+  for(let m=5;m>=0;m--){
+    const d=new Date(now.getFullYear(),now.getMonth()-m,1);
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    trendLabels.push(['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][d.getMonth()]);
+    const mInv=invs.filter(i=>i.date&&i.date.startsWith(key)&&i.status!=='draft');
+    trendRev.push(mInv.reduce((s,i)=>s+i.total,0));
+    trendPaid.push(mInv.filter(i=>i.status==='paid').reduce((s,i)=>s+i.total,0));
+  }
+
+  // ── Invoice status donut ──
+  const stPaid=invs.filter(i=>invStatus(i)==='paid').length;
+  const stUnpaid=invs.filter(i=>invStatus(i)==='unpaid').length;
+  const stPartial=invs.filter(i=>invStatus(i)==='partial').length;
+  const stOverdue=invs.filter(i=>invStatus(i)==='overdue').length;
+  const stDraft=invs.filter(i=>i.status==='draft').length;
 
   c.innerHTML=`
-  <div class="stats">
-    <div class="stat g"><div class="stat-lbl">${t('db_revenue')}</div><div class="stat-val">${rp(lr.pendapatan)}</div><div class="stat-sub">${t('db_curYear')}</div></div>
-    <div class="stat r"><div class="stat-lbl">${t('db_expenses')}</div><div class="stat-val">${rp(lr.beban+lr.hpp)}</div><div class="stat-sub">${t('db_cogsOps')}</div></div>
-    <div class="stat ${lr.labaBersih>=0?'b':'r'}"><div class="stat-lbl">${t('db_netprofit')}</div><div class="stat-val" style="color:${lr.labaBersih>=0?'var(--ok)':'var(--bad)'}">${lr.labaBersih<0?"- ":""}${rp(lr.labaBersih)}</div></div>
-    <div class="stat y"><div class="stat-lbl">${t('db_ar')}</div><div class="stat-val">${rp(totalAR)}</div><div class="stat-sub">${overdueInv} ${t('db_overdue')}</div></div>
-    <div class="stat r"><div class="stat-lbl">${t('db_ap')}</div><div class="stat-val">${rp(totalAP)}</div></div>
-    <div class="stat ${lowStock?'r':'g'}"><div class="stat-lbl">${t('db_lowstock')}</div><div class="stat-val">${lowStock}</div><div class="stat-sub">${t('db_products')}</div></div>
+  <!-- KPI Cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:20px">
+    ${kpiHTML}
   </div>
+
+  <!-- Row 1: Cash/Bank area charts -->
+  <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:800;color:#0f172a">💰 Saldo Kas &amp; Bank</div>
+      <button onclick="nav('reports')" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Riwayat saldo →</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">
+      ${cashBankHTML}
+    </div>
   </div>
-  ${renderAgingWidgetHTML()}
-  ${renderCashBankTrendsHTML()}
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
-    <div style="background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:16px"><div style="font-size:13px;font-weight:700;margin-bottom:10px">${t('db_plSummary')}</div><canvas id="ch-lr"></canvas><div id="ch-lr-legend" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:2px"></div></div>
-    <div style="background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:16px"><div style="font-size:13px;font-weight:700;margin-bottom:10px">📈 Revenue 6 Bulan</div><canvas id="ch-trend"></canvas></div>
-    <div style="background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:16px"><div style="font-size:13px;font-weight:700;margin-bottom:10px">${t('db_invStatus')}</div><canvas id="ch-inv"></canvas></div>
+
+  <!-- Row 2: Aging AR | Aging AP -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+    <!-- Aging AR -->
+    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:14px;font-weight:800;color:#0f172a">📋 Aging Piutang (AR)</div>
+        <button onclick="nav('reports')" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Detail →</button>
+      </div>
+      <div style="font-size:24px;font-weight:800;color:${C.teal};margin-bottom:16px">${rp(arTotal)}</div>
+      ${arBuckets.length?agingBarHTML(arBuckets,arTotal):`<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">✨ Semua piutang lunas!</div>`}
+    </div>
+    <!-- Aging AP -->
+    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:14px;font-weight:800;color:#0f172a">🏦 Aging Hutang (AP)</div>
+        <button onclick="nav('reports')" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Detail →</button>
+      </div>
+      <div style="font-size:24px;font-weight:800;color:${C.purple};margin-bottom:16px">${rp(apTotal)}</div>
+      ${apBuckets.length?agingBarHTML(apBuckets,apTotal):`<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">✨ Semua lunas!</div>`}
+    </div>
   </div>
-  <div class="card">
-    <div class="card-hd">${t('db_recentInv')} <span>${DB.invoices.length} total</span></div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>${t('inv_no')}</th><th>${t('lbl_customer')}</th><th>${t('lbl_date')}</th><th>${t('lbl_dueDate')}</th><th>${t('lbl_total')}</th><th>${t('lbl_status')}</th></tr></thead>
-      <tbody>
-        ${recent.length?recent.map(i=>{const ct=DB.contacts.find(x=>x.id===i.contactId);return`<tr><td class="fw7">${i.no}</td><td>${ct?ct.name:'-'}</td><td>${fDate(i.date)}</td><td>${fDate(i.dueDate)}</td><td class="fw7">${rp(i.total)}</td><td>${statusBadge(invStatus(i))}</td></tr>`;}).join(''):`<tr><td colspan="6" class="tbl-empty">${t('alert_noData')}</td></tr>`}
-      </tbody>
-    </table></div>
+
+  <!-- Row 3: Revenue trend | P&L bar | Invoice donut -->
+  <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr;gap:14px;margin-bottom:16px">
+    <!-- Revenue trend -->
+    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
+      <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:4px">📈 Revenue 6 Bulan</div>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:14px">Total invoice vs yang sudah lunas</div>
+      <canvas id="ch-trend" height="130"></canvas>
+    </div>
+    <!-- P&L summary -->
+    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
+      <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:4px">📊 ${t('db_plSummary')}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:14px">Tahun berjalan</div>
+      <canvas id="ch-lr" height="130"></canvas>
+    </div>
+    <!-- Invoice donut -->
+    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
+      <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:4px">🧾 ${t('db_invStatus')}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">${invs.length} invoice</div>
+      <canvas id="ch-inv" height="130"></canvas>
+    </div>
+  </div>
+
+  <!-- Row 4: Invoice terkini -->
+  <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:800;color:#0f172a">🧾 ${t('db_recentInv')}</div>
+      <span style="font-size:12px;color:#94a3b8;font-weight:600">${invs.length} total</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="border-bottom:2px solid #f1f5f9">
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('inv_no')}</th>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('lbl_customer')}</th>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('lbl_date')}</th>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('lbl_dueDate')}</th>
+            <th style="text-align:right;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('lbl_total')}</th>
+            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('lbl_status')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${recent.length?recent.map(i=>{
+            const ct=DB.contacts.find(x=>x.id===i.contactId);
+            const st=invStatus(i);
+            const stColor={paid:C.teal,unpaid:'#ef4444',partial:C.yellow,overdue:'#dc2626',draft:'#94a3b8'}[st]||'#94a3b8';
+            const stLabel={paid:'Lunas',unpaid:'Belum Bayar',partial:'Sebagian',overdue:'Terlambat',draft:'Draft'}[st]||st;
+            return`<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background='#fafbff'" onmouseout="this.style.background='transparent'">
+              <td style="padding:10px 12px;font-weight:700;color:#2563eb;cursor:pointer" onclick="nav('invoices')">${i.no}</td>
+              <td style="padding:10px 12px;color:#334155">${ct?ct.name:'-'}</td>
+              <td style="padding:10px 12px;color:#64748b">${fDate(i.date)}</td>
+              <td style="padding:10px 12px;color:${st==='overdue'?'#dc2626':'#64748b'};font-weight:${st==='overdue'?700:400}">${fDate(i.dueDate)}</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:700;color:#0f172a">${rp(i.total)}</td>
+              <td style="padding:10px 12px;text-align:center"><span style="background:${stColor}20;color:${stColor};border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700">${stLabel}</span></td>
+            </tr>`;
+          }).join(''):`<tr><td colspan="6" style="padding:32px;text-align:center;color:#94a3b8">Belum ada invoice</td></tr>`}
+        </tbody>
+      </table>
+    </div>
   </div>`;
 
+  // ── Charts ──
   const _safeChart=(id,config)=>{
     const canvas=document.getElementById(id);
     if(!canvas)return null;
-    if(typeof Chart!=='undefined'&&Chart.getChart){
-      const ex=Chart.getChart(canvas);if(ex)ex.destroy();
-    }
+    if(typeof Chart!=='undefined'&&Chart.getChart){const ex=Chart.getChart(canvas);if(ex)ex.destroy();}
     return new Chart(canvas,config);
   };
 
   setTimeout(()=>{
     const lr2=labaRugiCalc();
-    const ctx1=document.getElementById('ch-lr');
-    const isID=getLang()==='id';
-    if(ctx1){
-      const plLabels  = [isID?'Pendapatan':'Revenue', isID?'HPP':'COGS', isID?'Beban':'Expenses', isID?'Laba Bersih':'Net Profit'];
-      const plData    = [lr2.pendapatan, lr2.hpp, lr2.beban, lr2.labaBersih];
-      const plColors  = ['#10b981','#f59e0b','#ef4444', lr2.labaBersih>=0?'#2563eb':'#dc2626'];
-      const plBorders = ['#059669','#d97706','#dc2626', lr2.labaBersih>=0?'#1d4ed8':'#b91c1c'];
 
-      charts.lr=_safeChart('ch-lr',{
-        type:'bar',
-        data:{
-          labels:plLabels,
-          datasets:[{
-            data:plData,
-            backgroundColor:plColors,
-            borderColor:plBorders,
-            borderWidth:1.5,
-            borderRadius:6,
-            // Bar zero tetap kelihatan — minimum 1% dari max value
-            minBarLength:4
-          }]
-        },
-        options:{
-          responsive:true,
-          plugins:{
-            legend:{display:false},
-            // Tampilkan nilai di atas/bawah tiap bar
-            datalabels:{
-              display:false // pakai custom tooltip saja
-            },
-            tooltip:{
-              callbacks:{
-                label:ctx=>'Rp '+ctx.parsed.y.toLocaleString('id-ID')
-              }
-            }
-          },
-          scales:{
-            y:{
-              ticks:{callback:v=>'Rp '+Number(v).toLocaleString('id-ID')},
-              grid:{color:'#f1f5f9'}
-            },
-            x:{grid:{display:false}}
-          }
-        },
-        // Plugin custom: tampilkan nilai di atas tiap bar
-        plugins:[{
-          id:'barLabels',
-          afterDatasetsDraw(chart){
-            const {ctx:cx,data}=chart;
-            chart.getDatasetMeta(0).data.forEach((bar,i)=>{
-              const val=data.datasets[0].data[i];
-              if(val===0||val===undefined)return;
-              const label='Rp '+Math.abs(val).toLocaleString('id-ID');
-              cx.save();
-              cx.font='bold 9.5px Plus Jakarta Sans, sans-serif';
-              cx.fillStyle=plColors[i];
-              cx.textAlign='center';
-              cx.textBaseline=val>=0?'bottom':'top';
-              cx.fillText(label,bar.x,val>=0?bar.y-3:bar.y+3);
-              cx.restore();
-            });
-          }
+    // P&L bar chart — Kledo color
+    _safeChart('ch-lr',{
+      type:'bar',
+      data:{
+        labels:isID?['Pendapatan','HPP','Beban','Laba Bersih']:['Revenue','COGS','Expenses','Net Profit'],
+        datasets:[{
+          data:[lr2.pendapatan,lr2.hpp,lr2.beban,lr2.labaBersih],
+          backgroundColor:[C.teal+'cc',C.yellow+'cc',C.pink+'cc',lr2.labaBersih>=0?C.teal+'cc':C.pink+'cc'],
+          borderColor:[C.teal,C.yellow,C.pink,lr2.labaBersih>=0?C.teal:C.pink],
+          borderWidth:0,borderRadius:8,minBarLength:4
         }]
-      });
+      },
+      options:{
+        responsive:true,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'Rp '+ctx.parsed.y.toLocaleString('id-ID')}}},
+        scales:{
+          y:{ticks:{callback:v=>'Rp '+Number(v/1000000).toFixed(0)+'jt',font:{size:10}},grid:{color:'#f1f5f9'},border:{display:false}},
+          x:{grid:{display:false},ticks:{font:{size:11}}}
+        }
+      }
+    });
 
-      // Legend manual di bawah chart — karena Chart.js legend tidak bisa per-bar
-      const legendEl=document.getElementById('ch-lr-legend');
-      if(legendEl){
-        const items=[
-          {color:'#10b981',label:isID?'Pendapatan':'Revenue'},
-          {color:'#f59e0b',label:isID?'HPP / COGS':'COGS'},
-          {color:'#ef4444',label:isID?'Beban':'Expenses'},
-          {color:'#2563eb',label:isID?'Laba (untung)':'Profit'},
-          {color:'#dc2626',label:isID?'Rugi':'Loss'},
-        ];
-        legendEl.innerHTML=items.map(i=>`
-          <span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:10.5px;color:#64748b">
-            <span style="width:10px;height:10px;border-radius:2px;background:${i.color};flex-shrink:0"></span>${i.label}
-          </span>`).join('');
+    // Invoice donut — Kledo colors
+    _safeChart('ch-inv',{
+      type:'doughnut',
+      data:{
+        labels:['Lunas','Belum Bayar','Sebagian','Terlambat','Draft'],
+        datasets:[{data:[stPaid,stUnpaid,stPartial,stOverdue,stDraft],
+          backgroundColor:[C.teal,C.pink,C.yellow,'#dc2626','#94a3b8'],
+          borderWidth:0,hoverOffset:6}]
+      },
+      options:{
+        responsive:true,cutout:'68%',
+        plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8,boxWidth:10}},
+          tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.parsed+' invoice'}}}
       }
-    }
-    const paid=invs.filter(i=>invStatus(i)==='paid').length;
-    const unpaid=invs.filter(i=>invStatus(i)==='unpaid').length;
-    const partial=invs.filter(i=>invStatus(i)==='partial').length;
-    const overdue=invs.filter(i=>invStatus(i)==='overdue').length;
-    const draft=invs.filter(i=>i.status==='draft').length;
-    const ctx2=document.getElementById('ch-inv');
-    if(ctx2)charts.inv=_safeChart('ch-inv',{type:'doughnut',data:{labels:[t('st_paid'),t('st_unpaid'),t('st_partial'),t('st_overdue'),t('st_draft')],datasets:[{data:[paid,unpaid,partial,overdue,draft],backgroundColor:['#10b981','#ef4444','#f59e0b','#dc2626','#94a3b8'],borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}});
-    // Trend chart 6 bulan
-    const ctx3=document.getElementById('ch-trend');
-    if(ctx3){
-      const now=new Date();const labels=[],revData=[],paidData=[];
-      for(let m=5;m>=0;m--){
-        const d=new Date(now.getFullYear(),now.getMonth()-m,1);
-        const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        labels.push(['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][d.getMonth()]);
-        const mInv=DB.invoices.filter(i=>i.date&&i.date.startsWith(key)&&i.status!=='draft');
-        revData.push(mInv.reduce((s,i)=>s+i.total,0));
-        paidData.push(mInv.filter(i=>i.status==='paid').reduce((s,i)=>s+i.total,0));
+    });
+
+    // Revenue trend — area style
+    _safeChart('ch-trend',{
+      type:'bar',
+      data:{
+        labels:trendLabels,
+        datasets:[
+          {label:'Total Invoice',data:trendRev,backgroundColor:C.teal+'40',borderColor:C.teal,borderWidth:2,borderRadius:6},
+          {label:'Lunas',data:trendPaid,backgroundColor:C.yellow+'60',borderColor:C.yellow,borderWidth:2,borderRadius:6},
+        ]
+      },
+      options:{
+        responsive:true,
+        plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8,boxWidth:10}}},
+        scales:{
+          y:{ticks:{callback:v=>'Rp '+Number(v/1000000).toFixed(0)+'jt',font:{size:10}},grid:{color:'#f1f5f9'},border:{display:false}},
+          x:{grid:{display:false},ticks:{font:{size:11}}}
+        }
       }
-      charts.trend=_safeChart('ch-trend',{type:'bar',data:{labels,datasets:[
-        {label:'Total Invoice',data:revData,backgroundColor:'rgba(37,99,235,.25)',borderColor:'#2563eb',borderWidth:1.5,borderRadius:4},
-        {label:'Lunas',data:paidData,backgroundColor:'rgba(5,150,105,.3)',borderColor:'#059669',borderWidth:1.5,borderRadius:4},
-      ]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{y:{ticks:{callback:v=>'Rp '+Number(v/1000000).toFixed(0)+'jt'},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
-    }
-    initCashBankTrendCharts();
+    });
+
+    // Cash/Bank mini area charts
+    const cashColors=[C.pink,C.yellow,C.teal,C.purple];
+    cashBankAccs.forEach((a,i)=>{
+      const canvas=document.getElementById('cb-chart-'+a.id);
+      if(!canvas)return;
+      const txDays=[];const now2=new Date();
+      for(let d=29;d>=0;d--){const dd=new Date(now2);dd.setDate(dd.getDate()-d);txDays.push(dd.toISOString().split('T')[0]);}
+      let running=0;
+      const balByDay={};
+      (DB.transactions||[]).filter(tx=>tx.date).sort((a,b)=>a.date.localeCompare(b.date)).forEach(tx=>{
+        (tx.entries||[]).forEach(e=>{
+          if(e.acc===a.id||e.acc===a.code){running+=(parseFloat(e.deb)||0)-(parseFloat(e.crd)||0);}
+        });
+        balByDay[tx.date]=running;
+      });
+      const chartData=txDays.map(day=>{
+        const keys=Object.keys(balByDay).filter(k=>k<=day);
+        if(!keys.length)return 0;
+        return balByDay[keys[keys.length-1]];
+      });
+      const col=cashColors[i%cashColors.length];
+      if(typeof Chart!=='undefined'&&Chart.getChart){const ex=Chart.getChart(canvas);if(ex)ex.destroy();}
+      new Chart(canvas,{
+        type:'line',
+        data:{labels:txDays,datasets:[{data:chartData,borderColor:col,borderWidth:2,fill:true,backgroundColor:col+'25',tension:.4,pointRadius:0}]},
+        options:{responsive:true,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}
+      });
+    });
+
   },50);
 }
+
 
 // ================================================================
 //  CONTACTS
