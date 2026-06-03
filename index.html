@@ -3808,7 +3808,7 @@ function renderDashboard(c){
     {label:t('db_expenses'),   val:lr.beban+lr.hpp, sub:'HPP + Operasional', color:C.pink, icon:'📉'},
     {label:t('db_netprofit'),  val:lr.labaBersih, sub:'',                color:lr.labaBersih>=0?C.teal:C.pink, icon:'📊'},
     {label:t('db_ar'),         val:totalAR,       sub:overdueInv+' '+t('db_overdue'), color:C.yellow, icon:'📋'},
-    {label:t('db_ap'),         val:totalAP,       sub:'',                color:C.purple, icon:'🏦'},
+    {label:t('db_ap'),         val:apDisplayTotal||totalAP, sub:'',     color:C.purple, icon:'🏦'},
     {label:t('db_lowstock'),   val:lowStock,       sub:t('db_products'), color:lowStock?C.pink:C.green, icon:'📦', isCount:true},
   ];
 
@@ -3816,7 +3816,7 @@ function renderDashboard(c){
     <div style="background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7;position:relative;overflow:hidden;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04)'">
       <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${k.color};border-radius:14px 14px 0 0"></div>
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;margin-bottom:10px">${k.icon} ${k.label}</div>
-      <div style="font-size:${k.isCount?'32px':'22px'};font-weight:800;color:${k.isCount?k.color:'#0f172a'};line-height:1.15">${k.isCount?k.val:rp(k.val)}</div>
+      <div style="font-size:${k.isCount?'28px':'16px'};font-weight:800;color:${k.isCount?k.color:'#0f172a'};line-height:1.2;word-break:break-all">${k.isCount?k.val:rp(k.val)}</div>
       ${k.sub?`<div style="font-size:11px;color:#94a3b8;margin-top:5px;font-weight:500">${k.sub}</div>`:''}
     </div>`).join('');
 
@@ -3828,14 +3828,9 @@ function renderDashboard(c){
     const bal=a.balance||0;
     const pct=bal>0?'+':'';
     return`<div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
-        <div>
-          <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px">${a.code}</div>
-          <div style="font-size:13px;font-weight:700;color:#334155;margin-top:2px">${a.name}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:18px;font-weight:800;color:#0f172a">${rp(bal)}</div>
-        </div>
+      <div style="margin-bottom:6px">
+          <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px">${a.code} · ${a.name}</div>
+          <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:2px;word-break:break-all">${rp(bal)}</div>
       </div>
       <canvas id="cb-chart-${a.id}" height="60"></canvas>
     </div>`;
@@ -3853,12 +3848,33 @@ function renderDashboard(c){
     {label:'61–90 Hari', val:at.d61_90||0,  color:C.pink},
     {label:'>90 Hari',   val:at.gt90||0,    color:'#dc2626'},
   ].filter(b=>b.val>0);
+  // AP: baca dari DB.purchases (received, belum lunas)
+  const today0=new Date(); today0.setHours(0,0,0,0);
+  const daysOvr=(due)=>{if(!due)return 0;const d=new Date(due+'T00:00:00');return Math.floor((today0-d)/(864e5));};
+  const poItems=(DB.purchases||[]).filter(p=>['received','partial'].includes(p.status));
+  const apBucketsRaw={current:0,d1_30:0,d31_60:0,d61_90:0,gt90:0};
+  let apTotalCalc=0;
+  poItems.forEach(p=>{
+    const paid=(p.payments||[]).reduce((s,x)=>s+x.amount,0);
+    const rem=p.total-paid;
+    if(rem<=0)return;
+    apTotalCalc+=rem;
+    const days=daysOvr(p.dueDate||p.date);
+    if(days<=0)apBucketsRaw.current+=rem;
+    else if(days<=30)apBucketsRaw.d1_30+=rem;
+    else if(days<=60)apBucketsRaw.d31_60+=rem;
+    else if(days<=90)apBucketsRaw.d61_90+=rem;
+    else apBucketsRaw.gt90+=rem;
+  });
+  // Jika DB.purchases kosong tapi ada saldo di akun AP, tampilkan dari akun
+  const apAccBal=(()=>{const a=(DB.accounts||[]).find(x=>x.code==='2-20100');return a?Math.abs(a.balance||0):0;})();
+  const apDisplayTotal=apTotalCalc||apAccBal;
   const apBuckets=[
-    {label:'Belum JT',    val:apt.current||0, color:C.teal},
-    {label:'1–30 Hari',  val:apt.d1_30||0,   color:C.yellow},
-    {label:'31–60 Hari', val:apt.d31_60||0,  color:'#f59e0b'},
-    {label:'61–90 Hari', val:apt.d61_90||0,  color:C.pink},
-    {label:'>90 Hari',   val:apt.gt90||0,    color:'#dc2626'},
+    {label:'Belum JT',    val:apBucketsRaw.current||0, color:C.teal},
+    {label:'1–30 Hari',  val:apBucketsRaw.d1_30||0,   color:C.yellow},
+    {label:'31–60 Hari', val:apBucketsRaw.d31_60||0,  color:'#f59e0b'},
+    {label:'61–90 Hari', val:apBucketsRaw.d61_90||0,  color:C.pink},
+    {label:'>90 Hari',   val:apBucketsRaw.gt90||0,    color:'#dc2626'},
   ].filter(b=>b.val>0);
 
   const agingBarHTML=(buckets,total)=>buckets.map(b=>{
@@ -3927,8 +3943,8 @@ function renderDashboard(c){
         <div style="font-size:14px;font-weight:800;color:#0f172a">🏦 Aging Hutang (AP)</div>
         <button onclick="nav('reports')" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Detail →</button>
       </div>
-      <div style="font-size:24px;font-weight:800;color:${C.purple};margin-bottom:16px">${rp(apTotal)}</div>
-      ${apBuckets.length?agingBarHTML(apBuckets,apTotal):`<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">✨ Semua lunas!</div>`}
+      <div style="font-size:24px;font-weight:800;color:${C.purple};margin-bottom:16px">${rp(apDisplayTotal)}</div>
+      ${apBuckets.length?agingBarHTML(apBuckets,apDisplayTotal):`<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">✨ Semua lunas!</div>`}
     </div>
   </div>
 
