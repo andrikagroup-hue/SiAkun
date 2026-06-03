@@ -5141,28 +5141,37 @@ function filterDynamicCoa(){
   const q = (document.getElementById('coa-search')?.value||'').toLowerCase().trim();
   const cat = (document.getElementById('coa-cat-filter')?.value||'').toLowerCase();
 
-  // Filter semua row di tabel CoA dinamis
-  document.querySelectorAll('[data-coa-row]').forEach(tr=>{
-    const code = (tr.dataset.coaCode||'').toLowerCase();
-    const name = (tr.dataset.coaName||'').toLowerCase();
-    const rowCat = (tr.dataset.coaCat||'').toLowerCase();
-    const matchQ = !q || code.includes(q) || name.includes(q);
-    const matchCat = !cat || rowCat.includes(cat);
-    tr.style.display = (matchQ && matchCat) ? '' : 'none';
-  });
-
-  // Sembunyikan section card kalau semua row-nya hidden
+  // Filter per section dulu
   document.querySelectorAll('[data-coa-section]').forEach(section=>{
+    const sectionCat = (section.dataset.coaSection||'').toLowerCase();
+    const sectionMatch = !cat || sectionCat === cat;
+
+    if(!sectionMatch){
+      section.style.display = 'none';
+      return;
+    }
+
+    // Filter row di dalam section
     const rows = section.querySelectorAll('[data-coa-row]');
-    const anyVisible = [...rows].some(r=>r.style.display!=='none');
+    let anyVisible = false;
+    rows.forEach(tr=>{
+      const code = (tr.dataset.coaCode||'').toLowerCase();
+      const name = (tr.dataset.coaName||'').toLowerCase();
+      const matchQ = !q || code.includes(q) || name.includes(q);
+      tr.style.display = matchQ ? '' : 'none';
+      if(matchQ) anyVisible = true;
+    });
+
     section.style.display = anyVisible ? '' : 'none';
   });
 }
 
+window._coaCatBarOpen = false;
+
 function toggleCoaCatFilter(){
+  window._coaCatBarOpen = !window._coaCatBarOpen;
   const bar = document.getElementById('coa-cat-bar');
-  if(!bar) return;
-  bar.style.display = bar.style.display === 'none' ? 'flex' : 'none';
+  if(bar) bar.style.display = window._coaCatBarOpen ? 'flex' : 'none';
 }
 
 function coaUpdateDeleteBar(){
@@ -12235,7 +12244,7 @@ function renderAccountsDynamic(){
   // Preserve filter state sebelum rebuild
   const searchQ = (document.getElementById('coa-search')||{}).value||'';
   const catF = (document.getElementById('coa-cat-filter')||{}).value||'';
-  const catBarOpen = (document.getElementById('coa-cat-bar')||{}).style?.display === 'flex';
+  const catBarOpen = !!window._coaCatBarOpen;
 
   // Group by category
   const grouped={};
