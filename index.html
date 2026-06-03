@@ -12267,6 +12267,7 @@ function toggleSelectAllCoA(state){
   document.querySelectorAll('.coa-check').forEach(el=>{
     el.checked=state;
   });
+  coaUpdateDeleteBar();
 }
 
 function deleteSelectedCoA(){
@@ -12298,20 +12299,29 @@ function renderAccountsDynamic(){
     grouped[cat].push(acc);
   });
 
+  // Ambil nilai filter & search
+  const searchQ = (document.getElementById('coa-search')||{}).value||'';
+  const catF = (document.getElementById('coa-cat-filter')||{}).value||'';
+
   let html=`
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-      <label style="display:flex;gap:6px;align-items:center;font-size:12px;font-weight:600">
-        <input type="checkbox" onchange="toggleSelectAllCoA(this.checked)">
-        Select All
-      </label>
-
-      <button class="btn btn-bad" onclick="deleteSelectedCoA()">
-        Delete Selected
-      </button>
-
-      <button class="btn btn-bad" onclick="deleteAllCoA()">
-        Delete All CoA
-      </button>
+    <!-- Filter bar Kledo-style -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <button class="btn btn-out" style="font-size:12px;display:flex;align-items:center;gap:5px;" onclick="toggleCoaCatFilter()">▼ Filter</button>
+      <div style="flex:1"></div>
+      <input class="coa-search" id="coa-search" type="text" placeholder="🔍 Search" oninput="renderAccountsDynamic()" value="${searchQ}" style="width:220px;margin:0">
+    </div>
+    <!-- Category filter (hidden by default) -->
+    <div id="coa-cat-bar" style="display:none;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <span style="font-size:12px;font-weight:600;color:#475569">Kategori:</span>
+      <select class="coa-filter" id="coa-cat-filter" onchange="renderAccountsDynamic()" style="font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid #e2e8f0">
+        <option value="">Semua kategori</option>
+        ${[...new Set(accounts.map(a=>a.subCategory||dynamicCategory(a)))].sort().map(cat=>`<option value="${cat}" ${catF===cat?'selected':''}>${cat}</option>`).join('')}
+      </select>
+    </div>
+    <!-- Delete bar (muncul saat ada checkbox dicentang) -->
+    <div id="coa-delete-bar" style="display:none;align-items:center;gap:8px;margin-bottom:14px;background:#fff3f3;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;">
+      <span id="coa-selected-count" style="font-size:12px;font-weight:600;color:#dc2626">0 akun dipilih</span>
+      <button class="btn btn-bad btn-xs" onclick="deleteSelectedCoA()" style="font-size:12px;">🗑 Hapus Dipilih</button>
     </div>
   `;
 
