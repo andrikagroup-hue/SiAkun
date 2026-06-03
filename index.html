@@ -5215,6 +5215,28 @@ function sortCoaTable(field){
   rows.forEach(r=>tbody.appendChild(r));
 }
 
+function filterDynamicCoa(){
+  const q = (document.getElementById('coa-search')?.value||'').toLowerCase().trim();
+  const cat = (document.getElementById('coa-cat-filter')?.value||'').toLowerCase();
+
+  // Filter semua row di tabel CoA dinamis
+  document.querySelectorAll('[data-coa-row]').forEach(tr=>{
+    const code = (tr.dataset.coaCode||'').toLowerCase();
+    const name = (tr.dataset.coaName||'').toLowerCase();
+    const rowCat = (tr.dataset.coaCat||'').toLowerCase();
+    const matchQ = !q || code.includes(q) || name.includes(q);
+    const matchCat = !cat || rowCat.includes(cat);
+    tr.style.display = (matchQ && matchCat) ? '' : 'none';
+  });
+
+  // Sembunyikan section card kalau semua row-nya hidden
+  document.querySelectorAll('[data-coa-section]').forEach(section=>{
+    const rows = section.querySelectorAll('[data-coa-row]');
+    const anyVisible = [...rows].some(r=>r.style.display!=='none');
+    section.style.display = anyVisible ? '' : 'none';
+  });
+}
+
 function toggleCoaCatFilter(){
   const bar = document.getElementById('coa-cat-bar');
   if(!bar) return;
@@ -12308,12 +12330,12 @@ function renderAccountsDynamic(){
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
       <button class="btn btn-out" style="font-size:12px;display:flex;align-items:center;gap:5px;" onclick="toggleCoaCatFilter()">▼ Filter</button>
       <div style="flex:1"></div>
-      <input class="coa-search" id="coa-search" type="text" placeholder="🔍 Search" oninput="renderAccountsDynamic()" value="${searchQ}" style="width:220px;margin:0">
+      <input class="coa-search" id="coa-search" type="text" placeholder="🔍 Search" oninput="filterDynamicCoa()" value="${searchQ}" style="width:220px;margin:0">
     </div>
     <!-- Category filter (hidden by default) -->
     <div id="coa-cat-bar" style="display:none;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
       <span style="font-size:12px;font-weight:600;color:#475569">Kategori:</span>
-      <select class="coa-filter" id="coa-cat-filter" onchange="renderAccountsDynamic()" style="font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid #e2e8f0">
+      <select class="coa-filter" id="coa-cat-filter" onchange="filterDynamicCoa()" style="font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid #e2e8f0">
         <option value="">Semua kategori</option>
         ${[...new Set(accounts.map(a=>a.subCategory||dynamicCategory(a)))].sort().map(cat=>`<option value="${cat}" ${catF===cat?'selected':''}>${cat}</option>`).join('')}
       </select>
@@ -12330,7 +12352,7 @@ function renderAccountsDynamic(){
     const rows=grouped[cat];
 
     html += `
-      <div class="card">
+      <div class="card" data-coa-section="${cat}">
         <div class="card-hd">
           ${cat} (${rows.length} accounts)
         </div>
@@ -12359,7 +12381,7 @@ function renderAccountsDynamic(){
             <tbody>
 
               ${rows.map(acc=>`
-                <tr>
+                <tr data-coa-row="1" data-coa-code="${acc.code||''}" data-coa-name="${acc.name||''}" data-coa-cat="${acc.subCategory||''}">
                   <td>
                     <input class="coa-check" type="checkbox" value="${acc.id || ''}" onchange="coaUpdateDeleteBar()">
                   </td>
