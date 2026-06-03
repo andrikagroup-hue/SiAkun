@@ -4105,7 +4105,7 @@ function renderDashboard(c){
       const el=document.getElementById('dash-asset-widget');
       if(!el)return;
       if(!assets.length){
-        el.innerHTML='<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px">Belum ada aset tetap. <button onclick="nav('assets')" style="color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600;font-size:13px">+ Tambah aset</button></div>';
+        el.innerHTML='<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px">Belum ada aset tetap. <button onclick="nav(&quot;assets&quot;)" style="color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600;font-size:13px">+ Tambah aset</button></div>';
         return;
       }
       const totVal=assets.reduce((s,a)=>s+a.value,0);
