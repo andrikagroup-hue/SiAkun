@@ -12230,161 +12230,126 @@ function deleteSelectedCoA(){
 }
 
 function renderAccountsDynamic(){
-
   const accounts = getDynamicAccounts();
 
-  const grouped={};
+  // Preserve filter state sebelum rebuild
+  const searchQ = (document.getElementById('coa-search')||{}).value||'';
+  const catF = (document.getElementById('coa-cat-filter')||{}).value||'';
+  const catBarOpen = (document.getElementById('coa-cat-bar')||{}).style?.display === 'flex';
 
+  // Group by category
+  const grouped={};
   accounts.forEach(acc=>{
     const cat = acc.subCategory || dynamicCategory(acc);
-
     if(!grouped[cat]) grouped[cat]=[];
-
     grouped[cat].push(acc);
   });
 
-  // Ambil nilai filter & search
-  const searchQ = (document.getElementById('coa-search')||{}).value||'';
-  const catF = (document.getElementById('coa-cat-filter')||{}).value||'';
-
-  let html=`
-    <!-- Filter bar Kledo-style -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-      <button class="btn btn-out" style="font-size:12px;display:flex;align-items:center;gap:5px;" onclick="toggleCoaCatFilter()">▼ Filter</button>
-      <div style="flex:1"></div>
-      <input class="coa-search" id="coa-search" type="text" placeholder="🔍 Search" oninput="filterDynamicCoa()" value="${searchQ}" style="width:220px;margin:0">
-    </div>
-    <!-- Category filter (hidden by default) -->
-    <div id="coa-cat-bar" style="display:none;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-      <span style="font-size:12px;font-weight:600;color:#475569">Kategori:</span>
-      <select class="coa-filter" id="coa-cat-filter" data-no-search onchange="filterDynamicCoa()" style="font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid #e2e8f0">
-        <option value="">Semua kategori</option>
-        ${[...new Set(accounts.map(a=>a.subCategory||dynamicCategory(a)))].sort().map(cat=>`<option value="${cat}" ${catF===cat?'selected':''}>${cat}</option>`).join('')}
-      </select>
-    </div>
-    <!-- Delete bar (muncul saat ada checkbox dicentang) -->
-    <div id="coa-delete-bar" style="display:none;align-items:center;gap:8px;margin-bottom:14px;background:#fff3f3;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;">
-      <span id="coa-selected-count" style="font-size:12px;font-weight:600;color:#dc2626">0 akun dipilih</span>
-      <button class="btn btn-bad btn-xs" onclick="deleteSelectedCoA()" style="font-size:12px;">🗑 Hapus Dipilih</button>
-    </div>
-  `;
-
+  // Build tabel per kategori
+  let tableHtml='';
   Object.keys(grouped).forEach(cat=>{
-
     const rows=grouped[cat];
-
-    html += `
-      <div class="card" data-coa-section="${cat}">
-        <div class="card-hd">
-          ${cat} (${rows.length} accounts)
-        </div>
-
+    tableHtml += `
+      <div class="card" data-coa-section="${cat}" style="margin-bottom:12px">
+        <div class="card-hd">${cat} <span style="font-weight:400;color:#94a3b8">(${rows.length} akun)</span></div>
         <div class="tbl-wrap">
           <table style="width:100%;table-layout:fixed">
             <colgroup>
-              <col style="width:48px">
-              <col style="width:120px">
-              <col style="width:auto">
-              <col style="width:140px">
-              <col style="width:160px">
-              <col style="width:90px">
+              <col style="width:40px"><col style="width:110px"><col style="width:auto">
+              <col style="width:130px"><col style="width:150px"><col style="width:80px">
             </colgroup>
-            <thead>
-              <tr>
-                <th></th>
-                <th>Kode</th>
-                <th>Account Name</th>
-                <th>Category</th>
-                <th style="text-align:right">Balance</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-
+            <thead><tr>
+              <th></th><th>Kode</th><th>Nama Akun</th>
+              <th>Kategori</th><th style="text-align:right">Saldo</th><th>Aksi</th>
+            </tr></thead>
             <tbody>
-
-              ${rows.map(acc=>`
-                <tr data-coa-row="1" data-coa-code="${acc.code||''}" data-coa-name="${acc.name||''}" data-coa-cat="${acc.subCategory||''}">
-                  <td>
-                    <input class="coa-check" type="checkbox" value="${acc.id || ''}" onchange="coaUpdateDeleteBar()">
-                  </td>
-
-                  <td>${acc.code || ''}</td>
-                  <td>${acc.name || ''}</td>
-                  <td>${(()=>{
-                    const c=(acc.code||'').toString()[0];
-                    const map={
-                      '1':{label:'Aktiva',  bg:'#dbeafe',fg:'#1e40af'},
-                      '2':{label:'Pasiva',  bg:'#fee2e2',fg:'#991b1b'},
-                      '3':{label:'Modal',   bg:'#fef3c7',fg:'#92400e'},
-                      '4':{label:'Pendapatan',bg:'#dcfce7',fg:'#166534'},
-                      '5':{label:'HPP',     bg:'#fce7f3',fg:'#9d174d'},
-                      '6':{label:'Beban',   bg:'#fed7aa',fg:'#9a3412'},
-                      '7':{label:'Pend. Lain',bg:'#d1fae5',fg:'#065f46'},
-                      '8':{label:'Beban Lain',bg:'#ffedd5',fg:'#7c2d12'},
-                      '9':{label:'Pajak',   bg:'#e9d5ff',fg:'#6b21a8'}
-                    };
-                    const t=map[c]||{label:'-',bg:'#f1f5f9',fg:'#64748b'};
-                    return `<span style="font-size:11px;font-weight:600;background:${t.bg};color:${t.fg};padding:3px 10px;border-radius:12px">${t.label}</span>`;
-                  })()}</td>
-                  <td style="text-align:right;font-variant-numeric:tabular-nums">${rpFmt(acc.balance || 0)}</td>
-
-                  <td>
-  <button onclick="editCoA('${acc.id}')">✏️</button>
-  <button onclick="deleteCoA('${acc.id}')">🗑️</button>
-</td>
-                </tr>
-              `).join('')}
-
+              ${rows.map(acc=>{
+                const c=(acc.code||'').toString()[0];
+                const map={'1':{label:'Aktiva',bg:'#dbeafe',fg:'#1e40af'},'2':{label:'Pasiva',bg:'#fee2e2',fg:'#991b1b'},'3':{label:'Modal',bg:'#fef3c7',fg:'#92400e'},'4':{label:'Pendapatan',bg:'#dcfce7',fg:'#166534'},'5':{label:'HPP',bg:'#fce7f3',fg:'#9d174d'},'6':{label:'Beban',bg:'#fed7aa',fg:'#9a3412'},'7':{label:'Pend. Lain',bg:'#d1fae5',fg:'#065f46'},'8':{label:'Beban Lain',bg:'#ffedd5',fg:'#7c2d12'},'9':{label:'Pajak',bg:'#e9d5ff',fg:'#6b21a8'}};
+                const t=map[c]||{label:'-',bg:'#f1f5f9',fg:'#64748b'};
+                return `<tr data-coa-row="1" data-coa-code="${acc.code||''}" data-coa-name="${acc.name||''}" data-coa-cat="${acc.subCategory||''}">
+                  <td><input class="coa-check" type="checkbox" value="${acc.id||''}" onchange="coaUpdateDeleteBar()"></td>
+                  <td style="font-weight:600;color:#2563eb">${acc.code||''}</td>
+                  <td>${acc.name||''}</td>
+                  <td><span style="font-size:11px;font-weight:600;background:${t.bg};color:${t.fg};padding:3px 10px;border-radius:12px">${t.label}</span></td>
+                  <td style="text-align:right;font-variant-numeric:tabular-nums">${rpFmt(acc.balance||0)}</td>
+                  <td><button onclick="editCoA('${acc.id}')" style="margin-right:4px">✏️</button><button onclick="deleteCoA('${acc.id}')">🗑️</button></td>
+                </tr>`;
+              }).join('')}
             </tbody>
           </table>
         </div>
-      </div>
-    `;
+      </div>`;
   });
 
-  const content=document.getElementById('content');
-  // Target ke coa-dynamic-root agar tidak overwrite seluruh halaman
-  let dynRoot=document.getElementById('coa-dynamic-root');
-  if(!dynRoot && content){ dynRoot=content; }
+  // Full HTML: filter bar + delete bar + stat cards + charts + tabel
+  const allCats = [...new Set(accounts.map(a=>a.subCategory||dynamicCategory(a)))].sort();
+  const fullHtml = `
+    <!-- Filter bar -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="btn btn-out" style="font-size:12px;" onclick="toggleCoaCatFilter()">▼ Filter</button>
+      <div style="flex:1"></div>
+      <input id="coa-search" type="text" placeholder="Search akun..." oninput="filterDynamicCoa()" value="${searchQ}"
+        style="padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12.5px;outline:none;width:220px;background:#f8fafc">
+    </div>
+    <!-- Category filter -->
+    <div id="coa-cat-bar" style="display:${catBarOpen?'flex':'none'};align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <span style="font-size:12px;font-weight:600;color:#475569">Kategori:</span>
+      <select id="coa-cat-filter" data-no-search onchange="filterDynamicCoa()"
+        style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;min-width:200px">
+        <option value="">Semua kategori</option>
+        ${allCats.map(cat=>`<option value="${cat}" ${catF===cat?'selected':''}>${cat}</option>`).join('')}
+      </select>
+    </div>
+    <!-- Delete bar -->
+    <div id="coa-delete-bar" style="display:none;align-items:center;gap:8px;margin-bottom:12px;background:#fff3f3;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;">
+      <span id="coa-selected-count" style="font-size:12px;font-weight:600;color:#dc2626">0 akun dipilih</span>
+      <button class="btn btn-bad btn-xs" onclick="deleteSelectedCoA()" style="font-size:12px;">🗑 Hapus Dipilih</button>
+    </div>
+    <!-- Stat cards -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+        <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">Total Akun</div>
+        <div style="font-size:26px;font-weight:800;color:#0f172a;margin-top:4px">${accounts.length}</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+        <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">Akun Bersaldo</div>
+        <div style="font-size:26px;font-weight:800;color:#16a34a;margin-top:4px" id="coa-stat-active">—</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
+        <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">Total Saldo Aktiva</div>
+        <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:6px" id="coa-stat-asset">—</div>
+      </div>
+    </div>
+    <!-- Charts -->
+    <div class="coa-charts" style="margin-bottom:20px">
+      <div class="coa-chart-card">
+        <h4 style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">📊 Saldo Per Kategori</h4>
+        <p style="font-size:11px;color:#94a3b8;margin:0 0 12px">Distribusi saldo dari jurnal</p>
+        <div style="position:relative;height:260px"><canvas id="coaCategoryChart"></canvas></div>
+      </div>
+      <div class="coa-chart-card">
+        <h4 style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">🏆 Top 10 Akun by Saldo</h4>
+        <p style="font-size:11px;color:#94a3b8;margin:0 0 12px">Akun dengan saldo terbesar</p>
+        <div style="position:relative;height:260px"><canvas id="coaAccountChart"></canvas></div>
+      </div>
+    </div>
+    <!-- Tabel per kategori -->
+    ${tableHtml}
+  `;
 
+  // Inject ke coa-dynamic-root
+  let dynRoot = document.getElementById('coa-dynamic-root');
+  if(!dynRoot){ dynRoot = document.getElementById('content'); }
   if(dynRoot){
-    dynRoot.innerHTML=html;
-
-    const cs=document.createElement('div');
-    cs.style.cssText='padding:0 16px 24px';
-    cs.innerHTML=`
-      <div style="margin-top:16px">
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
-          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
-            <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">Total Akun</div>
-            <div style="font-size:26px;font-weight:800;color:#0f172a;margin-top:4px">${(DB.accounts||[]).length}</div>
-          </div>
-          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
-            <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">Akun Bersaldo</div>
-            <div style="font-size:26px;font-weight:800;color:#16a34a;margin-top:4px" id="coa-stat-active">—</div>
-          </div>
-          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">
-            <div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">Total Saldo Aktiva</div>
-            <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:6px" id="coa-stat-asset">—</div>
-          </div>
-        </div>
-        <div class="coa-charts">
-          <div class="coa-chart-card">
-            <h4 style="text-align:left;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">📊 Saldo Per Kategori</h4>
-            <p style="font-size:11px;color:#94a3b8;margin:0 0 12px">Distribusi saldo dari jurnal</p>
-            <div style="position:relative;height:260px"><canvas id="coaCategoryChart"></canvas></div>
-          </div>
-          <div class="coa-chart-card">
-            <h4 style="text-align:left;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">🏆 Top 10 Akun by Saldo</h4>
-            <p style="font-size:11px;color:#94a3b8;margin:0 0 12px">Akun dengan saldo terbesar</p>
-            <div style="position:relative;height:260px"><canvas id="coaAccountChart"></canvas></div>
-          </div>
-        </div>
-      </div>`;
-    dynRoot.appendChild(cs);
-    setTimeout(()=>renderCoaCharts(DB.accounts||[]),200);
+    dynRoot.innerHTML = fullHtml;
+    setTimeout(()=>renderCoaCharts(DB.accounts||[]), 200);
+    // Restore fokus search jika ada query
+    if(searchQ){
+      const si = document.getElementById('coa-search');
+      if(si){ si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
+    }
   }
-
 }
 
   
