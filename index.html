@@ -3792,386 +3792,203 @@ function renderLockPeriodCard(){
 function renderDashboard(c){
   const lr=labaRugiCalc();
   const invs=DB.invoices||[];
-  const totalAR=invs.filter(i=>invStatus(i)!=='paid'&&i.status!=='draft').reduce((s,i)=>s+i.total-invPaid(i),0);
-  const totalAP=(DB.purchases||[]).filter(p=>p.status==='received'&&!p.paid).reduce((s,p)=>s+p.total-((p.payments||[]).reduce((x,q)=>x+q.amount,0)),0);
-  // Hitung AP display total di awal agar bisa dipakai di KPI cards
-  const _today0=new Date(); _today0.setHours(0,0,0,0);
+  const isID=getLang()==='id';
+
+  // ── AP total (hitung di awal) ──
   const _poItems=(DB.purchases||[]).filter(p=>['received','partial'].includes(p.status));
   let apDisplayTotal=0;
   _poItems.forEach(p=>{const paid=(p.payments||[]).reduce((s,x)=>s+x.amount,0);const rem=p.total-paid;if(rem>0)apDisplayTotal+=rem;});
   if(!apDisplayTotal){const a=(DB.accounts||[]).find(x=>x.code==='2-20100');apDisplayTotal=a?Math.abs(a.balance||0):0;}
+
+  const totalAR=invs.filter(i=>invStatus(i)!=='paid'&&i.status!=='draft').reduce((s,i)=>s+i.total-invPaid(i),0);
   const overdueInv=invs.filter(i=>invStatus(i)==='overdue').length;
   const lowStock=(DB.products||[]).filter(p=>p.stock<=p.minStock).length;
-  const recent=[...invs].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,7);
-  const isID=getLang()==='id';
 
-  // ── Kledo-style color palette ──
-  const C={teal:'#0eb5a8',pink:'#f45b7a',yellow:'#f5a623',purple:'#7c5cbf',blue:'#4a90d9',green:'#27ae60'};
+  // ── Colors ──
+  const C={teal:'#0eb5a8',pink:'#f45b7a',yellow:'#f5a623',purple:'#7c5cbf',blue:'#4a90d9',green:'#27ae60',red:'#e74c3c'};
 
-  // ── KPI summary cards ──
-  const kpis=[
-    {label:t('db_revenue'),    val:lr.pendapatan, sub:t('db_curYear'),   color:C.teal,   icon:'💰'},
-    {label:t('db_expenses'),   val:lr.beban+lr.hpp, sub:'HPP + Operasional', color:C.pink, icon:'📉'},
-    {label:t('db_netprofit'),  val:lr.labaBersih, sub:'',                color:lr.labaBersih>=0?C.teal:C.pink, icon:'📊'},
-    {label:t('db_ar'),         val:totalAR,       sub:overdueInv+' '+t('db_overdue'), color:C.yellow, icon:'📋'},
-    {label:t('db_ap'),         val:apDisplayTotal||totalAP, sub:'',     color:C.purple, icon:'🏦'},
-    {label:t('db_lowstock'),   val:lowStock,       sub:t('db_products'), color:lowStock?C.pink:C.green, icon:'📦', isCount:true},
-  ];
-
-  const kpiHTML=kpis.map(k=>`
-    <div style="background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7;position:relative;overflow:hidden;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04)'">
-      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${k.color};border-radius:14px 14px 0 0"></div>
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;margin-bottom:10px">${k.icon} ${k.label}</div>
-      <div style="font-size:${k.isCount?'28px':'16px'};font-weight:800;color:${k.isCount?k.color:'#0f172a'};line-height:1.2;word-break:break-all">${k.isCount?k.val:rp(k.val)}</div>
-      ${k.sub?`<div style="font-size:11px;color:#94a3b8;margin-top:5px;font-weight:500">${k.sub}</div>`:''}
-    </div>`).join('');
-
-  // ── Cash/Bank area charts ──
+  // ── Cash/Bank accounts ──
   const cashBankAccs=(DB.accounts||[]).filter(a=>a.category==='Kas & Bank').slice(0,6);
-  const cashBankHTML=cashBankAccs.length?cashBankAccs.map((a,i)=>{
-    const colors=[C.pink,C.yellow,C.teal,C.purple];
-    const col=colors[i%colors.length];
-    const bal=a.balance||0;
-    const pct=bal>0?'+':'';
-    return`<div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
-      <div style="margin-bottom:6px">
-          <div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.5px">${a.code} · ${a.name}</div>
-          <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:2px;word-break:break-all">${rp(bal)}</div>
-      </div>
-      <canvas id="cb-chart-${a.id}" height="60"></canvas>
-    </div>`;
-  }).join(''):`<div style="background:#fff;border-radius:14px;padding:32px;text-align:center;color:#94a3b8;box-shadow:0 1px 4px rgba(0,0,0,.07)">Belum ada saldo kas & bank</div>`;
+  const cbColors=[C.pink,C.yellow,C.teal,C.purple,C.blue,C.green];
 
-  // ── Aging widget Kledo-style ──
+  // ── Aging buckets ──
   const aging=calcAgingBuckets();
-  const at=aging.arTotals, apt=aging.apTotals;
+  const at=aging.arTotals;
   const arTotal=aging.arGrandTotal||0;
-  const apTotal=aging.apGrandTotal||0;
-  const arBuckets=[
-    {label:'Belum JT',    val:at.current||0, color:C.teal},
-    {label:'1–30 Hari',  val:at.d1_30||0,   color:C.yellow},
-    {label:'31–60 Hari', val:at.d31_60||0,  color:'#f59e0b'},
-    {label:'61–90 Hari', val:at.d61_90||0,  color:C.pink},
-    {label:'>90 Hari',   val:at.gt90||0,    color:'#dc2626'},
-  ].filter(b=>b.val>0);
-  // AP: baca dari DB.purchases (received, belum lunas)
-  const today0=new Date(); today0.setHours(0,0,0,0);
-  const daysOvr=(due)=>{if(!due)return 0;const d=new Date(due+'T00:00:00');return Math.floor((today0-d)/(864e5));};
-  const poItems=(DB.purchases||[]).filter(p=>['received','partial'].includes(p.status));
+  const _today0=new Date();_today0.setHours(0,0,0,0);
+  const _daysOvr=(due)=>{if(!due)return 0;const d=new Date(due+'T00:00:00');return Math.floor((_today0-d)/(864e5));};
   const apBucketsRaw={current:0,d1_30:0,d31_60:0,d61_90:0,gt90:0};
   apDisplayTotal=0;
-  poItems.forEach(p=>{
-    const paid=(p.payments||[]).reduce((s,x)=>s+x.amount,0);
-    const rem=p.total-paid;
-    if(rem<=0)return;
-    apDisplayTotal+=rem;
-    const days=daysOvr(p.dueDate||p.date);
-    if(days<=0)apBucketsRaw.current+=rem;
-    else if(days<=30)apBucketsRaw.d1_30+=rem;
-    else if(days<=60)apBucketsRaw.d31_60+=rem;
-    else if(days<=90)apBucketsRaw.d61_90+=rem;
-    else apBucketsRaw.gt90+=rem;
-  });
-  // apDisplayTotal sudah dihitung di atas (sebelum KPI cards)
-  // apDisplayTotal = apDisplayTotal dari purchases atau saldo akun AP
-  const apBuckets=[
-    {label:'Belum JT',    val:apBucketsRaw.current||0, color:C.teal},
-    {label:'1–30 Hari',  val:apBucketsRaw.d1_30||0,   color:C.yellow},
-    {label:'31–60 Hari', val:apBucketsRaw.d31_60||0,  color:'#f59e0b'},
-    {label:'61–90 Hari', val:apBucketsRaw.d61_90||0,  color:C.pink},
-    {label:'>90 Hari',   val:apBucketsRaw.gt90||0,    color:'#dc2626'},
-  ].filter(b=>b.val>0);
+  _poItems.forEach(p=>{const paid=(p.payments||[]).reduce((s,x)=>s+x.amount,0);const rem=p.total-paid;if(rem<=0)return;apDisplayTotal+=rem;const days=_daysOvr(p.dueDate||p.date);if(days<=0)apBucketsRaw.current+=rem;else if(days<=30)apBucketsRaw.d1_30+=rem;else if(days<=60)apBucketsRaw.d31_60+=rem;else if(days<=90)apBucketsRaw.d61_90+=rem;else apBucketsRaw.gt90+=rem;});
+  if(!apDisplayTotal){const a=(DB.accounts||[]).find(x=>x.code==='2-20100');apDisplayTotal=a?Math.abs(a.balance||0):0;}
 
-  const agingBarHTML=(buckets,total)=>buckets.map(b=>{
-    const pct=total>0?Math.round(b.val/total*100):0;
-    return`<div style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-        <span style="font-weight:600;color:#475569">${b.label}</span>
-        <span style="font-weight:700;color:#0f172a">${rp(b.val)}</span>
-      </div>
-      <div style="background:#f1f5f9;border-radius:99px;height:7px">
-        <div style="background:${b.color};width:${pct}%;height:100%;border-radius:99px;transition:width .4s"></div>
-      </div>
-    </div>`;
-  }).join('');
+  const arBuckets=[{l:'Belum JT',v:at.current||0,c:C.teal},{l:'1–30 Hari',v:at.d1_30||0,c:C.yellow},{l:'31–60 Hari',v:at.d31_60||0,c:'#f59e0b'},{l:'61–90 Hari',v:at.d61_90||0,c:C.pink},{l:'>90 Hari',v:at.gt90||0,c:C.red}].filter(b=>b.v>0);
+  const apBuckets=[{l:'Belum JT',v:apBucketsRaw.current,c:C.teal},{l:'1–30 Hari',v:apBucketsRaw.d1_30,c:C.yellow},{l:'31–60 Hari',v:apBucketsRaw.d31_60,c:'#f59e0b'},{l:'61–90 Hari',v:apBucketsRaw.d61_90,c:C.pink},{l:'>90 Hari',v:apBucketsRaw.gt90,c:C.red}].filter(b=>b.v>0);
 
-  // ── Revenue trend (6 bulan) ──
-  const now=new Date();
+  const agingBar=(buckets,total)=>buckets.map(b=>{const pct=total>0?Math.round(b.v/total*100):0;return'<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:#475569">'+b.l+'</span><span style="font-weight:700;color:#0f172a">'+rp(b.v)+'</span></div><div style="background:#f1f5f9;border-radius:99px;height:6px"><div style="background:'+b.c+';width:'+pct+'%;height:100%;border-radius:99px"></div></div></div>';}).join('');
+
+  // ── Revenue trend 6 bulan ──
+  const now2=new Date();
   const trendLabels=[],trendRev=[],trendPaid=[];
-  for(let m=5;m>=0;m--){
-    const d=new Date(now.getFullYear(),now.getMonth()-m,1);
-    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    trendLabels.push(['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][d.getMonth()]);
-    const mInv=invs.filter(i=>i.date&&i.date.startsWith(key)&&i.status!=='draft');
-    trendRev.push(mInv.reduce((s,i)=>s+i.total,0));
-    trendPaid.push(mInv.filter(i=>i.status==='paid').reduce((s,i)=>s+i.total,0));
-  }
+  for(let m=5;m>=0;m--){const d=new Date(now2.getFullYear(),now2.getMonth()-m,1);const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');trendLabels.push(['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][d.getMonth()]);const mi=invs.filter(i=>i.date&&i.date.startsWith(key)&&i.status!=='draft');trendRev.push(mi.reduce((s,i)=>s+i.total,0));trendPaid.push(mi.filter(i=>i.status==='paid').reduce((s,i)=>s+i.total,0));}
 
-  // ── Invoice status donut ──
+  // ── Invoice status ──
   const stPaid=invs.filter(i=>invStatus(i)==='paid').length;
   const stUnpaid=invs.filter(i=>invStatus(i)==='unpaid').length;
   const stPartial=invs.filter(i=>invStatus(i)==='partial').length;
   const stOverdue=invs.filter(i=>invStatus(i)==='overdue').length;
   const stDraft=invs.filter(i=>i.status==='draft').length;
 
+  // ── Recent invoices ──
+  const recent=[...invs].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,7);
+
+  // ── KPI cards (compact, no wrap) ──
+  const kpis=[
+    {lbl:'PENDAPATAN',     val:rp(lr.pendapatan),      sub:'Tahun Berjalan',           col:C.teal,   icon:'💰'},
+    {lbl:'TOTAL BEBAN',    val:rp(lr.beban+lr.hpp),    sub:'HPP + Operasional',        col:C.pink,   icon:'📉'},
+    {lbl:'LABA BERSIH',    val:rp(lr.labaBersih),      sub:'',                         col:lr.labaBersih>=0?C.teal:C.red, icon:'📊'},
+    {lbl:'PIUTANG (AR)',   val:rp(totalAR),             sub:overdueInv+' terlambat',   col:C.yellow, icon:'📋'},
+    {lbl:'HUTANG (AP)',    val:rp(apDisplayTotal),      sub:'',                         col:C.purple, icon:'🏦'},
+    {lbl:'STOK RENDAH',   val:''+lowStock,              sub:'produk',                   col:lowStock?C.red:C.green, icon:'📦', isCount:true},
+  ];
+
+  const kpiHTML=kpis.map(k=>'<div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);border:1px solid #eef2f7;border-top:3px solid '+k.col+';min-width:0"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin-bottom:8px">'+k.icon+' '+k.lbl+'</div><div style="font-size:'+( k.isCount?'28px':'15px')+';font-weight:800;color:'+(k.isCount?k.col:'#0f172a')+';line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+k.val+'</div>'+(k.sub?'<div style="font-size:11px;color:#94a3b8;margin-top:4px">'+k.sub+'</div>':'')+'</div>').join('');
+
+  // ── Cash Bank cards (Kledo style: full area chart) ──
+  const cbCardsHTML=cashBankAccs.length
+    ? cashBankAccs.map((a,i)=>'<div style="background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);border:1px solid #eef2f7"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px"><div><div style="font-size:10px;color:#94a3b8;font-weight:600;letter-spacing:.5px;text-transform:uppercase">'+a.code+'</div><div style="font-size:13px;font-weight:700;color:#334155;margin-top:2px">'+a.name+'</div></div><div style="font-size:15px;font-weight:800;color:#0f172a;text-align:right">'+rp(a.balance||0)+'</div></div><canvas id="cbig-'+a.id+'" height="80"></canvas></div>').join('')
+    : '<div style="text-align:center;padding:32px;color:#94a3b8">Belum ada saldo kas & bank</div>';
+
+  // ── Fixed Asset summary ──
+  const assets=DB.assets||[];
+  const totVal=assets.reduce((s,a)=>s+a.value,0);
+  const totAkum=assets.reduce((s,a)=>{try{const p=calcPenyusutan(a);return s+(p.akum||0);}catch(e){return s;}},0);
+  const totBook=totVal-totAkum;
+  const catColors2=[C.teal,C.pink,C.yellow,C.purple,C.blue];
+  const assetRowsHTML=assets.length
+    ? assets.slice(0,5).map((a,i)=>{let p={akum:0,bookVal:0};try{p=calcPenyusutan(a);}catch(e){}const col=catColors2[i%5];return'<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background=\'#fafbff\'" onmouseout="this.style.background=\'transparent\'"><td style="padding:9px 10px;font-weight:700;color:#334155">'+a.name+'</td><td style="padding:9px 10px"><span style="background:'+col+'20;color:'+col+';border-radius:99px;padding:2px 8px;font-size:10px;font-weight:700">'+a.cat+'</span></td><td style="padding:9px 10px;text-align:right;font-weight:600">'+rp(a.value)+'</td><td style="padding:9px 10px;text-align:right;color:'+C.pink+';font-weight:600">'+rp(p.akum||0)+'</td><td style="padding:9px 10px;text-align:right;font-weight:800;color:'+C.teal+'">'+rp(p.bookVal||0)+'</td></tr>';}).join('')
+      +(assets.length>5?'<tr><td colspan="5" style="padding:8px;text-align:center;color:'+C.teal+';font-size:12px;cursor:pointer;font-weight:600" onclick="nav(\'assets\')">Lihat semua '+assets.length+' aset →</td></tr>':'')
+    : '<tr><td colspan="5" style="padding:24px;text-align:center;color:#94a3b8">Belum ada aset tetap. <button onclick="nav(\'assets\')" style="color:'+C.teal+';background:none;border:none;cursor:pointer;font-weight:600">+ Tambah</button></td></tr>';
+
+  // ── Invoice table ──
+  const invRowsHTML=recent.length
+    ? recent.map(i=>{const ct=DB.contacts.find(x=>x.id===i.contactId);const st=invStatus(i);const sc={paid:C.teal,unpaid:'#ef4444',partial:C.yellow,overdue:C.red,draft:'#94a3b8'}[st]||'#94a3b8';const sl={paid:'Lunas',unpaid:'Belum Bayar',partial:'Sebagian',overdue:'Terlambat',draft:'Draft'}[st]||st;return'<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background=\'#fafbff\'" onmouseout="this.style.background=\'transparent\'"><td style="padding:10px 12px;font-weight:700;color:#2563eb;cursor:pointer" onclick="nav(\'invoices\')">'+i.no+'</td><td style="padding:10px 12px;color:#334155">'+(ct?ct.name:'-')+'</td><td style="padding:10px 12px;color:#64748b">'+fDate(i.date)+'</td><td style="padding:10px 12px;color:'+(st==='overdue'?C.red:'#64748b')+';font-weight:'+(st==='overdue'?700:400)+'">'+fDate(i.dueDate)+'</td><td style="padding:10px 12px;text-align:right;font-weight:700">'+rp(i.total)+'</td><td style="padding:10px 12px;text-align:center"><span style="background:'+sc+'20;color:'+sc+';border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700">'+sl+'</span></td></tr>';}).join('')
+    : '<tr><td colspan="6" style="padding:32px;text-align:center;color:#94a3b8">Belum ada invoice</td></tr>';
+
+  const card=(content,mb)=>'<div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);border:1px solid #eef2f7;margin-bottom:'+(mb||'16px')+'">'+content+'</div>';
+  const cardHdr=(title,action)=>'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-size:14px;font-weight:800;color:#0f172a">'+title+'</div>'+(action||'')+'</div>';
+  const actBtn=(lbl,fn)=>'<button onclick="'+fn+'" style="font-size:12px;color:'+C.teal+';background:none;border:none;cursor:pointer;font-weight:600">'+lbl+'</button>';
+
   c.innerHTML=`
-  <!-- KPI Cards -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:20px">
+  <!-- KPI Row -->
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px">
     ${kpiHTML}
   </div>
 
-  <!-- Row 1: Cash/Bank area charts -->
-  <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7;margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div style="font-size:14px;font-weight:800;color:#0f172a">💰 Saldo Kas &amp; Bank</div>
-      <button onclick="nav('reports')" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Riwayat saldo →</button>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">
-      ${cashBankHTML}
-    </div>
-  </div>
+  <!-- Main 2-col layout -->
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start">
 
-  <!-- Row 2: Aging AR | Aging AP -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-    <!-- Aging AR -->
-    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <div style="font-size:14px;font-weight:800;color:#0f172a">📋 Aging Piutang (AR)</div>
-        <button onclick="nav('reports')" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Detail →</button>
+    <!-- LEFT COLUMN -->
+    <div>
+      <!-- Cash & Bank area charts (Kledo style) -->
+      ${card(
+        cardHdr('💰 Kas & Bank', actBtn('Riwayat →', "nav('reports')"))
+        +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">'+cbCardsHTML+'</div>'
+      )}
+
+      <!-- Revenue 6 Bulan (full width area) -->
+      ${card(
+        cardHdr('📈 Revenue 6 Bulan','<div style="font-size:11px;color:#94a3b8">Total invoice vs lunas</div>')
+        +'<canvas id="ch-trend" height="160"></canvas>'
+      )}
+
+      <!-- P&L + Invoice donut side by side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        ${card('<div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:4px">📊 Ringkasan Laba Rugi</div><div style="font-size:11px;color:#94a3b8;margin-bottom:12px">Tahun berjalan</div><canvas id="ch-lr" height="160"></canvas>','0')}
+        ${card('<div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:4px">🧾 Status Invoice</div><div style="font-size:11px;color:#94a3b8;margin-bottom:12px">${invs.length} invoice</div><canvas id="ch-inv" height="160"></canvas>','0')}
       </div>
-      <div style="font-size:24px;font-weight:800;color:${C.teal};margin-bottom:16px">${rp(arTotal)}</div>
-      ${arBuckets.length?agingBarHTML(arBuckets,arTotal):`<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">✨ Semua piutang lunas!</div>`}
-    </div>
-    <!-- Aging AP -->
-    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <div style="font-size:14px;font-weight:800;color:#0f172a">🏦 Aging Hutang (AP)</div>
-        <button onclick="nav('reports')" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Detail →</button>
-      </div>
-      <div style="font-size:24px;font-weight:800;color:${C.purple};margin-bottom:16px">${rp(apDisplayTotal)}</div>
-      ${apBuckets.length?agingBarHTML(apBuckets,apDisplayTotal):`<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">✨ Semua lunas!</div>`}
-    </div>
-  </div>
 
-  <!-- Row 3: Revenue trend | P&L bar | Invoice donut -->
-  <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr;gap:14px;margin-bottom:16px">
-    <!-- Revenue trend -->
-    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
-      <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:4px">📈 Revenue 6 Bulan</div>
-      <div style="font-size:11px;color:#94a3b8;margin-bottom:14px">Total invoice vs yang sudah lunas</div>
-      <canvas id="ch-trend" height="130"></canvas>
-    </div>
-    <!-- P&L summary -->
-    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
-      <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:4px">📊 ${t('db_plSummary')}</div>
-      <div style="font-size:11px;color:#94a3b8;margin-bottom:14px">Tahun berjalan</div>
-      <canvas id="ch-lr" height="130"></canvas>
-    </div>
-    <!-- Invoice donut -->
-    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7">
-      <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:4px">🧾 ${t('db_invStatus')}</div>
-      <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">${invs.length} invoice</div>
-      <canvas id="ch-inv" height="130"></canvas>
-    </div>
-  </div>
+      <!-- Fixed Asset -->
+      ${card(
+        cardHdr('🏗️ Aset Tetap', actBtn('Kelola aset →',"nav('assets')"))
+        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
+          +'<div style="background:#f0fdf9;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:'+C.teal+';margin-bottom:3px">Nilai Perolehan</div><div style="font-size:14px;font-weight:800;color:#0f172a">'+rp(totVal)+'</div></div>'
+          +'<div style="background:#fef2f2;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:'+C.pink+';margin-bottom:3px">Akum. Penyusutan</div><div style="font-size:14px;font-weight:800;color:#0f172a">'+rp(totAkum)+'</div></div>'
+          +'<div style="background:#fffbeb;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:'+C.yellow+';margin-bottom:3px">Nilai Buku</div><div style="font-size:14px;font-weight:800;color:#0f172a">'+rp(totBook)+'</div></div>'
+        +'</div>'
+        +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:2px solid #f1f5f9"><th style="text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Nama Aset</th><th style="text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Kategori</th><th style="text-align:right;padding:7px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Perolehan</th><th style="text-align:right;padding:7px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Akum.</th><th style="text-align:right;padding:7px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Nilai Buku</th></tr></thead><tbody>'+assetRowsHTML+'</tbody></table></div>'
+      )}
 
-  <!-- Row 3b: Fixed Asset -->
-  <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7;margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div style="font-size:14px;font-weight:800;color:#0f172a">🏗️ Aset Tetap</div>
-      <button onclick="nav('assets')" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Kelola aset →</button>
+      <!-- Invoice Terkini -->
+      ${card(
+        cardHdr('🧾 Invoice Terkini','<span style="font-size:12px;color:#94a3b8;font-weight:600">'+invs.length+' total</span>')
+        +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #f1f5f9"><th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">No. Invoice</th><th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Pelanggan</th><th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Tanggal</th><th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Jatuh Tempo</th><th style="text-align:right;padding:8px 12px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Total</th><th style="text-align:center;padding:8px 12px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Status</th></tr></thead><tbody>'+invRowsHTML+'</tbody></table></div>'
+      )}
     </div>
-    <div id="dash-asset-widget">Loading...</div>
-  </div>
 
-    <!-- Row 4: Invoice terkini -->
-  <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);border:1px solid #eef2f7;margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div style="font-size:14px;font-weight:800;color:#0f172a">🧾 ${t('db_recentInv')}</div>
-      <span style="font-size:12px;color:#94a3b8;font-weight:600">${invs.length} total</span>
-    </div>
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead>
-          <tr style="border-bottom:2px solid #f1f5f9">
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('inv_no')}</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('lbl_customer')}</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('lbl_date')}</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('lbl_dueDate')}</th>
-            <th style="text-align:right;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('lbl_total')}</th>
-            <th style="text-align:center;padding:8px 12px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">${t('lbl_status')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${recent.length?recent.map(i=>{
-            const ct=DB.contacts.find(x=>x.id===i.contactId);
-            const st=invStatus(i);
-            const stColor={paid:C.teal,unpaid:'#ef4444',partial:C.yellow,overdue:'#dc2626',draft:'#94a3b8'}[st]||'#94a3b8';
-            const stLabel={paid:'Lunas',unpaid:'Belum Bayar',partial:'Sebagian',overdue:'Terlambat',draft:'Draft'}[st]||st;
-            return`<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background='#fafbff'" onmouseout="this.style.background='transparent'">
-              <td style="padding:10px 12px;font-weight:700;color:#2563eb;cursor:pointer" onclick="nav('invoices')">${i.no}</td>
-              <td style="padding:10px 12px;color:#334155">${ct?ct.name:'-'}</td>
-              <td style="padding:10px 12px;color:#64748b">${fDate(i.date)}</td>
-              <td style="padding:10px 12px;color:${st==='overdue'?'#dc2626':'#64748b'};font-weight:${st==='overdue'?700:400}">${fDate(i.dueDate)}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:700;color:#0f172a">${rp(i.total)}</td>
-              <td style="padding:10px 12px;text-align:center"><span style="background:${stColor}20;color:${stColor};border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700">${stLabel}</span></td>
-            </tr>`;
-          }).join(''):`<tr><td colspan="6" style="padding:32px;text-align:center;color:#94a3b8">Belum ada invoice</td></tr>`}
-        </tbody>
-      </table>
+    <!-- RIGHT COLUMN -->
+    <div style="position:sticky;top:16px">
+      <!-- Aging AR -->
+      ${card(
+        cardHdr('📋 Aging Piutang (AR)', actBtn('Detail →',"nav('reports')"))
+        +'<div style="font-size:22px;font-weight:800;color:'+C.teal+';margin-bottom:14px">'+rp(arTotal)+'</div>'
+        +(arBuckets.length?agingBar(arBuckets,arTotal):'<div style="text-align:center;padding:16px;color:#94a3b8;font-size:13px">✨ Semua piutang lunas!</div>')
+      )}
+
+      <!-- Aging AP -->
+      ${card(
+        cardHdr('🏦 Aging Hutang (AP)', actBtn('Detail →',"nav('reports')"))
+        +'<div style="font-size:22px;font-weight:800;color:'+C.purple+';margin-bottom:14px">'+rp(apDisplayTotal)+'</div>'
+        +(apBuckets.length?agingBar(apBuckets,apDisplayTotal):'<div style="text-align:center;padding:16px;color:#94a3b8;font-size:13px">✨ Semua lunas!</div>')
+      )}
+
+      <!-- Receivable & Payable trend (Kledo style bar+line) -->
+      ${card(
+        cardHdr('📊 Receivable & Payable','')
+        +'<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;margin-top:-8px">6 bulan terakhir</div>'
+        +'<canvas id="ch-arp" height="200"></canvas>'
+      )}
     </div>
   </div>`;
 
   // ── Charts ──
-  const _safeChart=(id,config)=>{
-    const canvas=document.getElementById(id);
-    if(!canvas)return null;
-    if(typeof Chart!=='undefined'&&Chart.getChart){const ex=Chart.getChart(canvas);if(ex)ex.destroy();}
-    return new Chart(canvas,config);
-  };
+  const _sc=(id,cfg)=>{const el=document.getElementById(id);if(!el)return;if(typeof Chart!=='undefined'&&Chart.getChart){const ex=Chart.getChart(el);if(ex)ex.destroy();}return new Chart(el,cfg);};
 
   setTimeout(()=>{
     const lr2=labaRugiCalc();
 
-    // P&L bar chart — Kledo color
-    _safeChart('ch-lr',{
-      type:'bar',
-      data:{
-        labels:isID?['Pendapatan','HPP','Beban','Laba Bersih']:['Revenue','COGS','Expenses','Net Profit'],
-        datasets:[{
-          data:[lr2.pendapatan,lr2.hpp,lr2.beban,lr2.labaBersih],
-          backgroundColor:[C.teal+'cc',C.yellow+'cc',C.pink+'cc',lr2.labaBersih>=0?C.teal+'cc':C.pink+'cc'],
-          borderColor:[C.teal,C.yellow,C.pink,lr2.labaBersih>=0?C.teal:C.pink],
-          borderWidth:0,borderRadius:8,minBarLength:4
-        }]
-      },
-      options:{
-        responsive:true,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'Rp '+ctx.parsed.y.toLocaleString('id-ID')}}},
-        scales:{
-          y:{ticks:{callback:v=>'Rp '+Number(v/1000000).toFixed(0)+'jt',font:{size:10}},grid:{color:'#f1f5f9'},border:{display:false}},
-          x:{grid:{display:false},ticks:{font:{size:11}}}
-        }
-      }
-    });
+    // P&L bar
+    _sc('ch-lr',{type:'bar',data:{labels:isID?['Pendapatan','HPP','Beban','Laba Bersih']:['Revenue','COGS','Expenses','Net Profit'],datasets:[{data:[lr2.pendapatan,lr2.hpp,lr2.beban,lr2.labaBersih],backgroundColor:[C.teal+'cc',C.yellow+'cc',C.pink+'cc',(lr2.labaBersih>=0?C.teal:C.red)+'cc'],borderWidth:0,borderRadius:8,minBarLength:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'Rp '+ctx.parsed.y.toLocaleString('id-ID')}}},scales:{y:{ticks:{callback:v=>'Rp '+Number(v/1e6).toFixed(0)+'jt',font:{size:10}},grid:{color:'#f1f5f9'},border:{display:false}},x:{grid:{display:false},ticks:{font:{size:11}}}}}});
 
-    // Invoice donut — Kledo colors
-    _safeChart('ch-inv',{
-      type:'doughnut',
-      data:{
-        labels:['Lunas','Belum Bayar','Sebagian','Terlambat','Draft'],
-        datasets:[{data:[stPaid,stUnpaid,stPartial,stOverdue,stDraft],
-          backgroundColor:[C.teal,C.pink,C.yellow,'#dc2626','#94a3b8'],
-          borderWidth:0,hoverOffset:6}]
-      },
-      options:{
-        responsive:true,cutout:'68%',
-        plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8,boxWidth:10}},
-          tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.parsed+' invoice'}}}
-      }
-    });
+    // Invoice donut
+    _sc('ch-inv',{type:'doughnut',data:{labels:['Lunas','Belum Bayar','Sebagian','Terlambat','Draft'],datasets:[{data:[stPaid,stUnpaid,stPartial,stOverdue,stDraft],backgroundColor:[C.teal,C.pink,C.yellow,C.red,'#94a3b8'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,cutout:'68%',plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8,boxWidth:10}},tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.parsed+' invoice'}}}}});
 
-    // Revenue trend — area style
-    _safeChart('ch-trend',{
-      type:'bar',
-      data:{
-        labels:trendLabels,
-        datasets:[
-          {label:'Total Invoice',data:trendRev,backgroundColor:C.teal+'40',borderColor:C.teal,borderWidth:2,borderRadius:6},
-          {label:'Lunas',data:trendPaid,backgroundColor:C.yellow+'60',borderColor:C.yellow,borderWidth:2,borderRadius:6},
-        ]
-      },
-      options:{
-        responsive:true,
-        plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8,boxWidth:10}}},
-        scales:{
-          y:{ticks:{callback:v=>'Rp '+Number(v/1000000).toFixed(0)+'jt',font:{size:10}},grid:{color:'#f1f5f9'},border:{display:false}},
-          x:{grid:{display:false},ticks:{font:{size:11}}}
-        }
-      }
-    });
+    // Revenue trend — bar + line (Kledo style)
+    _sc('ch-trend',{type:'bar',data:{labels:trendLabels,datasets:[{label:'Total Invoice',data:trendRev,backgroundColor:C.teal+'50',borderColor:C.teal,borderWidth:2,borderRadius:6,order:2},{label:'Lunas',data:trendPaid,type:'line',borderColor:C.yellow,backgroundColor:C.yellow+'30',borderWidth:2.5,fill:true,tension:.4,pointRadius:3,pointBackgroundColor:C.yellow,order:1}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:10,boxWidth:10}}},scales:{y:{ticks:{callback:v=>'Rp '+Number(v/1e6).toFixed(0)+'jt',font:{size:10}},grid:{color:'#f1f5f9'},border:{display:false}},x:{grid:{display:false},ticks:{font:{size:11}}}}}});
 
-    // Cash/Bank mini area charts
-    const cashColors=[C.pink,C.yellow,C.teal,C.purple];
+    // AR/AP trend (Kledo Receivable & Payable style — bar+line)
+    const arByMonth=[];const apByMonth=[];
+    for(let m=5;m>=0;m--){const d2=new Date(now2.getFullYear(),now2.getMonth()-m,1);const key=d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0');const mi=invs.filter(i=>i.date&&i.date.startsWith(key)&&i.status!=='draft');arByMonth.push(mi.filter(i=>invStatus(i)!=='paid').reduce((s,i)=>s+i.total-invPaid(i),0));const pi=(DB.purchases||[]).filter(p=>p.date&&p.date.startsWith(key)&&['received','partial'].includes(p.status));apByMonth.push(pi.reduce((s,p)=>s+(p.total-((p.payments||[]).reduce((x,q)=>x+q.amount,0))),0));}
+    const netByMonth=arByMonth.map((ar,i)=>ar-apByMonth[i]);
+    _sc('ch-arp',{type:'bar',data:{labels:trendLabels,datasets:[{label:'Receivable',data:arByMonth,backgroundColor:C.teal+'80',borderColor:C.teal,borderWidth:0,borderRadius:4,order:2},{label:'Payable',data:apByMonth,backgroundColor:C.pink+'80',borderColor:C.pink,borderWidth:0,borderRadius:4,order:2},{label:'Net',data:netByMonth,type:'line',borderColor:'#c084fc',backgroundColor:'transparent',borderWidth:2,tension:.4,pointRadius:3,pointBackgroundColor:'#c084fc',order:1}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8,boxWidth:10}}},scales:{y:{ticks:{callback:v=>'Rp '+Number(v/1e6).toFixed(0)+'jt',font:{size:9}},grid:{color:'#f1f5f9'},border:{display:false}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+
+    // Cash/Bank area charts (Kledo style — besar, fill solid)
+    const cbColors2=[C.pink,C.yellow,C.teal,C.purple,C.blue,C.green];
     cashBankAccs.forEach((a,i)=>{
-      const canvas=document.getElementById('cb-chart-'+a.id);
+      const canvas=document.getElementById('cbig-'+a.id);
       if(!canvas)return;
-      const txDays=[];const now2=new Date();
-      for(let d=29;d>=0;d--){const dd=new Date(now2);dd.setDate(dd.getDate()-d);txDays.push(dd.toISOString().split('T')[0]);}
-      let running=0;
-      const balByDay={};
-      (DB.transactions||[]).filter(tx=>tx.date).sort((a,b)=>a.date.localeCompare(b.date)).forEach(tx=>{
-        (tx.entries||[]).forEach(e=>{
-          if(e.acc===a.id||e.acc===a.code){running+=(parseFloat(e.deb)||0)-(parseFloat(e.crd)||0);}
-        });
+      const col=cbColors2[i%cbColors2.length];
+      const txDays=[];const now3=new Date();
+      for(let d=29;d>=0;d--){const dd=new Date(now3);dd.setDate(dd.getDate()-d);txDays.push(dd.toISOString().split('T')[0]);}
+      let running=0;const balByDay={};
+      (DB.transactions||[]).filter(tx=>tx.date).sort((x,y)=>x.date.localeCompare(y.date)).forEach(tx=>{
+        (tx.entries||[]).forEach(e=>{if(e.acc===a.id||e.acc===a.code){running+=(parseFloat(e.deb)||0)-(parseFloat(e.crd)||0);}});
         balByDay[tx.date]=running;
       });
-      const chartData=txDays.map(day=>{
-        const keys=Object.keys(balByDay).filter(k=>k<=day);
-        if(!keys.length)return 0;
-        return balByDay[keys[keys.length-1]];
-      });
-      const col=cashColors[i%cashColors.length];
+      const chartData=txDays.map(day=>{const keys=Object.keys(balByDay).filter(k=>k<=day);return keys.length?balByDay[keys[keys.length-1]]:0;});
       if(typeof Chart!=='undefined'&&Chart.getChart){const ex=Chart.getChart(canvas);if(ex)ex.destroy();}
-      new Chart(canvas,{
-        type:'line',
-        data:{labels:txDays,datasets:[{data:chartData,borderColor:col,borderWidth:2,fill:true,backgroundColor:col+'25',tension:.4,pointRadius:0}]},
-        options:{responsive:true,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}
-      });
+      new Chart(canvas,{type:'line',data:{labels:txDays,datasets:[{data:chartData,borderColor:col,borderWidth:2.5,fill:true,backgroundColor:col+'30',tension:.4,pointRadius:0}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
     });
-
-    // Fixed Asset widget
-    (function(){
-      const assets=DB.assets||[];
-      const el=document.getElementById('dash-asset-widget');
-      if(!el)return;
-      if(!assets.length){
-        el.innerHTML='<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px">Belum ada aset tetap. <button onclick="nav(&quot;assets&quot;)" style="color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600;font-size:13px">+ Tambah aset</button></div>';
-        return;
-      }
-      const totVal=assets.reduce((s,a)=>s+a.value,0);
-      const totAkum=assets.reduce((s,a)=>{const p=calcPenyusutan(a);return s+(p.akum||0);},0);
-      const totBook=totVal-totAkum;
-      const catColors=['#0eb5a8','#f45b7a','#f5a623','#7c5cbf','#4a90d9'];
-      const rows=assets.slice(0,5).map((a,i)=>{
-        const p=calcPenyusutan(a);
-        const col=catColors[i%catColors.length];
-        return '<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background=&quot;#fafbff&quot;" onmouseout="this.style.background=&quot;transparent&quot;">'
-          +'<td style="padding:9px 10px;font-weight:700;color:#334155">'+a.name+'</td>'
-          +'<td style="padding:9px 10px"><span style="background:'+col+'20;color:'+col+';border-radius:99px;padding:2px 9px;font-size:10px;font-weight:700">'+a.cat+'</span></td>'
-          +'<td style="padding:9px 10px;text-align:right;font-weight:600;color:#0f172a">'+rp(a.value)+'</td>'
-          +'<td style="padding:9px 10px;text-align:right;color:#f45b7a;font-weight:600">'+rp(p.akum||0)+'</td>'
-          +'<td style="padding:9px 10px;text-align:right;font-weight:800;color:#0eb5a8">'+rp(p.bookVal||0)+'</td>'
-          +'</tr>';
-      }).join('');
-      const moreRow=assets.length>5?'<tr><td colspan="5" style="padding:8px 10px;text-align:center;color:#0eb5a8;font-size:12px;cursor:pointer;font-weight:600" onclick="nav(&quot;assets&quot;)">Lihat semua '+assets.length+' aset →</td></tr>':'';
-      el.innerHTML=''
-        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">'
-          +'<div style="background:#f0fdf9;border-radius:10px;padding:14px;text-align:center">'
-            +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0eb5a8;margin-bottom:4px">Nilai Perolehan</div>'
-            +'<div style="font-size:16px;font-weight:800;color:#0f172a">'+rp(totVal)+'</div>'
-          +'</div>'
-          +'<div style="background:#fef2f2;border-radius:10px;padding:14px;text-align:center">'
-            +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#f45b7a;margin-bottom:4px">Akum. Penyusutan</div>'
-            +'<div style="font-size:16px;font-weight:800;color:#0f172a">'+rp(totAkum)+'</div>'
-          +'</div>'
-          +'<div style="background:#fffbeb;border-radius:10px;padding:14px;text-align:center">'
-            +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#f5a623;margin-bottom:4px">Nilai Buku</div>'
-            +'<div style="font-size:16px;font-weight:800;color:#0f172a">'+rp(totBook)+'</div>'
-          +'</div>'
-        +'</div>'
-        +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
-          +'<thead><tr style="border-bottom:2px solid #f1f5f9">'
-            +'<th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Nama Aset</th>'
-            +'<th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Kategori</th>'
-            +'<th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Nilai Perolehan</th>'
-            +'<th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Akum. Penyusutan</th>'
-            +'<th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Nilai Buku</th>'
-          +'</tr></thead>'
-          +'<tbody>'+rows+moreRow+'</tbody>'
-        +'</table></div>';
-    })();
-
   },50);
 }
 
