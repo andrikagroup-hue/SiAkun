@@ -3859,7 +3859,7 @@ function renderDashboard(c){
   const daysOvr=(due)=>{if(!due)return 0;const d=new Date(due+'T00:00:00');return Math.floor((today0-d)/(864e5));};
   const poItems=(DB.purchases||[]).filter(p=>['received','partial'].includes(p.status));
   const apBucketsRaw={current:0,d1_30:0,d31_60:0,d61_90:0,gt90:0};
-  let apDisplayTotal=0;
+  apDisplayTotal=0;
   poItems.forEach(p=>{
     const paid=(p.payments||[]).reduce((s,x)=>s+x.amount,0);
     const rem=p.total-paid;
