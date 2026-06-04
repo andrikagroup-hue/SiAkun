@@ -3852,7 +3852,7 @@ function renderDashboard(c){
     {lbl:'STOK RENDAH',   val:''+lowStock,              sub:'produk',                   col:lowStock?C.red:C.green, icon:'📦', isCount:true},
   ];
 
-  const kpiHTML=kpis.map(k=>'<div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);border:1px solid #eef2f7;border-top:3px solid '+k.col+';min-width:0"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin-bottom:8px">'+k.icon+' '+k.lbl+'</div><div style="font-size:'+( k.isCount?'28px':'15px')+';font-weight:800;color:'+(k.isCount?k.col:'#0f172a')+';line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+k.val+'</div>'+(k.sub?'<div style="font-size:11px;color:#94a3b8;margin-top:4px">'+k.sub+'</div>':'')+'</div>').join('');
+  const kpiHTML=kpis.map(k=>'<div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);border:1px solid #eef2f7;border-top:3px solid '+k.col+';min-width:0"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin-bottom:8px">'+k.icon+' '+k.lbl+'</div><div style="font-size:'+( k.isCount?'24px':'13px')+';font-weight:800;color:'+(k.isCount?k.col:'#0f172a')+';line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+k.val+'</div>'+(k.sub?'<div style="font-size:11px;color:#94a3b8;margin-top:4px">'+k.sub+'</div>':'')+'</div>').join('');
 
   // ── Cash Bank cards (Kledo style: full area chart) ──
   const cbCardsHTML=cashBankAccs.length
@@ -3881,7 +3881,7 @@ function renderDashboard(c){
 
   c.innerHTML=`
   <!-- KPI Row -->
-  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
     ${kpiHTML}
   </div>
 
@@ -3905,7 +3905,7 @@ function renderDashboard(c){
       <!-- P&L + Invoice donut side by side -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
         ${card('<div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:4px">📊 Ringkasan Laba Rugi</div><div style="font-size:11px;color:#94a3b8;margin-bottom:12px">Tahun berjalan</div><canvas id="ch-lr" height="160"></canvas>','0')}
-        ${card('<div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:4px">🧾 Status Invoice</div><div style="font-size:11px;color:#94a3b8;margin-bottom:12px">${invs.length} invoice</div><canvas id="ch-inv" height="160"></canvas>','0')}
+        ${card('<div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:4px">🧾 Status Invoice</div><div style="font-size:11px;color:#94a3b8;margin-bottom:12px">'+invs.length+' invoice</div><canvas id="ch-inv" height="160"></canvas>','0')}
       </div>
 
       <!-- Fixed Asset -->
@@ -3978,16 +3978,17 @@ function renderDashboard(c){
       const canvas=document.getElementById('cbig-'+a.id);
       if(!canvas)return;
       const col=cbColors2[i%cbColors2.length];
-      const txDays=[];const now3=new Date();
-      for(let d=29;d>=0;d--){const dd=new Date(now3);dd.setDate(dd.getDate()-d);txDays.push(dd.toISOString().split('T')[0]);}
+      // Build running balance per minggu (12 titik = 3 bulan)
+      const txWeeks=[];const now3=new Date();
+      for(let w=11;w>=0;w--){const dd=new Date(now3);dd.setDate(dd.getDate()-w*7);txWeeks.push(dd.toISOString().split('T')[0]);}
       let running=0;const balByDay={};
       (DB.transactions||[]).filter(tx=>tx.date).sort((x,y)=>x.date.localeCompare(y.date)).forEach(tx=>{
         (tx.entries||[]).forEach(e=>{if(e.acc===a.id||e.acc===a.code){running+=(parseFloat(e.deb)||0)-(parseFloat(e.crd)||0);}});
         balByDay[tx.date]=running;
       });
-      const chartData=txDays.map(day=>{const keys=Object.keys(balByDay).filter(k=>k<=day);return keys.length?balByDay[keys[keys.length-1]]:0;});
+      const chartData=txWeeks.map(day=>{const keys=Object.keys(balByDay).filter(k=>k<=day);return keys.length?balByDay[keys[keys.length-1]]:0;});
       if(typeof Chart!=='undefined'&&Chart.getChart){const ex=Chart.getChart(canvas);if(ex)ex.destroy();}
-      new Chart(canvas,{type:'line',data:{labels:txDays,datasets:[{data:chartData,borderColor:col,borderWidth:2.5,fill:true,backgroundColor:col+'30',tension:.4,pointRadius:0}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
+      new Chart(canvas,{type:'line',data:{labels:txWeeks,datasets:[{data:chartData,borderColor:col,borderWidth:2.5,fill:true,backgroundColor:col+'35',tension:.5,pointRadius:0,pointHoverRadius:0}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false,grace:'10%'}}}});
     });
   },50);
 }
