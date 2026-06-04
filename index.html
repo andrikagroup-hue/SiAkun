@@ -6606,13 +6606,151 @@ function renderAssets(c){
   document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openAsset()">+ Add Asset</button><button class="btn btn-out" onclick="exportAssets()">⬇ Excel</button>`;
   const totVal=DB.assets.reduce((s,a)=>s+a.value,0),totAkum=DB.assets.reduce((s,a)=>s+calcPenyusutan(a).akum,0);
   c.innerHTML=`
-  <div class="stats"><div class="stat b"><div class="stat-lbl">Acquisition Value</div><div class="stat-val">${rp(totVal)}</div></div><div class="stat r"><div class="stat-lbl">Accum. Depreciation</div><div class="stat-val">${rp(totAkum)}</div></div><div class="stat g"><div class="stat-lbl">Book Value</div><div class="stat-val">${rp(totVal-totAkum)}</div></div></div>
+  <div class="stats">
+    <div class="stat b"><div class="stat-lbl">Nilai Perolehan</div><div class="stat-val">${rp(totVal)}</div></div>
+    <div class="stat r"><div class="stat-lbl">Akum. Penyusutan</div><div class="stat-val">${rp(totAkum)}</div></div>
+    <div class="stat g"><div class="stat-lbl">Nilai Buku</div><div class="stat-val">${rp(totVal-totAkum)}</div></div>
+  </div>
+
+  <!-- Chart Card Kledo-style -->
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:14px;font-weight:700;color:#0f172a">📊 FIXED ASSET</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;gap:4px;background:#f1f5f9;border-radius:8px;padding:3px">
+          <button id="fa-btn-monthly" onclick="renderAssetChart('monthly')" style="padding:5px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:#2563eb;color:#fff">Monthly</button>
+          <button id="fa-btn-yearly"  onclick="renderAssetChart('yearly')"  style="padding:5px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Yearly</button>
+          <button id="fa-btn-daily"   onclick="renderAssetChart('daily')"   style="padding:5px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Daily</button>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <label style="font-size:12px;color:#64748b">dari</label>
+          <input type="date" id="fa-from" style="border:1px solid #dde3f0;border-radius:6px;padding:4px 8px;font-size:12px" onchange="renderAssetChart(window._faMode||'monthly')">
+          <label style="font-size:12px;color:#64748b">s/d</label>
+          <input type="date" id="fa-until" style="border:1px solid #dde3f0;border-radius:6px;padding:4px 8px;font-size:12px" onchange="renderAssetChart(window._faMode||'monthly')">
+        </div>
+      </div>
+    </div>
+    <canvas id="fa-chart" height="120"></canvas>
+    <div style="display:flex;justify-content:center;gap:20px;margin-top:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b"><div style="width:12px;height:12px;border-radius:2px;background:#c084fc"></div>Purchase Price</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b"><div style="width:12px;height:12px;border-radius:2px;background:#0eb5a8"></div>Depreciation</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b"><div style="width:12px;height:12px;border-radius:2px;background:#f45b7a"></div>Book Value</div>
+    </div>
+  </div>
+
+  <!-- Asset Table -->
   <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>Asset Name</th><th>Category</th><th>Acquisition Date</th><th>Acquisition Value</th><th>Method</th><th>Useful Life</th><th>Penyusutan/thn</th><th>Akum.</th><th>Book Value</th><th>Action</th></tr></thead>
+    <thead><tr><th>Nama Aset</th><th>Kategori</th><th>Tgl Perolehan</th><th>Nilai Perolehan</th><th>Metode</th><th>Umur (Thn)</th><th>Penyusutan/thn</th><th>Akum.</th><th>Nilai Buku</th><th>Aksi</th></tr></thead>
     <tbody>
-      ${DB.assets.length?DB.assets.map(a=>{const p=calcPenyusutan(a);return`<tr><td class="fw7">${a.name}</td><td><span class="badge b-info">${a.cat}</span></td><td>${fDate(a.date)}</td><td>${rp(a.value)}</td><td>${a.method}</td><td>${a.life} thn</td><td class="bad">${rp(p.annualDep)}</td><td class="bad">${rp(p.akum)}</td><td class="ok fw7">${rp(p.bookVal)}</td><td class="gap8"><button class="btn btn-out btn-xs" onclick="openEditAsset('${a.id}')">✏️</button><button class="btn btn-bad btn-xs" onclick="delAsset('${a.id}')">✕</button></td></tr>`;}).join(''):`<tr><td colspan="10" class="tbl-empty">No assets yet</td></tr>`}
+      ${DB.assets.length?DB.assets.map(a=>{const p=calcPenyusutan(a);return`<tr><td class="fw7">${a.name}</td><td><span class="badge b-info">${a.cat}</span></td><td>${fDate(a.date)}</td><td>${rp(a.value)}</td><td>${a.method}</td><td>${a.life} thn</td><td class="bad">${rp(p.annualDep)}</td><td class="bad">${rp(p.akum)}</td><td class="ok fw7">${rp(p.bookVal)}</td><td class="gap8"><button class="btn btn-out btn-xs" onclick="openEditAsset('${a.id}')">✏️</button><button class="btn btn-bad btn-xs" onclick="delAsset('${a.id}')">✕</button></td></tr>`;}).join(''):`<tr><td colspan="10" class="tbl-empty">Belum ada aset</td></tr>`}
     </tbody>
   </table></div></div>`;
+
+  // Init date range & chart
+  const now=new Date();
+  const y=now.getFullYear();
+  document.getElementById('fa-from').value=y+'-01-01';
+  document.getElementById('fa-until').value=now.toISOString().split('T')[0];
+  window._faMode='monthly';
+  renderAssetChart('monthly');
+}
+
+function renderAssetChart(mode){
+  window._faMode=mode;
+  const canvas=document.getElementById('fa-chart');
+  if(!canvas)return;
+
+  // Update button styles
+  ['monthly','yearly','daily'].forEach(m=>{
+    const btn=document.getElementById('fa-btn-'+m);
+    if(!btn)return;
+    btn.style.background=m===mode?'#2563eb':'transparent';
+    btn.style.color=m===mode?'#fff':'#64748b';
+  });
+
+  const fromVal=document.getElementById('fa-from')?.value;
+  const untilVal=document.getElementById('fa-until')?.value;
+  const from=fromVal?new Date(fromVal+'T00:00:00'):new Date(new Date().getFullYear()+'-01-01');
+  const until=untilVal?new Date(untilVal+'T00:00:00'):new Date();
+
+  const assets=DB.assets||[];
+  let labels=[], purchaseData=[], deprData=[], bookData=[];
+
+  if(mode==='daily'){
+    // Per hari dalam range (max 60 hari)
+    const days=Math.min(60,Math.ceil((until-from)/(864e5))+1);
+    for(let i=0;i<days;i++){
+      const d=new Date(from);d.setDate(d.getDate()+i);
+      const ds=d.toISOString().split('T')[0];
+      labels.push(ds.slice(5)); // MM-DD
+      const activeAssets=assets.filter(a=>a.date<=ds);
+      const totV=activeAssets.reduce((s,a)=>s+a.value,0);
+      const totA=activeAssets.reduce((s,a)=>{
+        const yrs=(d-new Date(a.date+'T00:00:00'))/(1000*60*60*24*365);
+        const ak=Math.min((a.value-(a.residual||0))/a.life*yrs,a.value-(a.residual||0));
+        return s+Math.max(0,Math.round(ak));
+      },0);
+      purchaseData.push(totV);deprData.push(totA);bookData.push(totV-totA);
+    }
+  } else if(mode==='monthly'){
+    // Per bulan
+    let cur=new Date(from.getFullYear(),from.getMonth(),1);
+    const end=new Date(until.getFullYear(),until.getMonth(),1);
+    while(cur<=end){
+      const lastDay=new Date(cur.getFullYear(),cur.getMonth()+1,0);
+      const ds=lastDay.toISOString().split('T')[0];
+      labels.push(['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][cur.getMonth()]+(cur.getFullYear()!==new Date().getFullYear()?' '+cur.getFullYear():''));
+      const activeAssets=assets.filter(a=>a.date<=ds);
+      const totV=activeAssets.reduce((s,a)=>s+a.value,0);
+      const totA=activeAssets.reduce((s,a)=>{
+        const yrs=(lastDay-new Date(a.date+'T00:00:00'))/(1000*60*60*24*365);
+        const ak=Math.min((a.value-(a.residual||0))/a.life*yrs,a.value-(a.residual||0));
+        return s+Math.max(0,Math.round(ak));
+      },0);
+      purchaseData.push(totV);deprData.push(totA);bookData.push(totV-totA);
+      cur.setMonth(cur.getMonth()+1);
+    }
+  } else {
+    // Per tahun
+    const fromY=from.getFullYear(), untilY=until.getFullYear();
+    for(let yr=fromY;yr<=untilY;yr++){
+      labels.push(''+yr);
+      const ds=yr+'-12-31';
+      const activeAssets=assets.filter(a=>a.date<=ds);
+      const totV=activeAssets.reduce((s,a)=>s+a.value,0);
+      const refDate=new Date(Math.min(new Date(ds),new Date()));
+      const totA=activeAssets.reduce((s,a)=>{
+        const yrs=(refDate-new Date(a.date+'T00:00:00'))/(1000*60*60*24*365);
+        const ak=Math.min((a.value-(a.residual||0))/a.life*yrs,a.value-(a.residual||0));
+        return s+Math.max(0,Math.round(ak));
+      },0);
+      purchaseData.push(totV);deprData.push(totA);bookData.push(totV-totA);
+    }
+  }
+
+  if(typeof Chart!=='undefined'&&Chart.getChart){const ex=Chart.getChart(canvas);if(ex)ex.destroy();}
+  new Chart(canvas,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Purchase Price',data:purchaseData,backgroundColor:'#c084fc80',borderColor:'#c084fc',borderWidth:1,borderRadius:4,order:2},
+        {label:'Depreciation',data:deprData,type:'line',borderColor:'#0eb5a8',backgroundColor:'transparent',borderWidth:2,tension:.3,pointRadius:3,pointBackgroundColor:'#0eb5a8',order:1},
+        {label:'Book Value',data:bookData,backgroundColor:'#f45b7a80',borderColor:'#f45b7a',borderWidth:1,borderRadius:4,order:2},
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': Rp '+ctx.parsed.y.toLocaleString('id-ID')}}
+      },
+      scales:{
+        y:{ticks:{callback:v=>'Rp '+Number(v/1e6).toFixed(0)+'jt',font:{size:10}},grid:{color:'#f1f5f9'},border:{display:false}},
+        x:{grid:{display:false},ticks:{font:{size:10},maxRotation:45}}
+      }
+    }
+  });
 }
 function calcPenyusutan(a){const years=(new Date()-new Date(a.date+'T00:00:00'))/(1000*60*60*24*365);let akum=0;if(a.method==='Straight-Line'){akum=Math.min((a.value-a.residual)/a.life*years,a.value-a.residual);}else{const rate=1/a.life*2;let val=a.value;for(let i=0;i<Math.min(Math.floor(years),a.life);i++){akum+=val*rate;val-=val*rate;}}akum=Math.round(Math.max(0,akum));return{akum,bookVal:a.value-akum,annualDep:Math.round((a.value-(a.residual||0))/a.life)};}
 function openAsset(){
