@@ -732,7 +732,7 @@ items:[
 ['💸','Pemasukan & Pengeluaran',"nav('transactions')"],
 ['📊','Expense Analytics',"nav('expenseChart')"],
 ['🎯','Budget',"nav('budget')"],
-['🏢','Aset Tetap',"nav('assets')"],
+['🏢','Aset Tetap',"nav(&quot;assets&quot;)"],
 ['📆','Prepaid',"nav('prepaid')"]
 ]},
 
@@ -3979,7 +3979,7 @@ function renderDashboard(c){
       faEl.innerHTML=''
         +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">'
           +'<div style="font-size:14px;font-weight:800;color:#0f172a">🏗️ Aset Tetap</div>'
-          +'<button onclick="nav('assets')" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Kelola aset →</button>'
+          +'<button onclick="nav(&quot;assets&quot;)" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Kelola aset →</button>'
         +'</div>'
         +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
           +'<div style="background:#f0fdf9;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#0891b2;margin-bottom:3px">Nilai Perolehan</div><div style="font-size:14px;font-weight:800;color:#0f172a">'+rp(totVal2)+'</div></div>'
@@ -3988,15 +3988,15 @@ function renderDashboard(c){
         +'</div>'
         +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">'
           +'<div style="display:flex;gap:3px;background:#f1f5f9;border-radius:8px;padding:3px">'
-            +'<button id="dfa-monthly" onclick="dashAssetChart('monthly')" style="padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:#2563eb;color:#fff">Monthly</button>'
-            +'<button id="dfa-yearly"  onclick="dashAssetChart('yearly')"  style="padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Yearly</button>'
-            +'<button id="dfa-daily"   onclick="dashAssetChart('daily')"   style="padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Daily</button>'
+            +'<button id="dfa-monthly" onclick="dashAssetChart(&quot;monthly&quot;)" style="padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:#2563eb;color:#fff">Monthly</button>'
+            +'<button id="dfa-yearly"  onclick="dashAssetChart(&quot;yearly&quot;)"  style="padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Yearly</button>'
+            +'<button id="dfa-daily"   onclick="dashAssetChart(&quot;daily&quot;)"   style="padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Daily</button>'
           +'</div>'
           +'<div style="display:flex;gap:5px;align-items:center">'
             +'<span style="font-size:11px;color:#94a3b8">Dari</span>'
-            +'<input type="date" id="dfa-from" value="'+yr+'-01-01" style="border:1px solid #dde3f0;border-radius:6px;padding:3px 6px;font-size:11px" onchange="dashAssetChart(window._dfaMode||'monthly')">'
+            +'<input type="date" id="dfa-from" value="'+yr+'-01-01" style="border:1px solid #dde3f0;border-radius:6px;padding:3px 6px;font-size:11px" onchange="dashAssetChart(window._dfaMode||&quot;monthly&quot;)">'
             +'<span style="font-size:11px;color:#94a3b8">s/d</span>'
-            +'<input type="date" id="dfa-until" value="'+todayStr+'" style="border:1px solid #dde3f0;border-radius:6px;padding:3px 6px;font-size:11px" onchange="dashAssetChart(window._dfaMode||'monthly')">'
+            +'<input type="date" id="dfa-until" value="'+todayStr+'" style="border:1px solid #dde3f0;border-radius:6px;padding:3px 6px;font-size:11px" onchange="dashAssetChart(window._dfaMode||&quot;monthly&quot;)">'
           +'</div>'
         +'</div>'
         +'<canvas id="dfa-chart" height="110"></canvas>'
@@ -4007,7 +4007,7 @@ function renderDashboard(c){
         +'</div>';
 
       window._dfaMode='monthly';
-      dashAssetChart('monthly');
+      dashAssetChart(&quot;monthly&quot;);
     })();
 
     // Cash/Bank area charts (Kledo style — besar, fill solid)
@@ -6881,7 +6881,7 @@ function openAsset(){
   <div class="fr3"><div class="fg"><label>Acquisition Value</label><input type="number" id="as-value" placeholder="0"></div><div class="fg"><label>Residual Value</label><input type="number" id="as-residual" placeholder="0"></div><div class="fg"><label>Useful Life (Yrs)</label><input type="number" id="as-life" placeholder="5" min="1"></div></div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveAsset()">Save</button></div>`);
 }
-function saveAsset(){const name=v('as-name'),cat=v('as-cat'),date=v('as-date'),method=v('as-method'),value=parseFloat(v('as-value'))||0,residual=parseFloat(v('as-residual'))||0,life=parseInt(v('as-life'))||5;if(!name||!value)return alert('Name & value are required!');DB.assets.push({id:uid(),name,cat,date,method,value,residual,life});saveDB();closeModal();nav('assets');}
+function saveAsset(){const name=v('as-name'),cat=v('as-cat'),date=v('as-date'),method=v('as-method'),value=parseFloat(v('as-value'))||0,residual=parseFloat(v('as-residual'))||0,life=parseInt(v('as-life'))||5;if(!name||!value)return alert('Name & value are required!');DB.assets.push({id:uid(),name,cat,date,method,value,residual,life});saveDB();closeModal();nav(&quot;assets&quot;);}
 function openEditAsset(id){
   const a=DB.assets.find(x=>x.id===id);if(!a)return;
   const cats=['Tanah','Bangunan','Kendaraan','Mesin & Peralatan','Inventaris Kantor','Komputer & IT','Lainnya'];
@@ -6909,9 +6909,9 @@ function updateAsset(){
   const idx=DB.assets.findIndex(x=>x.id===id);
   if(idx<0)return alert('Asset not found!');
   DB.assets[idx]={...DB.assets[idx],name,cat,date,method,value,residual,life};
-  saveDB();closeModal();nav('assets');
+  saveDB();closeModal();nav(&quot;assets&quot;);
 }
-function delAsset(id){if(!confirm('Delete this asset?'))return;DB.assets=DB.assets.filter(a=>a.id!==id);saveDB();nav('assets');}
+function delAsset(id){if(!confirm('Delete this asset?'))return;DB.assets=DB.assets.filter(a=>a.id!==id);saveDB();nav(&quot;assets&quot;);}
 function exportAssets(){exportXLSX([{name:'Aset',data:DB.assets.map(a=>{const p=calcPenyusutan(a);return{Nama:a.name,Kategori:a.cat,'Acquisition Date':a.date,'Acquisition Value':a.value,Method:a.method,'Useful Life (Thn)':a.life,'Akum Penyusutan':p.akum,'Book Value':p.bookVal};})}],'aset_tetap');}
 
 // ── AMS PRODUCT / SERVICE SEED (v2 — Full Catalog) ──────────────────────────
