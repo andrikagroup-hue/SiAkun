@@ -6911,7 +6911,7 @@ function updateAsset(){
   DB.assets[idx]={...DB.assets[idx],name,cat,date,method,value,residual,life};
   saveDB();closeModal();nav('assets');
 }
-function delAsset(id){if(!confirm('Delete this asset?'))return;DB.assets=DB.assets.filter(a=>a.id!==id);saveDB();nav(&quot;assets&quot;);}
+function delAsset(id){if(!confirm('Delete this asset?'))return;DB.assets=DB.assets.filter(a=>a.id!==id);saveDB();nav('assets');}
 function exportAssets(){exportXLSX([{name:'Aset',data:DB.assets.map(a=>{const p=calcPenyusutan(a);return{Nama:a.name,Kategori:a.cat,'Acquisition Date':a.date,'Acquisition Value':a.value,Method:a.method,'Useful Life (Thn)':a.life,'Akum Penyusutan':p.akum,'Book Value':p.bookVal};})}],'aset_tetap');}
 
 // ── AMS PRODUCT / SERVICE SEED (v2 — Full Catalog) ──────────────────────────
