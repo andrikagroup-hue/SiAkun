@@ -3866,13 +3866,13 @@ function renderDashboard(c){
   const totBook=totVal-totAkum;
   const catColors2=[C.teal,C.pink,C.yellow,C.purple,C.blue];
   const assetRowsHTML=assets.length
-    ? assets.slice(0,5).map((a,i)=>{let p={akum:0,bookVal:0};try{p=calcPenyusutan(a);}catch(e){}const col=catColors2[i%5];return'<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background=\'#fafbff\'" onmouseout="this.style.background=\'transparent\'"><td style="padding:9px 10px;font-weight:700;color:#334155">'+a.name+'</td><td style="padding:9px 10px"><span style="background:'+col+'20;color:'+col+';border-radius:99px;padding:2px 8px;font-size:10px;font-weight:700">'+a.cat+'</span></td><td style="padding:9px 10px;text-align:right;font-weight:600">'+rp(a.value)+'</td><td style="padding:9px 10px;text-align:right;color:'+C.pink+';font-weight:600">'+rp(p.akum||0)+'</td><td style="padding:9px 10px;text-align:right;font-weight:800;color:'+C.teal+'">'+rp(p.bookVal||0)+'</td></tr>';}).join('')
-      +(assets.length>5?'<tr><td colspan="5" style="padding:8px;text-align:center;color:'+C.teal+';font-size:12px;cursor:pointer;font-weight:600" onclick="nav(\'assets\')">Lihat semua '+assets.length+' aset →</td></tr>':'')
-    : '<tr><td colspan="5" style="padding:24px;text-align:center;color:#94a3b8">Belum ada aset tetap. <button onclick="nav(\'assets\')" style="color:'+C.teal+';background:none;border:none;cursor:pointer;font-weight:600">+ Tambah</button></td></tr>';
+    ? assets.slice(0,5).map((a,i)=>{let p={akum:0,bookVal:0};try{p=calcPenyusutan(a);}catch(e){}const col=catColors2[i%5];return'<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background=&quot;#fafbff&quot;" onmouseout="this.style.background=&quot;transparent&quot;"><td style="padding:9px 10px;font-weight:700;color:#334155">'+a.name+'</td><td style="padding:9px 10px"><span style="background:'+col+'20;color:'+col+';border-radius:99px;padding:2px 8px;font-size:10px;font-weight:700">'+a.cat+'</span></td><td style="padding:9px 10px;text-align:right;font-weight:600">'+rp(a.value)+'</td><td style="padding:9px 10px;text-align:right;color:'+C.pink+';font-weight:600">'+rp(p.akum||0)+'</td><td style="padding:9px 10px;text-align:right;font-weight:800;color:'+C.teal+'">'+rp(p.bookVal||0)+'</td></tr>';}).join('')
+      +(assets.length>5?'<tr><td colspan="5" style="padding:8px;text-align:center;color:'+C.teal+';font-size:12px;cursor:pointer;font-weight:600" onclick="nav(&quot;assets&quot;)">Lihat semua '+assets.length+' aset →</td></tr>':'')
+    : '<tr><td colspan="5" style="padding:24px;text-align:center;color:#94a3b8">Belum ada aset tetap. <button onclick="nav(&quot;assets&quot;)" style="color:'+C.teal+';background:none;border:none;cursor:pointer;font-weight:600">+ Tambah</button></td></tr>';
 
   // ── Invoice table ──
   const invRowsHTML=recent.length
-    ? recent.map(i=>{const ct=DB.contacts.find(x=>x.id===i.contactId);const st=invStatus(i);const sc={paid:C.teal,unpaid:'#ef4444',partial:C.yellow,overdue:C.red,draft:'#94a3b8'}[st]||'#94a3b8';const sl={paid:'Lunas',unpaid:'Belum Bayar',partial:'Sebagian',overdue:'Terlambat',draft:'Draft'}[st]||st;return'<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background=\'#fafbff\'" onmouseout="this.style.background=\'transparent\'"><td style="padding:10px 12px;font-weight:700;color:#2563eb;cursor:pointer" onclick="nav(\'invoices\')">'+i.no+'</td><td style="padding:10px 12px;color:#334155">'+(ct?ct.name:'-')+'</td><td style="padding:10px 12px;color:#64748b">'+fDate(i.date)+'</td><td style="padding:10px 12px;color:'+(st==='overdue'?C.red:'#64748b')+';font-weight:'+(st==='overdue'?700:400)+'">'+fDate(i.dueDate)+'</td><td style="padding:10px 12px;text-align:right;font-weight:700">'+rp(i.total)+'</td><td style="padding:10px 12px;text-align:center"><span style="background:'+sc+'20;color:'+sc+';border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700">'+sl+'</span></td></tr>';}).join('')
+    ? recent.map(i=>{const ct=DB.contacts.find(x=>x.id===i.contactId);const st=invStatus(i);const sc={paid:C.teal,unpaid:'#ef4444',partial:C.yellow,overdue:C.red,draft:'#94a3b8'}[st]||'#94a3b8';const sl={paid:'Lunas',unpaid:'Belum Bayar',partial:'Sebagian',overdue:'Terlambat',draft:'Draft'}[st]||st;return'<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background=&quot;#fafbff&quot;" onmouseout="this.style.background=&quot;transparent&quot;"><td style="padding:10px 12px;font-weight:700;color:#2563eb;cursor:pointer" onclick="nav(&quot;invoices&quot;)">'+i.no+'</td><td style="padding:10px 12px;color:#334155">'+(ct?ct.name:'-')+'</td><td style="padding:10px 12px;color:#64748b">'+fDate(i.date)+'</td><td style="padding:10px 12px;color:'+(st==='overdue'?C.red:'#64748b')+';font-weight:'+(st==='overdue'?700:400)+'">'+fDate(i.dueDate)+'</td><td style="padding:10px 12px;text-align:right;font-weight:700">'+rp(i.total)+'</td><td style="padding:10px 12px;text-align:center"><span style="background:'+sc+'20;color:'+sc+';border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700">'+sl+'</span></td></tr>';}).join('')
     : '<tr><td colspan="6" style="padding:32px;text-align:center;color:#94a3b8">Belum ada invoice</td></tr>';
 
   const card=(content,mb)=>'<div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);border:1px solid #eef2f7;margin-bottom:'+(mb||'16px')+'">'+content+'</div>';
@@ -6739,15 +6739,15 @@ function renderAssets(c){
       <div style="font-size:14px;font-weight:700;color:#0f172a">📊 FIXED ASSET</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <div style="display:flex;gap:4px;background:#f1f5f9;border-radius:8px;padding:3px">
-          <button id="fa-btn-monthly" onclick="renderAssetChart('monthly')" style="padding:5px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:#2563eb;color:#fff">Monthly</button>
-          <button id="fa-btn-yearly"  onclick="renderAssetChart('yearly')"  style="padding:5px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Yearly</button>
-          <button id="fa-btn-daily"   onclick="renderAssetChart('daily')"   style="padding:5px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Daily</button>
+          <button id="fa-btn-monthly" onclick="renderAssetChart(&quot;monthly&quot;)" style="padding:5px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:#2563eb;color:#fff">Monthly</button>
+          <button id="fa-btn-yearly"  onclick="renderAssetChart(&quot;yearly&quot;)"  style="padding:5px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Yearly</button>
+          <button id="fa-btn-daily"   onclick="renderAssetChart(&quot;daily&quot;)"   style="padding:5px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Daily</button>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
           <label style="font-size:12px;color:#64748b">dari</label>
-          <input type="date" id="fa-from" style="border:1px solid #dde3f0;border-radius:6px;padding:4px 8px;font-size:12px" onchange="renderAssetChart(window._faMode||'monthly')">
+          <input type="date" id="fa-from" style="border:1px solid #dde3f0;border-radius:6px;padding:4px 8px;font-size:12px" onchange="renderAssetChart(window._faMode||&quot;monthly&quot;)">
           <label style="font-size:12px;color:#64748b">s/d</label>
-          <input type="date" id="fa-until" style="border:1px solid #dde3f0;border-radius:6px;padding:4px 8px;font-size:12px" onchange="renderAssetChart(window._faMode||'monthly')">
+          <input type="date" id="fa-until" style="border:1px solid #dde3f0;border-radius:6px;padding:4px 8px;font-size:12px" onchange="renderAssetChart(window._faMode||&quot;monthly&quot;)">
         </div>
       </div>
     </div>
@@ -6773,7 +6773,7 @@ function renderAssets(c){
   document.getElementById('fa-from').value=y+'-01-01';
   document.getElementById('fa-until').value=now.toISOString().split('T')[0];
   window._faMode='monthly';
-  renderAssetChart('monthly');
+  renderAssetChart(&quot;monthly&quot;);
 }
 
 function renderAssetChart(mode){
