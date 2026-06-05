@@ -3909,15 +3909,7 @@ function renderDashboard(c){
       </div>
 
       <!-- Fixed Asset -->
-      ${card(
-        cardHdr('🏗️ Aset Tetap', actBtn('Kelola aset →',"nav('assets')"))
-        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
-          +'<div style="background:#f0fdf9;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:'+C.teal+';margin-bottom:3px">Nilai Perolehan</div><div style="font-size:14px;font-weight:800;color:#0f172a">'+rp(totVal)+'</div></div>'
-          +'<div style="background:#fef2f2;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:'+C.pink+';margin-bottom:3px">Akum. Penyusutan</div><div style="font-size:14px;font-weight:800;color:#0f172a">'+rp(totAkum)+'</div></div>'
-          +'<div style="background:#fffbeb;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:'+C.yellow+';margin-bottom:3px">Nilai Buku</div><div style="font-size:14px;font-weight:800;color:#0f172a">'+rp(totBook)+'</div></div>'
-        +'</div>'
-        +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:2px solid #f1f5f9"><th style="text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Nama Aset</th><th style="text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Kategori</th><th style="text-align:right;padding:7px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Perolehan</th><th style="text-align:right;padding:7px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Akum.</th><th style="text-align:right;padding:7px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Nilai Buku</th></tr></thead><tbody>'+assetRowsHTML+'</tbody></table></div>'
-      )}
+      <div id="dash-fa-widget" style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);border:1px solid #eef2f7;margin-bottom:16px"></div>
 
       <!-- Invoice Terkini -->
       ${card(
@@ -3972,6 +3964,52 @@ function renderDashboard(c){
     const netByMonth=arByMonth.map((ar,i)=>ar-apByMonth[i]);
     _sc('ch-arp',{type:'bar',data:{labels:trendLabels,datasets:[{label:'Receivable',data:arByMonth,backgroundColor:C.teal+'80',borderColor:C.teal,borderWidth:0,borderRadius:4,order:2},{label:'Payable',data:apByMonth,backgroundColor:C.pink+'80',borderColor:C.pink,borderWidth:0,borderRadius:4,order:2},{label:'Net',data:netByMonth,type:'line',borderColor:'#c084fc',backgroundColor:'transparent',borderWidth:2,tension:.4,pointRadius:3,pointBackgroundColor:'#c084fc',order:1}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8,boxWidth:10}}},scales:{y:{ticks:{callback:v=>'Rp '+Number(v/1e6).toFixed(0)+'jt',font:{size:9}},grid:{color:'#f1f5f9'},border:{display:false}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 
+    // ── Dash Fixed Asset Chart ──
+    (function(){
+      const faEl=document.getElementById('dash-fa-widget');
+      if(!faEl)return;
+      const assets2=DB.assets||[];
+      const totVal2=assets2.reduce((s,a)=>s+a.value,0);
+      const totAkum2=assets2.reduce((s,a)=>{try{return s+calcPenyusutan(a).akum;}catch(e){return s;}},0);
+      const totBook2=totVal2-totAkum2;
+      const now=new Date();
+      const yr=now.getFullYear();
+      const todayStr=now.toISOString().split('T')[0];
+
+      faEl.innerHTML=''
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">'
+          +'<div style="font-size:14px;font-weight:800;color:#0f172a">🏗️ Aset Tetap</div>'
+          +'<button onclick="nav('assets')" style="font-size:12px;color:#0eb5a8;background:none;border:none;cursor:pointer;font-weight:600">Kelola aset →</button>'
+        +'</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
+          +'<div style="background:#f0fdf9;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#0891b2;margin-bottom:3px">Nilai Perolehan</div><div style="font-size:14px;font-weight:800;color:#0f172a">'+rp(totVal2)+'</div></div>'
+          +'<div style="background:#fff7ed;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#ea580c;margin-bottom:3px">Akum. Penyusutan</div><div style="font-size:14px;font-weight:800;color:#0f172a">'+rp(totAkum2)+'</div></div>'
+          +'<div style="background:#f0fdf4;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#16a34a;margin-bottom:3px">Nilai Buku</div><div style="font-size:14px;font-weight:800;color:#0f172a">'+rp(totBook2)+'</div></div>'
+        +'</div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">'
+          +'<div style="display:flex;gap:3px;background:#f1f5f9;border-radius:8px;padding:3px">'
+            +'<button id="dfa-monthly" onclick="dashAssetChart('monthly')" style="padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:#2563eb;color:#fff">Monthly</button>'
+            +'<button id="dfa-yearly"  onclick="dashAssetChart('yearly')"  style="padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Yearly</button>'
+            +'<button id="dfa-daily"   onclick="dashAssetChart('daily')"   style="padding:4px 10px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:#64748b">Daily</button>'
+          +'</div>'
+          +'<div style="display:flex;gap:5px;align-items:center">'
+            +'<span style="font-size:11px;color:#94a3b8">Dari</span>'
+            +'<input type="date" id="dfa-from" value="'+yr+'-01-01" style="border:1px solid #dde3f0;border-radius:6px;padding:3px 6px;font-size:11px" onchange="dashAssetChart(window._dfaMode||'monthly')">'
+            +'<span style="font-size:11px;color:#94a3b8">s/d</span>'
+            +'<input type="date" id="dfa-until" value="'+todayStr+'" style="border:1px solid #dde3f0;border-radius:6px;padding:3px 6px;font-size:11px" onchange="dashAssetChart(window._dfaMode||'monthly')">'
+          +'</div>'
+        +'</div>'
+        +'<canvas id="dfa-chart" height="110"></canvas>'
+        +'<div style="display:flex;justify-content:center;gap:16px;margin-top:10px;flex-wrap:wrap">'
+          +'<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#64748b"><div style="width:10px;height:10px;border-radius:2px;background:#0891b2"></div>Purchase Price</div>'
+          +'<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#64748b"><div style="width:10px;height:10px;border-radius:2px;background:#ea580c"></div>Depreciation</div>'
+          +'<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#64748b"><div style="width:10px;height:10px;border-radius:2px;background:#16a34a"></div>Book Value</div>'
+        +'</div>';
+
+      window._dfaMode='monthly';
+      dashAssetChart('monthly');
+    })();
+
     // Cash/Bank area charts (Kledo style — besar, fill solid)
     const cbColors2=[C.pink,C.yellow,C.teal,C.purple,C.blue,C.green];
     cashBankAccs.forEach((a,i)=>{
@@ -3993,6 +4031,89 @@ function renderDashboard(c){
   },50);
 }
 
+
+function dashAssetChart(mode){
+  window._dfaMode=mode;
+  const canvas=document.getElementById('dfa-chart');
+  if(!canvas)return;
+  ['monthly','yearly','daily'].forEach(m=>{
+    const btn=document.getElementById('dfa-'+m);
+    if(!btn)return;
+    btn.style.background=m===mode?'#2563eb':'transparent';
+    btn.style.color=m===mode?'#fff':'#64748b';
+  });
+  const fromVal=document.getElementById('dfa-from')?.value;
+  const untilVal=document.getElementById('dfa-until')?.value;
+  const from=fromVal?new Date(fromVal+'T00:00:00'):new Date(new Date().getFullYear()+'-01-01');
+  const until=untilVal?new Date(untilVal+'T00:00:00'):new Date();
+  const assets=DB.assets||[];
+  const labels=[],purchaseData=[],deprData=[],bookData=[];
+
+  const calcAkumAt=(a,refDate)=>{
+    const yrs=(refDate-new Date(a.date+'T00:00:00'))/(1000*60*60*24*365);
+    if(yrs<0)return 0;
+    const ak=Math.min((a.value-(a.residual||0))/a.life*yrs,a.value-(a.residual||0));
+    return Math.max(0,Math.round(ak));
+  };
+
+  if(mode==='daily'){
+    const days=Math.min(60,Math.ceil((until-from)/(864e5))+1);
+    for(let i=0;i<days;i++){
+      const d=new Date(from);d.setDate(d.getDate()+i);
+      const ds=d.toISOString().split('T')[0];
+      labels.push(ds.slice(5));
+      const act=assets.filter(a=>a.date<=ds);
+      const totV=act.reduce((s,a)=>s+a.value,0);
+      const totA=act.reduce((s,a)=>s+calcAkumAt(a,d),0);
+      purchaseData.push(totV);deprData.push(totA);bookData.push(totV-totA);
+    }
+  } else if(mode==='monthly'){
+    let cur=new Date(from.getFullYear(),from.getMonth(),1);
+    const end=new Date(until.getFullYear(),until.getMonth(),1);
+    while(cur<=end){
+      const lastDay=new Date(cur.getFullYear(),cur.getMonth()+1,0);
+      const ds=lastDay.toISOString().split('T')[0];
+      const refDate=new Date(Math.min(lastDay,new Date()));
+      labels.push(['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][cur.getMonth()]);
+      const act=assets.filter(a=>a.date<=ds);
+      const totV=act.reduce((s,a)=>s+a.value,0);
+      const totA=act.reduce((s,a)=>s+calcAkumAt(a,refDate),0);
+      purchaseData.push(totV);deprData.push(totA);bookData.push(totV-totA);
+      cur.setMonth(cur.getMonth()+1);
+    }
+  } else {
+    for(let yr=from.getFullYear();yr<=until.getFullYear();yr++){
+      labels.push(''+yr);
+      const ds=yr+'-12-31';
+      const refDate=new Date(Math.min(new Date(ds),new Date()));
+      const act=assets.filter(a=>a.date<=ds);
+      const totV=act.reduce((s,a)=>s+a.value,0);
+      const totA=act.reduce((s,a)=>s+calcAkumAt(a,refDate),0);
+      purchaseData.push(totV);deprData.push(totA);bookData.push(totV-totA);
+    }
+  }
+
+  if(typeof Chart!=='undefined'&&Chart.getChart){const ex=Chart.getChart(canvas);if(ex)ex.destroy();}
+  new Chart(canvas,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Purchase Price',data:purchaseData,backgroundColor:'#0891b240',borderColor:'#0891b2',borderWidth:1.5,borderRadius:4,order:2},
+      {label:'Book Value',    data:bookData,    backgroundColor:'#16a34a40',borderColor:'#16a34a',borderWidth:1.5,borderRadius:4,order:2},
+      {label:'Depreciation',  data:deprData,    type:'line',borderColor:'#ea580c',backgroundColor:'transparent',borderWidth:2.5,tension:.35,pointRadius:3,pointBackgroundColor:'#ea580c',order:1},
+    ]},
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': Rp '+ctx.parsed.y.toLocaleString('id-ID')}}
+      },
+      scales:{
+        y:{ticks:{callback:v=>'Rp '+Number(v/1e6).toFixed(0)+'jt',font:{size:10}},grid:{color:'#f1f5f9'},border:{display:false}},
+        x:{grid:{display:false},ticks:{font:{size:10},maxRotation:0}}
+      }
+    }
+  });
+}
 
 function renderContacts(c){
   const ta=document.getElementById('topbar-actions');
