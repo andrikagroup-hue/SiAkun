@@ -6881,7 +6881,7 @@ function openAsset(){
   <div class="fr3"><div class="fg"><label>Acquisition Value</label><input type="number" id="as-value" placeholder="0"></div><div class="fg"><label>Residual Value</label><input type="number" id="as-residual" placeholder="0"></div><div class="fg"><label>Useful Life (Yrs)</label><input type="number" id="as-life" placeholder="5" min="1"></div></div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveAsset()">Save</button></div>`);
 }
-function saveAsset(){const name=v('as-name'),cat=v('as-cat'),date=v('as-date'),method=v('as-method'),value=parseFloat(v('as-value'))||0,residual=parseFloat(v('as-residual'))||0,life=parseInt(v('as-life'))||5;if(!name||!value)return alert('Name & value are required!');DB.assets.push({id:uid(),name,cat,date,method,value,residual,life});saveDB();closeModal();nav(&quot;assets&quot;);}
+function saveAsset(){const name=v('as-name'),cat=v('as-cat'),date=v('as-date'),method=v('as-method'),value=parseFloat(v('as-value'))||0,residual=parseFloat(v('as-residual'))||0,life=parseInt(v('as-life'))||5;if(!name||!value)return alert('Name & value are required!');DB.assets.push({id:uid(),name,cat,date,method,value,residual,life});saveDB();closeModal();nav('assets');}
 function openEditAsset(id){
   const a=DB.assets.find(x=>x.id===id);if(!a)return;
   const cats=['Tanah','Bangunan','Kendaraan','Mesin & Peralatan','Inventaris Kantor','Komputer & IT','Lainnya'];
