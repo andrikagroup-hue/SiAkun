@@ -572,7 +572,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
     <div class="nav-i" data-tip="Sistem" onmouseenter="showFlyout('system',this)" onclick="nav('settings')"><span class="ic">⚙️</span><span>Sistem</span></div>
     </div>
 
-  
+  <div class="nav-sec">
+    <div class="nav-i" data-tip="FAQ" onclick="nav('faq')"><span class="ic">❓</span><span>FAQ</span></div>
+  </div>
+
 </div><div id="nav-flyout" class="flyout"></div>
 <!-- LOGIN SCREEN -->
 <div id="login-screen" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#14b8a6 0%,#0F172A 100%);display:flex;align-items:center;justify-content:center;">
@@ -819,7 +822,7 @@ const TR={
     nav_reports:'Laporan Keuangan',nav_transactions:'Pemasukan & Pengeluaran',
     nav_budget:'Anggaran & Perencanaan',nav_assets:'Aset Tetap',
     nav_payroll:'Penggajian',nav_tax:'Pajak (PPN & PPh)',
-    nav_receipts:'Kwitansi',nav_settings:'Pengaturan & Ekspor',nav_rekon:'Rekonsiliasi Bank',
+    nav_receipts:'Kwitansi',nav_settings:'Pengaturan & Ekspor',nav_rekon:'Rekonsiliasi Bank',nav_faq:'FAQ & Panduan',
     nav_users:'Manajemen Pengguna',nav_audit:'Jejak Audit',
     // Page titles
     page_dashboard:'Home',page_invoices:'Invoice & Penjualan',
@@ -831,7 +834,7 @@ const TR={
     page_budget:'Anggaran & Perencanaan',page_assets:'Aset Tetap',
     page_payroll:'Penggajian',page_tax:'Pajak (PPN & PPh)',
     page_receipts:'Kwitansi',page_settings:'Pengaturan & Ekspor',
-    page_users:'Manajemen Pengguna',page_audit:'Jejak Audit',page_basts:'BAST',
+    page_users:'Manajemen Pengguna',page_audit:'Jejak Audit',page_basts:'BAST',page_faq:'FAQ & Panduan',
     // Common buttons
     btn_save:'Simpan',btn_cancel:'Batal',btn_edit:'✏️ Edit',btn_delete:'✕ Hapus',
     btn_add:'+ Tambah',btn_close:'Tutup',btn_print:'🖨 Cetak',
@@ -929,7 +932,7 @@ const TR={
     nav_reports:'Financial Reports',nav_transactions:'Income & Expenses',
     nav_budget:'Budget & Planning',nav_assets:'Fixed Assets',
     nav_payroll:'Payroll',nav_tax:'Tax (VAT & Income Tax)',
-    nav_receipts:'Receipt',nav_settings:'Settings & Export',nav_rekon:'Bank Reconciliation',
+    nav_receipts:'Receipt',nav_settings:'Settings & Export',nav_rekon:'Bank Reconciliation',nav_faq:'FAQ & Guide',
     nav_users:'User Management',nav_audit:'Audit Trail',
     // Page titles
     page_dashboard:'Home',page_invoices:'Invoice & Sales',
@@ -941,7 +944,7 @@ const TR={
     page_budget:'Budget & Planning',page_assets:'Fixed Assets',
     page_payroll:'Payroll',page_tax:'Tax (VAT & Income Tax)',
     page_receipts:'Receipt',page_settings:'Settings & Export',
-    page_users:'User Management',page_audit:'Audit Trail',page_basts:'Handover Documents (BAST)',
+    page_users:'User Management',page_audit:'Audit Trail',page_basts:'Handover Documents (BAST)',page_faq:'FAQ & Guide',
     // Common buttons
     btn_save:'Save',btn_cancel:'Cancel',btn_edit:'✏️ Edit',btn_delete:'✕ Delete',
     btn_add:'+ Add',btn_close:'Close',btn_print:'🖨 Print',
@@ -3591,7 +3594,7 @@ const pageMap={
   budget:'page_budget',assets:'page_assets',payroll:'page_payroll',
   tax:'page_tax',receipts:'page_receipts',settings:'page_settings',
   users:'page_users',audit:'page_audit',operator:'page_operator',
-  basts:'page_basts'
+  basts:'page_basts',faq:'page_faq'
 };
 function nav(page){
   _currentPage=page;
@@ -3628,7 +3631,7 @@ function nav(page){
   destroyCharts();
   const c=document.getElementById('content');
   c.innerHTML='';
-  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,prepaid:renderPrepaid,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,sphs:renderSphs,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon,expenseChart:renderExpenseChart,operator:renderOperator,basts:renderBasts};
+  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,prepaid:renderPrepaid,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,sphs:renderSphs,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon,expenseChart:renderExpenseChart,operator:renderOperator,basts:renderBasts,faq:renderFAQ};
   if(pages[page]){
     try{pages[page](c);}catch(e){
       console.error('[SiAkun]',page,e);
@@ -8890,6 +8893,576 @@ function terbilangRp(n){
 // ================================================================
 //  SETTINGS
 // ================================================================
+function renderFAQ(c){
+  const isID=getLang()==='id';
+  c.innerHTML=`
+<style>
+.faq-wrap{max-width:900px;margin:0 auto;padding:20px 16px 40px;}
+.faq-search-wrap{position:relative;margin-bottom:28px;}
+.faq-search-wrap input{width:100%;padding:10px 16px 10px 40px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;outline:none;box-sizing:border-box;background:#fff;transition:border-color .2s;}
+.faq-search-wrap input:focus{border-color:var(--acc);}
+.faq-search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:16px;color:#94a3b8;pointer-events:none;}
+.faq-section-title{font-size:13px;font-weight:700;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;margin:28px 0 14px;padding-bottom:6px;border-bottom:1px solid #f1f5f9;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-bottom:8px;}
+.kpi-card{background:#fff;border:1px solid #e8edf2;border-radius:12px;padding:16px;cursor:pointer;transition:box-shadow .2s,border-color .2s;position:relative;}
+.kpi-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);border-color:#c7d2e0;}
+.kpi-card-icon{font-size:24px;margin-bottom:8px;}
+.kpi-card-name{font-size:14px;font-weight:700;color:#1e293b;margin:0 0 4px;}
+.kpi-card-desc{font-size:12px;color:#64748b;margin:0 0 8px;line-height:1.5;}
+.kpi-badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600;}
+.badge-green{background:#dcfce7;color:#166534;}
+.badge-red{background:#fee2e2;color:#991b1b;}
+.badge-yellow{background:#fef9c3;color:#854d0e;}
+.badge-blue{background:#dbeafe;color:#1e40af;}
+.badge-purple{background:#ede9fe;color:#5b21b6;}
+.kpi-tip{background:#f8fafc;border:1px solid #e8edf2;border-radius:8px;padding:10px 12px;margin-top:10px;font-size:12px;color:#475569;line-height:1.6;display:none;}
+.kpi-tip.open{display:block;}
+.kpi-tip-toggle{font-size:11px;color:var(--acc);font-weight:600;margin-top:6px;cursor:pointer;display:inline-block;}
+.faq-cat-title{font-size:14px;font-weight:700;color:#1e293b;margin:22px 0 10px;display:flex;align-items:center;gap:8px;}
+.faq-cat-title span{font-size:18px;}
+.faq-item{border:1px solid #e8edf2;border-radius:10px;margin-bottom:6px;overflow:hidden;background:#fff;}
+.faq-item[data-hidden="true"]{display:none;}
+.faq-q{padding:14px 16px;cursor:pointer;font-size:13.5px;font-weight:600;color:#1e293b;display:flex;justify-content:space-between;align-items:center;gap:12px;user-select:none;transition:background .15s;}
+.faq-q:hover{background:#f8fafc;}
+.faq-q-arrow{font-size:12px;color:#94a3b8;transition:transform .2s;flex-shrink:0;}
+.faq-q.open .faq-q-arrow{transform:rotate(180deg);}
+.faq-a{display:none;padding:0 16px 14px;font-size:13px;color:#475569;line-height:1.7;border-top:1px solid #f1f5f9;}
+.faq-a.open{display:block;}
+.faq-a strong{color:#1e293b;}
+.no-result{text-align:center;padding:40px 20px;color:#94a3b8;font-size:14px;}
+
+/* KPI Modal */
+.kpi-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;}
+.kpi-modal{background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.18);}
+.kpi-modal-header{padding:20px 24px 16px;border-bottom:1px solid #f1f5f9;position:sticky;top:0;background:#fff;border-radius:16px 16px 0 0;z-index:1;}
+.kpi-modal-title{font-size:18px;font-weight:700;color:#0f172a;margin:0 0 4px;}
+.kpi-modal-sub{font-size:12px;color:#64748b;margin:0;}
+.kpi-modal-body{padding:20px 24px 24px;}
+.kpi-modal-body h4{font-size:12px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin:16px 0 6px;}
+.kpi-modal-body p{font-size:13px;color:#475569;line-height:1.7;margin:0 0 4px;}
+.kpi-modal-body .formula{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:13px;color:#1e293b;font-family:monospace;margin:6px 0;}
+.kpi-modal-body .cond{display:flex;gap:10px;align-items:flex-start;margin:4px 0;}
+.kpi-modal-body .cond-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+.kpi-modal-body .cond-text{font-size:13px;color:#475569;line-height:1.5;}
+.kpi-modal-close{position:absolute;right:20px;top:18px;background:none;border:1px solid #e2e8f0;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:18px;color:#64748b;line-height:1;}
+@media(max-width:600px){.kpi-grid{grid-template-columns:1fr;}.kpi-modal{border-radius:12px 12px 0 0;}.kpi-modal-bg{align-items:flex-end;padding:0;}}
+</style>
+
+<div class="faq-wrap">
+  <h2 style="font-size:22px;font-weight:800;color:#0f172a;margin:0 0 4px;">❓ FAQ & Panduan</h2>
+  <p style="font-size:13px;color:#64748b;margin:0 0 20px;">Panduan membaca dashboard dan pertanyaan umum seputar SiAkun.</p>
+
+  <!-- Search -->
+  <div class="faq-search-wrap">
+    <span class="faq-search-icon">🔍</span>
+    <input type="text" id="faq-search" placeholder="Cari pertanyaan atau topik..." oninput="faqSearch(this.value)">
+  </div>
+
+  <!-- SECTION 1: KPI Cards -->
+  <div id="faq-kpi-section">
+    <div class="faq-section-title" id="faq-kpi-label">📊 Panduan Membaca Dashboard</div>
+    <div class="kpi-grid">
+
+      <div class="kpi-card" onclick="openKpiModal('pendapatan')">
+        <div class="kpi-card-icon">💰</div>
+        <div class="kpi-card-name">Pendapatan</div>
+        <div class="kpi-card-desc">Total uang masuk dari penjualan/jasa tahun ini</div>
+        <span class="kpi-badge badge-green">Makin besar = makin baik</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-pendapatan">Ini semua pemasukan dari penjualan/jasa tahun berjalan. Kalau angkanya kecil atau 0, belum ada invoice yang dicatat. Klik untuk detail lengkap.</div>
+      </div>
+
+      <div class="kpi-card" onclick="openKpiModal('beban')">
+        <div class="kpi-card-icon">📉</div>
+        <div class="kpi-card-name">Total Beban</div>
+        <div class="kpi-card-desc">HPP + biaya operasional yang sudah dikeluarkan</div>
+        <span class="kpi-badge badge-red">Makin kecil = makin efisien</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-beban">HPP = biaya produksi langsung. Operasional = listrik, gaji, sewa, dll. Kalau total beban melebihi pendapatan → bisnis rugi.</div>
+      </div>
+
+      <div class="kpi-card" onclick="openKpiModal('laba')">
+        <div class="kpi-card-icon">📊</div>
+        <div class="kpi-card-name">Laba Bersih</div>
+        <div class="kpi-card-desc">Hasil akhir: untung atau rugi setelah semua biaya</div>
+        <span class="kpi-badge badge-green">Hijau = untung · Merah = rugi</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-laba">Rumus: Pendapatan − HPP − Beban − Pajak. Angka paling penting di dashboard. Harus selalu positif untuk bisnis yang sehat.</div>
+      </div>
+
+      <div class="kpi-card" onclick="openKpiModal('ar')">
+        <div class="kpi-card-icon">📋</div>
+        <div class="kpi-card-name">Piutang (AR)</div>
+        <div class="kpi-card-desc">Uang dari pelanggan yang belum masuk ke kas</div>
+        <span class="kpi-badge badge-yellow">Ada info invoice terlambat</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-ar">AR = Accounts Receivable. Invoice sudah dikirim tapi pelanggan belum bayar. Angka merah di bawah = sudah lewat jatuh tempo → perlu ditagih segera.</div>
+      </div>
+
+      <div class="kpi-card" onclick="openKpiModal('ap')">
+        <div class="kpi-card-icon">🏦</div>
+        <div class="kpi-card-name">Hutang (AP)</div>
+        <div class="kpi-card-desc">Tagihan dari supplier yang belum kamu bayar</div>
+        <span class="kpi-badge badge-yellow">Idealnya kecil dan terkendali</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-ap">AP = Accounts Payable. Kamu udah terima barang/jasa tapi belum bayar supplier. Kalau besar + lama → risiko hubungan supplier terganggu.</div>
+      </div>
+
+      <div class="kpi-card" onclick="openKpiModal('stok')">
+        <div class="kpi-card-icon">📦</div>
+        <div class="kpi-card-name">Stok Rendah</div>
+        <div class="kpi-card-desc">Jumlah produk yang hampir habis stoknya</div>
+        <span class="kpi-badge badge-red">Merah = perlu restock segera</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-stok">Jumlah produk yang stoknya di bawah minimum. Hijau = aman. Merah = ada yang harus diisi ulang sebelum kehabisan.</div>
+      </div>
+
+      <div class="kpi-card" onclick="openKpiModal('revenue6')">
+        <div class="kpi-card-icon">📈</div>
+        <div class="kpi-card-name">Revenue 6 Bulan</div>
+        <div class="kpi-card-desc">Grafik total invoice vs yang sudah dibayar</div>
+        <span class="kpi-badge badge-blue">Bar biru + garis kuning</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-revenue6">Bar biru = total invoice dibuat. Garis kuning = yang sudah lunas. Gap besar antara keduanya = banyak yang belum bayar → perlu follow-up.</div>
+      </div>
+
+      <div class="kpi-card" onclick="openKpiModal('pl')">
+        <div class="kpi-card-icon">📊</div>
+        <div class="kpi-card-name">P&L Bar Chart</div>
+        <div class="kpi-card-desc">Perbandingan pendapatan, HPP, beban, dan laba</div>
+        <span class="kpi-badge badge-blue">4 batang warna-warni</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-pl">P&L = Profit & Loss. 4 batang: Pendapatan (hijau), HPP (kuning), Beban (merah muda), Laba Bersih (hijau/merah). Bar laba bersih harus positif.</div>
+      </div>
+
+      <div class="kpi-card" onclick="openKpiModal('donut')">
+        <div class="kpi-card-icon">🍩</div>
+        <div class="kpi-card-name">Invoice Donut</div>
+        <div class="kpi-card-desc">Status invoice: draft, dikirim, lunas, terlambat</div>
+        <span class="kpi-badge badge-blue">Grafik lingkaran</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-donut">Proporsi invoice berdasarkan statusnya. Idealnya porsi Lunas (paid) paling besar. Kalau Overdue dominan → ada masalah penagihan yang perlu ditangani.</div>
+      </div>
+
+      <div class="kpi-card" onclick="openKpiModal('arp')">
+        <div class="kpi-card-icon">📉</div>
+        <div class="kpi-card-name">Receivable & Payable Trend</div>
+        <div class="kpi-card-desc">Piutang vs hutang 6 bulan terakhir</div>
+        <span class="kpi-badge badge-blue">Bar + garis ungu (net)</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-arp">Bar hijau = piutang (uang masuk). Bar merah = hutang (uang keluar). Garis ungu = selisih bersih. Garis ungu naik = posisi keuangan makin sehat.</div>
+      </div>
+
+      <div class="kpi-card" onclick="openKpiModal('kasbank')">
+        <div class="kpi-card-icon">💵</div>
+        <div class="kpi-card-name">Kas & Bank</div>
+        <div class="kpi-card-desc">Saldo tiap rekening + tren naik/turun</div>
+        <span class="kpi-badge badge-green">↗ naik / ↘ turun</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-kasbank">Kartu per akun kas/bank dengan persentase perubahan vs 3 bulan lalu. Hijau = naik (bagus). Merah = turun (perlu dicek penyebabnya).</div>
+      </div>
+
+      <div class="kpi-card" onclick="openKpiModal('aging')">
+        <div class="kpi-card-icon">⏰</div>
+        <div class="kpi-card-name">Aging AR / AP</div>
+        <div class="kpi-card-desc">Piutang & hutang dikelompokkan berdasarkan usia</div>
+        <span class="kpi-badge badge-yellow">Makin tua = makin prioritas</span>
+        <div class="kpi-tip-toggle">Cara baca singkat ▼</div>
+        <div class="kpi-tip" id="tip-aging">Dibagi: Current, 1-30 hari, 31-60 hari, 60+ hari. Makin banyak di kolom tua → makin urgent. AR tua = kejar pelanggan. AP tua = segera bayar supplier.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECTION 2: FAQ Accordion -->
+  <div id="faq-accordion-section">
+    <div class="faq-section-title" id="faq-accordion-label">💬 Pertanyaan Umum</div>
+
+    <!-- KATEGORI 1: Dashboard -->
+    <div class="faq-cat-title" id="faqcat-dashboard"><span>🏠</span> Dashboard</div>
+    <div class="faq-item" data-tags="dashboard kpi pendapatan angka widget">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa saja widget yang ada di Dashboard?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Dashboard SiAkun terdiri dari: <strong>KPI Cards</strong> (Pendapatan, Beban, Laba Bersih, Piutang, Hutang, Stok Rendah), <strong>Revenue 6 Bulan</strong>, <strong>P&L Bar Chart</strong>, <strong>Invoice Donut</strong>, <strong>Saldo Kas & Bank</strong>, <strong>Aging AR/AP</strong>, <strong>Aset Tetap</strong>, dan <strong>Receivable & Payable Trend</strong>.</div>
+    </div>
+    <div class="faq-item" data-tags="dashboard data kosong belum muncul">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Kenapa dashboard saya kosong / semua angka nol?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Dashboard mengambil data dari transaksi yang sudah diinput. Kalau semua nol, artinya: <strong>(1)</strong> Belum ada invoice/transaksi yang dicatat, <strong>(2)</strong> Data belum disimpan dengan benar, atau <strong>(3)</strong> Filter periode tidak sesuai. Mulai dengan membuat invoice pertama di menu Penjualan.</div>
+    </div>
+    <div class="faq-item" data-tags="dashboard refresh update realtime">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apakah dashboard otomatis update?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Ya, dashboard SiAkun memuat ulang data setiap kali kamu membuka menu Dashboard. Data tersimpan di browser (localStorage) dan langsung terefleksi setelah kamu menyimpan transaksi baru.</div>
+    </div>
+
+    <!-- KATEGORI 2: Penjualan -->
+    <div class="faq-cat-title" id="faqcat-penjualan"><span>🧾</span> Penjualan</div>
+    <div class="faq-item" data-tags="penjualan invoice buat status">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa saja status invoice di SiAkun?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Invoice memiliki 4 status: <strong>Draft</strong> (belum dikirim), <strong>Sent</strong> (sudah dikirim ke pelanggan), <strong>Paid</strong> (sudah lunas), dan <strong>Overdue</strong> (melewati jatuh tempo tanpa pembayaran). Status overdue muncul otomatis berdasarkan tanggal jatuh tempo.</div>
+    </div>
+    <div class="faq-item" data-tags="penjualan invoice overdue terlambat jatuh tempo">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Kenapa invoice muncul sebagai Overdue?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Invoice otomatis berubah menjadi <strong>Overdue</strong> jika tanggal jatuh tempo (due date) sudah terlewati dan status masih belum Paid. Untuk menghindarinya, pastikan kamu mengupdate status invoice menjadi Paid setelah pelanggan membayar.</div>
+    </div>
+    <div class="faq-item" data-tags="penjualan invoice margin keuntungan harga jual">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana cara menghitung margin keuntungan?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a"><strong>Margin = ((Harga Jual − HPP) / Harga Jual) × 100%</strong><br>Contoh: Harga jual Rp 1.000.000, HPP Rp 600.000 → Margin = 40%. Semakin tinggi margin, semakin menguntungkan produk tersebut.</div>
+    </div>
+    <div class="faq-item" data-tags="penjualan ppn pajak invoice">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apakah invoice bisa ditambahkan PPN?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Ya. Saat membuat invoice, kamu bisa memilih jenis pajak (PPN 11%, PPh, dll). Tarif pajak default bisa diatur di menu <strong>Sistem → Pengaturan → Tarif Pajak</strong>.</div>
+    </div>
+
+    <!-- KATEGORI 3: Pembelian -->
+    <div class="faq-cat-title" id="faqcat-pembelian"><span>🛒</span> Pembelian</div>
+    <div class="faq-item" data-tags="pembelian purchase order PO">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa itu Purchase Order (PO) di SiAkun?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Purchase Order adalah dokumen resmi yang kamu buat untuk memesan barang/jasa dari supplier. PO berisi: nama supplier, item yang dipesan, jumlah, harga, dan tanggal pengiriman yang diharapkan. PO yang sudah diterima bisa dikonversi menjadi hutang (AP).</div>
+    </div>
+    <div class="faq-item" data-tags="pembelian hpp harga pokok produksi">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa itu HPP dan bagaimana pengaruhnya?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a"><strong>HPP = Harga Pokok Penjualan</strong> (Cost of Goods Sold / COGS). Ini adalah biaya langsung untuk memproduksi atau membeli barang yang dijual. Rumus Laba Kotor: <strong>Pendapatan − HPP</strong>. HPP yang tinggi → margin kecil → perlu negosiasi harga beli atau efisiensi produksi.</div>
+    </div>
+    <div class="faq-item" data-tags="pembelian supplier hutang AP">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana cara mencatat pembayaran ke supplier?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Buka menu <strong>Pembelian → Hutang (AP)</strong>, pilih invoice supplier yang ingin dibayar, lalu klik tombol Bayar. Sistem akan otomatis mencatat jurnal pembayaran dan mengurangi saldo hutang.</div>
+    </div>
+
+    <!-- KATEGORI 4: Persediaan -->
+    <div class="faq-cat-title" id="faqcat-persediaan"><span>📦</span> Persediaan</div>
+    <div class="faq-item" data-tags="persediaan stok produk tidak sesuai selisih">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Kenapa stok produk tidak sesuai dengan fisik?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Penyebab umum: <strong>(1)</strong> Ada transaksi penjualan yang belum dicatat, <strong>(2)</strong> Penerimaan barang dari supplier belum diinput, <strong>(3)</strong> Ada retur yang belum dicatat, atau <strong>(4)</strong> Stok awal tidak diset dengan benar. Lakukan stock opname dan sesuaikan via menu Inventori.</div>
+    </div>
+    <div class="faq-item" data-tags="persediaan stok rendah minimum reorder">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana cara mengatur batas stok minimum?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Buka menu <strong>Inventori → Edit Produk</strong>, isi field <em>Stok Minimum</em>. Sistem akan otomatis menampilkan peringatan di KPI Card "Stok Rendah" di Dashboard jika stok aktual jatuh di bawah angka minimum.</div>
+    </div>
+    <div class="faq-item" data-tags="persediaan kategori produk jenis">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa perbedaan produk dan jasa di SiAkun?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a"><strong>Produk</strong> memiliki stok fisik yang perlu dilacak (barang). <strong>Jasa</strong> tidak memiliki stok — setiap penjualan langsung dicatat sebagai pendapatan tanpa pengurangan inventori. Keduanya bisa dimasukkan ke invoice yang sama.</div>
+    </div>
+
+    <!-- KATEGORI 5: Piutang -->
+    <div class="faq-cat-title" id="faqcat-piutang"><span>📋</span> Piutang</div>
+    <div class="faq-item" data-tags="piutang AR accounts receivable arti definisi">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa itu Accounts Receivable (AR) / Piutang?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a"><strong>Accounts Receivable (AR)</strong> atau Piutang Usaha adalah hak tagih kamu terhadap pelanggan atas barang/jasa yang sudah diberikan tapi belum dibayar. Ini adalah aset lancar — uang yang "di jalan" menuju rekening kamu. Semakin cepat piutang tertagih, semakin sehat cashflow bisnis.</div>
+    </div>
+    <div class="faq-item" data-tags="piutang aging umur tagihan lama">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa itu Aging AR dan cara membacanya?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Aging AR mengelompokkan piutang berdasarkan umur tunggakan: <strong>Current</strong> (belum jatuh tempo), <strong>1-30 hari</strong>, <strong>31-60 hari</strong>, <strong>60+ hari</strong>. Piutang yang makin lama makin sulit ditagih. Prioritaskan collection ke yang paling lama dulu karena risiko tidak tertagih (bad debt) makin tinggi.</div>
+    </div>
+    <div class="faq-item" data-tags="piutang cashflow dampak bisnis">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana piutang yang menumpuk mempengaruhi bisnis?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Piutang besar = uang kamu "terjebak" di luar. Dampaknya: <strong>(1)</strong> Kesulitan membayar supplier tepat waktu, <strong>(2)</strong> Tidak bisa membeli stok baru, <strong>(3)</strong> Perlu utang bank untuk operasional. Idealnya, rasio piutang tidak lebih dari 15-20% dari total pendapatan.</div>
+    </div>
+
+    <!-- KATEGORI 6: Hutang -->
+    <div class="faq-cat-title" id="faqcat-hutang"><span>🏦</span> Hutang</div>
+    <div class="faq-item" data-tags="hutang AP accounts payable arti definisi">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa itu Accounts Payable (AP) / Hutang Usaha?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a"><strong>Accounts Payable (AP)</strong> atau Hutang Usaha adalah kewajiban pembayaran kamu ke supplier atas barang/jasa yang sudah diterima. Ini adalah liabilitas lancar. Mengelola AP dengan baik penting untuk menjaga kepercayaan supplier dan memanfaatkan credit terms secara optimal.</div>
+    </div>
+    <div class="faq-item" data-tags="hutang aging prioritas bayar supplier">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana menentukan prioritas pembayaran hutang?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Gunakan Aging AP di Dashboard: <strong>(1)</strong> Bayar dulu yang <em>60+ hari</em> — risiko denda atau putus kontrak, <strong>(2)</strong> Lanjut ke yang <em>31-60 hari</em>, <strong>(3)</strong> Yang masih Current bisa dijadwalkan. Jangan tunda pembayaran terlalu lama — supplier yang kecewa bisa menghentikan pasokan.</div>
+    </div>
+    <div class="faq-item" data-tags="hutang credit terms tempo supplier">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa itu credit terms dari supplier?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Credit terms adalah kesepakatan tempo pembayaran yang diberikan supplier. Contoh: <strong>Net 30</strong> = bayar dalam 30 hari. <strong>2/10 Net 30</strong> = dapat diskon 2% kalau bayar dalam 10 hari, atau bayar penuh dalam 30 hari. Catat terms ini di detail kontak supplier di SiAkun.</div>
+    </div>
+
+    <!-- KATEGORI 7: Laporan Keuangan -->
+    <div class="faq-cat-title" id="faqcat-laporan"><span>📑</span> Laporan Keuangan</div>
+    <div class="faq-item" data-tags="laporan laba rugi profit loss cara baca">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana cara membaca Laporan Laba Rugi?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Laporan Laba Rugi (P&L) dibaca dari atas ke bawah: <strong>(1) Pendapatan</strong> (semua penjualan), <strong>(2) HPP</strong> (biaya produksi) → menghasilkan <strong>Laba Kotor</strong>, <strong>(3) Beban Operasional</strong> (gaji, sewa, listrik) → menghasilkan <strong>Laba Usaha</strong>, <strong>(4) Pajak</strong> → menghasilkan <strong>Laba Bersih</strong>. Angka merah di baris manapun adalah tanda peringatan.</div>
+    </div>
+    <div class="faq-item" data-tags="laporan neraca balance sheet aset liabilitas modal">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa itu Neraca (Balance Sheet)?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Neraca adalah foto kondisi keuangan bisnis di satu titik waktu. Strukturnya: <strong>Aset = Liabilitas + Modal</strong>. Aset = semua yang kamu miliki (kas, piutang, stok, aset tetap). Liabilitas = semua yang kamu utangi. Modal = selisihnya (kekayaan bersih pemilik). Neraca harus selalu seimbang (balance).</div>
+    </div>
+    <div class="faq-item" data-tags="laporan arus kas cashflow">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa perbedaan Laba Bersih dan Arus Kas?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Bisnis bisa <strong>untung tapi kehabisan uang</strong>! Contoh: kamu untung Rp 100jt tapi pelanggan belum bayar → arus kas negatif. <strong>Laba Bersih</strong> = keuntungan di atas kertas (termasuk piutang). <strong>Arus Kas</strong> = uang yang benar-benar masuk dan keluar dari rekening. Keduanya penting untuk dipantau.</div>
+    </div>
+    <div class="faq-item" data-tags="laporan ekspor cetak pdf excel download">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana cara mengekspor laporan ke PDF atau Excel?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Buka menu <strong>Laporan Keuangan</strong>, pilih jenis laporan (Laba Rugi, Neraca, dll), atur periode, lalu klik tombol <strong>PDF</strong> atau <strong>Excel</strong> di pojok kanan atas. Laporan akan langsung diunduh ke perangkatmu.</div>
+    </div>
+
+    <!-- KATEGORI 8: Aset Tetap -->
+    <div class="faq-cat-title" id="faqcat-aset"><span>🏢</span> Aset Tetap</div>
+    <div class="faq-item" data-tags="aset tetap fixed asset penyusutan depresiasi">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Kapan dan bagaimana aset disusutkan?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Penyusutan (depresiasi) adalah penurunan nilai aset tetap seiring waktu. Aset disusutkan mulai bulan pembelian. SiAkun menggunakan metode <strong>Garis Lurus (Straight-Line)</strong>: nilai aset dibagi merata selama umur manfaat. Contoh: Mesin Rp 120jt, umur 5 tahun → susut Rp 2jt/bulan.</div>
+    </div>
+    <div class="faq-item" data-tags="aset tetap jenis kategori kendaraan mesin gedung">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa saja yang termasuk Aset Tetap?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Aset Tetap adalah aset berwujud yang digunakan jangka panjang (>1 tahun) dan tidak untuk dijual kembali. Contoh: <strong>Tanah, Gedung/Bangunan, Kendaraan, Mesin & Peralatan, Komputer & Elektronik, Furnitur</strong>. Tanah tidak disusutkan karena nilainya tidak berkurang.</div>
+    </div>
+    <div class="faq-item" data-tags="aset tetap grafik nilai buku chart filter">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana membaca grafik Aset Tetap di Dashboard?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Grafik Aset Tetap menampilkan: <strong>Biru</strong> = Nilai Buku (harga perolehan dikurangi akumulasi penyusutan), <strong>Oranye</strong> = Akumulasi Penyusutan, <strong>Hijau</strong> = Nilai Sisa (estimasi nilai jual). Ada filter Harian/Bulanan/Tahunan untuk melihat tren perubahan nilai aset.</div>
+    </div>
+
+    <!-- KATEGORI 9: Kas & Bank -->
+    <div class="faq-cat-title" id="faqcat-kasbank"><span>💵</span> Kas & Bank</div>
+    <div class="faq-item" data-tags="kas bank perbedaan beda rekening">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Apa perbedaan Kas dan Bank di SiAkun?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a"><strong>Kas</strong> = uang tunai fisik di tangan (petty cash, brankas). <strong>Bank</strong> = uang di rekening bank (tabungan, giro). Keduanya adalah aset likuid paling cepat. SiAkun memisahkan keduanya agar kamu bisa tracking saldo per rekening secara akurat.</div>
+    </div>
+    <div class="faq-item" data-tags="kas bank saldo tidak cocok selisih rekonsiliasi">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Mengapa saldo di SiAkun tidak cocok dengan rekening bank?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Penyebab umum: <strong>(1)</strong> Ada transaksi yang belum diinput ke SiAkun, <strong>(2)</strong> Ada biaya admin bank yang belum dicatat, <strong>(3)</strong> Ada transfer antar rekening yang dobel dicatat. Gunakan menu <strong>Rekonsiliasi Bank</strong> untuk mencocokkan saldo SiAkun dengan mutasi bank.</div>
+    </div>
+    <div class="faq-item" data-tags="kas bank rekonsiliasi cara import mutasi">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana cara melakukan Rekonsiliasi Bank?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Buka menu <strong>Rekonsiliasi Bank</strong>, pilih akun bank yang ingin direkonsiliasi, import mutasi dari file PDF/CSV bank, lalu cocokkan setiap transaksi dengan yang ada di SiAkun. Transaksi yang belum cocok akan ditandai merah — kamu perlu menginput atau mengkoreksinya.</div>
+    </div>
+    <div class="faq-item" data-tags="kas bank transfer antar rekening">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana mencatat transfer antar rekening sendiri?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Gunakan menu <strong>Pemasukan & Pengeluaran</strong>, buat transaksi dengan tipe Transfer. Pilih akun sumber (debit rekening asal) dan akun tujuan (kredit rekening tujuan). Ini penting agar tidak terhitung sebagai pemasukan/pengeluaran baru yang membengkakkan laporan.</div>
+    </div>
+
+    <!-- KATEGORI 10: Pengaturan Sistem -->
+    <div class="faq-cat-title" id="faqcat-sistem"><span>⚙️</span> Pengaturan Sistem</div>
+    <div class="faq-item" data-tags="pengaturan backup data ekspor simpan">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana cara backup data SiAkun?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Buka menu <strong>Sistem → Pengaturan & Ekspor</strong>, scroll ke bagian Backup Data, lalu klik <strong>Ekspor Data (JSON)</strong>. File backup akan diunduh ke perangkatmu. Simpan di tempat aman (Google Drive, dll). Lakukan backup rutin minimal seminggu sekali.</div>
+    </div>
+    <div class="faq-item" data-tags="pengaturan restore import data hilang">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana memulihkan data dari backup?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Buka menu <strong>Sistem → Pengaturan & Ekspor</strong>, di bagian Import Data, klik <strong>Pilih File JSON</strong>, pilih file backup yang sebelumnya diekspor, lalu klik Import. <strong>Perhatian:</strong> Import akan menggantikan semua data yang ada saat ini.</div>
+    </div>
+    <div class="faq-item" data-tags="pengaturan bahasa ganti english indonesia">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana cara mengganti bahasa SiAkun?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Klik ikon bendera 🇮🇩/🇬🇧 di pojok kanan atas untuk beralih antara Bahasa Indonesia dan English. Semua label, menu, dan laporan akan berubah secara otomatis.</div>
+    </div>
+    <div class="faq-item" data-tags="pengaturan perusahaan nama logo profil">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana mengubah nama perusahaan dan logo?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Buka menu <strong>Sistem → Pengaturan & Ekspor</strong>, bagian <em>Profil Perusahaan</em>. Isi nama, alamat, NPWP, dan upload logo. Logo akan muncul di sidebar, invoice, slip gaji, dan laporan yang dicetak.</div>
+    </div>
+    <div class="faq-item" data-tags="pengaturan pajak ppn pph tarif">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana mengatur tarif pajak default?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Buka menu <strong>Sistem → Pengaturan & Ekspor → Tarif Pajak Default</strong>. Kamu bisa mengatur tarif PPN (default 11%), PPh 23, dan PPh Final pasal 4(2). Tarif ini akan otomatis diterapkan ke invoice baru, tapi masih bisa diubah per transaksi.</div>
+    </div>
+    <div class="faq-item" data-tags="pengaturan pengguna akses multi user password">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bisakah SiAkun digunakan oleh lebih dari satu pengguna?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Ya. Buka menu <strong>Sistem → Manajemen Pengguna</strong> untuk menambah akun pengguna baru. Setiap pengguna memiliki username dan password sendiri. Admin bisa mengatur hak akses per pengguna (tampilkan/sembunyikan modul tertentu).</div>
+    </div>
+    <div class="faq-item" data-tags="pengaturan data hapus reset ulang">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>Bagaimana cara mereset semua data SiAkun?</span><span class="faq-q-arrow">▼</span></div>
+      <div class="faq-a">Di menu <strong>Sistem → Pengaturan & Ekspor</strong>, ada tombol <strong>Reset Data</strong> (biasanya di bagian bawah). <strong>Peringatan keras:</strong> Reset akan menghapus SEMUA data secara permanen dan tidak bisa dikembalikan. Pastikan sudah backup sebelum melakukan reset.</div>
+    </div>
+
+  </div><!-- end faq-accordion-section -->
+  <div class="no-result" id="faq-no-result" style="display:none">🔍 Tidak ada pertanyaan yang cocok. Coba kata kunci lain.</div>
+</div><!-- end faq-wrap -->
+
+<!-- KPI MODAL -->
+<div id="kpi-modal-bg" class="kpi-modal-bg" style="display:none" onclick="if(event.target===this)closeKpiModal()">
+  <div class="kpi-modal" id="kpi-modal-box">
+    <div class="kpi-modal-header">
+      <button class="kpi-modal-close" onclick="closeKpiModal()">✕</button>
+      <div class="kpi-modal-title" id="kpi-modal-title"></div>
+      <div class="kpi-modal-sub" id="kpi-modal-sub"></div>
+    </div>
+    <div class="kpi-modal-body" id="kpi-modal-body"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Toggle tip singkat
+  document.querySelectorAll('.kpi-tip-toggle').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      var tip=this.parentElement.querySelector('.kpi-tip');
+      if(tip){tip.classList.toggle('open');this.textContent=tip.classList.contains('open')?'Cara baca singkat ▲':'Cara baca singkat ▼';}
+    });
+  });
+
+  // FAQ accordion
+  window.toggleFaq=function(el){
+    var ans=el.nextElementSibling;
+    var isOpen=ans.classList.contains('open');
+    // tutup semua
+    document.querySelectorAll('.faq-a.open').forEach(function(a){a.classList.remove('open');});
+    document.querySelectorAll('.faq-q.open').forEach(function(q){q.classList.remove('open');});
+    if(!isOpen){ans.classList.add('open');el.classList.add('open');}
+  };
+
+  // FAQ search
+  window.faqSearch=function(q){
+    q=q.toLowerCase().trim();
+    var items=document.querySelectorAll('.faq-item');
+    var kpiSection=document.getElementById('faq-kpi-section');
+    var kpiLabel=document.getElementById('faq-kpi-label');
+    var accLabel=document.getElementById('faq-accordion-label');
+    var noResult=document.getElementById('faq-no-result');
+    var catTitles=document.querySelectorAll('.faq-cat-title');
+    var visibleCount=0;
+
+    if(!q){
+      // reset
+      items.forEach(function(i){i.removeAttribute('data-hidden');});
+      catTitles.forEach(function(ct){ct.style.display='';});
+      kpiSection.style.display='';
+      kpiLabel.style.display='';
+      accLabel.style.display='';
+      noResult.style.display='none';
+      return;
+    }
+
+    // Sembunyikan KPI section jika ada search
+    kpiSection.style.display='none';
+    kpiLabel.style.display='none';
+    accLabel.style.display='';
+
+    items.forEach(function(item){
+      var text=(item.textContent+' '+(item.getAttribute('data-tags')||'')).toLowerCase();
+      if(text.indexOf(q)>=0){item.removeAttribute('data-hidden');item.style.display='';visibleCount++;}
+      else{item.setAttribute('data-hidden','true');item.style.display='none';}
+    });
+
+    // Sembunyikan kategori yang semua itemnya hidden
+    catTitles.forEach(function(ct){
+      var nextSibling=ct.nextElementSibling;
+      var hasVisible=false;
+      while(nextSibling&&nextSibling.classList.contains('faq-item')){
+        if(!nextSibling.hasAttribute('data-hidden'))hasVisible=true;
+        nextSibling=nextSibling.nextElementSibling;
+      }
+      ct.style.display=hasVisible?'':'none';
+    });
+
+    noResult.style.display=visibleCount===0?'block':'none';
+  };
+
+  // KPI Modal data
+  var modalData={
+    pendapatan:{icon:'💰',title:'Pendapatan',sub:'Total pemasukan dari penjualan & jasa tahun berjalan',body:`
+      <h4>Definisi</h4><p>Pendapatan adalah total uang yang dihasilkan bisnis dari penjualan produk atau jasa dalam periode berjalan (tahun ini). Ini adalah angka "gross" sebelum dikurangi biaya apapun.</p>
+      <h4>Sumber Data</h4><p>Dihitung dari semua invoice dengan status <strong>Sent, Paid, atau Overdue</strong> di tahun berjalan. Invoice berstatus Draft tidak dihitung.</p>
+      <h4>Cara Membaca</h4>
+      <div class="cond"><span class="cond-icon">✅</span><div class="cond-text"><strong>Sehat:</strong> Angka besar dan terus bertumbuh bulan ke bulan. Bandingkan dengan bulan/tahun sebelumnya untuk melihat tren pertumbuhan.</div></div>
+      <div class="cond"><span class="cond-icon">⚠️</span><div class="cond-text"><strong>Perhatian:</strong> Angka stagnan atau menurun. Evaluasi strategi penjualan, harga, atau target pasar.</div></div>
+      <div class="cond"><span class="cond-icon">🔴</span><div class="cond-text"><strong>Kritis:</strong> Angka nol atau sangat kecil. Belum ada invoice yang dicatat, atau bisnis belum berjalan.</div></div>
+    `},
+    beban:{icon:'📉',title:'Total Beban',sub:'HPP + semua biaya operasional periode berjalan',body:`
+      <h4>Definisi</h4><p>Total Beban terdiri dari dua komponen: <strong>HPP</strong> (Harga Pokok Penjualan — biaya langsung produksi/pembelian barang) dan <strong>Beban Operasional</strong> (gaji, sewa, listrik, marketing, dll).</p>
+      <h4>Cara Menghitung</h4>
+      <div class="formula">Total Beban = HPP + Beban Operasional</div>
+      <h4>Cara Membaca</h4>
+      <div class="cond"><span class="cond-icon">✅</span><div class="cond-text"><strong>Sehat:</strong> Total Beban jauh di bawah Pendapatan. Rasio Beban/Pendapatan idealnya di bawah 70%.</div></div>
+      <div class="cond"><span class="cond-icon">⚠️</span><div class="cond-text"><strong>Perhatian:</strong> Total Beban mendekati atau sama dengan Pendapatan. Margin menipis, perlu efisiensi.</div></div>
+      <div class="cond"><span class="cond-icon">🔴</span><div class="cond-text"><strong>Kritis:</strong> Total Beban melebihi Pendapatan → Bisnis sedang rugi. Perlu audit segera ke pos biaya terbesar.</div></div>
+    `},
+    laba:{icon:'📊',title:'Laba Bersih',sub:'Hasil akhir keuangan setelah semua biaya dan pajak',body:`
+      <h4>Definisi</h4><p>Laba Bersih adalah keuntungan sesungguhnya yang dihasilkan bisnis setelah semua biaya (HPP, operasional) dan pajak dikurangi dari pendapatan. Ini adalah angka paling penting dalam bisnis.</p>
+      <h4>Rumus</h4>
+      <div class="formula">Laba Bersih = Pendapatan − HPP − Beban Operasional − Pajak Badan</div>
+      <h4>Contoh Interpretasi</h4>
+      <div class="cond"><span class="cond-icon">✅</span><div class="cond-text"><strong>Untung:</strong> Warna hijau. Artinya bisnis menghasilkan lebih dari yang dikeluarkan. Semakin besar, semakin sehat.</div></div>
+      <div class="cond"><span class="cond-icon">🔴</span><div class="cond-text"><strong>Rugi:</strong> Warna merah & tanda minus. Harus segera investigasi: apakah HPP terlalu tinggi? Beban tidak terkendali? Pendapatan kurang?</div></div>
+      <h4>Catatan</h4><p>Laba Bersih positif tidak selalu berarti punya uang tunai. Cek juga Arus Kas untuk memastikan likuiditas bisnis.</p>
+    `},
+    ar:{icon:'📋',title:'Piutang (AR)',sub:'Uang dari pelanggan yang sudah invoice tapi belum dibayar',body:`
+      <h4>Definisi</h4><p>Accounts Receivable (AR) atau Piutang Usaha adalah total tagihan yang kamu miliki ke pelanggan atas barang/jasa yang sudah dikirim. Ini adalah aset lancar — uang yang "di perjalanan" menuju rekeningmu.</p>
+      <h4>Angka "Terlambat" di Bawah KPI</h4><p>Angka kecil berwarna merah menunjukkan berapa invoice yang sudah melewati jatuh tempo. Semakin besar angka ini, semakin urgensi untuk melakukan penagihan.</p>
+      <h4>Dampak ke Cashflow</h4>
+      <div class="cond"><span class="cond-icon">✅</span><div class="cond-text"><strong>Sehat:</strong> Piutang kecil relatif terhadap pendapatan (<15%). Artinya pelanggan bayar tepat waktu.</div></div>
+      <div class="cond"><span class="cond-icon">⚠️</span><div class="cond-text"><strong>Waspada:</strong> Piutang besar tapi overdue sedikit. Bisa jadi credit terms terlalu longgar.</div></div>
+      <div class="cond"><span class="cond-icon">🔴</span><div class="cond-text"><strong>Kritis:</strong> Banyak overdue. Risiko bad debt tinggi. Segera lakukan collection agresif dimulai dari yang tertua.</div></div>
+    `},
+    ap:{icon:'🏦',title:'Hutang (AP)',sub:'Tagihan dari supplier yang belum kamu bayar',body:`
+      <h4>Definisi</h4><p>Accounts Payable (AP) atau Hutang Usaha adalah kewajiban pembayaran kamu kepada supplier atas barang/jasa yang sudah diterima tapi belum dibayar.</p>
+      <h4>Cara Membaca</h4>
+      <div class="cond"><span class="cond-icon">✅</span><div class="cond-text"><strong>Sehat:</strong> AP terkendali dan pembayaran selalu tepat waktu. Hubungan supplier terjaga baik.</div></div>
+      <div class="cond"><span class="cond-icon">⚠️</span><div class="cond-text"><strong>Perhatian:</strong> AP mulai menumpuk. Evaluasi cashflow — apakah ada masalah di sisi penerimaan (AR)?</div></div>
+      <div class="cond"><span class="cond-icon">🔴</span><div class="cond-text"><strong>Kritis:</strong> Banyak AP overdue. Risiko supplier menghentikan pasokan atau mengenakan denda keterlambatan.</div></div>
+      <h4>Tips</h4><p>Manfaatkan credit terms supplier seoptimal mungkin — tapi jangan melewati batasnya. Reputasi pembayaran yang baik bisa berujung negosiasi harga lebih baik.</p>
+    `},
+    stok:{icon:'📦',title:'Stok Rendah',sub:'Produk yang mendekati atau melewati batas minimum stok',body:`
+      <h4>Definisi</h4><p>Widget ini menampilkan jumlah produk yang stoknya berada di bawah batas minimum yang telah kamu tentukan. Batas minimum diatur di menu Inventori per produk.</p>
+      <h4>Cara Membaca</h4>
+      <div class="cond"><span class="cond-icon">✅</span><div class="cond-text"><strong>Hijau (0):</strong> Semua produk stoknya aman di atas minimum. Tidak perlu tindakan segera.</div></div>
+      <div class="cond"><span class="cond-icon">🔴</span><div class="cond-text"><strong>Merah (>0):</strong> Ada X produk yang perlu restock. Klik untuk lihat detail produk mana yang kritis.</div></div>
+      <h4>Tips</h4><p>Set batas minimum dengan memperhitungkan lead time pemesanan. Jika supplier butuh 7 hari kirim, set minimum = rata-rata penjualan 7 hari × buffer 1.5.</p>
+    `},
+    revenue6:{icon:'📈',title:'Revenue 6 Bulan',sub:'Tren invoice vs pembayaran dalam 6 bulan terakhir',body:`
+      <h4>Cara Membaca Grafik</h4>
+      <div class="cond"><span class="cond-icon">🟦</span><div class="cond-text"><strong>Bar biru</strong> = Total nilai invoice yang dibuat di bulan tersebut (termasuk yang belum dibayar).</div></div>
+      <div class="cond"><span class="cond-icon">🟡</span><div class="cond-text"><strong>Garis kuning</strong> = Nilai invoice yang sudah berstatus Paid (benar-benar sudah dibayar).</div></div>
+      <h4>Interpretasi</h4>
+      <div class="cond"><span class="cond-icon">✅</span><div class="cond-text"><strong>Ideal:</strong> Garis kuning mendekati atau menyentuh bar biru → pelanggan rajin bayar, collection efektif.</div></div>
+      <div class="cond"><span class="cond-icon">🔴</span><div class="cond-text"><strong>Waspada:</strong> Gap besar antara bar dan garis → banyak invoice belum dibayar. Perlu follow-up aktif.</div></div>
+      <h4>Tren</h4><p>Perhatikan apakah bar biru cenderung naik (bisnis tumbuh), flat (stagnan), atau turun (perlu evaluasi strategi penjualan).</p>
+    `},
+    pl:{icon:'📊',title:'P&L Bar Chart',sub:'Ringkasan visual Profit & Loss dalam satu tampilan',body:`
+      <h4>Cara Membaca 4 Batang</h4>
+      <div class="cond"><span class="cond-icon">🟢</span><div class="cond-text"><strong>Batang 1 — Pendapatan:</strong> Total penjualan. Batang tertinggi adalah titik awal perhitungan.</div></div>
+      <div class="cond"><span class="cond-icon">🟡</span><div class="cond-text"><strong>Batang 2 — HPP:</strong> Biaya produksi langsung. Semakin kecil relatif terhadap pendapatan, semakin baik marginnya.</div></div>
+      <div class="cond"><span class="cond-icon">🟥</span><div class="cond-text"><strong>Batang 3 — Beban:</strong> Biaya operasional. Harus dikendalikan agar tidak menggerus laba kotor.</div></div>
+      <div class="cond"><span class="cond-icon">🟢/🔴</span><div class="cond-text"><strong>Batang 4 — Laba Bersih:</strong> Hijau = untung. Merah = rugi. Ini hasil akhir setelah semua dikurangi.</div></div>
+    `},
+    donut:{icon:'🍩',title:'Invoice Donut Chart',sub:'Proporsi status invoice secara visual',body:`
+      <h4>Status Invoice</h4>
+      <div class="cond"><span class="cond-icon">⬜</span><div class="cond-text"><strong>Draft:</strong> Invoice dibuat tapi belum dikirim ke pelanggan.</div></div>
+      <div class="cond"><span class="cond-icon">🔵</span><div class="cond-text"><strong>Sent:</strong> Invoice sudah dikirim, menunggu pembayaran.</div></div>
+      <div class="cond"><span class="cond-icon">🟢</span><div class="cond-text"><strong>Paid:</strong> Invoice sudah lunas. Porsi ini idealnya paling besar.</div></div>
+      <div class="cond"><span class="cond-icon">🔴</span><div class="cond-text"><strong>Overdue:</strong> Melewati jatuh tempo tanpa pembayaran. Perlu tindakan segera.</div></div>
+      <h4>Interpretasi</h4><p>Donut yang didominasi warna hijau (Paid) adalah tanda bisnis sehat. Porsi merah (Overdue) yang besar adalah sinyal bahaya untuk segera ditangani.</p>
+    `},
+    arp:{icon:'📉',title:'Receivable & Payable Trend',sub:'Perbandingan piutang vs hutang 6 bulan terakhir',body:`
+      <h4>Cara Membaca</h4>
+      <div class="cond"><span class="cond-icon">🟢</span><div class="cond-text"><strong>Bar hijau — Receivable (AR):</strong> Total piutang per bulan. Uang yang akan masuk ke kas.</div></div>
+      <div class="cond"><span class="cond-icon">🟥</span><div class="cond-text"><strong>Bar merah — Payable (AP):</strong> Total hutang per bulan. Uang yang harus keluar dari kas.</div></div>
+      <div class="cond"><span class="cond-icon">🟣</span><div class="cond-text"><strong>Garis ungu — Net:</strong> AR dikurangi AP. Kalau positif dan naik → posisi keuangan membaik.</div></div>
+      <h4>Interpretasi Garis Ungu</h4>
+      <div class="cond"><span class="cond-icon">✅</span><div class="cond-text">Garis ungu di atas nol dan naik = piutang lebih besar dari hutang, bisnis dalam posisi tagih lebih banyak dari yang harus dibayar.</div></div>
+      <div class="cond"><span class="cond-icon">🔴</span><div class="cond-text">Garis ungu di bawah nol = hutang melebihi piutang. Perlu review pengeluaran atau percepat collection.</div></div>
+    `},
+    kasbank:{icon:'💵',title:'Kas & Bank',sub:'Saldo tiap rekening dengan tren perubahan',body:`
+      <h4>Yang Ditampilkan</h4><p>Setiap kartu mewakili satu akun kas atau bank. Menampilkan: nama rekening, saldo saat ini, dan persentase perubahan dibandingkan 3 bulan lalu.</p>
+      <h4>Indikator Tren</h4>
+      <div class="cond"><span class="cond-icon">↗ 🟢</span><div class="cond-text"><strong>Naik (hijau):</strong> Saldo rekening meningkat dibanding 3 bulan lalu. Bagus!</div></div>
+      <div class="cond"><span class="cond-icon">↘ 🔴</span><div class="cond-text"><strong>Turun (merah):</strong> Saldo menurun. Perlu analisis: apakah karena investasi aset? Atau karena pengeluaran operasional berlebih?</div></div>
+      <div class="cond"><span class="cond-icon">→ ⬜</span><div class="cond-text"><strong>Flat (abu-abu):</strong> Saldo relatif tidak berubah. Bisa jadi normal jika bisnis stabil.</div></div>
+      <h4>Tips</h4><p>Selalu pastikan total saldo kas & bank cukup untuk menutup minimal 1-3 bulan biaya operasional (emergency fund bisnis).</p>
+    `},
+    aging:{icon:'⏰',title:'Aging AR & AP',sub:'Pengelompokan piutang & hutang berdasarkan umur tunggakan',body:`
+      <h4>Kelompok Aging</h4>
+      <div class="cond"><span class="cond-icon">🟢</span><div class="cond-text"><strong>Current:</strong> Belum jatuh tempo. Masih normal, tidak perlu tindakan darurat.</div></div>
+      <div class="cond"><span class="cond-icon">🟡</span><div class="cond-text"><strong>1-30 hari:</strong> Sudah lewat jatuh tempo tapi masih relatif baru. Kirim reminder.</div></div>
+      <div class="cond"><span class="cond-icon">🟠</span><div class="cond-text"><strong>31-60 hari:</strong> Mulai bermasalah. Hubungi langsung pelanggan/supplier.</div></div>
+      <div class="cond"><span class="cond-icon">🔴</span><div class="cond-text"><strong>60+ hari:</strong> Kritis. Risiko tidak tertagih sangat tinggi. Pertimbangkan jalur hukum atau negosiasi cicilan.</div></div>
+      <h4>Untuk AR (Piutang)</h4><p>Prioritas collection dari yang tertua. Semakin lama, semakin kecil kemungkinan tertagih.</p>
+      <h4>Untuk AP (Hutang)</h4><p>Prioritas pembayaran dari yang tertua untuk menjaga reputasi dan menghindari denda.</p>
+    `}
+  };
+
+  window.openKpiModal=function(key){
+    var d=modalData[key];
+    if(!d)return;
+    document.getElementById('kpi-modal-title').textContent=d.icon+' '+d.title;
+    document.getElementById('kpi-modal-sub').textContent=d.sub;
+    document.getElementById('kpi-modal-body').innerHTML=d.body;
+    document.getElementById('kpi-modal-bg').style.display='flex';
+    document.body.style.overflow='hidden';
+  };
+  window.closeKpiModal=function(){
+    document.getElementById('kpi-modal-bg').style.display='none';
+    document.body.style.overflow='';
+  };
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeKpiModal();});
+})();
+</script>
+`;
+}
+
+
 function renderSettings(c){
   // Guard: Admin only — but be defensive about _currentUser state
   const role=_currentUser?.role||sessionStorage.getItem('__role__')||'';
