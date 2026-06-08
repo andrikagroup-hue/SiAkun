@@ -784,6 +784,15 @@ function showFlyout(key,el){
  box.classList.remove('open');
  void box.offsetWidth;
  box.classList.add('open');
+ requestAnimationFrame(function(){
+  var bh=box.offsetHeight;
+  var vh=window.innerHeight;
+  var top=r.top;
+  if(top+bh>vh-8){top=Math.max(8,vh-bh-8);box.style.top=top+'px';}
+ });
+ return;
+ void box.offsetWidth;
+ box.classList.add('open');
 }
 
 function hideFlyout(){
