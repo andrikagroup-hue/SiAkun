@@ -2732,14 +2732,23 @@ async function doLogin(){
       {id:'usr_ratu',username:'Ratu',password:'',role:'Admin',name:'Ratu Azzahra',bypassPassword:true,createdAt:new Date().toISOString()},
       {id:'usr_admin',username:'admin',password:'AMS2025!',role:'Admin',name:'Administrator',createdAt:new Date().toISOString()},
       {id:'usr_andri',username:'andriams',password:'ams2026!',role:'Direktur',name:'Andri AMS',createdAt:new Date().toISOString()},
+      {id:'usr_dedi',username:'dedi',password:'ams2026!',role:'Manajer',name:'Dedi',createdAt:new Date().toISOString()},
     ];
     saveDB();
   }
-  // Ensure Ratu always exists (auto-add if missing)
-  if(!DB.users.find(x => x.username && x.username.toLowerCase() === 'ratu')){
-    DB.users.unshift({id:'usr_ratu',username:'Ratu',password:'',role:'Admin',name:'Ratu Azzahra',bypassPassword:true,createdAt:new Date().toISOString()});
-    saveDB();
-  }
+  // Ensure default users always exist (auto-add if missing)
+  var _defaultUsers=[
+    {id:'usr_ratu',username:'Ratu',password:'',role:'Admin',name:'Ratu Azzahra',bypassPassword:true},
+    {id:'usr_admin',username:'admin',password:'AMS2025!',role:'Admin',name:'Administrator'},
+    {id:'usr_andri',username:'andriams',password:'ams2026!',role:'Direktur',name:'Andri AMS'},
+    {id:'usr_dedi',username:'dedi',password:'ams2026!',role:'Manajer',name:'Dedi'},
+  ];
+  _defaultUsers.forEach(function(def){
+    if(!DB.users.find(function(x){return x.username&&x.username.toLowerCase()===def.username.toLowerCase();})){
+      DB.users.push(Object.assign({},def,{createdAt:new Date().toISOString()}));
+      saveDB();
+    }
+  });
   if(!DB.activity_log) DB.activity_log = [];
   const users=DB.users;
   const found=users.find(x=>x.username.toLowerCase()===u);
@@ -9107,104 +9116,216 @@ function _faqSearch(q){
 
 
 function renderSettings(c){
-  // Guard: Admin only — but be defensive about _currentUser state
   const role=_currentUser?.role||sessionStorage.getItem('__role__')||'';
   if(role&&role!=='Admin'){
     c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:12px"><div style="font-size:48px">🔒</div><div style="font-size:18px;font-weight:700">Akses Ditolak</div><div style="color:#64748b">Halaman ini hanya untuk Admin.</div></div>';
     document.getElementById('topbar-actions').innerHTML='';return;
   }
-  // Ensure DB fields exist (migrate if needed)
   if(!DB.taxSettings)DB.taxSettings={ppnRate:11,pph23Rate:2,pph4Rate:2};
   if(!DB.company)DB.company={name:'',npwp:'',address:'',phone:'',email:'',year:new Date().getFullYear(),logo:''};
   const co=DB.company;
-  const logoPreview=co.logo?`<img src="${co.logo}" class="logo-preview"><br><button class="btn btn-bad btn-xs" style="margin-top:6px" onclick="removeLogo()">✕ ${getLang()==='id'?'Hapus Logo':'Remove Logo'}</button>`:`<div style="font-size:22px;margin-bottom:4px">🏢</div><p style="font-size:11.5px;color:var(--muted)">${getLang()==='id'?'Klik untuk upload logo':'Click to upload logo'}</p><p style="font-size:10.5px;color:var(--muted)">PNG/JPG, max 2MB</p>`;
+  const isID=getLang()==='id';
+  const logoPreview=co.logo
+    ?`<img src="${co.logo}" class="logo-preview"><br><button class="btn btn-bad btn-xs" style="margin-top:6px" onclick="removeLogo()">✕ ${isID?'Hapus Logo':'Remove Logo'}</button>`
+    :`<div style="font-size:22px;margin-bottom:4px">🏢</div><p style="font-size:11.5px;color:var(--muted)">${isID?'Klik untuk upload logo':'Click to upload logo'}</p><p style="font-size:10.5px;color:var(--muted)">PNG/JPG, max 2MB</p>`;
+
   c.innerHTML=`
-  <div class="fr2">
-    <div>
-      <div class="card"><div class="card-hd">${t('set_companyLogo')}</div>
-        <div class="logo-upload-area"><input type="file" accept="image/*" onchange="handleLogoUpload(this)"><div id="logo-pw">${logoPreview}</div></div>
-        <p style="font-size:10.5px;color:var(--muted);margin-top:6px">${getLang()==='id'?'Logo tampil di sidebar, invoice, slip gaji, kwitansi & laporan':'Logo appears in sidebar, invoice, payslip, receipt & reports'}</p>
+<style>
+.cfg-wrap{max-width:860px;margin:0 auto;padding:0 0 40px;}
+.cfg-group{border:1px solid #e8edf2;border-radius:14px;overflow:hidden;margin-bottom:10px;background:#fff;}
+.cfg-group-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;user-select:none;transition:background .15s;}
+.cfg-group-hd:hover{background:#f8fafc;}
+.cfg-group-hd.open{background:#f0fdfa;border-bottom:1px solid #e8edf2;}
+.cfg-group-icon{font-size:20px;margin-right:12px;flex-shrink:0;}
+.cfg-group-title{font-size:14px;font-weight:700;color:#0f172a;}
+.cfg-group-desc{font-size:12px;color:#64748b;margin-top:2px;}
+.cfg-group-arrow{font-size:12px;color:#94a3b8;transition:transform .2s;flex-shrink:0;}
+.cfg-group-hd.open .cfg-group-arrow{transform:rotate(180deg);}
+.cfg-group-body{display:none;padding:20px;}
+.cfg-group-body.open{display:block;}
+.cfg-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.cfg-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.cfg-save-row{margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;}
+.cfg-btn-row{display:flex;flex-direction:column;gap:8px;}
+.cfg-section-lbl{font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;padding:10px 0 6px;border-top:1px solid #f1f5f9;margin-top:8px;}
+@media(max-width:600px){.cfg-2col,.cfg-3col{grid-template-columns:1fr;}}
+</style>
+
+<div class="cfg-wrap">
+  <p style="font-size:13px;color:#64748b;margin:0 0 18px;">Klik kategori untuk membuka pengaturan.</p>
+
+  <!-- 1. PROFIL PERUSAHAAN -->
+  <div class="cfg-group">
+    <div class="cfg-group-hd" onclick="toggleCfg(this)">
+      <div style="display:flex;align-items:center;">
+        <span class="cfg-group-icon">🏢</span>
+        <div><div class="cfg-group-title">Profil Perusahaan</div><div class="cfg-group-desc">Nama, NPWP, alamat, rekening bank, dan logo</div></div>
       </div>
-      <div class="card"><div class="card-hd">${t('set_companyProfile')}</div>
-        <div class="fg"><label>${t('set_companyName')}</label><input id="co-name" value="${co.name}"></div>
-        <div class="fg"><label>${t('set_npwp')}</label><input id="co-npwp" value="${co.npwp}"></div>
-        <div class="fg"><label>${t('set_address')}</label><input id="co-addr" value="${co.address}"></div>
-        <div class="fr2"><div class="fg"><label>${t('lbl_phone')}</label><input id="co-phone" value="${co.phone}"></div><div class="fg"><label>${t('lbl_email')}</label><input id="co-email" value="${co.email}"></div></div>
-        <div class="fg"><label>Nama Penanda Tangan Default (HRD/Finance Manager)</label><input id="co-signatory" value="${co.signatory||''}" placeholder="contoh: Dedi Candra — bisa diedit langsung di slip saat print"></div>
-        <div class="fr2"><div class="fg"><label>🏦 Nama Bank</label><input id="co-bank" value="${co.bank||''}" placeholder="contoh: BSI, BCA, Mandiri..."></div><div class="fg"><label>No. Rekening</label><input id="co-norek" value="${co.norek||''}" placeholder="contoh: 1234567890"></div></div>
-        <div class="fg"><label>Atas Nama Rekening</label><input id="co-atasnama" value="${co.atasnama||''}" placeholder="Nama pemilik rekening"></div>
-        <div class="fg"><label>🏙️ Kota (untuk dokumen cetak)</label><input id="co-kota" value="${co.kota||''}" placeholder="contoh: Jakarta, Tangerang Selatan, Surabaya..."></div>
-        <div class="fg"><label>${t('set_fiscalYear')}</label><input type="number" id="co-year" value="${co.year}"></div>
-        <button class="btn btn-pri" onclick="saveCompany()">${t('set_saveProfile')}</button>
+      <span class="cfg-group-arrow">▼</span>
+    </div>
+    <div class="cfg-group-body">
+      <div class="cfg-2col" style="align-items:start;gap:20px;">
+        <div>
+          <div class="fg"><label>Logo Perusahaan</label>
+            <div class="logo-upload-area"><input type="file" accept="image/*" onchange="handleLogoUpload(this)"><div id="logo-pw">${logoPreview}</div></div>
+            <p style="font-size:10.5px;color:var(--muted);margin-top:6px">Tampil di sidebar, invoice, slip gaji & laporan</p>
+          </div>
+        </div>
+        <div>
+          <div class="fg"><label>${t('set_companyName')}</label><input id="co-name" value="${co.name}"></div>
+          <div class="fg"><label>${t('set_npwp')}</label><input id="co-npwp" value="${co.npwp}"></div>
+          <div class="fg"><label>🏙️ Kota (untuk dokumen cetak)</label><input id="co-kota" value="${co.kota||''}" placeholder="contoh: Jakarta, Surabaya..."></div>
+          <div class="fg"><label>${t('set_address')}</label><input id="co-addr" value="${co.address}"></div>
+        </div>
+      </div>
+      <div class="cfg-2col">
+        <div class="fg"><label>${t('lbl_phone')}</label><input id="co-phone" value="${co.phone}"></div>
+        <div class="fg"><label>${t('lbl_email')}</label><input id="co-email" value="${co.email}"></div>
+      </div>
+      <div class="fg"><label>Nama Penanda Tangan Default (HRD/Finance Manager)</label><input id="co-signatory" value="${co.signatory||''}" placeholder="contoh: Dedi Candra"></div>
+      <div class="cfg-section-lbl">🏦 Informasi Rekening Bank</div>
+      <div class="cfg-2col">
+        <div class="fg"><label>Nama Bank</label><input id="co-bank" value="${co.bank||''}" placeholder="contoh: BSI, BCA, Mandiri..."></div>
+        <div class="fg"><label>No. Rekening</label><input id="co-norek" value="${co.norek||''}" placeholder="contoh: 1234567890"></div>
+      </div>
+      <div class="fg"><label>Atas Nama Rekening</label><input id="co-atasnama" value="${co.atasnama||''}" placeholder="Nama pemilik rekening"></div>
+      <div class="fg"><label>${t('set_fiscalYear')}</label><input type="number" id="co-year" value="${co.year}" style="max-width:120px;"></div>
+      <div class="cfg-save-row"><button class="btn btn-pri" onclick="saveCompany()">💾 ${t('set_saveProfile')}</button></div>
+    </div>
+  </div>
+
+  <!-- 2. TARIF PAJAK -->
+  <div class="cfg-group">
+    <div class="cfg-group-hd" onclick="toggleCfg(this)">
+      <div style="display:flex;align-items:center;">
+        <span class="cfg-group-icon">💹</span>
+        <div><div class="cfg-group-title">Tarif Pajak Default</div><div class="cfg-group-desc">PPN, PPh 23, dan PPh 4(2) untuk invoice baru</div></div>
+      </div>
+      <span class="cfg-group-arrow">▼</span>
+    </div>
+    <div class="cfg-group-body">
+      <div class="alert a-info" style="font-size:12px;margin-bottom:14px;">Update kapan saja sesuai PMK terbaru. Invoice lama tidak berubah.</div>
+      <div class="cfg-3col">
+        <div class="fg"><label>PPN / VAT (%)</label>
+          <input type="number" id="ts-ppn" value="${DB.taxSettings?.ppnRate||11}" min="0" max="100" step="0.1">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">Contoh: 11% atau 12%</div>
+        </div>
+        <div class="fg"><label>PPh 23 (%)</label>
+          <input type="number" id="ts-pph23" value="${DB.taxSettings?.pph23Rate||2}" min="0" max="100" step="0.1">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">Default: 2% (jasa)</div>
+        </div>
+        <div class="fg"><label>PPh 4(2) (%)</label>
+          <input type="number" id="ts-pph4" value="${DB.taxSettings?.pph4Rate||2}" min="0" max="100" step="0.1">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">Default: 2% (konstruksi)</div>
+        </div>
+      </div>
+      <div class="cfg-save-row"><button class="btn btn-pri" onclick="saveTaxSettings()">💾 Simpan Tarif Pajak</button></div>
+    </div>
+  </div>
+
+  <!-- 3. IMPORT DATA -->
+  <div class="cfg-group">
+    <div class="cfg-group-hd" onclick="toggleCfg(this)">
+      <div style="display:flex;align-items:center;">
+        <span class="cfg-group-icon">📥</span>
+        <div><div class="cfg-group-title">Import Data</div><div class="cfg-group-desc">Import transaksi, kontak, produk, dan karyawan dari Excel</div></div>
+      </div>
+      <span class="cfg-group-arrow">▼</span>
+    </div>
+    <div class="cfg-group-body">
+      <div class="alert a-ok" style="margin-bottom:14px;font-size:12px;">✨ <b>Smart Import</b> — Upload Excel apa saja, SiAkun otomatis petakan ke akun yang tepat.</div>
+      <div class="cfg-btn-row">
+        <button class="btn btn-pri" onclick="openImportWizard()">🧙 Import Transaksi (Smart Wizard)</button>
+      </div>
+      <div class="cfg-section-lbl">Import Master Data</div>
+      <div class="cfg-btn-row">
+        <div class="fg" style="margin:0"><label>Import Kontak</label><input type="file" accept=".xlsx,.xls" onchange="importData(this,'contacts')"></div>
+        <div class="fg" style="margin:0"><label>Import Produk</label><input type="file" accept=".xlsx,.xls" onchange="importData(this,'products')"></div>
+        <div class="fg" style="margin:0"><label>Import Karyawan</label><input type="file" accept=".xlsx,.xls" onchange="importData(this,'employees')"></div>
+        <button class="btn btn-out" onclick="downloadTemplates()">⬇ Download Template Excel</button>
+      </div>
+      <div class="cfg-section-lbl">Format Khusus</div>
+      <div class="cfg-btn-row">
+        <button class="btn btn-acc" onclick="document.getElementById('import-cr-ams').click()">📊 Import Cash Report (Format AMS)</button>
+        <input type="file" id="import-cr-ams" accept=".xlsx,.xls" style="display:none" onchange="importCashReportAMS(this)">
+        <p style="font-size:10.5px;color:var(--muted);margin:0">Untuk format Cash Report PT. Andrika Mitra Solusi</p>
+        <button class="btn btn-pri" style="background:var(--ok)" onclick="document.getElementById('import-bsi-journal').click()">🏦 Import Mutasi BSI → Auto Jurnal</button>
+        <input type="file" id="import-bsi-journal" accept=".pdf,.xlsx,.xls,.csv" style="display:none" onchange="openBSIJournalImport(this)">
+        <p style="font-size:10.5px;color:var(--muted);margin:0">Upload PDF/Excel mutasi BSI → otomatis buat jurnal</p>
       </div>
     </div>
-    <div>
-      <div class="card"><div class="card-hd">${t('set_import')}</div>
-        <div class="alert a-ok" style="margin-bottom:12px">✨ <b>Smart Import</b> — ${getLang()==='id'?'upload Excel apa saja, SiAkun otomatis petakan ke accounts yang tepat. Tidak perlu tahu kode COA!':'Upload any Excel file, SiAkun automatically maps to the correct accounts. No need to know COA codes!'}</div>
-        <div style="display:flex;flex-direction:column;gap:7px">
-          <button class="btn btn-pri" onclick="openImportWizard()">🧙 ${getLang()==='id'?'Import Transaksi (Smart Wizard)':'Import Transactions (Smart Wizard)'}</button>
-          <div style="border-top:1px solid var(--bdr);padding-top:7px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-top:2px">${getLang()==='id'?'Import Master Data':'Import Master Data'}</div>
-          <div class="fg" style="margin:0"><label>${getLang()==='id'?'Import Kontak':'Import Contacts'}</label><input type="file" accept=".xlsx,.xls" onchange="importData(this,'contacts')"></div>
-          <div class="fg" style="margin:0"><label>${getLang()==='id'?'Import Produk':'Import Products'}</label><input type="file" accept=".xlsx,.xls" onchange="importData(this,'products')"></div>
-          <div class="fg" style="margin:0"><label>${getLang()==='id'?'Import Karyawan':'Import Employees'}</label><input type="file" accept=".xlsx,.xls" onchange="importData(this,'employees')"></div>
-          <button class="btn btn-out" onclick="downloadTemplates()">⬇ Download Template</button>
-          <div style="border-top:1px solid var(--bdr);padding-top:8px;margin-top:4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">Custom Format</div>
-          <button class="btn btn-acc" onclick="document.getElementById('import-cr-ams').click()">📊 Import Cash Report (Format AMS)</button>
-          <input type="file" id="import-cr-ams" accept=".xlsx,.xls" style="display:none" onchange="importCashReportAMS(this)">
-          <p style="font-size:10.5px;color:var(--muted);margin:2px 0 0">For PT. Andrika Mitra Solusi Cash Report format</p>
-          <div style="border-top:1px solid var(--bdr);padding-top:8px;margin-top:4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">🏦 Import Mutasi Bank → Jurnal</div>
-          <button class="btn btn-pri" style="background:var(--ok)" onclick="document.getElementById('import-bsi-journal').click()">🏦 Import Mutasi BSI → Auto Jurnal</button>
-          <input type="file" id="import-bsi-journal" accept=".pdf,.xlsx,.xls,.csv" style="display:none" onchange="openBSIJournalImport(this)">
-          <p style="font-size:10.5px;color:var(--muted);margin:2px 0 0">Upload PDF/Excel mutasi BSI → otomatis buat jurnal + masuk ke laporan keuangan</p>
-        </div>
+  </div>
+
+  <!-- 4. EKSPOR LAPORAN -->
+  <div class="cfg-group">
+    <div class="cfg-group-hd" onclick="toggleCfg(this)">
+      <div style="display:flex;align-items:center;">
+        <span class="cfg-group-icon">📤</span>
+        <div><div class="cfg-group-title">Ekspor Laporan</div><div class="cfg-group-desc">Download laporan keuangan dalam format Excel</div></div>
       </div>
-      <div class="card"><div class="card-hd">${t('set_export')}</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="btn btn-ok" onclick="exportAll()">⬇ ${getLang()==='id'?'Export SEMUA Laporan':'Export ALL Reports'}</button>
-          <button class="btn btn-out" onclick="exportJurnal()">⬇ ${t('nav_journal')}</button>
-          <button class="btn btn-out" onclick="exportAkun()">⬇ ${t('nav_accounts')}</button>
-          <button class="btn btn-out" onclick="exportNeraca()">⬇ ${getLang()==='id'?'Neraca':'Balance Sheet'}</button>
-          <button class="btn btn-out" onclick="exportLabaRugi()">⬇ ${getLang()==='id'?'Laba Rugi':'Profit & Loss'}</button>
-          <button class="btn btn-out" onclick="exportInvoices()">⬇ ${getLang()==='id'?'Daftar Invoice':'Invoice List'}</button>
-          <button class="btn btn-out" onclick="exportPurchases()">⬇ ${getLang()==='id'?'Order Pembelian':'Purchase Order'}</button>
-          <button class="btn btn-out" onclick="exportPayroll()">⬇ ${t('nav_payroll')}</button>
-        </div>
-      </div>
-      <!-- TAX SETTINGS CARD -->
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-hd">💹 Tarif Pajak Default <span>Berlaku untuk invoice baru</span></div>
-        <div class="alert a-info" style="font-size:11.5px;margin-bottom:10px">
-          Update kapan saja sesuai PMK terbaru. Invoice lama tidak berubah.
-        </div>
-        <div class="fr3">
-          <div class="fg"><label>PPN / VAT (%)</label>
-            <input type="number" id="ts-ppn" value="${DB.taxSettings?.ppnRate||11}" min="0" max="100" step="0.1">
-            <div style="font-size:10px;color:var(--muted);margin-top:3px">Contoh: 11% atau 12%</div>
-          </div>
-          <div class="fg"><label>PPh 23 (%)</label>
-            <input type="number" id="ts-pph23" value="${DB.taxSettings?.pph23Rate||2}" min="0" max="100" step="0.1">
-            <div style="font-size:10px;color:var(--muted);margin-top:3px">Default: 2% (jasa)</div>
-          </div>
-          <div class="fg"><label>PPh 4(2) (%)</label>
-            <input type="number" id="ts-pph4" value="${DB.taxSettings?.pph4Rate||2}" min="0" max="100" step="0.1">
-            <div style="font-size:10px;color:var(--muted);margin-top:3px">Default: 2% (konstruksi)</div>
-          </div>
-        </div>
-        <div style="margin-top:10px"><button class="btn btn-pri" onclick="saveTaxSettings()">💾 Simpan Tarif Pajak</button></div>
-      </div>
-      <div class="card"><div class="card-hd">${t('set_backup')}</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="btn btn-out" onclick="backupData()">${t('set_backupBtn')}</button>
-          <div class="fg"><label>${t('set_restoreBtn')}</label><input type="file" accept=".json" onchange="restoreData(this)"></div>
-          <button class="btn btn-bad" onclick="resetAll()">${t('set_resetBtn')}</button>
-        </div>
-      </div>
-      ${isAdmin()?`
-      <div class="card" id="lock-period-card"></div>`:''}
+      <span class="cfg-group-arrow">▼</span>
     </div>
-  </div>`;
-  // Render lock period card setelah HTML di-inject
-  if(isAdmin())setTimeout(renderLockPeriodCard,0);
+    <div class="cfg-group-body">
+      <div class="cfg-btn-row">
+        <button class="btn btn-ok" onclick="exportAll()">⬇ Export SEMUA Laporan</button>
+        <button class="btn btn-out" onclick="exportJurnal()">⬇ ${t('nav_journal')}</button>
+        <button class="btn btn-out" onclick="exportAkun()">⬇ ${t('nav_accounts')}</button>
+        <button class="btn btn-out" onclick="exportNeraca()">⬇ ${isID?'Neraca':'Balance Sheet'}</button>
+        <button class="btn btn-out" onclick="exportLabaRugi()">⬇ ${isID?'Laba Rugi':'Profit & Loss'}</button>
+        <button class="btn btn-out" onclick="exportInvoices()">⬇ ${isID?'Daftar Invoice':'Invoice List'}</button>
+        <button class="btn btn-out" onclick="exportPurchases()">⬇ ${isID?'Order Pembelian':'Purchase Order'}</button>
+        <button class="btn btn-out" onclick="exportPayroll()">⬇ ${t('nav_payroll')}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. BACKUP & RESTORE -->
+  <div class="cfg-group">
+    <div class="cfg-group-hd" onclick="toggleCfg(this)">
+      <div style="display:flex;align-items:center;">
+        <span class="cfg-group-icon">🗄️</span>
+        <div><div class="cfg-group-title">Backup & Restore</div><div class="cfg-group-desc">Simpan atau pulihkan seluruh data SiAkun</div></div>
+      </div>
+      <span class="cfg-group-arrow">▼</span>
+    </div>
+    <div class="cfg-group-body">
+      <div class="cfg-btn-row">
+        <button class="btn btn-out" onclick="backupData()">⬇ ${t('set_backupBtn')}</button>
+        <div class="fg" style="margin:0"><label>${t('set_restoreBtn')}</label><input type="file" accept=".json" onchange="restoreData(this)"></div>
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid #fee2e2;">
+        <div style="font-size:12px;font-weight:700;color:#991b1b;margin-bottom:8px;">⚠️ Zona Berbahaya</div>
+        <button class="btn btn-bad" onclick="resetAll()">${t('set_resetBtn')}</button>
+        <p style="font-size:10.5px;color:#991b1b;margin-top:6px;">Tindakan ini tidak dapat dibatalkan. Semua data akan dihapus permanen.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. LOCK PERIOD (Admin only) -->
+  ${isAdmin()?`
+  <div class="cfg-group">
+    <div class="cfg-group-hd" onclick="toggleCfg(this)">
+      <div style="display:flex;align-items:center;">
+        <span class="cfg-group-icon">🔒</span>
+        <div><div class="cfg-group-title">Lock Periode</div><div class="cfg-group-desc">Kunci periode akuntansi agar tidak bisa diedit</div></div>
+      </div>
+      <span class="cfg-group-arrow">▼</span>
+    </div>
+    <div class="cfg-group-body">
+      <div id="lock-period-card"></div>
+    </div>
+  </div>`:''}
+
+</div>`;
+
+  // Toggle accordion
+  window.toggleCfg = function(hd){
+    hd.classList.toggle('open');
+    var body = hd.nextElementSibling;
+    body.classList.toggle('open');
+  };
+
+  if(isAdmin()) setTimeout(renderLockPeriodCard, 0);
 }
 
 function saveCompany(){
