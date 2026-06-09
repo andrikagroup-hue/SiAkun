@@ -7766,132 +7766,138 @@ function buildSlipHTML(e,slip,pRec,co){
   const bulan=`${monthName(pRec.month)} ${pRec.year}`;
   const logoHtml=co.logo?`<img src="${co.logo}" style="width:80px;height:90px;object-fit:contain;">`:
     `<div style="width:80px;height:90px;display:flex;align-items:center;justify-content:center;font-size:36px">🏢</div>`;
-  const rows=(items)=>items.filter(([,v])=>v>0).map(([l,v])=>`
-    <tr><td style="padding:4px 10px;color:#475569;font-size:11px">${l}</td>
-        <td style="padding:4px 10px;text-align:right;font-weight:600;font-size:11px;color:#059669">${rp(v)}</td></tr>`).join('');
-  const dedRows=(items)=>items.filter(([,v])=>v>0).map(([l,v])=>`
-    <tr><td style="padding:4px 10px;color:#475569;font-size:11px">${l}</td>
-        <td style="padding:4px 10px;text-align:right;font-weight:600;color:#dc2626;font-size:11px">-${rp(v)}</td></tr>`).join('');
+  const rows=(items)=>items.filter(([,v])=>v>0||v===0).map(([l,v])=>`
+    <tr style="border-bottom:0.5px solid #f1f5f9">
+      <td style="padding:4px 12px;color:#475569;font-size:11px">${l}</td>
+      <td style="padding:4px 12px;text-align:right;font-weight:500;font-size:11px;color:#059669">${rp(v)}</td>
+    </tr>`).join('');
+  const dedRows=(items)=>items.filter(([,v])=>v>0||v===0).map(([l,v])=>`
+    <tr style="border-bottom:0.5px solid #f1f5f9;border-left:1px solid #e2e8f0">
+      <td style="padding:4px 12px;color:#475569;font-size:11px">${l}</td>
+      <td style="padding:4px 12px;text-align:right;font-weight:500;color:#dc2626;font-size:11px">${v>0?'-':''}${rp(v)}</td>
+    </tr>`).join('');
   const bankLine=(co.bank||co.norek)
-    ?`<span style="color:#1d4ed8;font-weight:700">Bank: ${co.bank||''}</span>${co.norek?` | No. Rek: <b>${co.norek}</b>`:''}${co.atasnama?` a/n ${co.atasnama}`:''}`
+    ?`<span style="color:#1e293b;font-weight:700">Bank: ${co.bank||''}</span>${co.norek?` | No. Rek: <b>${co.norek}</b>`:''}${co.atasnama?` a/n ${co.atasnama}`:''}`
     :'';
   return`<div style="font-family:'Plus Jakarta Sans',Arial,sans-serif;border:1px solid #cbd5e1;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact">
     <!-- HEADER -->
-    <div style="padding:16px 20px 0 20px;border-bottom:3px solid #1d4ed8">
-      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
+    <div style="padding:14px 18px 0 18px;border-bottom:3px solid #1e293b">
+      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:10px">
         <div style="flex-shrink:0">${logoHtml}</div>
-        <div style="flex:1;max-width:55%">
-          <div style="font-size:15px;font-weight:800;color:#1d4ed8">${co.name}</div>
-          <div style="font-size:9px;color:#475569;line-height:1.7;margin-top:2px">${co.address||''}</div>
-          <div style="font-size:9px;color:#475569">Telp: ${co.phone||''} | ${co.email||''}</div>
-          ${co.npwp?`<div style="font-size:9px;color:#475569">NPWP: ${co.npwp}</div>`:''}
-          ${bankLine?`<div style="font-size:9px;margin-top:1px">${bankLine}</div>`:''}
+        <div style="flex:1;max-width:56%">
+          <div style="font-size:14px;font-weight:500;color:#1e293b;margin-bottom:3px">${co.name}</div>
+          <div style="font-size:9.5px;color:#475569;line-height:1.7">${co.address||''}</div>
+          <div style="font-size:9.5px;color:#475569">Telp: ${co.phone||''} | ${co.email||''}</div>
+          ${co.npwp?`<div style="font-size:9.5px;color:#475569">NPWP: ${co.npwp}</div>`:''}
+          ${bankLine?`<div style="font-size:9.5px;margin-top:1px">${bankLine}</div>`:''}
         </div>
         <div style="margin-left:auto;text-align:right;flex-shrink:0">
           <div style="font-size:8px;letter-spacing:2px;color:#94a3b8;text-transform:uppercase">Employee Payslip / Slip Gaji</div>
-          <div style="font-size:16px;font-weight:800;color:#1d4ed8;margin-top:3px">${bulan}</div>
+          <div style="font-size:15px;font-weight:500;color:#1e293b;margin-top:2px">${bulan}</div>
           <div style="display:flex;gap:3px;justify-content:flex-end;margin-top:6px">
-            <div style="width:30px;height:4px;background:#1d4ed8;border-radius:2px"></div>
-            <div style="width:12px;height:4px;background:#93c5fd;border-radius:2px"></div>
-            <div style="width:6px;height:4px;background:#dbeafe;border-radius:2px"></div>
+            <div style="width:28px;height:4px;background:#1e293b;border-radius:2px"></div>
+            <div style="width:12px;height:4px;background:#64748b;border-radius:2px"></div>
+            <div style="width:6px;height:4px;background:#cbd5e1;border-radius:2px"></div>
           </div>
         </div>
       </div>
-      <div style="height:1px;background:#dbeafe;margin:0 -20px"></div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 0">
+      <div style="height:1px;background:#e2e8f0;margin:0 -18px"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 0 4px">
         ${[['Nama / Name',e.name],['NIK / ID',e.nik],['Jabatan',e.jabatan],
            ['Divisi',e.divisi||'—'],['Status PTKP',e.ptkp],['Hari Kerja / Working Days',`${slip.hk||25} hari`],
            ['Tgl Masuk / Join Date',fDate(e.join||'')],['Rek. Gaji',e.bankInfo||'—']].map(([l,val])=>`
-          <div style="font-size:9.5px"><span style="color:#94a3b8">${l}</span><br><b style="color:#1e293b">${val}</b></div>`).join('')}
+          <div style="font-size:9.5px"><span style="color:#94a3b8;font-size:9px">${l}</span><br><b style="color:#1e293b;font-weight:500">${val}</b></div>`).join('')}
       </div>
     </div>
-    <!-- BODY -->
-    <div style="display:grid;grid-template-columns:1fr 1fr">
-      <div style="border-right:1px solid #e2e8f0">
-        <div style="padding:7px 10px;font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid #e2e8f0">
-          Earnings / Pendapatan
+    <!-- BODY TABLE -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #e2e8f0">
+      <!-- Earnings -->
+      <div>
+        <div style="display:grid;grid-template-columns:1fr auto;padding:7px 12px;background:#166534;color:#fff;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.7px">
+          <span>Earnings / Pendapatan</span><span style="font-size:9px;opacity:.8">Jumlah</span>
         </div>
-        <table style="width:100%">
+        <table style="width:100%;border-collapse:collapse">
           ${rows([
             ['Gaji Pokok / Basic Salary',slip.gaji],
             [`Tunjangan Makan (${slip.hk} hr)`,slip.tunMakan],
             [`Tunjangan Transport (${slip.hk} hr)`,slip.tunTransport],
-            [`Lembur (${slip.lemburJam||0} jam \xd7 Rp${rp(slip.tarifLembur||0)})`,slip.tunLembur],
-            ['Bonus',slip.bonus],
-            ['Pendapatan Lain',slip.otherIn],
+            [`Lembur (${slip.lemburJam||0} jam \xd7 ${rp(slip.tarifLembur||0)})`,slip.tunLembur||0],
+            ['Bonus',slip.bonus||0],
+            ['Pendapatan Lain',slip.otherIn||0],
           ])}
         </table>
-        <div style="border-top:1px solid #059669;padding:7px 10px;display:flex;justify-content:space-between;font-weight:800;color:#059669;font-size:12px">
-          <span>TOTAL PENDAPATAN</span><span>${rp(slip.totalPendapatan)}</span>
+        <div style="border-top:1px solid #059669;padding:6px 12px;display:flex;justify-content:space-between;font-weight:500;color:#059669;font-size:11.5px">
+          <span>Total Pendapatan</span><span>${rp(slip.totalPendapatan)}</span>
         </div>
       </div>
-      <div>
-        <div style="padding:7px 10px;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid #e2e8f0">
-          Deductions / Potongan
+      <!-- Deductions -->
+      <div style="border-left:1px solid #e2e8f0">
+        <div style="display:grid;grid-template-columns:1fr auto;padding:7px 12px;background:#991b1b;color:#fff;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.7px">
+          <span>Deductions / Potongan</span><span style="font-size:9px;opacity:.8">Jumlah</span>
         </div>
-        <table style="width:100%">
+        <table style="width:100%;border-collapse:collapse">
           ${dedRows([
-            ['PPh 21',slip.pph21],
-            ['BPJS Kesehatan (1%)',slip.bpjsKes],
-            ['BPJS TK / JHT (2%)',slip.bpjsTK],
+            ['PPh 21',slip.pph21||0],
+            ['BPJS Kesehatan (1%)',slip.bpjsKes||0],
+            ['BPJS TK / JHT (2%)',slip.bpjsTK||0],
             ['BPJS TK / JP (1%)',slip.bpjsJP||0],
-            [`Keterlambatan (${slip.telatX||0}\xd7)`,slip.dedTelat],
-            [`Absen tanpa izin (${slip.absenHr||0} hr)`,slip.dedAbsen],
-            ['Potongan Lain',slip.otherOut],
+            [`Keterlambatan (${slip.telatX||0}\xd7)`,slip.dedTelat||0],
+            [`Absen tanpa izin (${slip.absenHr||0} hr)`,slip.dedAbsen||0],
+            ['Potongan Lain',slip.otherOut||0],
           ])}
         </table>
-        <div style="border-top:1px solid #dc2626;padding:7px 10px;display:flex;justify-content:space-between;font-weight:800;color:#dc2626;font-size:12px">
-          <span>TOTAL POTONGAN</span><span>${rp(slip.totalPotongan)}</span>
+        <div style="border-top:1px solid #dc2626;padding:6px 12px;display:flex;justify-content:space-between;font-weight:500;color:#dc2626;font-size:11.5px">
+          <span>Total Potongan</span><span>${rp(slip.totalPotongan)}</span>
         </div>
       </div>
     </div>
     <!-- NET -->
-    <div style="border-top:2px solid #1d4ed8;border-bottom:1px solid #e2e8f0;padding:12px 20px;display:flex;justify-content:space-between;align-items:center">
+    <div style="border-top:2px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:10px 18px;display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-size:10px;color:#64748b;letter-spacing:1px;text-transform:uppercase">Gaji Bersih / Net Salary</div>
-        <div style="font-size:10px;color:#94a3b8;margin-top:2px">Terbilang: ${terbilang(slip.gajiNet)} Rupiah</div>
+        <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px">Gaji Bersih / Net Salary</div>
+        <div style="font-size:9.5px;color:#94a3b8;margin-top:2px">Terbilang: ${terbilang(slip.gajiNet)} Rupiah</div>
       </div>
-      <div style="font-size:22px;font-weight:900;color:#1e293b">${rp(slip.gajiNet)}</div>
+      <div style="font-size:21px;font-weight:500;color:#1e293b">${rp(slip.gajiNet)}</div>
     </div>
     <!-- BPJS PERUSAHAAN -->
     ${slip.totalBpjsEmp>0?`
-    <div style="padding:10px 20px;border-top:1px solid #e2e8f0">
-      <div style="font-size:9.5px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Iuran BPJS Pemberi Kerja (Tidak Dipotong dari Gaji)</div>
+    <div style="padding:10px 18px;border-bottom:1px solid #e2e8f0">
+      <div style="font-size:9.5px;font-weight:500;color:#1e293b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">Iuran BPJS Pemberi Kerja (Tidak Dipotong dari Gaji)</div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px">
         ${[['Kes. 4%',slip.bpjsKesEmp||0],['JHT 3.7%',slip.bpjsJHTEmp||0],['JP 2%',slip.bpjsJPEmp||0],['JKK 0.24%',slip.bpjsJKK||0],['JKM 0.3%',slip.bpjsJKM||0]].map(([l,v])=>`
-        <div style="border:1px solid #dbeafe;border-radius:4px;padding:5px 8px;text-align:center">
+        <div style="border:0.5px solid #dbeafe;border-radius:4px;padding:5px 6px;text-align:center">
           <div style="font-size:9px;color:#94a3b8">${l}</div>
-          <div style="font-size:10.5px;font-weight:700;color:#dc2626">${rp(v)}</div>
+          <div style="font-size:10px;font-weight:500;color:#dc2626">${rp(v)}</div>
         </div>`).join('')}
       </div>
-      <div style="text-align:right;font-size:10.5px;font-weight:700;color:#dc2626;margin-top:5px">Total Beban Perusahaan: ${rp(slip.totalBpjsEmp)}</div>
+      <div style="text-align:right;font-size:10px;font-weight:500;color:#dc2626;margin-top:5px">Total Beban Perusahaan: ${rp(slip.totalBpjsEmp)}</div>
     </div>`:''}
     <!-- TANDA TANGAN -->
-    <div style="padding:14px 20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:10.5px;border-top:1px solid #f1f5f9">
+    <div style="padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:10.5px;border-top:1px solid #f1f5f9">
       <div>
-        <div style="color:var(--muted,#64748b);margin-bottom:28px">Tangerang Selatan, <span id="slip-date-text" contenteditable="true" style="outline:none;border-bottom:1px dashed #94a3b8;cursor:text" title="Klik untuk edit tanggal">${new Date(pRec.date||today()).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</span></div>
-        <div style="color:var(--muted,#64748b);margin-bottom:28px">Disetujui Oleh / Authorized Signatory,</div>
-        <div style="width:180px;border-top:1px solid #000;padding-top:4px">( <span id="slip-signatory-name" contenteditable="true" style="min-width:80px;display:inline-block;outline:none;border-bottom:1px dashed #94a3b8">${co.signatory||''}</span> )</div>
-        <div style="color:var(--muted,#64748b);font-size:9.5px">HRD / Finance Manager</div>
+        <div style="color:#64748b;margin-bottom:24px">Tangerang Selatan, ${new Date((pRec.date||today())).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+        <div style="color:#64748b;margin-bottom:24px">Disetujui Oleh / Authorized Signatory,</div>
+        <div style="width:160px;border-top:1px solid #1e293b;padding-top:4px">( ${co.signatory||'___________________'} )</div>
+        <div style="color:#64748b;font-size:9.5px;margin-top:2px">HRD / Finance Manager</div>
       </div>
       <div>
-        <div style="color:var(--muted,#64748b);margin-bottom:28px">&nbsp;</div>
-        <div style="color:var(--muted,#64748b);margin-bottom:28px">Diterima Oleh / Received By,</div>
-        <div style="width:180px;border-top:1px solid #000;padding-top:4px">( ${e.name} )</div>
-        <div style="color:var(--muted,#64748b);font-size:9.5px">Karyawan / Employee</div>
+        <div style="color:#64748b;margin-bottom:24px">&nbsp;</div>
+        <div style="color:#64748b;margin-bottom:24px">Diterima Oleh / Received By,</div>
+        <div style="width:160px;border-top:1px solid #1e293b;padding-top:4px">( ${e.name} )</div>
+        <div style="color:#64748b;font-size:9.5px;margin-top:2px">Karyawan / Employee</div>
       </div>
     </div>
     <!-- NOTES -->
-    <div style="padding:8px 20px 12px;font-size:9px;color:#94a3b8;border-top:1px solid #f1f5f9;line-height:1.7">
-      <b style="color:#64748b">NOTES / CATATAN</b><br>
-      1. This payslip is generated electronically and is valid without a physical signature / Slip gaji ini dibuat secara elektronik dan sah tanpa tanda tangan fisik.<br>
-      2. Please verify all amounts. Report any discrepancies within 3 working days / Harap verifikasi semua jumlah. Laporkan ketidaksesuaian dalam 3 hari kerja.<br>
-      3. For inquiries, contact HR Department at ${co.email||'hr@andrikagroup.com'} / Untuk pertanyaan, hubungi HR di ${co.email||'hr@andrikagroup.com'}.<br>
-      4. Working days are calculated based on attendance records / Hari kerja dihitung berdasarkan catatan kehadiran.<br>
-      5. Tax deductions are calculated according to Indonesian tax regulations / Potongan pajak dihitung sesuai peraturan perpajakan Indonesia.<br>
-      6. Salary calculation is based on ${slip.HK_STD||25} working days. If more working days, meal &amp; transport allowance will be added / Perhitungan gaji berdasarkan ${slip.HK_STD||25} hari kerja. Jika lebih, tunjangan makan &amp; transport akan ditambahkan.<br>
+    <div style="margin:0 18px 14px;padding:10px 14px;border:1px solid #d4a017;background:#fffbeb;border-radius:4px;font-size:9px;color:#78350f;line-height:1.8">
+      <b style="color:#92400e;font-weight:500">Notes / Catatan</b><br>
+      1. Slip gaji ini dibuat secara elektronik dan sah tanpa tanda tangan fisik.<br>
+      2. Harap verifikasi semua jumlah. Laporkan ketidaksesuaian dalam 3 hari kerja.<br>
+      3. Untuk pertanyaan, hubungi HR di ${co.email||'info@andrikagroup.com'}.<br>
+      4. Hari kerja dihitung berdasarkan catatan kehadiran.<br>
+      5. Potongan pajak dihitung sesuai peraturan perpajakan Indonesia.<br>
+      6. Perhitungan gaji berdasarkan ${slip.HK_STD||25} hari kerja. Jika lebih, tunjangan makan &amp; transport akan ditambahkan.<br>
       7. BPJS Perusahaan: Kes 4% | JHT 3.7% | JP 2% | JKK 0.24% | JKM 0.3% — tidak dipotong dari gaji karyawan, menjadi beban perusahaan.<br>
-      <span style="color:#475569;font-style:italic">This document is a valid proof of salary payment | Dokumen ini adalah bukti pembayaran gaji yang sah</span>
+      <span style="font-style:italic">This document is a valid proof of salary payment | Dokumen ini adalah bukti pembayaran gaji yang sah</span>
     </div>
   </div>`;
 }
