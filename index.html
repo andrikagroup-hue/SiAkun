@@ -7764,33 +7764,44 @@ function runPayroll(){
 // ── PAYSLIP ───────────────────────────────────────────────────────
 function buildSlipHTML(e,slip,pRec,co){
   const bulan=`${monthName(pRec.month)} ${pRec.year}`;
-  const logoHtml=co.logo?`<img src="${co.logo}" style="height:48px;object-fit:contain;">`:
-    `<div style="height:48px;width:48px;display:flex;align-items:center;justify-content:center;font-size:20px">🔥</div>`;
+  const logoHtml=co.logo?`<img src="${co.logo}" style="height:64px;width:64px;object-fit:contain;">`:
+    `<div style="height:64px;width:64px;display:flex;align-items:center;justify-content:center;font-size:28px">🏢</div>`;
   const rows=(items)=>items.filter(([,v])=>v>0).map(([l,v])=>`
     <tr><td style="padding:4px 10px;color:#475569;font-size:11px">${l}</td>
-        <td style="padding:4px 10px;text-align:right;font-weight:600;font-size:11px">${rp(v)}</td></tr>`).join('');
+        <td style="padding:4px 10px;text-align:right;font-weight:600;font-size:11px;color:#1e293b">${rp(v)}</td></tr>`).join('');
   const dedRows=(items)=>items.filter(([,v])=>v>0).map(([l,v])=>`
     <tr><td style="padding:4px 10px;color:#475569;font-size:11px">${l}</td>
         <td style="padding:4px 10px;text-align:right;font-weight:600;color:#dc2626;font-size:11px">-${rp(v)}</td></tr>`).join('');
+  const bankLine=co.bank?`<span style="color:#1d4ed8;font-weight:700">Bank: ${co.bank}</span>${co.bankNo?` | No. Rek: ${co.bankNo}`:''}`:''
   return`<div style="font-family:'Plus Jakarta Sans',Arial,sans-serif;border:1px solid #cbd5e1;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact">
     <!-- HEADER -->
-    <div style="padding:16px 20px;border-bottom:2px solid #E8510A">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="display:flex;align-items:center;gap:12px">
-          ${logoHtml}
-          <div>
-            <div style="font-size:14px;font-weight:800;color:#E8510A">${co.name}</div>
-            <div style="font-size:9px;color:#64748b;line-height:1.6">${co.address||''}</div>
-            <div style="font-size:9px;color:#64748b">${co.phone||''} &nbsp;|&nbsp; ${co.email||''}</div>
+    <div style="padding:16px 20px 0 20px;border-bottom:3px solid #1d4ed8">
+      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
+        <!-- Logo -->
+        <div style="flex-shrink:0">${logoHtml}</div>
+        <!-- Info perusahaan - diberi max-width agar tidak mepet ke kanan -->
+        <div style="flex:1;max-width:55%">
+          <div style="font-size:15px;font-weight:800;color:#1d4ed8">${co.name}</div>
+          <div style="font-size:9px;color:#475569;line-height:1.7;margin-top:2px">${co.address||''}</div>
+          <div style="font-size:9px;color:#475569">Telp: ${co.phone||''} | ${co.email||''}</div>
+          ${co.npwp?`<div style="font-size:9px;color:#475569">NPWP: ${co.npwp}</div>`:''}
+          ${bankLine?`<div style="font-size:9px;margin-top:1px">${bankLine}</div>`:''}
+        </div>
+        <!-- Label slip & bulan - di kanan, terpisah dari alamat -->
+        <div style="margin-left:auto;text-align:right;flex-shrink:0">
+          <div style="font-size:8px;letter-spacing:2px;color:#94a3b8;text-transform:uppercase">Employee Payslip / Slip Gaji</div>
+          <div style="font-size:16px;font-weight:800;color:#1d4ed8;margin-top:3px">${bulan}</div>
+          <!-- Ornamen biru -->
+          <div style="display:flex;gap:3px;justify-content:flex-end;margin-top:6px">
+            <div style="width:30px;height:4px;background:#1d4ed8;border-radius:2px"></div>
+            <div style="width:12px;height:4px;background:#93c5fd;border-radius:2px"></div>
+            <div style="width:6px;height:4px;background:#dbeafe;border-radius:2px"></div>
           </div>
         </div>
-        <div style="text-align:right">
-          <div style="font-size:8px;letter-spacing:2px;color:#94a3b8;text-transform:uppercase">Employee Payslip / Slip Gaji</div>
-          <div style="font-size:15px;font-weight:800;color:#E8510A;margin-top:2px">${bulan}</div>
-        </div>
       </div>
-      <div style="height:1px;background:#e2e8f0;margin:8px 0"></div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+      <!-- Garis biru tipis sebagai ornamen atas info karyawan -->
+      <div style="height:1px;background:#dbeafe;margin:0 -20px"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 0">
         ${[['Nama / Name',e.name],['NIK / ID',e.nik],['Jabatan',e.jabatan],
            ['Divisi',e.divisi||'—'],['Status PTKP',e.ptkp],['Hari Kerja / Working Days',`${slip.hk||25} hari`],
            ['Tgl Masuk / Join Date',fDate(e.join||'')],['Rek. Gaji',e.bankInfo||'—']].map(([l,val])=>`
@@ -7801,7 +7812,7 @@ function buildSlipHTML(e,slip,pRec,co){
     <div style="display:grid;grid-template-columns:1fr 1fr">
       <!-- Pendapatan -->
       <div style="border-right:1px solid #e2e8f0">
-        <div style="padding:7px 10px;font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid #e2e8f0">
+        <div style="padding:7px 10px;font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid #e2e8f0">
           Earnings / Pendapatan
         </div>
         <table style="width:100%">
@@ -7814,7 +7825,7 @@ function buildSlipHTML(e,slip,pRec,co){
             ['Pendapatan Lain',slip.otherIn],
           ])}
         </table>
-        <div style="border-top:1px solid #059669;padding:7px 10px;display:flex;justify-content:space-between;font-weight:800;color:#059669;font-size:12px">
+        <div style="border-top:1px solid #1d4ed8;padding:7px 10px;display:flex;justify-content:space-between;font-weight:800;color:#1d4ed8;font-size:12px">
           <span>TOTAL PENDAPATAN</span><span>${rp(slip.totalPendapatan)}</span>
         </div>
       </div>
@@ -7840,7 +7851,7 @@ function buildSlipHTML(e,slip,pRec,co){
       </div>
     </div>
     <!-- NET -->
-    <div style="border-top:2px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:12px 20px;display:flex;justify-content:space-between;align-items:center">
+    <div style="border-top:2px solid #1d4ed8;border-bottom:1px solid #e2e8f0;padding:12px 20px;display:flex;justify-content:space-between;align-items:center">
       <div>
         <div style="font-size:10px;color:#64748b;letter-spacing:1px;text-transform:uppercase">Gaji Bersih / Net Salary</div>
         <div style="font-size:10px;color:#94a3b8;margin-top:2px">Terbilang: ${terbilang(slip.gajiNet)} Rupiah</div>
@@ -7850,10 +7861,10 @@ function buildSlipHTML(e,slip,pRec,co){
     <!-- BPJS PERUSAHAAN -->
     ${slip.totalBpjsEmp>0?`
     <div style="padding:10px 20px;border-top:1px solid #e2e8f0">
-      <div style="font-size:9.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Iuran BPJS Pemberi Kerja (Tidak Dipotong dari Gaji)</div>
+      <div style="font-size:9.5px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Iuran BPJS Pemberi Kerja (Tidak Dipotong dari Gaji)</div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px">
         ${[['Kes. 4%',slip.bpjsKesEmp||0],['JHT 3.7%',slip.bpjsJHTEmp||0],['JP 2%',slip.bpjsJPEmp||0],['JKK 0.24%',slip.bpjsJKK||0],['JKM 0.3%',slip.bpjsJKM||0]].map(([l,v])=>`
-        <div style="border:1px solid #e2e8f0;border-radius:4px;padding:5px 8px;text-align:center">
+        <div style="border:1px solid #dbeafe;border-radius:4px;padding:5px 8px;text-align:center">
           <div style="font-size:9px;color:#94a3b8">${l}</div>
           <div style="font-size:10.5px;font-weight:700;color:#dc2626">${rp(v)}</div>
         </div>`).join('')}
