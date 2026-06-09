@@ -7764,8 +7764,8 @@ function runPayroll(){
 // ── PAYSLIP ───────────────────────────────────────────────────────
 function buildSlipHTML(e,slip,pRec,co){
   const bulan=`${monthName(pRec.month)} ${pRec.year}`;
-  const logoHtml=co.logo?`<img src="${co.logo}" style="height:64px;width:64px;object-fit:contain;">`:
-    `<div style="height:64px;width:64px;display:flex;align-items:center;justify-content:center;font-size:28px">🏢</div>`;
+  const logoHtml=co.logo?`<img src="${co.logo}" style="width:72px;height:100%;object-fit:contain;align-self:stretch;">`:
+    `<div style="width:72px;display:flex;align-items:center;justify-content:center;font-size:32px;align-self:stretch">🏢</div>`;
   const rows=(items)=>items.filter(([,v])=>v>0).map(([l,v])=>`
     <tr><td style="padding:4px 10px;color:#475569;font-size:11px">${l}</td>
         <td style="padding:4px 10px;text-align:right;font-weight:600;font-size:11px;color:#1e293b">${rp(v)}</td></tr>`).join('');
@@ -7808,7 +7808,7 @@ function buildSlipHTML(e,slip,pRec,co){
     <!-- BODY -->
     <div style="display:grid;grid-template-columns:1fr 1fr">
       <div style="border-right:1px solid #e2e8f0">
-        <div style="padding:7px 10px;font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid #e2e8f0">
+        <div style="padding:7px 10px;font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid #e2e8f0">
           Earnings / Pendapatan
         </div>
         <table style="width:100%">
@@ -7821,7 +7821,7 @@ function buildSlipHTML(e,slip,pRec,co){
             ['Pendapatan Lain',slip.otherIn],
           ])}
         </table>
-        <div style="border-top:1px solid #1d4ed8;padding:7px 10px;display:flex;justify-content:space-between;font-weight:800;color:#1d4ed8;font-size:12px">
+        <div style="border-top:1px solid #059669;padding:7px 10px;display:flex;justify-content:space-between;font-weight:800;color:#059669;font-size:12px">
           <span>TOTAL PENDAPATAN</span><span>${rp(slip.totalPendapatan)}</span>
         </div>
       </div>
