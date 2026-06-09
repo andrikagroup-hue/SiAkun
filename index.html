@@ -7772,20 +7772,23 @@ function buildSlipHTML(e,slip,pRec,co){
       <td style="padding:4px 12px;text-align:right;font-weight:500;font-size:11px;color:#059669">${rp(v)}</td>
     </tr>`).join('');
   const dedRows=(items)=>items.filter(([,v])=>v>0||v===0).map(([l,v])=>`
-    <tr style="border-bottom:0.5px solid #f1f5f9;border-left:1px solid #e2e8f0">
-      <td style="padding:4px 12px;color:#475569;font-size:11px">${l}</td>
-      <td style="padding:4px 12px;text-align:right;font-weight:500;color:#dc2626;font-size:11px">${v>0?'-':''}${rp(v)}</td>
+    <tr style="border-bottom:0.5px solid #f1f5f9">
+      <td style="padding:4px 12px;color:#475569;font-size:11px;border-left:1px solid #e2e8f0">${l}</td>
+      <td style="padding:4px 12px;text-align:right;font-weight:500;color:#dc2626;font-size:11px;border-left:0">${v>0?'-':''}${rp(v)}</td>
     </tr>`).join('');
   const bankLine=(co.bank||co.norek)
     ?`<span style="color:#1e293b;font-weight:700">Bank: ${co.bank||''}</span>${co.norek?` | No. Rek: <b>${co.norek}</b>`:''}${co.atasnama?` a/n ${co.atasnama}`:''}`
     :'';
+  // Tanggal TTD — ambil dari pRec.date atau today()
+  const tglTTD=pRec.date?new Date(pRec.date):new Date();
+  const tglStr=tglTTD.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
   return`<div style="font-family:'Plus Jakarta Sans',Arial,sans-serif;border:1px solid #cbd5e1;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact">
     <!-- HEADER -->
-    <div style="padding:14px 18px 0 18px;border-bottom:3px solid #1e293b">
+    <div style="padding:14px 18px 0 18px;border-bottom:3px solid #E8510A">
       <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:10px">
         <div style="flex-shrink:0">${logoHtml}</div>
         <div style="flex:1;max-width:56%">
-          <div style="font-size:14px;font-weight:500;color:#1e293b;margin-bottom:3px">${co.name}</div>
+          <div style="font-size:14px;font-weight:600;color:#E8510A;margin-bottom:3px">${co.name}</div>
           <div style="font-size:9.5px;color:#475569;line-height:1.7">${co.address||''}</div>
           <div style="font-size:9.5px;color:#475569">Telp: ${co.phone||''} | ${co.email||''}</div>
           ${co.npwp?`<div style="font-size:9.5px;color:#475569">NPWP: ${co.npwp}</div>`:''}
@@ -7793,11 +7796,11 @@ function buildSlipHTML(e,slip,pRec,co){
         </div>
         <div style="margin-left:auto;text-align:right;flex-shrink:0">
           <div style="font-size:8px;letter-spacing:2px;color:#94a3b8;text-transform:uppercase">Employee Payslip / Slip Gaji</div>
-          <div style="font-size:15px;font-weight:500;color:#1e293b;margin-top:2px">${bulan}</div>
+          <div style="font-size:15px;font-weight:700;color:#E8510A;margin-top:2px">${bulan}</div>
           <div style="display:flex;gap:3px;justify-content:flex-end;margin-top:6px">
-            <div style="width:28px;height:4px;background:#1e293b;border-radius:2px"></div>
-            <div style="width:12px;height:4px;background:#64748b;border-radius:2px"></div>
-            <div style="width:6px;height:4px;background:#cbd5e1;border-radius:2px"></div>
+            <div style="width:28px;height:4px;background:#E8510A;border-radius:2px"></div>
+            <div style="width:12px;height:4px;background:#f9a87a;border-radius:2px"></div>
+            <div style="width:6px;height:4px;background:#fde8dc;border-radius:2px"></div>
           </div>
         </div>
       </div>
@@ -7811,9 +7814,8 @@ function buildSlipHTML(e,slip,pRec,co){
     </div>
     <!-- BODY TABLE -->
     <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #e2e8f0">
-      <!-- Earnings -->
       <div>
-        <div style="display:grid;grid-template-columns:1fr auto;padding:7px 12px;background:#166534;color:#fff;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.7px">
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;background:#dcfce7;color:#166534;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid #bbf7d0">
           <span>Earnings / Pendapatan</span><span style="font-size:9px;opacity:.8">Jumlah</span>
         </div>
         <table style="width:100%;border-collapse:collapse">
@@ -7826,13 +7828,12 @@ function buildSlipHTML(e,slip,pRec,co){
             ['Pendapatan Lain',slip.otherIn||0],
           ])}
         </table>
-        <div style="border-top:1px solid #059669;padding:6px 12px;display:flex;justify-content:space-between;font-weight:500;color:#059669;font-size:11.5px">
+        <div style="border-top:1px solid #059669;padding:6px 12px;display:flex;justify-content:space-between;font-weight:600;color:#059669;font-size:11.5px">
           <span>Total Pendapatan</span><span>${rp(slip.totalPendapatan)}</span>
         </div>
       </div>
-      <!-- Deductions -->
       <div style="border-left:1px solid #e2e8f0">
-        <div style="display:grid;grid-template-columns:1fr auto;padding:7px 12px;background:#991b1b;color:#fff;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.7px">
+        <div style="display:grid;grid-template-columns:1fr auto;padding:6px 12px;background:#fee2e2;color:#991b1b;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid #fecaca">
           <span>Deductions / Potongan</span><span style="font-size:9px;opacity:.8">Jumlah</span>
         </div>
         <table style="width:100%;border-collapse:collapse">
@@ -7846,26 +7847,26 @@ function buildSlipHTML(e,slip,pRec,co){
             ['Potongan Lain',slip.otherOut||0],
           ])}
         </table>
-        <div style="border-top:1px solid #dc2626;padding:6px 12px;display:flex;justify-content:space-between;font-weight:500;color:#dc2626;font-size:11.5px">
+        <div style="border-top:1px solid #dc2626;padding:6px 12px;display:flex;justify-content:space-between;font-weight:600;color:#dc2626;font-size:11.5px">
           <span>Total Potongan</span><span>${rp(slip.totalPotongan)}</span>
         </div>
       </div>
     </div>
     <!-- NET -->
-    <div style="border-top:2px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:10px 18px;display:flex;justify-content:space-between;align-items:center">
+    <div style="border-top:2px solid #E8510A;border-bottom:1px solid #e2e8f0;padding:10px 18px;display:flex;justify-content:space-between;align-items:center;background:#fff7f4">
       <div>
         <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px">Gaji Bersih / Net Salary</div>
         <div style="font-size:9.5px;color:#94a3b8;margin-top:2px">Terbilang: ${terbilang(slip.gajiNet)} Rupiah</div>
       </div>
-      <div style="font-size:21px;font-weight:500;color:#1e293b">${rp(slip.gajiNet)}</div>
+      <div style="font-size:21px;font-weight:700;color:#E8510A">${rp(slip.gajiNet)}</div>
     </div>
     <!-- BPJS PERUSAHAAN -->
     ${slip.totalBpjsEmp>0?`
     <div style="padding:10px 18px;border-bottom:1px solid #e2e8f0">
-      <div style="font-size:9.5px;font-weight:500;color:#1e293b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">Iuran BPJS Pemberi Kerja (Tidak Dipotong dari Gaji)</div>
+      <div style="font-size:9.5px;font-weight:600;color:#1e293b;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">Iuran BPJS Pemberi Kerja (Tidak Dipotong dari Gaji)</div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px">
         ${[['Kes. 4%',slip.bpjsKesEmp||0],['JHT 3.7%',slip.bpjsJHTEmp||0],['JP 2%',slip.bpjsJPEmp||0],['JKK 0.24%',slip.bpjsJKK||0],['JKM 0.3%',slip.bpjsJKM||0]].map(([l,v])=>`
-        <div style="border:0.5px solid #dbeafe;border-radius:4px;padding:5px 6px;text-align:center">
+        <div style="border:0.5px solid #fde8dc;border-radius:4px;padding:5px 6px;text-align:center;background:#fff7f4">
           <div style="font-size:9px;color:#94a3b8">${l}</div>
           <div style="font-size:10px;font-weight:500;color:#dc2626">${rp(v)}</div>
         </div>`).join('')}
@@ -7873,9 +7874,9 @@ function buildSlipHTML(e,slip,pRec,co){
       <div style="text-align:right;font-size:10px;font-weight:500;color:#dc2626;margin-top:5px">Total Beban Perusahaan: ${rp(slip.totalBpjsEmp)}</div>
     </div>`:''}
     <!-- TANDA TANGAN -->
-    <div style="padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:10.5px;border-top:1px solid #f1f5f9">
+    <div style="padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:10.5px">
       <div>
-        <div style="color:#64748b;margin-bottom:24px">Tangerang Selatan, ${new Date((pRec.date||today())).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+        <div style="color:#64748b;margin-bottom:24px">Tangerang Selatan, <span class="slip-edit-ttd" style="border-bottom:1px dashed #E8510A;cursor:pointer;color:#1e293b" title="Klik untuk edit tanggal">${tglStr}</span></div>
         <div style="color:#64748b;margin-bottom:24px">Disetujui Oleh / Authorized Signatory,</div>
         <div style="width:160px;border-top:1px solid #1e293b;padding-top:4px">( ${co.signatory||'___________________'} )</div>
         <div style="color:#64748b;font-size:9.5px;margin-top:2px">HRD / Finance Manager</div>
@@ -7889,7 +7890,7 @@ function buildSlipHTML(e,slip,pRec,co){
     </div>
     <!-- NOTES -->
     <div style="margin:0 18px 14px;padding:10px 14px;border:1px solid #d4a017;background:#fffbeb;border-radius:4px;font-size:9px;color:#78350f;line-height:1.8">
-      <b style="color:#92400e;font-weight:500">Notes / Catatan</b><br>
+      <b style="color:#92400e;font-weight:600">Notes / Catatan</b><br>
       1. Slip gaji ini dibuat secara elektronik dan sah tanpa tanda tangan fisik.<br>
       2. Harap verifikasi semua jumlah. Laporkan ketidaksesuaian dalam 3 hari kerja.<br>
       3. Untuk pertanyaan, hubungi HR di ${co.email||'info@andrikagroup.com'}.<br>
@@ -7935,12 +7936,59 @@ function openSlip(empId,payrollId){
   }
   if(!e||!slip)return alert('Data tidak ditemukan.');
   const co=DB.company;
+  // Buat daftar bulan untuk dropdown
+  const bulanOpts=[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}" ${m===pRec.month?'selected':''}>${monthName(m)}</option>`).join('');
+  const thnList=[pRec.year-1,pRec.year,pRec.year+1];
+  const thnOpts=thnList.map(y=>`<option value="${y}" ${y===pRec.year?'selected':''}>${y}</option>`).join('');
   openModal(`Slip Gaji — ${e.name} | ${monthName(pRec.month)} ${pRec.year}`,`
+  <!-- PANEL EDIT PERIODE & TANGGAL (tidak ikut print) -->
+  <div class="no-print" style="background:#fff7f4;border:1px solid #fde8dc;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span style="font-size:12px;font-weight:600;color:#E8510A">✏️ Edit Slip:</span>
+    <label style="font-size:11px;color:#475569;display:flex;align-items:center;gap:6px">
+      Periode:
+      <select id="slip-edit-bulan" style="padding:3px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px">${bulanOpts}</select>
+      <select id="slip-edit-tahun" style="padding:3px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px">${thnOpts}</select>
+    </label>
+    <label style="font-size:11px;color:#475569;display:flex;align-items:center;gap:6px">
+      Tgl TTD:
+      <input type="date" id="slip-edit-tgl" value="${pRec.date||today()}" style="padding:3px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px">
+    </label>
+    <button onclick="refreshSlipPreview('${empId}','${payrollId||''}')" style="padding:4px 12px;background:#E8510A;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600">↻ Terapkan</button>
+  </div>
   <div id="slip-print-area">${buildSlipHTML(e,slip,pRec,co)}</div>
   <div class="modal-ft no-print">
     <button class="btn btn-out" onclick="closeModal()">Tutup</button>
     <button class="btn btn-pri" onclick="printSlip()">🖨 Print / PDF</button>
   </div>`,'modal-lg');
+}
+
+function refreshSlipPreview(empId,payrollId){
+  const mn=parseInt(document.getElementById('slip-edit-bulan').value);
+  const yr=parseInt(document.getElementById('slip-edit-tahun').value);
+  const tgl=document.getElementById('slip-edit-tgl').value||today();
+  const e=DB.employees.find(x=>x.id===empId);
+  if(!e)return;
+  let slip,pRec;
+  if(payrollId){
+    // Kalau dari payroll tersimpan, ambil slip aslinya tapi override tanggal
+    const pr=DB.payroll.find(x=>x.id===payrollId);
+    if(pr){
+      pRec={...pr,month:mn,year:yr,date:tgl};
+      slip=pr.slips.find(s=>s.empId===empId);
+    }
+  }
+  if(!slip){
+    const hkAuto=hitungHK(yr,mn);
+    slip=calcDetailedSlip(e,hkAuto,0,0,0,0,0,0);
+    pRec={year:yr,month:mn,date:tgl};
+  } else {
+    pRec={...pRec,date:tgl};
+  }
+  const co=DB.company;
+  document.getElementById('slip-print-area').innerHTML=buildSlipHTML(e,slip,pRec,co);
+  // Update judul modal
+  const titleEl=document.querySelector('.modal-hd h3');
+  if(titleEl)titleEl.textContent=`Slip Gaji — ${e.name} | ${monthName(mn)} ${yr}`;
 }
 
 function printSlip(){
