@@ -345,6 +345,71 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 .ham-btn{display:none;background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:7px;color:var(--dark);font-size:20px;line-height:1;transition:.15s;}
 .ham-btn:hover{background:#f1f5f9;}
 
+/* ── BOTTOM NAV (mobile only) ── */
+.bottom-nav{display:none;}
+@media(max-width:768px){
+  .bottom-nav{
+    display:flex;
+    position:fixed;
+    bottom:0;left:0;right:0;
+    background:#fff;
+    border-top:1px solid #e2e8f0;
+    z-index:200;
+    padding:4px 0 6px;
+    box-shadow:0 -2px 12px rgba(0,0,0,.08);
+  }
+  .bnav-item{
+    flex:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    gap:2px;cursor:pointer;padding:4px 2px;
+    color:#64748b;font-size:9.5px;font-weight:500;
+    border:none;background:none;
+    -webkit-tap-highlight-color:transparent;
+    transition:color .15s;
+  }
+  .bnav-item .bnav-ic{font-size:20px;line-height:1;}
+  .bnav-item.active{color:#0d9488;}
+  .bnav-item.active .bnav-ic{transform:scale(1.1);}
+  /* Tombol More di tengah */
+  .bnav-more{
+    flex:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    gap:2px;cursor:pointer;padding:4px 2px;
+    color:#64748b;font-size:9.5px;font-weight:500;
+    border:none;background:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .bnav-more .bnav-ic{font-size:20px;line-height:1;}
+  /* Drawer menu lengkap */
+  .bnav-drawer{
+    display:none;
+    position:fixed;bottom:60px;left:0;right:0;
+    background:#fff;border-top:1px solid #e2e8f0;
+    border-radius:16px 16px 0 0;
+    box-shadow:0 -4px 24px rgba(0,0,0,.12);
+    z-index:199;
+    padding:12px 8px 8px;
+  }
+  .bnav-drawer.open{display:block;}
+  .bnav-drawer-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
+  }
+  .bnav-drawer-item{
+    display:flex;flex-direction:column;align-items:center;
+    gap:4px;padding:10px 4px;cursor:pointer;border-radius:10px;
+    color:#1e293b;font-size:10px;font-weight:500;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .bnav-drawer-item:active{background:#f1f5f9;}
+  .bnav-drawer-item .ic{font-size:22px;}
+  .bnav-drawer-overlay{
+    display:none;position:fixed;inset:0;z-index:198;
+  }
+  .bnav-drawer-overlay.open{display:block;}
+  /* Beri ruang konten agar tidak tertutup bottom nav */
+  .main{padding-bottom:64px;}
+}
+
 @media(max-width:768px){
   /* Sidebar jadi overlay — tidak memakan ruang konten */
   .sb{
@@ -2657,6 +2722,25 @@ function confirmImportRekon(){
   openRekonDetail(sessionId);
 }
 
+function bnavGo(page){
+  closeBnavDrawer();
+  nav(page);
+  // Update active state bottom nav
+  document.querySelectorAll('.bnav-item').forEach(el=>{
+    el.classList.toggle('active', el.id==='bnav-'+page);
+  });
+}
+function toggleBnavDrawer(){
+  const drawer=document.getElementById('bnavDrawer');
+  const overlay=document.getElementById('bnavOverlay');
+  const isOpen=drawer.classList.contains('open');
+  drawer.classList.toggle('open',!isOpen);
+  overlay.classList.toggle('open',!isOpen);
+}
+function closeBnavDrawer(){
+  document.getElementById('bnavDrawer').classList.remove('open');
+  document.getElementById('bnavOverlay').classList.remove('open');
+}
 function toggleSidebar(){
   sb.classList.contains('open')?closeSidebar():openSidebar();
 }
@@ -3641,6 +3725,12 @@ function nav(page){
   }
   // Auto-close sidebar di mobile setelah pilih menu
   if(window.innerWidth<=768)closeSidebar();
+  // Sync active state bottom nav
+  if(window.innerWidth<=768){
+    document.querySelectorAll('.bnav-item').forEach(el=>{
+      el.classList.toggle('active',el.id==='bnav-'+page);
+    });
+  }
   document.querySelectorAll('.nav-i').forEach(el=>el.classList.toggle('active',el.getAttribute('onclick')===`nav('${page}')`));
   const titleKey=pageMap[page];
   document.getElementById('topbar-title').textContent=titleKey?t(titleKey):page;
@@ -13323,5 +13413,40 @@ setTimeout(()=>{
 },500);
 
 </script> 
+  <!-- BOTTOM NAV MOBILE -->
+  <div class="bnav-drawer-overlay" id="bnavOverlay" onclick="closeBnavDrawer()"></div>
+  <div class="bnav-drawer" id="bnavDrawer">
+    <div class="bnav-drawer-grid">
+      <div class="bnav-drawer-item" onclick="bnavGo('accounts')"><span class="ic">📒</span><span>Akuntansi</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('transactions')"><span class="ic">💸</span><span>Operasional</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('payroll')"><span class="ic">👥</span><span>SDM & Pajak</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('basts')"><span class="ic">🗂️</span><span>Dokumen</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('ar')"><span class="ic">📋</span><span>Piutang</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('ap')"><span class="ic">🏦</span><span>Hutang</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('assets')"><span class="ic">🏗️</span><span>Aset</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('reports')"><span class="ic">📊</span><span>Laporan</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('calendar')"><span class="ic">📅</span><span>Kalender</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('faq')"><span class="ic">❓</span><span>FAQ</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('settings')"><span class="ic">⚙️</span><span>Pengaturan</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('audit')"><span class="ic">🔍</span><span>Audit</span></div>
+    </div>
+  </div>
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="bnav-item active" id="bnav-dashboard" onclick="bnavGo('dashboard')">
+      <span class="bnav-ic">🏠</span><span>Home</span>
+    </button>
+    <button class="bnav-item" id="bnav-invoices" onclick="bnavGo('invoices')">
+      <span class="bnav-ic">🧾</span><span>Jual</span>
+    </button>
+    <button class="bnav-item" id="bnav-purchases" onclick="bnavGo('purchases')">
+      <span class="bnav-ic">🛒</span><span>Beli</span>
+    </button>
+    <button class="bnav-item" id="bnav-products" onclick="bnavGo('products')">
+      <span class="bnav-ic">📦</span><span>Inventori</span>
+    </button>
+    <button class="bnav-more" onclick="toggleBnavDrawer()">
+      <span class="bnav-ic">☰</span><span>Menu</span>
+    </button>
+  </nav>
 </body>
 </html>
