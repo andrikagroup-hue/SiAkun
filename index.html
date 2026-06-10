@@ -253,6 +253,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   top:calc(100% + 3px);
   left:0;
   width:520px;
+  max-width:calc(100vw - 32px);
   background:#fff;
   border:1px solid var(--bdr);
   border-radius:8px;
@@ -276,7 +277,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   cursor:pointer;
   color:var(--txt);
   white-space:nowrap;
-  min-width:500px;
+  min-width:0;
 }
 .ss-opt:hover,.ss-opt.active{background:var(--lightBlue,#dbeafe);color:var(--pri);}
 .ss-opt.selected{font-weight:700;color:var(--pri);}
@@ -409,7 +410,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   }
   .bnav-drawer-overlay.open{display:block;}
   /* Beri ruang konten agar tidak tertutup bottom nav */
-  .main{padding-bottom:64px;}
+  .main{padding-bottom:72px;}
+  /* Safe area iPhone notch/home bar */
+  .bottom-nav{padding-bottom:calc(6px + env(safe-area-inset-bottom));}
 }
 
 @media(max-width:768px){
@@ -442,6 +445,26 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   /* Card full width */
   .grid-2{grid-template-columns:1fr!important;}
+  /* Form grids collapse di mobile */
+  .fr2,.fr3,.fr4{grid-template-columns:1fr!important;}
+  /* Neraca collapse di mobile */
+  .neraca-g{grid-template-columns:1fr!important;}
+  /* Journal & Invoice rows scroll horizontal */
+  .je-row,.je-tot,.inv-row,.inv-tot{
+    overflow-x:auto;
+    min-width:0;
+  }
+  /* Searchable dropdown full width di mobile */
+  .ss-dropdown{width:100%;left:0;right:0;}
+  /* Modal full width di mobile */
+  .modal,.modal-wide,.modal-lg,.modal-xl{width:96%;max-width:96%;padding:16px;}
+  /* PDF 2-col collapse */
+  .pdf-2col{grid-template-columns:1fr!important;}
+  /* COA charts 1 col */
+  .coa-charts{grid-template-columns:1fr!important;}
+  /* Topbar user menu tidak overflow */
+  .qnav-right{gap:4px;}
+  .qnav-mini{display:none;}
 }
 
 /* ── EXPENSE ANALYTICS ── */
