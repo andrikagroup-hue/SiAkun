@@ -432,8 +432,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   }
   .sb-overlay.open{display:block;}
   .ham-btn{display:flex;align-items:center;justify-content:center;}
-  /* Konten full width di mobile */
-  .main{width:100%;min-width:0;}
+  /* Sidebar takes no flex space at mobile */
+  body{overflow-x:hidden;}
+  .sb{flex-shrink:0;width:0;border:none;}
+  .main{margin-left:0!important;width:100vw;max-width:100vw;}
   /* Topbar sedikit lebih compact */
   .topbar{padding:10px 14px;gap:8px;}
   .topbar h2{font-size:14px;}
@@ -467,7 +469,88 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   .qnav-mini{display:none;}
 }
 
-/* ── EXPENSE ANALYTICS ── */
+/* ── MOBILE: COA TABLE ── */
+@media(max-width:768px){
+  /* Tabel COA: sembunyikan kolom Saldo (5) dan Aksi (6) */
+  .coa-tbl th:nth-child(5),
+  .coa-tbl th:nth-child(6),
+  .coa-tbl td:nth-child(5),
+  .coa-tbl td:nth-child(6){ display:none; }
+
+  /* renderAccountsDynamic table: sembunyikan Saldo & Aksi */
+  [data-coa-section] table th:nth-child(5),
+  [data-coa-section] table th:nth-child(6),
+  [data-coa-section] table td:nth-child(5),
+  [data-coa-section] table td:nth-child(6){ display:none !important; }
+
+  /* Reset fixed table-layout di mobile supaya kolom bisa wrapping */
+  [data-coa-section] table{
+    table-layout:auto !important;
+  }
+
+  /* Kolom nama bisa wrap teks panjang */
+  [data-coa-section] table td:nth-child(3){
+    white-space:normal;
+    word-break:break-word;
+    min-width:80px;
+  }
+
+  /* Badge kategori: blok sendiri, tidak float ke atas nama */
+  [data-coa-section] table td:nth-child(4){
+    white-space:normal;
+    min-width:60px;
+  }
+
+  /* Topbar actions wrap di mobile */
+  #topbar-actions{
+    flex-wrap:wrap;
+    max-width:calc(100vw - 160px);
+    gap:4px !important;
+    overflow:hidden;
+  }
+  #topbar-actions .btn{
+    font-size:10px;
+    padding:5px 7px;
+    white-space:nowrap;
+  }
+  #topbar-actions select{
+    font-size:10px;
+    padding:4px 6px;
+    max-width:100px;
+  }
+  /* Sembunyikan tombol PDF ekstra di mobile */
+  #topbar-actions .rpt-extra{display:none;}
+
+  /* Tabs scroll horizontal */
+  .tabs{
+    overflow-x:auto;
+    flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    padding-bottom:2px;
+  }
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+
+  /* Neraca baris nr tidak overflow */
+  .nr{
+    font-size:11.5px;
+  }
+  .nr span:last-child{
+    text-align:right;
+    flex-shrink:0;
+    margin-left:8px;
+  }
+
+  /* Quick nav bar di topbar wrap */
+  .qnav-right{
+    flex-wrap:nowrap;
+    overflow:hidden;
+  }
+}
 .exp-filter-bar{background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .exp-filter-bar label{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
 .exp-filter-bar select{padding:6px 10px;border-radius:7px;font-family:var(--font);font-size:12px;font-weight:600;border:1px solid var(--bdr);background:#fff;color:var(--txt);cursor:pointer;}
@@ -6317,8 +6400,8 @@ function renderReports(c){
       <option value="en">🇬🇧 English</option>
     </select>
     <button class="btn btn-pri" onclick="exportPDF('all')">📄 PDF (Semua)</button>
-    <button class="btn btn-out" onclick="exportPDF('neraca')">📄 PDF Neraca/BS</button>
-    <button class="btn btn-out" onclick="exportPDF('pl')">📄 PDF Laba Rugi/P&L</button>
+    <button class="btn btn-out rpt-extra" onclick="exportPDF('neraca')">📄 PDF Neraca/BS</button>
+    <button class="btn btn-out rpt-extra" onclick="exportPDF('pl')">📄 PDF Laba Rugi/P&L</button>
     <button class="btn btn-out" onclick="exportFinancialReport()">⬇ Excel</button>`;
   c.innerHTML=`<div class="tabs"><div class="tab active" onclick="showTab('neraca',this)">Balance Sheet</div><div class="tab" onclick="showTab('labarugi',this)">Profit & Loss</div><div class="tab" onclick="showTab('aruskas',this)">Cash Flow</div><div class="tab" onclick="showTab('neracasaldo',this)">Balance Sheet Saldo</div><div class="tab" onclick="showTab('perubahanmodal',this)">📊 Perubahan Modal</div><div class="tab" onclick="showTab('agingar',this)">⏰ Aging AR/AP</div></div><div id="neraca" class="tabcnt active"></div><div id="labarugi" class="tabcnt"></div><div id="aruskas" class="tabcnt"></div><div id="neracasaldo" class="tabcnt"></div><div id="perubahanmodal" class="tabcnt"></div><div id="agingar" class="tabcnt"></div>`;
   renderNeraca();
