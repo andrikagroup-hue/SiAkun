@@ -437,7 +437,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   .sb{flex-shrink:0;width:0;border:none;}
   .main{margin-left:0!important;width:100vw;max-width:100vw;}
   /* Topbar sedikit lebih compact */
-  .topbar{padding:10px 14px;gap:8px;}
+  .topbar{padding:10px 14px;gap:8px;overflow:visible;}
   .topbar h2{font-size:14px;}
   /* Content padding lebih kecil */
   .content{padding:12px 14px;}
@@ -469,44 +469,24 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   .qnav-mini{display:none;}
 }
 
-/* ── MOBILE: COA TABLE ── */
+/* ── MOBILE ONLY ── */
 @media(max-width:768px){
-  /* Tabel COA: sembunyikan kolom Saldo (5) dan Aksi (6) */
-  .coa-tbl th:nth-child(5),
-  .coa-tbl th:nth-child(6),
-  .coa-tbl td:nth-child(5),
-  .coa-tbl td:nth-child(6){ display:none; }
 
-  /* renderAccountsDynamic table: sembunyikan Saldo & Aksi */
-  [data-coa-section] table th:nth-child(5),
-  [data-coa-section] table th:nth-child(6),
-  [data-coa-section] table td:nth-child(5),
-  [data-coa-section] table td:nth-child(6){ display:none !important; }
-
-  /* Reset fixed table-layout di mobile supaya kolom bisa wrapping */
+  /* ── COA TABLE: scroll horizontal (sama seperti tabel produk) ── */
+  [data-coa-section] .tbl-wrap{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
   [data-coa-section] table{
     table-layout:auto !important;
+    min-width:520px; /* pastikan semua kolom tetap tampil, geser horizontal */
   }
 
-  /* Kolom nama bisa wrap teks panjang */
-  [data-coa-section] table td:nth-child(3){
-    white-space:normal;
-    word-break:break-word;
-    min-width:80px;
-  }
-
-  /* Badge kategori: blok sendiri, tidak float ke atas nama */
-  [data-coa-section] table td:nth-child(4){
-    white-space:normal;
-    min-width:60px;
-  }
-
-  /* Topbar actions wrap di mobile */
+  /* ── Topbar actions: wrap rapi di mobile ── */
   #topbar-actions{
     flex-wrap:wrap;
     max-width:calc(100vw - 160px);
     gap:4px !important;
-    overflow:hidden;
   }
   #topbar-actions .btn{
     font-size:10px;
@@ -521,7 +501,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   /* Sembunyikan tombol PDF ekstra di mobile */
   #topbar-actions .rpt-extra{display:none;}
 
-  /* Tabs scroll horizontal */
+  /* ── Tabs scroll horizontal ── */
   .tabs{
     overflow-x:auto;
     flex-wrap:nowrap;
@@ -535,20 +515,25 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
     flex-shrink:0;
   }
 
-  /* Neraca baris nr tidak overflow */
-  .nr{
-    font-size:11.5px;
-  }
+  /* ── Neraca rows ── */
+  .nr{ font-size:11.5px; }
   .nr span:last-child{
     text-align:right;
     flex-shrink:0;
     margin-left:8px;
   }
 
-  /* Quick nav bar di topbar wrap */
+  /* ── User dropdown: JANGAN overflow:hidden agar tombol ▼ bisa diklik ── */
   .qnav-right{
     flex-wrap:nowrap;
-    overflow:hidden;
+    overflow:visible !important;
+  }
+  .user-menu-wrap{
+    position:relative;
+    overflow:visible !important;
+  }
+  .user-dropdown{
+    z-index:9999;
   }
 }
 .exp-filter-bar{background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
