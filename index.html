@@ -6293,6 +6293,21 @@ function delJournal(id){
   const tx=DB.transactions.find(t=>t.id===id);
   if(tx&&!checkLock(tx.date))return; // 🔒 lock check
   DB.transactions=DB.transactions.filter(t=>t.id!==id);
+  // ── Reset flag payroll jika jurnal PAY dihapus ──
+  if(tx&&tx.ref&&String(tx.ref).startsWith('PAY-')){
+    // ref format: PAY-YYYY-MM atau PAY-YYYYMM
+    const refStr=String(tx.ref).replace('PAY-','');
+    // Cek apakah masih ada jurnal PAY lain dengan ref yang sama
+    const masihAda=DB.transactions.some(t=>t.ref===tx.ref);
+    if(!masihAda){
+      // Tidak ada lagi jurnal dengan ref ini → reset flag payroll
+      DB.payroll=DB.payroll.filter(p=>{
+        const prRef=`PAY-${p.year}-${String(p.month).padStart(2,'0')}`;
+        const prRef2=`PAY-${p.year}${String(p.month).padStart(2,'0')}`;
+        return prRef!==tx.ref&&prRef2!==tx.ref;
+      });
+    }
+  }
   recalculateAllBalances();             // 📊 POST KE LEDGER
   saveDB();
   if(typeof logActivity === 'function') logActivity('Hapus Jurnal', `Ref: ${tx?.ref||id} — ${tx?.desc||''}`);
