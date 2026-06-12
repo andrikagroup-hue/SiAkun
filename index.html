@@ -11229,9 +11229,6 @@ function valClass(n){return n<0?'neg':n>0?'pos':'';}
 
 function buildCoverHdr(co,today_str,reportTitle,lang){
   const isID=lang==='id';
-  const logo=co.logo
-    ?`<img src="${co.logo}" style="width:80px;height:80px;object-fit:contain;flex-shrink:0;">`
-    :`<div style="width:80px;height:80px;background:#fff3ee;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🏢</div>`;
   const dateLabel=isID?'Per Tanggal':'As of';
   const reportLabel=isID?'Laporan Keuangan':'Financial Statement';
   // info lines — only non-empty
@@ -11243,26 +11240,37 @@ function buildCoverHdr(co,today_str,reportTitle,lang){
   const bk=[co.bank?`Bank: ${co.bank}`:'',co.norek?`No. Rek: <b>${co.norek}</b>`:'',co.atasnama?`a/n ${co.atasnama}`:''].filter(Boolean).join('  |  ');
   if(bk) lines.push(`<span>${bk}</span>`);
   const infoHtml=lines.map(l=>`<div style="font-size:10px;color:#4a3320;margin-bottom:1.5px;line-height:1.5">${l}</div>`).join('');
+  // Logo: stretch to full height of info block (name + all lines)
+  // Use align-items:stretch so logo div matches the text column height exactly
+  const logo=co.logo
+    ?`<img src="${co.logo}" style="width:auto;height:100%;object-fit:contain;display:block;">`
+    :`<div style="width:100%;height:100%;background:#fff3ee;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:30px;">🏢</div>`;
   return`
   <div style="background:linear-gradient(135deg,#fff3ee 0%,#ffe8d6 100%);border-radius:10px;margin-bottom:20px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-    <!-- top band: company info -->
-    <div style="display:flex;align-items:center;gap:16px;padding:18px 22px 14px;">
-      ${logo}
+    <!-- company info row -->
+    <div style="display:flex;align-items:stretch;gap:16px;padding:18px 22px 14px;">
+      <!-- logo column: stretches to match info column height -->
+      <div style="flex-shrink:0;width:80px;display:flex;align-items:stretch;">
+        ${logo}
+      </div>
+      <!-- info column -->
       <div style="flex:1;min-width:0;">
         <div style="font-size:15px;font-weight:800;color:#c2400a;margin-bottom:5px;letter-spacing:-.2px">${co.name}</div>
         ${infoHtml}
       </div>
-      <div style="text-align:right;flex-shrink:0;padding-left:16px;">
-        <div style="font-size:8px;letter-spacing:2px;color:#a0522d;text-transform:uppercase;margin-bottom:3px;font-weight:600">${dateLabel}</div>
-        <div style="font-size:13px;font-weight:800;color:#0f172a">${today_str}</div>
-      </div>
     </div>
     <!-- divider -->
     <div style="height:1px;background:rgba(194,64,10,.2);margin:0 22px;"></div>
-    <!-- bottom band: report title -->
-    <div style="padding:10px 22px 14px;">
-      <div style="font-size:8.5px;letter-spacing:2.5px;color:#a0522d;text-transform:uppercase;margin-bottom:3px;font-weight:600">${reportLabel}</div>
-      <div style="font-size:22px;font-weight:900;color:#c2400a;letter-spacing:-.3px">${reportTitle}</div>
+    <!-- report title + date row -->
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:10px 22px 14px;">
+      <div>
+        <div style="font-size:8.5px;letter-spacing:2.5px;color:#a0522d;text-transform:uppercase;margin-bottom:3px;font-weight:600">${reportLabel}</div>
+        <div style="font-size:22px;font-weight:900;color:#c2400a;letter-spacing:-.3px">${reportTitle}</div>
+      </div>
+      <div style="text-align:right;padding-bottom:2px;">
+        <div style="font-size:8px;letter-spacing:2px;color:#a0522d;text-transform:uppercase;margin-bottom:3px;font-weight:600">${dateLabel}</div>
+        <div style="font-size:13px;font-weight:800;color:#0f172a">${today_str}</div>
+      </div>
     </div>
   </div>`;
 }
