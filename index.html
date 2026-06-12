@@ -11229,33 +11229,40 @@ function valClass(n){return n<0?'neg':n>0?'pos':'';}
 
 function buildCoverHdr(co,today_str,reportTitle,lang){
   const isID=lang==='id';
-  const logo=co.logo?`<img src="${co.logo}" style="width:64px;height:64px;object-fit:contain;flex-shrink:0;">`:
-    `<div style="width:64px;height:64px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🏢</div>`;
+  const logo=co.logo
+    ?`<img src="${co.logo}" style="width:80px;height:80px;object-fit:contain;flex-shrink:0;">`
+    :`<div style="width:80px;height:80px;background:#fff3ee;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🏢</div>`;
   const dateLabel=isID?'Per Tanggal':'As of';
   const reportLabel=isID?'Laporan Keuangan':'Financial Statement';
-  // Build info lines — only show fields that exist
+  // info lines — only non-empty
   const lines=[];
-  if(co.address) lines.push(co.address);
-  const phoneLine=[co.phone?`Telp: ${co.phone}`:'', co.email?`| ${co.email}`:''].filter(Boolean).join(' ');
-  if(phoneLine) lines.push(phoneLine);
-  if(co.npwp) lines.push(`NPWP: ${co.npwp}`);
-  const bankLine=[co.bank?`Bank: ${co.bank}`:'', co.norek?`| No. Rek: <strong>${co.norek}</strong>`:'', co.atasnama?`a/n ${co.atasnama}`:''].filter(Boolean).join(' ');
-  if(bankLine) lines.push(bankLine);
-  const infoHtml = lines.map(l=>`<div style="font-size:10.5px;color:#475569;margin-bottom:2px;line-height:1.5">${l}</div>`).join('');
-  return`<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:18px 20px;border-bottom:2px solid #e2e8f0;margin-bottom:20px;background:#fff;">
-    <div style="display:flex;align-items:flex-start;gap:14px;">
+  if(co.address) lines.push(`<span>${co.address}</span>`);
+  const ph=[co.phone?`Telp: ${co.phone}`:'',co.email?co.email:''].filter(Boolean).join('  |  ');
+  if(ph) lines.push(`<span>${ph}</span>`);
+  if(co.npwp) lines.push(`<span>NPWP: ${co.npwp}</span>`);
+  const bk=[co.bank?`Bank: ${co.bank}`:'',co.norek?`No. Rek: <b>${co.norek}</b>`:'',co.atasnama?`a/n ${co.atasnama}`:''].filter(Boolean).join('  |  ');
+  if(bk) lines.push(`<span>${bk}</span>`);
+  const infoHtml=lines.map(l=>`<div style="font-size:10px;color:#4a3320;margin-bottom:1.5px;line-height:1.5">${l}</div>`).join('');
+  return`
+  <div style="background:linear-gradient(135deg,#fff3ee 0%,#ffe8d6 100%);border-radius:10px;margin-bottom:20px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+    <!-- top band: company info -->
+    <div style="display:flex;align-items:center;gap:16px;padding:18px 22px 14px;">
       ${logo}
-      <div>
-        <div style="font-size:14px;font-weight:800;color:#E8510A;margin-bottom:4px;letter-spacing:-.2px">${co.name}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:15px;font-weight:800;color:#c2400a;margin-bottom:5px;letter-spacing:-.2px">${co.name}</div>
         ${infoHtml}
       </div>
+      <div style="text-align:right;flex-shrink:0;padding-left:16px;">
+        <div style="font-size:8px;letter-spacing:2px;color:#a0522d;text-transform:uppercase;margin-bottom:3px;font-weight:600">${dateLabel}</div>
+        <div style="font-size:13px;font-weight:800;color:#0f172a">${today_str}</div>
+      </div>
     </div>
-    <div style="text-align:right;flex-shrink:0;margin-left:20px;">
-      <div style="font-size:8px;letter-spacing:2px;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">${reportLabel}</div>
-      <div style="font-size:15px;font-weight:800;color:#E8510A;letter-spacing:-.3px">${reportTitle}</div>
-      <div style="width:40px;height:3px;background:#E8510A;border-radius:2px;margin:5px 0 5px auto"></div>
-      <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">${dateLabel}</div>
-      <div style="font-size:12px;font-weight:700;color:#0f172a">${today_str}</div>
+    <!-- divider -->
+    <div style="height:1px;background:rgba(194,64,10,.2);margin:0 22px;"></div>
+    <!-- bottom band: report title -->
+    <div style="padding:10px 22px 14px;">
+      <div style="font-size:8.5px;letter-spacing:2.5px;color:#a0522d;text-transform:uppercase;margin-bottom:3px;font-weight:600">${reportLabel}</div>
+      <div style="font-size:22px;font-weight:900;color:#c2400a;letter-spacing:-.3px">${reportTitle}</div>
     </div>
   </div>`;
 }
@@ -11280,21 +11287,21 @@ function buildNePDF(lr,co,today_str,lang){
     total:       isID?'Total':'Total',
   };
   const acGroups=[
-    {label:T.curAssets,bg:'#1D4ED8',filter:a=>a.type==='aktiva'&&a.sub==='lancar'},
-    {label:T.fixAssets,bg:'#1E3A8A',filter:a=>a.type==='aktiva'&&a.sub==='tetap'},
-    {label:T.othAssets,bg:'#7C3AED',filter:a=>a.type==='aktiva'&&a.sub==='lain'},
+    {label:T.curAssets,bg:'#dbeafe',tc:'#1e40af',filter:a=>a.type==='aktiva'&&a.sub==='lancar'},
+    {label:T.fixAssets,bg:'#e0e7ff',tc:'#3730a3',filter:a=>a.type==='aktiva'&&a.sub==='tetap'},
+    {label:T.othAssets,bg:'#ede9fe',tc:'#5b21b6',filter:a=>a.type==='aktiva'&&a.sub==='lain'},
   ];
   const lwGroups=[
-    {label:T.curLiab,bg:'#059669',filter:a=>a.type==='kewajiban'&&a.sub==='lancar'},
-    {label:T.ltLiab,bg:'#0E7490',filter:a=>a.type==='kewajiban'&&a.sub==='panjang'},
-    {label:T.equity,bg:'#E8510A',filter:a=>a.type==='modal'},
+    {label:T.curLiab,bg:'#d1fae5',tc:'#065f46',filter:a=>a.type==='kewajiban'&&a.sub==='lancar'},
+    {label:T.ltLiab,bg:'#cffafe',tc:'#164e63',filter:a=>a.type==='kewajiban'&&a.sub==='panjang'},
+    {label:T.equity,bg:'#ffedd5',tc:'#9a3412',filter:a=>a.type==='modal'},
   ];
   function renderGroup(grps,addNetProfit){
     let html2='';let grandTotal=0;
     grps.forEach(g=>{
       const accs=DB.accounts.filter(g.filter);
       let secTotal=0;
-      html2+=`<div style="background:${g.bg};color:white;padding:6px 12px;font-weight:700;font-size:11px;margin-top:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${g.label}</div>`;
+      html2+=`<div style="background:${g.bg};color:${g.tc||'#1e293b'};padding:6px 12px;font-weight:700;font-size:11px;margin-top:8px;border-left:3px solid ${g.tc||'#334155'};-webkit-print-color-adjust:exact;print-color-adjust:exact">${g.label}</div>`;
       accs.forEach((a,i)=>{
         const bal=acctBal(a.id);const netBal=(a.name||'').toLowerCase().includes('akumulasi penyusutan')?-bal:bal;secTotal+=netBal;
         html2+=`<div style="display:flex;justify-content:space-between;padding:5px 12px;border-bottom:1px solid #E2E8F0;background:${i%2===0?'#F8FAFC':'white'};font-size:11px">
@@ -11310,8 +11317,8 @@ function buildNePDF(lr,co,today_str,lang){
         secTotal+=lr.labaBersih;
       }
       grandTotal+=secTotal;
-      html2+=`<div style="display:flex;justify-content:space-between;padding:7px 12px;background:#DBEAFE;font-weight:700;font-size:11.5px;color:#1D4ED8;border-top:2px solid #1D4ED8;border-bottom:2px solid #1D4ED8;-webkit-print-color-adjust:exact;print-color-adjust:exact">
-        <span>${T.total} ${g.label.split('/')[0].trim()}</span><span>${rp2(secTotal)}</span>
+      html2+=`<div style="display:flex;justify-content:space-between;padding:6px 12px;background:#f8fafc;font-weight:700;font-size:11px;color:#374151;border-top:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;">
+        <span style="font-style:italic">${T.total} ${g.label.split('/')[0].trim()}</span><span>${rp2(secTotal)}</span>
       </div>`;
     });
     return{html2,grandTotal};
@@ -11323,18 +11330,18 @@ function buildNePDF(lr,co,today_str,lang){
   return buildCoverHdr(co,today_str,T.title,lang)+`
   <div style="display:grid;grid-template-columns:1fr 12px 1fr;gap:0;margin-bottom:12px">
     <div>
-      <div style="background:#0F172A;color:white;padding:8px 12px;font-weight:800;font-size:12px;border-radius:6px 6px 0 0;-webkit-print-color-adjust:exact;print-color-adjust:exact">${T.assets}</div>
+      <div style="background:#fff3ee;color:#9a3412;padding:8px 12px;font-weight:800;font-size:12px;border-radius:6px 6px 0 0;border-bottom:2px solid #fdba74;-webkit-print-color-adjust:exact;print-color-adjust:exact">${T.assets}</div>
       ${leftResult.html2}
-      <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#0F172A;color:white;font-weight:800;font-size:13px;margin-top:8px;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact">
-        <span>${T.totalAssets}</span><span style="color:#FBBF24">${rp2(totA)}</span>
+      <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#fff3ee;color:#9a3412;font-weight:800;font-size:12px;margin-top:8px;border-radius:4px;border:1px solid #fdba74;-webkit-print-color-adjust:exact;print-color-adjust:exact">
+        <span>${T.totalAssets}</span><span style="color:#9a3412">${rp2(totA)}</span>
       </div>
     </div>
     <div style="background:#E2E8F0;margin:0 4px"></div>
     <div>
-      <div style="background:#0F172A;color:white;padding:8px 12px;font-weight:800;font-size:12px;border-radius:6px 6px 0 0;-webkit-print-color-adjust:exact;print-color-adjust:exact">${T.liabEq}</div>
+      <div style="background:#fff3ee;color:#9a3412;padding:8px 12px;font-weight:800;font-size:12px;border-radius:6px 6px 0 0;border-bottom:2px solid #fdba74;-webkit-print-color-adjust:exact;print-color-adjust:exact">${T.liabEq}</div>
       ${rightResult.html2}
-      <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#0F172A;color:white;font-weight:800;font-size:13px;margin-top:8px;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact">
-        <span>${T.totalLE}</span><span style="color:#FBBF24">${rp2(totLE)}</span>
+      <div style="display:flex;justify-content:space-between;padding:10px 12px;background:#fff3ee;color:#9a3412;font-weight:800;font-size:12px;margin-top:8px;border-radius:4px;border:1px solid #fdba74;-webkit-print-color-adjust:exact;print-color-adjust:exact">
+        <span>${T.totalLE}</span><span style="color:#9a3412">${rp2(totLE)}</span>
       </div>
     </div>
   </div>
@@ -11385,10 +11392,10 @@ function buildPLPDF(lr,co,today_str,lang){
   }
 
   function totRow(label,val,large){
-    const bg=val<0?'#FEE2E2':'#DBEAFE';
-    const clr=val<0?'#DC2626':'#1D4ED8';
-    const bdr=val<0?'#DC2626':'#1D4ED8';
-    return`<div style="display:flex;justify-content:space-between;padding:${large?'10':'7'}px 12px;background:${bg};font-weight:700;font-size:${large?'13':'11.5'}px;color:${clr};border-top:2px solid ${bdr};border-bottom:2px solid ${bdr};-webkit-print-color-adjust:exact;print-color-adjust:exact">
+    const bg=val<0?'#fff1f2':'#f0fdf4';
+    const clr=val<0?'#be123c':'#166534';
+    const bdr=val<0?'#fda4af':'#86efac';
+    return`<div style="display:flex;justify-content:space-between;padding:${large?'9':'6'}px 12px;background:${bg};font-weight:700;font-size:${large?'12':'11'}px;color:${clr};border-top:1px solid ${bdr};border-bottom:1px solid ${bdr};-webkit-print-color-adjust:exact;print-color-adjust:exact">
       <span>${label}</span><span>${rp2(val)}</span>
     </div>`;
   }
@@ -11396,10 +11403,10 @@ function buildPLPDF(lr,co,today_str,lang){
   const expenseRows=bebanGroups.map(g=>{
     const accs=DB.accounts.filter(a=>a.type==='beban'&&a.sub===g.sub&&acctBal(a.id)!==0);
     if(!accs.length)return'';
-    return`<div style="background:${g.bg};padding:5px 12px 5px 20px;font-weight:700;font-size:10.5px;color:#374151;-webkit-print-color-adjust:exact;print-color-adjust:exact">▸  ${g.label}</div>`+
-      accs.map((a,i)=>`<div style="display:flex;justify-content:space-between;padding:5px 12px 5px 28px;border-bottom:1px solid #E2E8F0;background:${i%2===0?'#FFF7F7':'white'};font-size:11px">
+    return`<div style="background:#fef9f0;border-left:3px solid #fb923c;padding:5px 12px 5px 14px;font-weight:700;font-size:10.5px;color:#9a3412;-webkit-print-color-adjust:exact;print-color-adjust:exact">▸  ${g.label}</div>`+
+      accs.map((a,i)=>`<div style="display:flex;justify-content:space-between;padding:5px 12px 5px 20px;border-bottom:1px solid #f3e8e0;background:white;font-size:11px">
         <span style="color:#1E293B">${a.name}</span>
-        <span style="font-weight:500;color:#DC2626">${rp2(acctBal(a.id))}</span>
+        <span style="font-weight:500;color:#b45309">${rp2(acctBal(a.id))}</span>
       </div>`).join('');
   }).join('');
 
