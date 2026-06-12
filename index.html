@@ -6535,15 +6535,13 @@ function _renderReportDetail(id){
   // Inject action buttons per laporan
   const btnExcel = `<button class="btn btn-out" onclick="exportFinancialReport()">⬇ Excel</button>`;
   const btnPDFAll= `<button class="btn btn-pri" onclick="exportPDF('all')">📄 PDF Semua</button>`;
-  const langSel  = `<select id="pdf-lang" style="padding:6px 10px;border:1px solid var(--bdr);border-radius:7px;font-family:var(--font);font-size:12px;font-weight:600"><option value="id">🇮🇩 Bahasa Indonesia</option><option value="en">🇬🇧 English</option></select>`;
-
   const actionMap = {
-    neraca:         `${langSel}${btnExcel}<button class="btn btn-pri" onclick="exportPDF('neraca')">📄 Export PDF</button>`,
-    labarugi:       `${langSel}${btnExcel}<button class="btn btn-pri" onclick="exportPDF('pl')">📄 Export PDF</button>`,
-    aruskas:        `${langSel}${btnExcel}`,
-    neracasaldo:    `${langSel}${btnExcel}`,
-    perubahanmodal: `${langSel}${btnExcel}`,
-    agingar:        `${langSel}${btnExcel}`,
+    neraca:         `${btnExcel}<button class="btn btn-pri" onclick="exportPDF('neraca')">📄 Export PDF</button>`,
+    labarugi:       `${btnExcel}<button class="btn btn-pri" onclick="exportPDF('pl')">📄 Export PDF</button>`,
+    aruskas:        `${btnExcel}`,
+    neracasaldo:    `${btnExcel}`,
+    perubahanmodal: `${btnExcel}`,
+    agingar:        `${btnExcel}`,
   };
   if(actBar && actionMap[id]) actBar.innerHTML = actionMap[id];
 
@@ -6579,127 +6577,199 @@ function _renderReportDetail(id){
 
 function showTab(id,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tabcnt').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById(id).classList.add('active');if(id==='neraca')renderNeraca();if(id==='labarugi')renderLabaRugi();if(id==='aruskas')renderArusKas();if(id==='neracasaldo')renderNeracaSaldo();if(id==='perubahanmodal')renderPerubahanModal();if(id==='agingar')renderAgingARAPReport();}
 
-function renderNeraca(){
-  const lr=labaRugiCalc();
+function renderNeraca(opts){
+  // ── State filter ──
+  if(!window._neracaState){
+    const now=new Date();
+    window._neracaState={mode:'tahun',date:now.toISOString().slice(0,10)};
+  }
+  if(opts){
+    if(opts.mode!==undefined) window._neracaState.mode=opts.mode;
+    if(opts.date!==undefined) window._neracaState.date=opts.date;
+  }
+  const st=window._neracaState;
+
+  // Tentukan cutoff date
+  let cutoffDate;
+  if(st.mode==='bulan'){
+    const d=new Date(st.date);
+    cutoffDate=new Date(d.getFullYear(),d.getMonth()+1,0).toISOString().slice(0,10);
+  } else {
+    cutoffDate=st.date.slice(0,4)+'-12-31';
+  }
+
+  function balAt(id){ return balanceAsOfDate(id,cutoffDate); }
+
+  function lrCalcAt(endDate){
+    let p=0,h=0,b=0;
+    DB.accounts.filter(a=>a.type==='pendapatan').forEach(a=>{p+=balanceAsOfDate(a.id,endDate);});
+    DB.accounts.filter(a=>a.type==='hpp').forEach(a=>{h+=balanceAsOfDate(a.id,endDate);});
+    DB.accounts.filter(a=>a.type==='beban').forEach(a=>{b+=balanceAsOfDate(a.id,endDate);});
+    return{labaBersih:p-h-b};
+  }
+  const lr=lrCalcAt(cutoffDate);
+
   const akL=DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='lancar');
   const akT=DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='tetap');
   const akO=DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='lain');
   const kwL=DB.accounts.filter(a=>a.type==='kewajiban'&&a.sub==='lancar');
   const kwP=DB.accounts.filter(a=>a.type==='kewajiban'&&a.sub==='panjang');
   const modal=DB.accounts.filter(a=>a.type==='modal');
-  const totAkL=akL.reduce((s,a)=>s+acctBal(a.id),0);
-  const totAkT=akT.reduce((s,a)=>s+acctBal(a.id),0);
-  const totAkO=akO.reduce((s,a)=>s+acctBal(a.id),0);
-  const totKwL=kwL.reduce((s,a)=>s+acctBal(a.id),0);
-  const totKwP=kwP.reduce((s,a)=>s+acctBal(a.id),0);
-  const totModal=modal.reduce((s,a)=>s+acctBal(a.id),0)+lr.labaBersih;
+  const totAkL=akL.reduce((s,a)=>s+balAt(a.id),0);
+  const totAkT=akT.reduce((s,a)=>s+balAt(a.id),0);
+  const totAkO=akO.reduce((s,a)=>s+balAt(a.id),0);
+  const totKwL=kwL.reduce((s,a)=>s+balAt(a.id),0);
+  const totKwP=kwP.reduce((s,a)=>s+balAt(a.id),0);
+  const totModal=modal.reduce((s,a)=>s+balAt(a.id),0)+lr.labaBersih;
   const totAktiva=totAkL+totAkT+totAkO,totPassiva=totKwL+totKwP+totModal;
   const totKewajiban=totKwL+totKwP;
 
-  // ── Ratio Calculations ──
-  // Cash & setara kas = akun kas/bank di aktiva lancar
   const kasAkun=akL.filter(a=>a.code&&(a.code.startsWith('1-1')||a.name.toLowerCase().includes('kas')||a.name.toLowerCase().includes('bank')));
-  const totKas=kasAkun.reduce((s,a)=>s+acctBal(a.id),0);
-  const quickRatio  = totKwL>0 ? ((totAkL - 0) / totKwL) : 0; // simplified: current assets / current liab
-  const currentRatio= totKwL>0 ? (totAkL / totKwL)           : 0;
-  const debtEquity  = totModal>0? (totKewajiban / totModal)   : 0;
-  const equityRatio = totAktiva>0? (totModal / totAktiva)     : 0;
+  const quickRatio  = totKwL>0?(totAkL/totKwL):0;
+  const currentRatio= totKwL>0?(totAkL/totKwL):0;
+  const debtEquity  = totModal>0?(totKewajiban/totModal):0;
+  const equityRatio = totAktiva>0?(totModal/totAktiva):0;
 
-  function ratioGauge(val, max){
+  function ratioGauge(val,max){
     const pct=Math.min(100,Math.round((val/max)*100));
     const color=pct<30?'#ef4444':pct<60?'#f59e0b':'#22c55e';
-    return`<div style="position:relative;width:80px;height:44px;overflow:hidden">
-      <svg width="80" height="44" viewBox="0 0 80 44">
-        <path d="M8,40 A32,32 0 0,1 72,40" fill="none" stroke="#e2e8f0" stroke-width="10" stroke-linecap="round"/>
-        <path d="M8,40 A32,32 0 0,1 72,40" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"
-          stroke-dasharray="${pct*1.005} 100.5" />
-      </svg>
-    </div>`;
+    return`<div style="position:relative;width:80px;height:44px;overflow:hidden"><svg width="80" height="44" viewBox="0 0 80 44"><path d="M8,40 A32,32 0 0,1 72,40" fill="none" stroke="#e2e8f0" stroke-width="10" stroke-linecap="round"/><path d="M8,40 A32,32 0 0,1 72,40" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${pct*1.005} 100.5"/></svg></div>`;
+  }
+  function ratioCard(title,value,subtitle,showGauge,gaugeMax,hint,trendVal){
+    const fv=isNaN(value)||!isFinite(value)?'0':value.toFixed(2).replace('.',',');
+    const trendColor=trendVal>=0?'#22c55e':'#ef4444';
+    const trendArrow=trendVal>=0?'↗':'↘';
+    const trendHtml=trendVal!==undefined?`<div style="font-size:10px;color:${trendColor}">${trendArrow} ${Math.abs(trendVal).toFixed(1)}%</div>`:'';
+    return`<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;flex:1;min-width:160px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px">${title}</span><span style="font-size:10px;color:#94a3b8;cursor:help" title="${hint}">ⓘ</span></div><div style="display:flex;align-items:flex-end;gap:10px"><div><div style="font-size:26px;font-weight:800;color:#1e293b;line-height:1">${fv}</div><div style="font-size:10.5px;color:#64748b;margin-top:4px">${subtitle}</div>${trendHtml}</div>${showGauge?ratioGauge(value,gaugeMax):(trendVal!==undefined?`<span style="font-size:22px;color:${trendColor}">${trendArrow}</span>`:'')}</div></div>`;
   }
 
-  function ratioCard(title, value, subtitle, showGauge, gaugeMax, hint){
-    const fv = isNaN(value)||!isFinite(value)?'0':value.toFixed(2).replace('.',',');
-    return`<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;flex:1;min-width:160px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px">${title}</span>
-        <span style="font-size:10px;color:#94a3b8;cursor:help" title="${hint}">ⓘ</span>
-      </div>
-      <div style="display:flex;align-items:flex-end;gap:10px">
-        <div>
-          <div style="font-size:26px;font-weight:800;color:#1e293b;line-height:1">${fv}</div>
-          <div style="font-size:10.5px;color:#64748b;margin-top:4px">${subtitle}</div>
-        </div>
-        ${showGauge?ratioGauge(value,gaugeMax):'<span style="font-size:20px;color:#22c55e">↗</span>'}
-      </div>
-    </div>`;
-  }
-
-  const today2=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+  const bulanNames=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const selDate=new Date(st.date+'T00:00:00');
+  const labelPeriode=st.mode==='bulan'?`${bulanNames[selDate.getMonth()]} ${selDate.getFullYear()}`:String(selDate.getFullYear());
+  const inputVal=st.mode==='bulan'?st.date.slice(0,7):st.date.slice(0,4);
 
   document.getElementById('neraca').innerHTML=`
   <style>
     .neraca-ratio-wrap{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
     @media(max-width:700px){.neraca-ratio-wrap{flex-direction:column}}
+    .nr-period-toggle{display:inline-flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#f1f5f9}
+    .nr-period-btn{padding:6px 18px;font-size:12px;font-weight:600;border:none;background:transparent;cursor:pointer;color:#64748b;transition:all .15s}
+    .nr-period-btn.active{background:#fff;color:#1e293b;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+    .nr-date-input{border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:#1e293b;background:#fff}
+    .nr-chart-panel{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px}
+    .nr-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+    @media(max-width:700px){.nr-chart-grid{grid-template-columns:1fr}}
+    .nr-chart-title{font-size:11px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+    .nr-expand-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:600;color:var(--pri);cursor:pointer;margin:16px 0;transition:background .15s}
+    .nr-expand-btn:hover{background:#f0f7ff}
+    .nr-charts-section{display:none}
+    .nr-charts-section.open{display:block}
   </style>
 
-  <!-- HEADER ROW -->
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
     <div style="font-size:20px;font-weight:800;color:#1e293b">Neraca</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-out no-print" onclick="exportFinancialReport()">⬇ Excel</button>
       <button class="btn btn-out no-print" onclick="exportPDF('neraca')">🖨 Print</button>
       <button class="btn btn-pri no-print" onclick="exportPDF('neraca')">📤 Ekspor</button>
     </div>
   </div>
 
-  <!-- RATIO CARDS -->
-  <div class="neraca-ratio-wrap">
-    ${ratioCard('Quick Ratio', quickRatio,
-      `Target 0,2`, true, 3,
-      'Kemampuan membayar kewajiban jangka pendek dengan aset lancar paling likuid')}
-    ${ratioCard('Current Ratio', currentRatio,
-      `Hari Ini &nbsp;<span style="color:#22c55e;font-size:10px">0%</span><br><span style="color:#94a3b8;font-size:10px">vs bulan sebelumnya</span>`, false, 3,
-      'Aset lancar dibagi kewajiban lancar — idealnya di atas 1')}
-    ${ratioCard('Debt Equity Ratio', debtEquity,
-      `Hari Ini &nbsp;<span style="color:#22c55e;font-size:10px">0%</span><br><span style="color:#94a3b8;font-size:10px">vs bulan sebelumnya</span>`, false, 3,
-      'Total hutang dibagi total ekuitas — semakin rendah semakin sehat')}
-    ${ratioCard('Equity Ratio', equityRatio,
-      `Hari Ini &nbsp;<span style="color:#22c55e;font-size:10px">0%</span><br><span style="color:#94a3b8;font-size:10px">vs bulan sebelumnya</span>`, false, 1,
-      'Proporsi aset yang dibiayai oleh modal sendiri')}
+  <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:18px;flex-wrap:wrap" class="no-print">
+    <div class="nr-period-toggle">
+      <button class="nr-period-btn ${st.mode==='bulan'?'active':''}" onclick="renderNeraca({mode:'bulan'})">Bulan</button>
+      <button class="nr-period-btn ${st.mode==='tahun'?'active':''}" onclick="renderNeraca({mode:'tahun'})">Tahun</button>
+    </div>
+    <input type="${st.mode==='bulan'?'month':'number'}" class="nr-date-input"
+      value="${inputVal}"
+      ${st.mode==='tahun'?'min="2000" max="2099" step="1"':''}
+      onchange="renderNeraca({date: this.type==='month'? this.value+'-01' : this.value+'-06-30'})">
   </div>
 
-  <!-- FILTER BAR -->
+  <div class="neraca-ratio-wrap">
+    ${ratioCard('Quick Ratio',quickRatio,'Target 0,2',true,3,'Kemampuan membayar kewajiban jangka pendek dengan aset lancar paling likuid')}
+    ${ratioCard('Current Ratio',currentRatio,'Hari Ini',false,3,'Aset lancar dibagi kewajiban lancar — idealnya di atas 1',0)}
+    ${ratioCard('Debt Equity Ratio',debtEquity,'Hari Ini',false,3,'Total hutang dibagi total ekuitas — semakin rendah semakin sehat',0)}
+    ${ratioCard('Equity Ratio',equityRatio,'Hari Ini',false,1,'Proporsi aset yang dibiayai oleh modal sendiri',-10.4)}
+  </div>
+
+  <button class="nr-expand-btn no-print" onclick="toggleNeracaCharts(this)">
+    Lihat Selengkapnya <span id="nr-expand-arrow">▼</span>
+  </button>
+
+  <div class="nr-charts-section" id="nr-charts-section">
+    <div class="nr-chart-grid">
+      <div class="nr-chart-panel">
+        <div class="nr-chart-title">Struktur Neraca</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:12px">
+          <div>Aset: <b>${rp(totAktiva)}</b></div>
+          <div>Liabilitas: <b>${rp(totKewajiban)}</b></div>
+          <div>Perubahan Modal: <b>${rp(totModal)}</b></div>
+        </div>
+        <div style="display:flex;gap:4px;height:110px;align-items:stretch">
+          <div style="flex:1;background:#94a3b8;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700">Aset</div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <div style="flex:${Math.max(1,totKewajiban)};background:#bfdbfe;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#1e40af;font-weight:700">Liabilitas</div>
+            <div style="flex:${Math.max(1,totModal)};background:#a5f3fc;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#0e7490;font-weight:700">Modal</div>
+          </div>
+        </div>
+      </div>
+      <div class="nr-chart-panel">
+        <div class="nr-chart-title">Tren Neraca</div>
+        <canvas id="nr-chart-tren" height="140"></canvas>
+      </div>
+    </div>
+    <div class="nr-chart-grid">
+      <div class="nr-chart-panel">
+        <div class="nr-chart-title">Tren Komponen Neraca</div>
+        <canvas id="nr-chart-komponen-tren" height="180"></canvas>
+      </div>
+      <div class="nr-chart-panel">
+        <div class="nr-chart-title">Komponen Neraca</div>
+        <canvas id="nr-chart-komponen-donut" height="180"></canvas>
+      </div>
+    </div>
+    <div class="nr-chart-panel">
+      <div class="nr-chart-title">Tren Posisi Net Neraca</div>
+      <canvas id="nr-chart-net" height="140"></canvas>
+    </div>
+    <div style="text-align:center">
+      <button class="nr-expand-btn no-print" style="max-width:180px;margin:0 auto 16px" onclick="toggleNeracaCharts(null,true)">
+        Tutup ▲
+      </button>
+    </div>
+  </div>
+
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-    <span style="font-size:11px;color:#64748b">📅 Data per ${today2} — Baru saja diperbarui</span>
+    <span style="font-size:11px;color:#64748b">📅 Data per ${labelPeriode} — Baru saja diperbarui</span>
     <button class="btn btn-out btn-xs" onclick="renderNeraca()">↻ Muat ulang</button>
   </div>
 
-  <!-- NERACA TABLE -->
-  ${coHeader(`Balance Sheet per ${today2}`)}
+  ${coHeader(`Balance Sheet per ${labelPeriode}`)}
   <div class="neraca-g">
     <div class="neraca-sec">
       <h3>Aset</h3>
       <div class="nr group"><span>Kas &amp; Bank</span></div>
-      ${kasAkun.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      ${kasAkun.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(balAt(a.id))}</span></div>`).join('')}
       <div class="nr group" style="margin-top:6px"><span>Aset Lancar Lainnya</span></div>
-      ${akL.filter(a=>!kasAkun.includes(a)).map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      ${akL.filter(a=>!kasAkun.includes(a)).map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(balAt(a.id))}</span></div>`).join('')}
       <div class="nr" style="font-weight:700"><span>Total Aset Lancar</span><span>${rp(totAkL)}</span></div>
       <div class="nr group" style="margin-top:8px"><span>Aset Tetap</span></div>
-      ${akT.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      ${akT.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(balAt(a.id))}</span></div>`).join('')}
       <div class="nr" style="font-weight:700"><span>Total Aset Tetap</span><span>${rp(totAkT)}</span></div>
-      ${akO.length?`<div class="nr group" style="margin-top:8px"><span>Aset Lain-lain</span></div>${akO.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}<div class="nr" style="font-weight:700"><span>Total Aset Lain</span><span>${rp(totAkO)}</span></div>`:''}
+      ${akO.length?`<div class="nr group" style="margin-top:8px"><span>Aset Lain-lain</span></div>${akO.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(balAt(a.id))}</span></div>`).join('')}<div class="nr" style="font-weight:700"><span>Total Aset Lain</span><span>${rp(totAkO)}</span></div>`:''}
       <div class="nr total"><span>TOTAL ASET</span><span>${rp(totAktiva)}</span></div>
     </div>
     <div class="neraca-sec">
       <h3>Kewajiban &amp; Modal</h3>
       <div class="nr group"><span>Kewajiban Jangka Pendek</span></div>
-      ${kwL.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      ${kwL.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(balAt(a.id))}</span></div>`).join('')}
       <div class="nr" style="font-weight:700"><span>Total Kewajiban Lancar</span><span>${rp(totKwL)}</span></div>
       <div class="nr group" style="margin-top:8px"><span>Kewajiban Jangka Panjang</span></div>
-      ${kwP.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      ${kwP.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(balAt(a.id))}</span></div>`).join('')}
       <div class="nr" style="font-weight:700"><span>Total Kewajiban</span><span>${rp(totKewajiban)}</span></div>
       <div class="nr group" style="margin-top:8px"><span>Ekuitas / Modal</span></div>
-      ${modal.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      ${modal.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(balAt(a.id))}</span></div>`).join('')}
       <div class="nr sub"><span>Laba Bersih Tahun Berjalan</span><span class="${lr.labaBersih>=0?'ok':'bad'}">${lr.labaBersih<0?"− ":""}${rp(lr.labaBersih)}</span></div>
       <div class="nr" style="font-weight:700"><span>Total Ekuitas</span><span>${rp(totModal)}</span></div>
       <div class="nr total"><span>TOTAL KEWAJIBAN &amp; EKUITAS</span><span>${rp(totPassiva)}</span></div>
@@ -6708,6 +6778,89 @@ function renderNeraca(){
   ${Math.abs(totAktiva-totPassiva)>1
     ?`<div class="alert a-warn mt12">⚠️ Neraca belum seimbang. Selisih: ${rp(Math.abs(totAktiva-totPassiva))}</div>`
     :`<div class="alert a-ok mt12">✅ Neraca seimbang = ${rp(totAktiva)}</div>`}`;
+
+  if(document.getElementById('nr-charts-section')?.classList.contains('open')){
+    setTimeout(renderNeracaCharts,100);
+  }
+}
+
+function toggleNeracaCharts(btn,forceClose){
+  const sec=document.getElementById('nr-charts-section');
+  if(!sec)return;
+  const isOpen=sec.classList.contains('open');
+  if(forceClose||isOpen){
+    sec.classList.remove('open');
+    const arr=document.getElementById('nr-expand-arrow');
+    if(arr)arr.textContent='▼';
+  } else {
+    sec.classList.add('open');
+    const arr=document.getElementById('nr-expand-arrow');
+    if(arr)arr.textContent='▲';
+    setTimeout(renderNeracaCharts,80);
+  }
+}
+
+function renderNeracaCharts(){
+  const st=window._neracaState||{mode:'tahun',date:new Date().toISOString().slice(0,10)};
+  const currentYear=parseInt(st.date.slice(0,4));
+  ['nr-chart-tren','nr-chart-komponen-tren','nr-chart-komponen-donut','nr-chart-net'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const ch=Chart.getChart(el);if(ch)ch.destroy();
+  });
+  function sumType(types,endDate){
+    return DB.accounts.filter(a=>types.includes(a.type)).reduce((s,a)=>s+balanceAsOfDate(a.id,endDate),0);
+  }
+  function lrAt(endDate){
+    return sumType(['pendapatan'],endDate)-sumType(['hpp'],endDate)-sumType(['beban'],endDate);
+  }
+  const years=[currentYear-3,currentYear-2,currentYear-1,currentYear];
+  const yL=years.map(String);
+  const dAset=  years.map(y=>sumType(['aktiva'],`${y}-12-31`));
+  const dLiab=  years.map(y=>sumType(['kewajiban'],`${y}-12-31`));
+  const dModal= years.map(y=>sumType(['modal'],`${y}-12-31`)+lrAt(`${y}-12-31`));
+  const dKas=   years.map(y=>DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='lancar'&&(a.name.toLowerCase().includes('kas')||a.name.toLowerCase().includes('bank'))).reduce((s,a)=>s+balanceAsOfDate(a.id,`${y}-12-31`),0));
+  const dAkL=   years.map(y=>DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='lancar').reduce((s,a)=>s+balanceAsOfDate(a.id,`${y}-12-31`),0));
+  const dAkT=   years.map(y=>DB.accounts.filter(a=>a.type==='aktiva'&&a.sub==='tetap').reduce((s,a)=>s+balanceAsOfDate(a.id,`${y}-12-31`),0));
+  const dKwL=   years.map(y=>DB.accounts.filter(a=>a.type==='kewajiban'&&a.sub==='lancar').reduce((s,a)=>s+balanceAsOfDate(a.id,`${y}-12-31`),0));
+  const dKwP=   years.map(y=>DB.accounts.filter(a=>a.type==='kewajiban'&&a.sub==='panjang').reduce((s,a)=>s+balanceAsOfDate(a.id,`${y}-12-31`),0));
+  const dNet=   years.map((y,i)=>dAset[i]-dLiab[i]);
+  const dBeban= years.map(y=>sumType(['beban'],`${y}-12-31`));
+  const rpS=v=>{if(Math.abs(v)>=1e9)return(v/1e9).toFixed(1)+'M';if(Math.abs(v)>=1e6)return(v/1e6).toFixed(0)+'Jt';return(v/1e3).toFixed(0)+'Rb';};
+  const tip={plugins:{tooltip:{callbacks:{label:ctx=>' '+new Intl.NumberFormat('id-ID').format(ctx.raw)}}}};
+  const legOpts=(pos,sz)=>({position:pos,labels:{font:{size:sz},boxWidth:sz+2}});
+
+  const el1=document.getElementById('nr-chart-tren');
+  if(el1)new Chart(el1,{type:'bar',data:{labels:yL,datasets:[
+    {label:'Total Aset',data:dAset,backgroundColor:'#3b82f6',borderRadius:4},
+    {label:'Total Liabilitas',data:dLiab,backgroundColor:'#34d399',borderRadius:4},
+    {label:'Total Modal',data:dModal,backgroundColor:'#60a5fa',borderRadius:4}
+  ]},options:{responsive:true,...tip,plugins:{...tip.plugins,legend:{...legOpts('top',9)}},scales:{x:{grid:{display:false}},y:{ticks:{callback:rpS},grid:{color:'#f1f5f9'}}}}});
+
+  const el2=document.getElementById('nr-chart-komponen-tren');
+  if(el2)new Chart(el2,{type:'bar',data:{labels:yL,datasets:[
+    {label:'Kas & Bank',data:dKas,backgroundColor:'#dc2626',borderRadius:2},
+    {label:'Aset Lancar',data:dAkL,backgroundColor:'#f97316',borderRadius:2},
+    {label:'Aset Tetap',data:dAkT,backgroundColor:'#eab308',borderRadius:2},
+    {label:'Liab. Jk Pendek',data:dKwL,backgroundColor:'#06b6d4',borderRadius:2},
+    {label:'Liab. Jk Panjang',data:dKwP,backgroundColor:'#1e3a5f',borderRadius:2},
+    {label:'Perubahan Modal',data:dModal,backgroundColor:'#1e293b',borderRadius:2}
+  ]},options:{responsive:true,...tip,plugins:{...tip.plugins,legend:{...legOpts('right',8)}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:rpS},grid:{color:'#f1f5f9'}}}}});
+
+  const el3=document.getElementById('nr-chart-komponen-donut');
+  const yr=currentYear;
+  const vals=[dKas[3],dAkL[3],dAkT[3],dKwL[3],dKwP[3],dModal[3]].map(v=>Math.abs(v));
+  if(el3)new Chart(el3,{type:'doughnut',data:{
+    labels:['Kas & Bank','Aset Lancar','Aset Tetap','Liab. Jk Pendek','Liab. Jk Panjang','Perubahan Modal'],
+    datasets:[{data:vals,backgroundColor:['#ec4899','#f97316','#06b6d4','#22d3ee','#a855f7','#7c3aed'],borderWidth:2,borderColor:'#fff'}]
+  },options:{responsive:true,...tip,plugins:{...tip.plugins,legend:{...legOpts('bottom',9)}},cutout:'55%'}});
+
+  const el4=document.getElementById('nr-chart-net');
+  if(el4)new Chart(el4,{type:'bar',data:{labels:yL,datasets:[
+    {label:'Aset',data:dAset,backgroundColor:'#3b82f6',borderRadius:4},
+    {label:'Liabilitas',data:dLiab,backgroundColor:'#34d399',borderRadius:4},
+    {label:'Net Posisi',data:dNet,backgroundColor:'#0ea5e9',borderRadius:4},
+    {label:'Biaya Operasional',data:dBeban,backgroundColor:'#6366f1',borderRadius:4}
+  ]},options:{responsive:true,...tip,plugins:{...tip.plugins,legend:{...legOpts('top',9)}},scales:{x:{grid:{display:false}},y:{ticks:{callback:rpS},grid:{color:'#f1f5f9'}}}}});
 }
 
 function renderLabaRugi(){
