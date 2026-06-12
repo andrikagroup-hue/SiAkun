@@ -5927,81 +5927,241 @@ function exportAkun(){exportXLSX([{name:'CoA',data:DB.accounts.map(a=>({Kode:a.c
 function renderJournal(c){
   const ta=document.getElementById('topbar-actions');
   const _hasCR=DB.transactions.some(t=>t.ref&&String(t.ref).startsWith('CR-'));
-  ta.innerHTML=`
-    <button class="btn btn-pri" onclick="openAddJournal()">+ Journal Entry</button>
-    <button class="btn btn-ok" onclick="openImportJurnal()">📥 Import Excel</button>
-    <button class="btn btn-bad" id="btn-bulk-del" style="display:none" onclick="bulkDeleteJournals()">🗑 Delete Selected (<span id="sel-count">0</span>)</button>
-    <button class="btn btn-out" onclick="exportJurnal()">⬇ Excel (All)</button>
-    <button class="btn btn-out" onclick="exportJurnalByMonth()">⬇ Excel (Per Month)</button>
-    <button class="btn btn-out" onclick="exportJurnalPDF()" style="background:#ef4444;color:#fff;border-color:#ef4444">⬇ PDF</button>
-    ${_hasCR?'<button class="btn btn-bad" onclick="undoCashReportImport()">🗑 Delete Cash Report Import</button>':''}`;
 
-  // Get available months from transactions
-  const allMonths=[...new Set(DB.transactions.map(t=>t.date?t.date.slice(0,7):null).filter(Boolean))].sort().reverse();
-  const curFilter=window._journalMonthFilter||'all';
+  // ── Topbar buttons — Kledo style with dropdown for exports ──
+  ta.innerHTML=`
+    <button class="btn btn-pri" onclick="openAddJournal()" style="display:flex;align-items:center;gap:6px;font-size:12.5px;padding:7px 14px;border-radius:8px">
+      <span style="font-size:16px;line-height:1">＋</span> Journal Entry
+    </button>
+    <button class="btn btn-ok" onclick="openImportJurnal()" style="display:flex;align-items:center;gap:6px;font-size:12.5px;padding:7px 14px;border-radius:8px">
+      <span style="font-size:13px">📥</span> Import Excel
+    </button>
+    <div style="position:relative;display:inline-block" id="jexp-wrap">
+      <button onclick="document.getElementById('jexp-drop').style.display=document.getElementById('jexp-drop').style.display==='block'?'none':'block'"
+        style="display:flex;align-items:center;gap:6px;font-size:12.5px;padding:7px 14px;border-radius:8px;border:1px solid var(--bdr);background:#fff;cursor:pointer;font-family:var(--font);color:#475569;font-weight:600">
+        <span style="font-size:13px">⬇</span> Ekspor <span style="font-size:10px;margin-left:2px">▾</span>
+      </button>
+      <div id="jexp-drop" style="display:none;position:absolute;top:calc(100%+4px);right:0;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:180px;z-index:999;padding:6px;white-space:nowrap">
+        <div onclick="exportJurnal();document.getElementById('jexp-drop').style.display='none'" style="padding:9px 12px;font-size:12.5px;font-weight:500;color:#0f172a;cursor:pointer;border-radius:7px;display:flex;align-items:center;gap:8px;transition:.12s" onmouseover="this.style.background='#f0fdfa';this.style.color='#0d9488'" onmouseout="this.style.background='';this.style.color='#0f172a'">
+          <span>📊</span> Excel (Semua)
+        </div>
+        <div onclick="exportJurnalByMonth();document.getElementById('jexp-drop').style.display='none'" style="padding:9px 12px;font-size:12.5px;font-weight:500;color:#0f172a;cursor:pointer;border-radius:7px;display:flex;align-items:center;gap:8px;transition:.12s" onmouseover="this.style.background='#f0fdfa';this.style.color='#0d9488'" onmouseout="this.style.background='';this.style.color='#0f172a'">
+          <span>📋</span> Excel (Per Bulan)
+        </div>
+        <div onclick="exportJurnalPDF();document.getElementById('jexp-drop').style.display='none'" style="padding:9px 12px;font-size:12.5px;font-weight:500;color:#0f172a;cursor:pointer;border-radius:7px;display:flex;align-items:center;gap:8px;transition:.12s" onmouseover="this.style.background='#f0fdfa';this.style.color='#0d9488'" onmouseout="this.style.background='';this.style.color='#0f172a'">
+          <span>📄</span> PDF
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-bad" id="btn-bulk-del" style="display:none;align-items:center;gap:6px;font-size:12.5px;padding:7px 14px;border-radius:8px" onclick="bulkDeleteJournals()">
+      🗑 Hapus (<span id="sel-count">0</span>)
+    </button>
+    ${_hasCR?'<button class="btn btn-bad" onclick="undoCashReportImport()" style="font-size:12px;padding:7px 12px;border-radius:8px">🗑 Hapus Cash Report</button>':''}`;
+
+  // Close dropdown when clicking outside
+  setTimeout(()=>{
+    document.addEventListener('click',function _jClose(e){
+      const w=document.getElementById('jexp-wrap');
+      if(w&&!w.contains(e.target)){
+        const d=document.getElementById('jexp-drop');
+        if(d)d.style.display='none';
+      }
+      document.removeEventListener('click',_jClose);
+    });
+  },0);
+
+  // ── Date range filter (default: current month) ──
+  const today=new Date();
+  const defFrom=window._jDateFrom||(today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-01');
+  const defTo=window._jDateTo||today.toISOString().slice(0,10);
+
   const curSearch=(window._journalSearch||'').toLowerCase().trim();
 
-  const sorted=[...DB.transactions]
+  // ── Compute summary stats ──
+  const allTx=DB.transactions||[];
+  // Total debit sums across all filtered entries
+  const txInRange=allTx.filter(t=>{
+    if(!t.date)return false;
+    return(!window._jDateFrom||t.date>=defFrom)&&(!window._jDateTo||t.date<=defTo);
+  });
+  const totalNilai=txInRange.reduce((s,t)=>s+(t.entries||[]).reduce((ss,e)=>ss+(e.deb||0),0),0);
+  const totalJumlah=txInRange.length;
+  const totalBaris=txInRange.reduce((s,t)=>s+(t.entries||[]).length,0);
+
+  // ── Previous period for comparison ──
+  const msFrom=new Date(defFrom).getTime();
+  const msTo=new Date(defTo).getTime();
+  const span=msTo-msFrom;
+  const prevFrom=new Date(msFrom-span-86400000).toISOString().slice(0,10);
+  const prevTo=new Date(msFrom-86400000).toISOString().slice(0,10);
+  const prevTx=allTx.filter(t=>t.date&&t.date>=prevFrom&&t.date<=prevTo);
+  const prevNilai=prevTx.reduce((s,t)=>s+(t.entries||[]).reduce((ss,e)=>ss+(e.deb||0),0),0);
+  const prevJumlah=prevTx.length;
+  const prevBaris=prevTx.reduce((s,t)=>s+(t.entries||[]).length,0);
+
+  function pctBadge(cur,prev){
+    if(!prev&&!cur)return`<span style="color:#94a3b8;font-size:11px;font-weight:600">0%</span>`;
+    if(!prev)return`<span style="color:#059669;font-size:11px;font-weight:700">↑ baru</span>`;
+    const p=Math.round(((cur-prev)/prev)*100);
+    const up=p>=0;
+    return`<span style="color:${up?'#059669':'#dc2626'};font-size:11px;font-weight:700">${up?'↑':'↓'} ${Math.abs(p)}%</span>`;
+  }
+
+  // ── Filtered sorted list for table ──
+  const sorted=[...allTx]
     .filter(t=>{
-      if(curFilter!=='all'&&(!t.date||!t.date.startsWith(curFilter)))return false;
+      if(t.date&&(t.date<defFrom||t.date>defTo))return false;
       if(!curSearch)return true;
-      const accMatch=t.entries.some(e=>{const a=DB.accounts.find(x=>x.id===e.acc);return a&&(a.name.toLowerCase().includes(curSearch)||a.code.toLowerCase().includes(curSearch));});
+      const accMatch=(t.entries||[]).some(e=>{const a=DB.accounts.find(x=>x.id===e.acc);return a&&(a.name.toLowerCase().includes(curSearch)||a.code.toLowerCase().includes(curSearch));});
       return (t.ref||'').toLowerCase().includes(curSearch)||(t.desc||'').toLowerCase().includes(curSearch)||accMatch;
     })
     .sort((a,b)=>new Date(b.date)-new Date(a.date));
 
-  // Group by month for display
   function getMonthLabel(dateStr){
     if(!dateStr)return'—';
     const[y,m]=dateStr.split('-');
-    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return`${months[parseInt(m)-1]} ${y}`;
+    const mn=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    return`${mn[parseInt(m)-1]} ${y}`;
   }
 
-  // Build month options
-  const monthOpts=`<option value="all">All Months (${DB.transactions.length} entries)</option>`+
-    allMonths.map(m=>{const cnt=DB.transactions.filter(t=>t.date&&t.date.startsWith(m)).length;return`<option value="${m}"${curFilter===m?' selected':''}>${getMonthLabel(m+'-01')} (${cnt} entries)</option>`;}).join('');
-
+  // ── Render ──
   c.innerHTML=`
-  <div class="alert a-info"><b>Double-Entry:</b> every entry must have Total Debit = Total Credit. &nbsp;📅 <b>Backdate:</b> enter any date — can be set to a past date.</div>
-  <div class="card">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:12px;font-weight:700;color:var(--muted)">📅 Filter:</span>
-        <select onchange="window._journalMonthFilter=this.value;nav('journal')" style="font-size:12px;padding:5px 8px;border:1px solid var(--bdr);border-radius:6px;font-family:var(--font)">${monthOpts}</select>
+  <!-- ══ SUMMARY CARDS (Kledo-style) ══ -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:18px">
+
+    <!-- Nilai Transaksi -->
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Nilai Transaksi</div>
+      <div style="font-size:22px;font-weight:800;color:#0f172a;line-height:1.1;margin-bottom:4px">${totalNilai>0?rp(totalNilai):'0'}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:6px">periode ini &nbsp;${pctBadge(totalNilai,prevNilai)}</div>
+      <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);opacity:.07;font-size:52px;pointer-events:none">₿</div>
+    </div>
+
+    <!-- Jumlah Transaksi -->
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Jumlah Transaksi</div>
+      <div style="font-size:22px;font-weight:800;color:#0f172a;line-height:1.1;margin-bottom:4px">${totalJumlah.toLocaleString('id-ID')}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:6px">periode ini &nbsp;${pctBadge(totalJumlah,prevJumlah)}</div>
+      <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);opacity:.07;font-size:52px;pointer-events:none">📋</div>
+    </div>
+
+    <!-- Baris Jurnal -->
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Baris Jurnal</div>
+      <div style="font-size:22px;font-weight:800;color:#0f172a;line-height:1.1;margin-bottom:4px">${totalBaris.toLocaleString('id-ID')}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:6px">periode ini &nbsp;${pctBadge(totalBaris,prevBaris)}</div>
+      <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);opacity:.07;font-size:52px;pointer-events:none">≡</div>
+    </div>
+
+  </div>
+
+  <!-- ══ TABLE CARD ══ -->
+  <div class="card" style="padding:0;overflow:hidden">
+
+    <!-- Toolbar: filter + search -->
+    <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff">
+
+      <!-- Date range -->
+      <div style="display:flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px">
+        <span style="font-size:12px;color:#94a3b8">📅</span>
+        <input type="date" id="j-date-from" value="${defFrom}"
+          onchange="window._jDateFrom=this.value;nav('journal')"
+          style="border:none;background:transparent;font-size:12px;font-family:var(--font);color:#0f172a;outline:none;width:110px">
+        <span style="font-size:11px;color:#cbd5e1">—</span>
+        <input type="date" id="j-date-to" value="${defTo}"
+          onchange="window._jDateTo=this.value;nav('journal')"
+          style="border:none;background:transparent;font-size:12px;font-family:var(--font);color:#0f172a;outline:none;width:110px">
       </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:12px;font-weight:700;color:var(--muted)">🔍</span>
+
+      <!-- Search -->
+      <div style="display:flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid ${curSearch?'#0d9488':'#e2e8f0'};border-radius:8px;padding:5px 10px;min-width:200px;flex:1;max-width:300px;transition:.2s">
+        <span style="font-size:12px;color:#94a3b8">🔍</span>
         <input id="journal-search" type="text" placeholder="Cari ref, deskripsi, akun..." value="${window._journalSearch||''}"
           oninput="window._journalSearch=this.value;window._journalSearchFocus=true;nav('journal')"
-          style="font-size:12px;padding:5px 10px;border:1px solid var(--bdr);border-radius:6px;font-family:var(--font);width:220px">
-        ${curSearch?`<button onclick="window._journalSearch='';nav('journal')" style="font-size:11px;padding:3px 8px;border:1px solid var(--bdr);border-radius:6px;cursor:pointer;background:#fff">✕ Clear</button>`:''}
+          style="border:none;background:transparent;font-size:12px;font-family:var(--font);color:#0f172a;outline:none;width:100%">
+        ${curSearch?`<span onclick="window._journalSearch='';nav('journal')" style="cursor:pointer;font-size:11px;color:#94a3b8;padding:1px 4px;border-radius:4px;background:#e2e8f0">✕</span>`:''}
       </div>
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;user-select:none">
-        <input type="checkbox" id="chk-all" onchange="toggleAllJournals(this.checked)" style="width:15px;height:15px;cursor:pointer">
-        Select All
+
+      <!-- Select all + count -->
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;color:#475569;white-space:nowrap;user-select:none">
+        <input type="checkbox" id="chk-all" onchange="toggleAllJournals(this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#0d9488">
+        Pilih Semua
       </label>
-      <span style="font-size:11px;color:var(--muted)" id="sel-info"></span>
-      <span style="font-size:11px;color:var(--muted);margin-left:auto">Showing <b>${sorted.length}</b> entries</span>
+      <span id="sel-info" style="font-size:11px;color:#94a3b8"></span>
+      <span style="font-size:11.5px;color:#94a3b8;margin-left:auto;white-space:nowrap">
+        Menampilkan <b style="color:#0f172a">${sorted.length}</b> transaksi
+      </span>
     </div>
-    <div class="tbl-wrap"><table>
-    <thead><tr><th style="width:32px"></th><th>Date</th><th>Description</th><th>Ref</th><th>Account</th><th>Debit</th><th>Credit</th><th>Action</th></tr></thead>
-    <tbody>
-      ${sorted.length?(() => {
-        let lastMonth='';let rows='';
-        sorted.forEach(tx=>{
-          const txMonth=tx.date?tx.date.slice(0,7):'';
-          if(txMonth!==lastMonth){
-            lastMonth=txMonth;
-            rows+=`<tr><td colspan="8" style="background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;font-size:11px;font-weight:700;padding:7px 12px;letter-spacing:1px">${getMonthLabel(txMonth+'-01').toUpperCase()}</td></tr>`;
-          }
-          const txRows=tx.entries.map((e,i)=>{const a=DB.accounts.find(x=>x.id===e.acc);return`<tr>${i===0?`<td rowspan="${tx.entries.length}" style="text-align:center"><input type="checkbox" class="jchk" value="${tx.id}" onchange="updateJournalSelection()" style="width:15px;height:15px;cursor:pointer"></td><td rowspan="${tx.entries.length}">${fDate(tx.date)}</td><td rowspan="${tx.entries.length}">${tx.desc}</td><td rowspan="${tx.entries.length}" class="muted">${tx.ref||'-'}</td>`:''}<td>${a?`<small class="muted">${a.code}</small> ${a.name}`:e.acc}</td><td class="${e.deb?'ok fw7':''}">${e.deb?rp(e.deb):''}</td><td class="${e.crd?'bad fw7':''}" style="padding-left:20px">${e.crd?rp(e.crd):''}</td>${i===0?`<td rowspan="${tx.entries.length}" class="gap8"><button class="btn btn-out btn-xs" onclick="openEditJournal('${tx.id}')">✏️</button><button class="btn btn-bad btn-xs" onclick="delJournal('${tx.id}')">✕</button></td>`:''}</tr>`;}).join('');
-          rows+=txRows+'<tr><td colspan="8" style="padding:1px;background:#f8fafc"></td></tr>';
-        });
-        return rows;
-      })():`<tr><td colspan="8" class="tbl-empty">No journal entries yet</td></tr>`}
-    </tbody>
-  </table></div></div>`;
+
+    <!-- Table -->
+    <div class="tbl-wrap">
+      <table style="border-collapse:collapse;width:100%">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th style="width:36px;padding:10px 8px 10px 16px;border-bottom:1px solid #e2e8f0;text-align:center"></th>
+            <th style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:11.5px;font-weight:700;color:#64748b;white-space:nowrap;text-align:left">Tanggal</th>
+            <th style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:11.5px;font-weight:700;color:#64748b;text-align:left">Deskripsi</th>
+            <th style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:11.5px;font-weight:700;color:#64748b;text-align:left">Ref</th>
+            <th style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:11.5px;font-weight:700;color:#64748b;text-align:left">Akun</th>
+            <th style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:11.5px;font-weight:700;color:#059669;text-align:right;white-space:nowrap">Debit</th>
+            <th style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:11.5px;font-weight:700;color:#dc2626;text-align:right;white-space:nowrap">Kredit</th>
+            <th style="padding:10px 16px 10px 12px;border-bottom:1px solid #e2e8f0;font-size:11.5px;font-weight:700;color:#64748b;text-align:center">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted.length?(()=>{
+            let lastMonth='';let rows='';
+            sorted.forEach(tx=>{
+              const txMonth=tx.date?tx.date.slice(0,7):'';
+              if(txMonth!==lastMonth){
+                lastMonth=txMonth;
+                rows+=`<tr>
+                  <td colspan="8" style="padding:8px 16px;background:#f0fdf9;border-top:2px solid #ccfbf1;border-bottom:1px solid #d1fae5">
+                    <span style="font-size:11px;font-weight:800;color:#0d9488;letter-spacing:.8px;text-transform:uppercase">${getMonthLabel(txMonth+'-01')}</span>
+                  </td>
+                </tr>`;
+              }
+              const txRows=(tx.entries||[]).map((e,i)=>{
+                const a=DB.accounts.find(x=>x.id===e.acc);
+                const isFirst=i===0;
+                const rspan=tx.entries.length;
+                return`<tr style="border-bottom:1px solid #f1f5f9;transition:background .1s" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+                  ${isFirst?`<td rowspan="${rspan}" style="padding:10px 8px 10px 16px;text-align:center;vertical-align:top;border-right:1px solid #f1f5f9">
+                    <input type="checkbox" class="jchk" value="${tx.id}" onchange="updateJournalSelection()" style="width:14px;height:14px;cursor:pointer;accent-color:#0d9488">
+                  </td>
+                  <td rowspan="${rspan}" style="padding:10px 12px;vertical-align:top;font-size:12px;color:#475569;white-space:nowrap;font-weight:500;border-right:1px solid #f1f5f9">${fDate(tx.date)}</td>
+                  <td rowspan="${rspan}" style="padding:10px 12px;vertical-align:top;font-size:12.5px;color:#0f172a;font-weight:600;max-width:220px;border-right:1px solid #f1f5f9">${tx.desc}</td>
+                  <td rowspan="${rspan}" style="padding:10px 12px;vertical-align:top;font-size:11.5px;color:#94a3b8;font-weight:500;white-space:nowrap;border-right:1px solid #f1f5f9">${tx.ref||'—'}</td>`:''}
+                  <td style="padding:8px 12px;font-size:12px;color:#334155">
+                    ${a?`<span style="font-size:10px;color:#94a3b8;font-weight:600;margin-right:4px">${a.code}</span><span style="font-weight:500">${a.name}</span>`:e.acc}
+                  </td>
+                  <td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700;color:${e.deb?'#059669':'#cbd5e1'};white-space:nowrap">
+                    ${e.deb?rp(e.deb):''}
+                  </td>
+                  <td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700;color:${e.crd?'#dc2626':'#cbd5e1'};white-space:nowrap">
+                    ${e.crd?rp(e.crd):''}
+                  </td>
+                  ${isFirst?`<td rowspan="${rspan}" style="padding:8px 16px 8px 12px;text-align:center;vertical-align:top;white-space:nowrap">
+                    <div style="display:flex;gap:4px;justify-content:center">
+                      <button onclick="openEditJournal('${tx.id}')" style="border:1px solid #e2e8f0;background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:#475569;transition:.12s;font-family:var(--font)" onmouseover="this.style.background='#f0fdfa';this.style.borderColor='#0d9488';this.style.color='#0d9488'" onmouseout="this.style.background='#fff';this.style.borderColor='#e2e8f0';this.style.color='#475569'">✏️</button>
+                      <button onclick="delJournal('${tx.id}')" style="border:1px solid #fee2e2;background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:#dc2626;transition:.12s;font-family:var(--font)" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='#fff'">✕</button>
+                    </div>
+                  </td>`:''}
+                </tr>`;
+              }).join('');
+              rows+=txRows;
+            });
+            return rows;
+          })():`<tr><td colspan="8" style="text-align:center;padding:60px 20px;color:#94a3b8">
+            <div style="font-size:36px;margin-bottom:12px;opacity:.4">📒</div>
+            <div style="font-size:14px;font-weight:600;color:#cbd5e1">Belum ada jurnal</div>
+            <div style="font-size:12px;margin-top:4px">Coba ubah rentang tanggal atau buat Journal Entry baru.</div>
+          </td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+
   // Restore search focus after re-render
   if(window._journalSearchFocus){window._journalSearchFocus=false;setTimeout(()=>{const s=document.getElementById('journal-search');if(s){s.focus();const l=s.value.length;s.setSelectionRange(l,l);}},0);}
 }
