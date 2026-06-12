@@ -233,9 +233,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
 @media print{
   .sb,.topbar,.no-print{display:none!important;}
+  .rpt-kledo-actions,.rpt-breadcrumb{display:none!important;}
   .main{overflow:visible;}
   .content{padding:0;}
   body{display:block;}
+  .rpt-kledo-header{border-bottom:none!important;margin-bottom:8px!important;}
 }
 
 /* SEARCHABLE SELECT */
@@ -6469,6 +6471,25 @@ function _renderReportIndex(c){
     .rpt-detail-title{font-size:18px;font-weight:800;color:var(--txt);margin-bottom:16px}
     .rpt-actions-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
     .no-rpt-result{color:var(--muted);font-size:13px;padding:24px 0;text-align:center}
+    /* Kledo-style report header */
+    .rpt-breadcrumb{font-size:12px;color:#94a3b8;margin-bottom:14px;display:flex;align-items:center;gap:5px}
+    .rpt-breadcrumb a{color:#64748b;cursor:pointer;text-decoration:none;transition:color .12s}.rpt-breadcrumb a:hover{color:#2563eb}
+    .rpt-breadcrumb .sep{color:#cbd5e1}.rpt-breadcrumb .cur{color:#0f172a;font-weight:600}
+    .rpt-kledo-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #e2e8f0}
+    .rpt-kledo-title{font-size:22px;font-weight:800;color:#0f172a}
+    .rpt-kledo-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .rpt-kledo-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;font-family:inherit;font-size:12px;font-weight:600;color:#374151;cursor:pointer;transition:all .15s;white-space:nowrap}
+    .rpt-kledo-btn:hover{background:#f8fafc;border-color:#cbd5e1}
+    .rpt-kledo-btn .chevron{font-size:10px;color:#94a3b8;margin-left:2px}
+    .rpt-kledo-btn-print{display:inline-flex;align-items:center;border:1px solid #e2e8f0;border-radius:8px;overflow:visible;position:relative;background:#fff}
+    .rpt-kledo-btn-print .print-main{padding:7px 11px;font-family:inherit;font-size:12px;font-weight:600;color:#374151;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;border-right:1px solid #e2e8f0;transition:background .15s;border-radius:8px 0 0 8px}
+    .rpt-kledo-btn-print .print-main:hover{background:#f8fafc}
+    .rpt-kledo-btn-print .print-caret{padding:7px 8px;background:transparent;border:none;cursor:pointer;display:flex;align-items:center;font-size:10px;color:#64748b;transition:background .15s;border-radius:0 8px 8px 0}
+    .rpt-kledo-btn-print .print-caret:hover{background:#f8fafc}
+    .rpt-print-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:185px;z-index:9999;display:none;padding:6px}
+    .rpt-print-dropdown.open{display:block;animation:flyoutIn .15s ease forwards}
+    .rpt-print-dd-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:7px;font-size:12px;font-weight:500;color:#374151;cursor:pointer;transition:background .12s}
+    .rpt-print-dd-item:hover{background:#f0f6ff;color:#2563eb}
   </style>
   <div class="rpt-page-title">Laporan</div>
   <div class="rpt-search-wrap">
@@ -6518,11 +6539,50 @@ function _openReport(id, navTarget, action){
   if(!c) return;
   // render detail view
   const item = REPORT_CATALOG.flatMap(x=>x.items).find(x=>x.id===id);
+  const lbl = item?item.label:id;
   c.innerHTML = `
-    <button class="rpt-back-btn" onclick="renderReports(document.getElementById('content'))">‹ Kembali ke Laporan</button>
-    <div class="rpt-detail-title">${item?item.label:id}</div>
+    <div class="rpt-breadcrumb">
+      <a onclick="nav('dashboard')">Beranda</a>
+      <span class="sep">·</span>
+      <a onclick="renderReports(document.getElementById('content'))">Laporan</a>
+      <span class="sep">·</span>
+      <span class="cur">${lbl}</span>
+    </div>
+    <div class="rpt-kledo-header">
+      <div class="rpt-kledo-title">${lbl}</div>
+      <div class="rpt-kledo-actions" id="rpt-kledo-actions">
+        <button class="rpt-kledo-btn" onclick="alert('Panduan fitur ini belum tersedia.')">
+          <span>⊕</span> Panduan <span class="chevron">▾</span>
+        </button>
+        <button class="rpt-kledo-btn" id="rpt-ekspor-btn">
+          <span>↗</span> Ekspor
+        </button>
+        <button class="rpt-kledo-btn" onclick="alert('Bagikan laporan belum tersedia.')">
+          <span>⇉</span> Bagikan <span class="chevron">▾</span>
+        </button>
+        <div class="rpt-kledo-btn-print" id="rpt-print-wrap">
+          <button class="print-main" onclick="printReportPortrait()">
+            🖨 Print
+          </button>
+          <button class="print-caret" onclick="togglePrintDropdown(event)">▾</button>
+          <div class="rpt-print-dropdown" id="rpt-print-dd">
+            <div class="rpt-print-dd-item" onclick="printReportPortrait()">🖨 Print Portrait</div>
+            <div class="rpt-print-dd-item" onclick="printReportLandscape()">🖨 Print Landscape</div>
+            <div class="rpt-print-dd-item" onclick="printReportWithCharts()">🖨 Print Grafik</div>
+            <div class="rpt-print-dd-item" onclick="alert('Ganti Layout belum tersedia.')">⊞ Ganti Layout</div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div id="rpt-detail-body"></div>`;
   document.getElementById('topbar-actions').innerHTML = '';
+  // Wire up Ekspor button after DOM inject
+  setTimeout(()=>{
+    const eb = document.getElementById('rpt-ekspor-btn');
+    if(eb) eb.onclick = ()=>{ _rptEksporAction(id); };
+    // Close print dropdown on outside click
+    document.addEventListener('click', _closePrintDD, {once:false});
+  }, 0);
   _renderReportDetail(id);
 }
 
@@ -6760,12 +6820,8 @@ function renderNeraca(opts){
     .nr-charts-section.open{display:block}
   </style>
 
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
-    <div style="font-size:20px;font-weight:800;color:#1e293b">Neraca</div>
-    <div style="display:flex;gap:8px;align-items:center" class="no-print">
-      <button class="btn btn-out" onclick="exportFinancialReport()">⬇ Excel</button>
-      <button class="btn btn-pri" onclick="exportPDF('neraca')">📄 Export PDF</button>
-    </div>
+  <div style="margin-bottom:16px">
+    <div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:4px">Laporan Keuangan</div>
   </div>
 
   <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:18px;flex-wrap:wrap" class="no-print">
@@ -6984,8 +7040,7 @@ function renderLabaRugi(){
   document.getElementById('labarugi').innerHTML=`
   ${coHeader(`Laporan Profit & Loss — Periode ${co.year}`)}
   <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px">
-    <button class="btn btn-out no-print" onclick="exportFinancialReport()">⬇ Excel</button>
-    <button class="btn btn-pri no-print" onclick="exportPDF('pl')">📄 Export PDF</button>
+
   </div>
   <div style="max-width:640px">
     <div class="nr group"><span>Revenue</span></div>
@@ -11020,6 +11075,51 @@ function buildTrialBalance(co,today_str){
   return ws;
 }
 
+
+// ================================================================
+//  Kledo-style Report Header helpers
+// ================================================================
+function togglePrintDropdown(e){
+  e.stopPropagation();
+  const dd = document.getElementById('rpt-print-dd');
+  if(!dd) return;
+  dd.classList.toggle('open');
+}
+function _closePrintDD(e){
+  const wrap = document.getElementById('rpt-print-wrap');
+  if(wrap && !wrap.contains(e.target)){
+    const dd = document.getElementById('rpt-print-dd');
+    if(dd) dd.classList.remove('open');
+  }
+}
+function _rptEksporAction(id){
+  const exportMap = {
+    neraca:'neraca', labarugi:'pl', aruskas:null, neracasaldo:null,
+    perubahanmodal:null, agingar:null
+  };
+  if(exportMap[id]) exportPDF(exportMap[id]);
+  else exportFinancialReport();
+}
+function printReportPortrait(){
+  window._printOrientation = 'portrait';
+  window.print();
+}
+function printReportLandscape(){
+  const s = document.createElement('style');
+  s.id = '_ls_override';
+  s.innerHTML = '@media print{@page{size:A4 landscape;margin:10mm}}';
+  document.head.appendChild(s);
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{ const el=document.getElementById('_ls_override'); if(el) el.remove(); },1000);
+  }, 100);
+}
+function printReportWithCharts(){
+  // Expand charts section if collapsed
+  const cs = document.querySelector('.nr-charts-section');
+  if(cs && !cs.classList.contains('open')) cs.classList.add('open');
+  setTimeout(()=>window.print(), 200);
+}
 
 // ================================================================
 //  PDF EXPORT — Financial Reports
