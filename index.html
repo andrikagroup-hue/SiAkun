@@ -6389,21 +6389,186 @@ function exportBukuBesar(){
 }
 
 // ================================================================
-//  REPORTS
+//  REPORTS — Kledo-style index + per-report pages
 // ================================================================
+
+// ── Laporan per kategori ─────────────────────────────────────────
+const REPORT_CATALOG = [
+  {
+    cat: 'Finansial', icon: '📊',
+    items: [
+      { id:'neraca',        label:'Neraca',                 desc:'Posisi keuangan: Aset, Liabilitas & Modal' },
+      { id:'labarugi',      label:'Laba Rugi',              desc:'Pendapatan, HPP, beban & laba bersih' },
+      { id:'aruskas',       label:'Arus Kas',               desc:'Aliran kas operasi, investasi & pendanaan' },
+      { id:'neracasaldo',   label:'Trial Balance',          desc:'Neraca saldo seluruh akun' },
+      { id:'perubahanmodal',label:'Perubahan Modal',        desc:'Mutasi ekuitas & laba ditahan' },
+      { id:'agingar',       label:'Aging AR / AP',          desc:'Umur piutang & hutang berdasarkan jatuh tempo' },
+    ]
+  },
+  {
+    cat: 'Akuntansi', icon: '📒',
+    items: [
+      { id:'journal',       label:'Jurnal',                 desc:'Buka halaman Buku Jurnal', nav:'journal' },
+      { id:'ledger',        label:'Buku Besar',             desc:'Buka halaman Buku Besar', nav:'ledger' },
+      { id:'tax',           label:'Laporan Pajak',          desc:'PPh 21, PPh 23, PPN & SPT', nav:'tax' },
+    ]
+  },
+  {
+    cat: 'Pengeluaran & Biaya', icon: '💸',
+    items: [
+      { id:'expenseChart',  label:'Grafik Pengeluaran',     desc:'Visualisasi biaya per kategori', nav:'expenseChart' },
+    ]
+  },
+  {
+    cat: 'Ekspor', icon: '⬇️',
+    items: [
+      { id:'export-excel',  label:'Excel (Semua Laporan)',  desc:'Download laporan keuangan lengkap ke Excel', action:'exportFinancialReport()' },
+      { id:'export-pdf-all',label:'PDF (Semua Laporan)',    desc:'Cetak semua laporan keuangan ke PDF',        action:"exportPDF('all')" },
+      { id:'export-pdf-bs', label:'PDF Neraca / Balance Sheet', desc:'Cetak Balance Sheet ke PDF',            action:"exportPDF('neraca')" },
+      { id:'export-pdf-pl', label:'PDF Laba Rugi / P&L',   desc:'Cetak Profit & Loss ke PDF',                action:"exportPDF('pl')" },
+    ]
+  },
+];
+
 function renderReports(c){
-  document.getElementById('topbar-actions').innerHTML=`
-    <select id="pdf-lang" style="padding:6px 10px;border:1px solid var(--bdr);border-radius:7px;font-family:var(--font);font-size:12px;font-weight:600">
-      <option value="id">🇮🇩 Bahasa Indonesia</option>
-      <option value="en">🇬🇧 English</option>
-    </select>
-    <button class="btn btn-pri" onclick="exportPDF('all')">📄 PDF (Semua)</button>
-    <button class="btn btn-out rpt-extra" onclick="exportPDF('neraca')">📄 PDF Neraca/BS</button>
-    <button class="btn btn-out rpt-extra" onclick="exportPDF('pl')">📄 PDF Laba Rugi/P&L</button>
-    <button class="btn btn-out" onclick="exportFinancialReport()">⬇ Excel</button>`;
-  c.innerHTML=`<div class="tabs"><div class="tab active" onclick="showTab('neraca',this)">Balance Sheet</div><div class="tab" onclick="showTab('labarugi',this)">Profit & Loss</div><div class="tab" onclick="showTab('aruskas',this)">Cash Flow</div><div class="tab" onclick="showTab('neracasaldo',this)">Balance Sheet Saldo</div><div class="tab" onclick="showTab('perubahanmodal',this)">📊 Perubahan Modal</div><div class="tab" onclick="showTab('agingar',this)">⏰ Aging AR/AP</div></div><div id="neraca" class="tabcnt active"></div><div id="labarugi" class="tabcnt"></div><div id="aruskas" class="tabcnt"></div><div id="neracasaldo" class="tabcnt"></div><div id="perubahanmodal" class="tabcnt"></div><div id="agingar" class="tabcnt"></div>`;
-  renderNeraca();
+  document.getElementById('topbar-actions').innerHTML='';
+  _renderReportIndex(c);
 }
+
+function _renderReportIndex(c){
+  // search bar + judul
+  c.innerHTML=`
+  <style>
+    .rpt-page-title{font-size:22px;font-weight:800;color:var(--txt);margin-bottom:18px}
+    .rpt-search-wrap{position:relative;max-width:340px;margin-bottom:28px}
+    .rpt-search-wrap input{width:100%;padding:9px 14px 9px 36px;border:1px solid var(--bdr);border-radius:8px;font-size:13px;font-family:var(--font);background:var(--card);color:var(--txt);outline:none;transition:border .15s}
+    .rpt-search-wrap input:focus{border-color:#2563eb}
+    .rpt-search-wrap .rpt-search-ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
+    .rpt-cat-section{margin-bottom:28px}
+    .rpt-cat-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+    .rpt-cat-title span{font-size:15px}
+    .rpt-cards-grid{background:var(--card);border:1px solid var(--bdr);border-radius:10px;overflow:hidden}
+    .rpt-card-item{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--bdr);cursor:pointer;transition:background .12s;text-decoration:none}
+    .rpt-card-item:last-child{border-bottom:none}
+    .rpt-card-item:hover{background:#f0f6ff}
+    .rpt-card-star{color:#94a3b8;font-size:16px;flex-shrink:0;transition:color .12s}
+    .rpt-card-item:hover .rpt-card-star{color:#2563eb}
+    .rpt-card-label{font-size:13px;font-weight:600;color:#2563eb;flex:1}
+    .rpt-card-desc{font-size:11px;color:var(--muted);margin-top:1px}
+    .rpt-card-arrow{color:#94a3b8;font-size:13px;flex-shrink:0}
+    .rpt-back-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--card);border:1px solid var(--bdr);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;color:var(--txt);margin-bottom:16px;transition:background .12s}
+    .rpt-back-btn:hover{background:#f0f6ff}
+    .rpt-detail-title{font-size:18px;font-weight:800;color:var(--txt);margin-bottom:16px}
+    .rpt-actions-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+    .no-rpt-result{color:var(--muted);font-size:13px;padding:24px 0;text-align:center}
+  </style>
+  <div class="rpt-page-title">Laporan</div>
+  <div class="rpt-search-wrap">
+    <span class="rpt-search-ic">🔍</span>
+    <input type="text" id="rpt-search" placeholder="Cari laporan..." oninput="_filterReports(this.value)">
+  </div>
+  <div id="rpt-catalog-body"></div>`;
+  _renderCatalog('');
+}
+
+function _renderCatalog(q){
+  const body = document.getElementById('rpt-catalog-body');
+  if(!body) return;
+  const kw = q.toLowerCase().trim();
+  let html = '';
+  let anyResult = false;
+  REPORT_CATALOG.forEach(cat => {
+    const items = kw ? cat.items.filter(i => i.label.toLowerCase().includes(kw) || (i.desc||'').toLowerCase().includes(kw)) : cat.items;
+    if(!items.length) return;
+    anyResult = true;
+    html += `<div class="rpt-cat-section">
+      <div class="rpt-cat-title"><span>${cat.icon}</span>${cat.cat}</div>
+      <div class="rpt-cards-grid">
+        ${items.map(item => `
+          <div class="rpt-card-item" onclick="_openReport('${item.id}','${item.nav||''}','${item.action||''}')">
+            <span class="rpt-card-star">☆</span>
+            <div style="flex:1">
+              <div class="rpt-card-label">${item.label}</div>
+              ${item.desc ? `<div class="rpt-card-desc">${item.desc}</div>` : ''}
+            </div>
+            <span class="rpt-card-arrow">›</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  if(!anyResult) html = `<div class="no-rpt-result">Tidak ada laporan yang cocok dengan "<b>${q}</b>"</div>`;
+  body.innerHTML = html;
+}
+
+function _filterReports(q){ _renderCatalog(q); }
+
+function _openReport(id, navTarget, action){
+  if(action){ try{ eval(action); }catch(e){} return; }
+  if(navTarget){ nav(navTarget); return; }
+  // Render laporan langsung di halaman reports
+  const c = document.getElementById('content');
+  if(!c) return;
+  // render detail view
+  const item = REPORT_CATALOG.flatMap(x=>x.items).find(x=>x.id===id);
+  c.innerHTML = `
+    <button class="rpt-back-btn" onclick="renderReports(document.getElementById('content'))">‹ Kembali ke Laporan</button>
+    <div class="rpt-detail-title">${item?item.label:id}</div>
+    <div class="rpt-actions-bar" id="rpt-detail-actions"></div>
+    <div id="rpt-detail-body"></div>`;
+  document.getElementById('topbar-actions').innerHTML = '';
+  _renderReportDetail(id);
+}
+
+function _renderReportDetail(id){
+  const actBar = document.getElementById('rpt-detail-actions');
+  const body   = document.getElementById('rpt-detail-body');
+  if(!body) return;
+
+  // Inject action buttons per laporan
+  const btnExcel = `<button class="btn btn-out" onclick="exportFinancialReport()">⬇ Excel</button>`;
+  const btnPDFAll= `<button class="btn btn-pri" onclick="exportPDF('all')">📄 PDF Semua</button>`;
+  const langSel  = `<select id="pdf-lang" style="padding:6px 10px;border:1px solid var(--bdr);border-radius:7px;font-family:var(--font);font-size:12px;font-weight:600"><option value="id">🇮🇩 Bahasa Indonesia</option><option value="en">🇬🇧 English</option></select>`;
+
+  const actionMap = {
+    neraca:         `${langSel}${btnExcel}<button class="btn btn-pri" onclick="exportPDF('neraca')">📄 Export PDF</button>`,
+    labarugi:       `${langSel}${btnExcel}<button class="btn btn-pri" onclick="exportPDF('pl')">📄 Export PDF</button>`,
+    aruskas:        `${langSel}${btnExcel}`,
+    neracasaldo:    `${langSel}${btnExcel}`,
+    perubahanmodal: `${langSel}${btnExcel}`,
+    agingar:        `${langSel}${btnExcel}`,
+  };
+  if(actBar && actionMap[id]) actBar.innerHTML = actionMap[id];
+
+  // Buat container tab sesuai kebutuhan lalu render
+  const makeContainer = (tabId) => {
+    body.innerHTML = `<div id="${tabId}"></div>`;
+    return document.getElementById(tabId);
+  };
+
+  switch(id){
+    case 'neraca':
+      body.innerHTML = `<div id="neraca"></div>`;
+      renderNeraca(); break;
+    case 'labarugi':
+      body.innerHTML = `<div id="labarugi"></div>`;
+      renderLabaRugi(); break;
+    case 'aruskas':
+      body.innerHTML = `<div id="aruskas"></div>`;
+      renderArusKas(); break;
+    case 'neracasaldo':
+      body.innerHTML = `<div id="neracasaldo"></div>`;
+      renderNeracaSaldo(); break;
+    case 'perubahanmodal':
+      body.innerHTML = `<div id="perubahanmodal"></div>`;
+      if(typeof renderPerubahanModal==='function') renderPerubahanModal(); break;
+    case 'agingar':
+      body.innerHTML = `<div id="agingar"></div>`;
+      if(typeof renderAgingARAPReport==='function') renderAgingARAPReport(); break;
+    default:
+      body.innerHTML = `<div class="alert a-warn">Laporan tidak ditemukan.</div>`;
+  }
+}
+
 function showTab(id,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tabcnt').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById(id).classList.add('active');if(id==='neraca')renderNeraca();if(id==='labarugi')renderLabaRugi();if(id==='aruskas')renderArusKas();if(id==='neracasaldo')renderNeracaSaldo();if(id==='perubahanmodal')renderPerubahanModal();if(id==='agingar')renderAgingARAPReport();}
 
 function renderNeraca(){
