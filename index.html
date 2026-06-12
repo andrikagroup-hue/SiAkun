@@ -6397,35 +6397,43 @@ const REPORT_CATALOG = [
   {
     cat: 'Finansial', icon: '📊',
     items: [
-      { id:'neraca',        label:'Neraca',                 desc:'Posisi keuangan: Aset, Liabilitas & Modal' },
-      { id:'labarugi',      label:'Laba Rugi',              desc:'Pendapatan, HPP, beban & laba bersih' },
-      { id:'aruskas',       label:'Arus Kas',               desc:'Aliran kas operasi, investasi & pendanaan' },
-      { id:'neracasaldo',   label:'Trial Balance',          desc:'Neraca saldo seluruh akun' },
-      { id:'perubahanmodal',label:'Perubahan Modal',        desc:'Mutasi ekuitas & laba ditahan' },
-      { id:'agingar',       label:'Aging AR / AP',          desc:'Umur piutang & hutang berdasarkan jatuh tempo' },
+      { id:'neraca',        label:'Neraca',                      desc:'Posisi keuangan: Aset, Liabilitas & Modal' },
+      { id:'labarugi',      label:'Laba Rugi',                   desc:'Pendapatan, HPP, beban & laba bersih' },
+      { id:'aruskas',       label:'Arus Kas',                    desc:'Aliran kas operasi, investasi & pendanaan' },
+      { id:'perubahanmodal',label:'Perubahan Modal',             desc:'Mutasi ekuitas & laba ditahan' },
+      { id:'agingar',       label:'Ringkasan Eksekutif',         desc:'Ringkasan kondisi keuangan perusahaan' },
+      { id:'agingar',       label:'Hutang Piutang per Kontak',   desc:'Posisi hutang & piutang per kontak' },
     ]
   },
   {
     cat: 'Akuntansi', icon: '📒',
     items: [
-      { id:'journal',       label:'Jurnal',                 desc:'Buka halaman Buku Jurnal', nav:'journal' },
-      { id:'ledger',        label:'Buku Besar',             desc:'Buka halaman Buku Besar', nav:'ledger' },
-      { id:'tax',           label:'Laporan Pajak',          desc:'PPh 21, PPh 23, PPN & SPT', nav:'tax' },
+      { id:'neracasaldo',   label:'Trial Balance',               desc:'Neraca saldo seluruh akun' },
+      { id:'journal',       label:'Jurnal',                      desc:'Buka halaman Buku Jurnal', nav:'journal' },
+      { id:'ledger',        label:'Buku Besar',                  desc:'Buka halaman Buku Besar', nav:'ledger' },
+      { id:'tax',           label:'Laporan Pajak',               desc:'PPh 21, PPh 23, PPN & SPT', nav:'tax' },
     ]
   },
   {
     cat: 'Pengeluaran & Biaya', icon: '💸',
     items: [
-      { id:'expenseChart',  label:'Grafik Pengeluaran',     desc:'Visualisasi biaya per kategori', nav:'expenseChart' },
+      { id:'expenseChart',  label:'Grafik Pengeluaran',          desc:'Visualisasi biaya per kategori', nav:'expenseChart' },
+      { id:'expenseChart',  label:'Biaya per Kontak',            desc:'Detail pengeluaran dikelompokkan per kontak', nav:'expenseChart' },
     ]
   },
   {
-    cat: 'Ekspor', icon: '⬇️',
+    cat: 'Penggajian', icon: '👥',
     items: [
-      { id:'export-excel',  label:'Excel (Semua Laporan)',  desc:'Download laporan keuangan lengkap ke Excel', action:'exportFinancialReport()' },
-      { id:'export-pdf-all',label:'PDF (Semua Laporan)',    desc:'Cetak semua laporan keuangan ke PDF',        action:"exportPDF('all')" },
-      { id:'export-pdf-bs', label:'PDF Neraca / Balance Sheet', desc:'Cetak Balance Sheet ke PDF',            action:"exportPDF('neraca')" },
-      { id:'export-pdf-pl', label:'PDF Laba Rugi / P&L',   desc:'Cetak Profit & Loss ke PDF',                action:"exportPDF('pl')" },
+      { id:'payroll-rpt',   label:'Laporan Penggajian',          desc:'Rekap gaji, PPh 21 & BPJS seluruh karyawan', nav:'payroll' },
+    ]
+  },
+  {
+    cat: 'Ekspor Laporan', icon: '⬇️',
+    items: [
+      { id:'export-excel',  label:'Excel — Semua Laporan',       desc:'Download laporan keuangan lengkap ke Excel', action:'exportFinancialReport()' },
+      { id:'export-pdf-all',label:'PDF — Semua Laporan',         desc:'Cetak semua laporan keuangan ke PDF',        action:"exportPDF('all')" },
+      { id:'export-pdf-bs', label:'PDF — Neraca / Balance Sheet',desc:'Cetak Balance Sheet ke PDF',                action:"exportPDF('neraca')" },
+      { id:'export-pdf-pl', label:'PDF — Laba Rugi / P&L',      desc:'Cetak Profit & Loss ke PDF',                action:"exportPDF('pl')" },
     ]
   },
 ];
@@ -6579,37 +6587,127 @@ function renderNeraca(){
   const kwL=DB.accounts.filter(a=>a.type==='kewajiban'&&a.sub==='lancar');
   const kwP=DB.accounts.filter(a=>a.type==='kewajiban'&&a.sub==='panjang');
   const modal=DB.accounts.filter(a=>a.type==='modal');
-  const totAkL=akL.reduce((s,a)=>s+acctBal(a.id),0),totAkT=akT.reduce((s,a)=>s+acctBal(a.id),0),totAkO=akO.reduce((s,a)=>s+acctBal(a.id),0);
-  const totKwL=kwL.reduce((s,a)=>s+acctBal(a.id),0),totKwP=kwP.reduce((s,a)=>s+acctBal(a.id),0);
+  const totAkL=akL.reduce((s,a)=>s+acctBal(a.id),0);
+  const totAkT=akT.reduce((s,a)=>s+acctBal(a.id),0);
+  const totAkO=akO.reduce((s,a)=>s+acctBal(a.id),0);
+  const totKwL=kwL.reduce((s,a)=>s+acctBal(a.id),0);
+  const totKwP=kwP.reduce((s,a)=>s+acctBal(a.id),0);
   const totModal=modal.reduce((s,a)=>s+acctBal(a.id),0)+lr.labaBersih;
   const totAktiva=totAkL+totAkT+totAkO,totPassiva=totKwL+totKwP+totModal;
+  const totKewajiban=totKwL+totKwP;
+
+  // ── Ratio Calculations ──
+  // Cash & setara kas = akun kas/bank di aktiva lancar
+  const kasAkun=akL.filter(a=>a.code&&(a.code.startsWith('1-1')||a.name.toLowerCase().includes('kas')||a.name.toLowerCase().includes('bank')));
+  const totKas=kasAkun.reduce((s,a)=>s+acctBal(a.id),0);
+  const quickRatio  = totKwL>0 ? ((totAkL - 0) / totKwL) : 0; // simplified: current assets / current liab
+  const currentRatio= totKwL>0 ? (totAkL / totKwL)           : 0;
+  const debtEquity  = totModal>0? (totKewajiban / totModal)   : 0;
+  const equityRatio = totAktiva>0? (totModal / totAktiva)     : 0;
+
+  function ratioGauge(val, max){
+    const pct=Math.min(100,Math.round((val/max)*100));
+    const color=pct<30?'#ef4444':pct<60?'#f59e0b':'#22c55e';
+    return`<div style="position:relative;width:80px;height:44px;overflow:hidden">
+      <svg width="80" height="44" viewBox="0 0 80 44">
+        <path d="M8,40 A32,32 0 0,1 72,40" fill="none" stroke="#e2e8f0" stroke-width="10" stroke-linecap="round"/>
+        <path d="M8,40 A32,32 0 0,1 72,40" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"
+          stroke-dasharray="${pct*1.005} 100.5" />
+      </svg>
+    </div>`;
+  }
+
+  function ratioCard(title, value, subtitle, showGauge, gaugeMax, hint){
+    const fv = isNaN(value)||!isFinite(value)?'0':value.toFixed(2).replace('.',',');
+    return`<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;flex:1;min-width:160px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px">${title}</span>
+        <span style="font-size:10px;color:#94a3b8;cursor:help" title="${hint}">ⓘ</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:10px">
+        <div>
+          <div style="font-size:26px;font-weight:800;color:#1e293b;line-height:1">${fv}</div>
+          <div style="font-size:10.5px;color:#64748b;margin-top:4px">${subtitle}</div>
+        </div>
+        ${showGauge?ratioGauge(value,gaugeMax):'<span style="font-size:20px;color:#22c55e">↗</span>'}
+      </div>
+    </div>`;
+  }
+
+  const today2=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+
   document.getElementById('neraca').innerHTML=`
-  ${coHeader(`Balance Sheet as of ${new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}`)}
-  <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px">
-    <button class="btn btn-out no-print" onclick="exportFinancialReport()">⬇ Excel</button>
-    <button class="btn btn-pri no-print" onclick="exportPDF('neraca')">📄 Export PDF</button>
+  <style>
+    .neraca-ratio-wrap{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+    @media(max-width:700px){.neraca-ratio-wrap{flex-direction:column}}
+  </style>
+
+  <!-- HEADER ROW -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+    <div style="font-size:20px;font-weight:800;color:#1e293b">Neraca</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-out no-print" onclick="exportFinancialReport()">⬇ Excel</button>
+      <button class="btn btn-out no-print" onclick="exportPDF('neraca')">🖨 Print</button>
+      <button class="btn btn-pri no-print" onclick="exportPDF('neraca')">📤 Ekspor</button>
+    </div>
   </div>
+
+  <!-- RATIO CARDS -->
+  <div class="neraca-ratio-wrap">
+    ${ratioCard('Quick Ratio', quickRatio,
+      `Target 0,2`, true, 3,
+      'Kemampuan membayar kewajiban jangka pendek dengan aset lancar paling likuid')}
+    ${ratioCard('Current Ratio', currentRatio,
+      `Hari Ini &nbsp;<span style="color:#22c55e;font-size:10px">0%</span><br><span style="color:#94a3b8;font-size:10px">vs bulan sebelumnya</span>`, false, 3,
+      'Aset lancar dibagi kewajiban lancar — idealnya di atas 1')}
+    ${ratioCard('Debt Equity Ratio', debtEquity,
+      `Hari Ini &nbsp;<span style="color:#22c55e;font-size:10px">0%</span><br><span style="color:#94a3b8;font-size:10px">vs bulan sebelumnya</span>`, false, 3,
+      'Total hutang dibagi total ekuitas — semakin rendah semakin sehat')}
+    ${ratioCard('Equity Ratio', equityRatio,
+      `Hari Ini &nbsp;<span style="color:#22c55e;font-size:10px">0%</span><br><span style="color:#94a3b8;font-size:10px">vs bulan sebelumnya</span>`, false, 1,
+      'Proporsi aset yang dibiayai oleh modal sendiri')}
+  </div>
+
+  <!-- FILTER BAR -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <span style="font-size:11px;color:#64748b">📅 Data per ${today2} — Baru saja diperbarui</span>
+    <button class="btn btn-out btn-xs" onclick="renderNeraca()">↻ Muat ulang</button>
+  </div>
+
+  <!-- NERACA TABLE -->
+  ${coHeader(`Balance Sheet per ${today2}`)}
   <div class="neraca-g">
-    <div class="neraca-sec"><h3>Asset</h3>
-      <div class="nr group"><span>Current Assets</span></div>${akL.map(a=>`<div class="nr sub"><span>${a.name}</span><span>${rp(acctBal(a.id))}</span></div>`).join('')}
-      <div class="nr" style="font-weight:600"><span>Total Current Assets</span><span>${rp(totAkL)}</span></div>
-      <div class="nr group"><span>Fixed Assets</span></div>${akT.map(a=>`<div class="nr sub"><span>${a.name}</span><span>${rp(acctBal(a.id))}</span></div>`).join('')}
-      <div class="nr" style="font-weight:600"><span>Total Fixed Assets</span><span>${rp(totAkT)}</span></div>
-      ${akO.length?`<div class="nr group"><span>Other Assets</span></div>${akO.map(a=>`<div class="nr sub"><span>${a.name}</span><span>${rp(acctBal(a.id))}</span></div>`).join('')}<div class="nr" style="font-weight:600"><span>Total Other Assets</span><span>${rp(totAkO)}</span></div>`:''}
-      <div class="nr total"><span>TOTAL ASSETS</span><span>${rp(totAktiva)}</span></div>
+    <div class="neraca-sec">
+      <h3>Aset</h3>
+      <div class="nr group"><span>Kas &amp; Bank</span></div>
+      ${kasAkun.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      <div class="nr group" style="margin-top:6px"><span>Aset Lancar Lainnya</span></div>
+      ${akL.filter(a=>!kasAkun.includes(a)).map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      <div class="nr" style="font-weight:700"><span>Total Aset Lancar</span><span>${rp(totAkL)}</span></div>
+      <div class="nr group" style="margin-top:8px"><span>Aset Tetap</span></div>
+      ${akT.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      <div class="nr" style="font-weight:700"><span>Total Aset Tetap</span><span>${rp(totAkT)}</span></div>
+      ${akO.length?`<div class="nr group" style="margin-top:8px"><span>Aset Lain-lain</span></div>${akO.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}<div class="nr" style="font-weight:700"><span>Total Aset Lain</span><span>${rp(totAkO)}</span></div>`:''}
+      <div class="nr total"><span>TOTAL ASET</span><span>${rp(totAktiva)}</span></div>
     </div>
-    <div class="neraca-sec"><h3>Kewajiban & Modal</h3>
-      <div class="nr group"><span>Current Liabilities</span></div>${kwL.map(a=>`<div class="nr sub"><span>${a.name}</span><span>${rp(acctBal(a.id))}</span></div>`).join('')}
-      <div class="nr" style="font-weight:600"><span>Total Current Liabilities</span><span>${rp(totKwL)}</span></div>
-      <div class="nr group"><span>Long-term Liabilities</span></div>${kwP.map(a=>`<div class="nr sub"><span>${a.name}</span><span>${rp(acctBal(a.id))}</span></div>`).join('')}
-      <div class="nr" style="font-weight:600"><span>Total Liabilities</span><span>${rp(totKwL+totKwP)}</span></div>
-      <div class="nr group"><span>Equity</span></div>${modal.map(a=>`<div class="nr sub"><span>${a.name}</span><span>${rp(acctBal(a.id))}</span></div>`).join('')}
-      <div class="nr sub"><span>Net Profit Current Year</span><span class="${lr.labaBersih>=0?'ok':'bad'}">${lr.labaBersih<0?"− ":""}${rp(lr.labaBersih)}</span></div>
-      <div class="nr" style="font-weight:600"><span>Total Equity</span><span>${rp(totModal)}</span></div>
-      <div class="nr total"><span>TOTAL LIABILITIES & EQUITY</span><span>${rp(totPassiva)}</span></div>
+    <div class="neraca-sec">
+      <h3>Kewajiban &amp; Modal</h3>
+      <div class="nr group"><span>Kewajiban Jangka Pendek</span></div>
+      ${kwL.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      <div class="nr" style="font-weight:700"><span>Total Kewajiban Lancar</span><span>${rp(totKwL)}</span></div>
+      <div class="nr group" style="margin-top:8px"><span>Kewajiban Jangka Panjang</span></div>
+      ${kwP.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      <div class="nr" style="font-weight:700"><span>Total Kewajiban</span><span>${rp(totKewajiban)}</span></div>
+      <div class="nr group" style="margin-top:8px"><span>Ekuitas / Modal</span></div>
+      ${modal.map(a=>`<div class="nr sub"><span>${a.code} ${a.name}</span><span style="color:#2563eb">${rp(acctBal(a.id))}</span></div>`).join('')}
+      <div class="nr sub"><span>Laba Bersih Tahun Berjalan</span><span class="${lr.labaBersih>=0?'ok':'bad'}">${lr.labaBersih<0?"− ":""}${rp(lr.labaBersih)}</span></div>
+      <div class="nr" style="font-weight:700"><span>Total Ekuitas</span><span>${rp(totModal)}</span></div>
+      <div class="nr total"><span>TOTAL KEWAJIBAN &amp; EKUITAS</span><span>${rp(totPassiva)}</span></div>
     </div>
   </div>
-  ${Math.abs(totAktiva-totPassiva)>1?`<div class="alert a-warn mt12">⚠️ Balance Sheet belum seimbang. Selisih: ${rp(Math.abs(totAktiva-totPassiva))}</div>`:`<div class="alert a-ok mt12">✅ Balance Sheet seimbang = ${rp(totAktiva)}</div>`}`;
+  ${Math.abs(totAktiva-totPassiva)>1
+    ?`<div class="alert a-warn mt12">⚠️ Neraca belum seimbang. Selisih: ${rp(Math.abs(totAktiva-totPassiva))}</div>`
+    :`<div class="alert a-ok mt12">✅ Neraca seimbang = ${rp(totAktiva)}</div>`}`;
 }
 
 function renderLabaRugi(){
