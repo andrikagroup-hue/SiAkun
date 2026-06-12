@@ -7681,6 +7681,7 @@ function saveEditPayroll(id,count){
   if(totalPPh>0)entries.push({acc:'2-20500',deb:0,crd:totalPPh});
   if(totalBPJS>0)entries.push({acc:'2-20701',deb:0,crd:totalBPJS});
   DB.transactions.push({id:uid(),date,ref:txRef,desc:`Gaji ${monthName(p.month)} ${p.year}`,entries});
+  recalculateAllBalances();
   saveDB();closeModal();logAudit('Edit Payroll',`${monthName(p.month)} ${p.year}`);renderPayrollHist();
 }
 function delPayroll(id){
@@ -7930,8 +7931,9 @@ function runPayroll(){
     totBpjsEmp+=s.totalBpjsEmp||0;
     return{empId:e.id,...s};
   });
+  const txRef=`PAY-${y}${String(m).padStart(2,'0')}`;
   // ── Jurnal Akrual Gaji ──
-  DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Beban Gaji ${monthName(m)} ${y}`,entries:[
+  DB.transactions.push({id:uid(),date,ref:txRef,desc:`Beban Gaji ${monthName(m)} ${y}`,entries:[
     {acc:'6-60101',deb:totGross,crd:0},
     {acc:'2-20201',deb:0,crd:totNet},        // Utang Gaji
     {acc:'2-20501',deb:0,crd:totPPh},        // Utang PPh 21
@@ -7939,19 +7941,20 @@ function runPayroll(){
   ]});
   // ── Jurnal Beban BPJS Perusahaan ──
   if(totBpjsEmp>0){
-    DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Beban BPJS Perusahaan ${monthName(m)} ${y}`,entries:[
+    DB.transactions.push({id:uid(),date,ref:txRef,desc:`Beban BPJS Perusahaan ${monthName(m)} ${y}`,entries:[
       {acc:'6-60111',deb:totBpjsEmp,crd:0},  // Beban BPJS Perusahaan
       {acc:'2-20702',deb:0,crd:totBpjsEmp},  // Utang BPJS
     ]});
   }
   // ── Jurnal Pembayaran Gaji ──
-  DB.transactions.push({id:uid(),date,ref:`PAY-${mv}`,desc:`Pembayaran Gaji ${monthName(m)} ${y}`,entries:[
+  DB.transactions.push({id:uid(),date,ref:txRef,desc:`Pembayaran Gaji ${monthName(m)} ${y}`,entries:[
     {acc:'2-20201',deb:totNet,crd:0},
     {acc:bankAcc,deb:0,crd:totNet},
   ]});
-  const rec={id:uid(),year:y,month:m,date,bankAcc,slips,
+  const rec={id:uid(),year:y,month:m,date,bankAcc,txRef,slips,
     totalGaji:totGross,totalPPh:totPPh,totalNet:totNet,totalBPJS:totBPJS,totalBpjsEmp:totBpjsEmp};
   DB.payroll.push(rec);
+  recalculateAllBalances();
   saveDB();closeModal();
   logAudit('Payroll',`${monthName(m)} ${y}: ${slips.length} karyawan, gross ${rp(totGross)}, net ${rp(totNet)}`);
   nav('payroll');
@@ -8127,10 +8130,18 @@ function openSlip(empId,payrollId){
   } else {
     e=DB.employees.find(x=>x.id===empId);
     if(e){
+      // Cek apakah sudah ada payroll tersimpan untuk bulan ini
       const yr=new Date().getFullYear(),mn=new Date().getMonth()+1;
-      const hkAuto=hitungHK(yr,mn);
-      slip=calcDetailedSlip(e,hkAuto,0,0,0,0,0,0);
-      pRec={year:yr,month:mn,date:today()};
+      const savedPRec=DB.payroll.find(p=>p.year===yr&&p.month===mn);
+      if(savedPRec){
+        const savedSlip=savedPRec.slips.find(s=>s.empId===empId);
+        if(savedSlip){slip=savedSlip;pRec=savedPRec;}
+      }
+      if(!slip){
+        const hkAuto=hitungHK(yr,mn);
+        slip=calcDetailedSlip(e,hkAuto,0,0,0,0,0,0);
+        pRec={year:yr,month:mn,date:today()};
+      }
     }
   }
   if(!e||!slip)return alert('Data tidak ditemukan.');
@@ -8169,11 +8180,19 @@ function refreshSlipPreview(empId,payrollId){
   if(!e)return;
   let slip,pRec;
   if(payrollId){
-    // Kalau dari payroll tersimpan, ambil slip aslinya tapi override tanggal
-    const pr=DB.payroll.find(x=>x.id===payrollId);
-    if(pr){
-      pRec={...pr,month:mn,year:yr,date:tgl};
-      slip=pr.slips.find(s=>s.empId===empId);
+    // Cek dulu apakah periode yang dipilih punya payroll tersimpan
+    const savedForPeriod=DB.payroll.find(p=>p.year===yr&&p.month===mn);
+    if(savedForPeriod){
+      const savedSlip=savedForPeriod.slips.find(s=>s.empId===empId);
+      if(savedSlip){slip=savedSlip;pRec={...savedForPeriod,date:tgl};}
+    }
+    if(!slip){
+      // Kalau dari payroll tersimpan, ambil slip aslinya tapi override tanggal
+      const pr=DB.payroll.find(x=>x.id===payrollId);
+      if(pr){
+        pRec={...pr,month:mn,year:yr,date:tgl};
+        slip=pr.slips.find(s=>s.empId===empId);
+      }
     }
   }
   if(!slip){
