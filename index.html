@@ -11229,24 +11229,33 @@ function valClass(n){return n<0?'neg':n>0?'pos':'';}
 
 function buildCoverHdr(co,today_str,reportTitle,lang){
   const isID=lang==='id';
-  const logo=co.logo?`<img src="${co.logo}" style="width:88px;height:88px;object-fit:contain;border-radius:14px;background:white;padding:8px;margin-bottom:16px;display:block;box-shadow:0 2px 12px rgba(0,0,0,.2);">`:'';
+  const logo=co.logo?`<img src="${co.logo}" style="width:64px;height:64px;object-fit:contain;flex-shrink:0;">`:
+    `<div style="width:64px;height:64px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🏢</div>`;
   const dateLabel=isID?'Per Tanggal':'As of';
   const reportLabel=isID?'Laporan Keuangan':'Financial Statement';
-  return`<div style="background:linear-gradient(135deg,#E8510A 0%,#0F172A 100%);color:white;padding:36px 40px;border-radius:14px;margin-bottom:24px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-    ${logo}
-    <div style="font-size:24px;font-weight:800;margin-bottom:5px;color:#FFFFFF;letter-spacing:-.3px">${co.name}</div>
-    <div style="font-size:12px;color:#E2E8F0;margin-bottom:2px">📍 ${co.address}</div>
-    <div style="font-size:11.5px;color:#CBD5E1;margin-bottom:16px">📞 ${co.phone} &nbsp;|&nbsp; NPWP: ${co.npwp}</div>
-    <div style="height:2px;background:rgba(255,255,255,.4);margin-bottom:16px"></div>
-    <div style="display:flex;justify-content:space-between;align-items:flex-end">
+  // Build info lines — only show fields that exist
+  const lines=[];
+  if(co.address) lines.push(co.address);
+  const phoneLine=[co.phone?`Telp: ${co.phone}`:'', co.email?`| ${co.email}`:''].filter(Boolean).join(' ');
+  if(phoneLine) lines.push(phoneLine);
+  if(co.npwp) lines.push(`NPWP: ${co.npwp}`);
+  const bankLine=[co.bank?`Bank: ${co.bank}`:'', co.norek?`| No. Rek: <strong>${co.norek}</strong>`:'', co.atasnama?`a/n ${co.atasnama}`:''].filter(Boolean).join(' ');
+  if(bankLine) lines.push(bankLine);
+  const infoHtml = lines.map(l=>`<div style="font-size:10.5px;color:#475569;margin-bottom:2px;line-height:1.5">${l}</div>`).join('');
+  return`<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:18px 20px;border-bottom:2px solid #e2e8f0;margin-bottom:20px;background:#fff;">
+    <div style="display:flex;align-items:flex-start;gap:14px;">
+      ${logo}
       <div>
-        <div style="font-size:9px;letter-spacing:2.5px;color:#94A3B8;text-transform:uppercase;margin-bottom:5px">${reportLabel}</div>
-        <div style="font-size:28px;font-weight:900;letter-spacing:-.5px;color:#FFFFFF">${reportTitle}</div>
+        <div style="font-size:14px;font-weight:800;color:#E8510A;margin-bottom:4px;letter-spacing:-.2px">${co.name}</div>
+        ${infoHtml}
       </div>
-      <div style="text-align:right">
-        <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px">${dateLabel}</div>
-        <div style="font-size:16px;font-weight:800;color:#FBBF24">${today_str}</div>
-      </div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;margin-left:20px;">
+      <div style="font-size:8px;letter-spacing:2px;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">${reportLabel}</div>
+      <div style="font-size:15px;font-weight:800;color:#E8510A;letter-spacing:-.3px">${reportTitle}</div>
+      <div style="width:40px;height:3px;background:#E8510A;border-radius:2px;margin:5px 0 5px auto"></div>
+      <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">${dateLabel}</div>
+      <div style="font-size:12px;font-weight:700;color:#0f172a">${today_str}</div>
     </div>
   </div>`;
 }
