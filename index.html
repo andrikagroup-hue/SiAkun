@@ -5933,55 +5933,8 @@ function renderJournal(c){
     ['jimp-drop','jexp-drop'].forEach(id=>{const d=document.getElementById(id);if(d)d.style.display='none';});
   }
 
-  // ── Topbar: + Journal Entry | Import/Export ▾ ──
+  // ── Topbar: kosongkan seperti halaman Laporan Neraca ──
   ta.innerHTML=`
-    <button class="btn btn-pri" onclick="openAddJournal()"
-      style="display:flex;align-items:center;gap:6px;font-size:12.5px;padding:7px 16px;border-radius:8px;font-weight:600">
-      + Journal Entry
-    </button>
-
-    <!-- Import dropdown -->
-    <div style="position:relative;display:inline-flex" id="jimp-wrap">
-      <button id="jimp-btn"
-        onclick="(function(){_closeJDrops();const d=document.getElementById('jimp-drop');d.style.display=d.style.display==='block'?'none':'block';})()"
-        style="display:flex;align-items:center;gap:6px;font-size:12.5px;padding:7px 14px;border-radius:8px 0 0 8px;border:1px solid #16a34a;background:#16a34a;color:#fff;cursor:pointer;font-family:var(--font);font-weight:600">
-        📥 Import
-      </button>
-      <button
-        onclick="(function(){_closeJDrops();const d=document.getElementById('jimp-drop');d.style.display=d.style.display==='block'?'none':'block';})()"
-        style="display:flex;align-items:center;padding:7px 8px;border-radius:0 8px 8px 0;border:1px solid #16a34a;border-left:1px solid #15803d;background:#16a34a;color:#fff;cursor:pointer;font-size:10px">▾</button>
-      <div id="jimp-drop" style="display:none;position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:190px;z-index:999;padding:6px;white-space:nowrap">
-        <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;padding:4px 10px 6px;border-bottom:1px solid #f1f5f9;margin-bottom:4px">IMPORT</div>
-        <div onclick="openImportJurnal();_closeJDrops()" style="padding:9px 12px;font-size:12.5px;font-weight:500;color:#0f172a;cursor:pointer;border-radius:7px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">
-          <span style="font-size:15px">📊</span> Excel (.xlsx)
-        </div>
-      </div>
-    </div>
-
-    <!-- Export dropdown -->
-    <div style="position:relative;display:inline-flex" id="jexp-wrap">
-      <button
-        onclick="(function(){_closeJDrops();const d=document.getElementById('jexp-drop');d.style.display=d.style.display==='block'?'none':'block';})()"
-        style="display:flex;align-items:center;gap:6px;font-size:12.5px;padding:7px 14px;border-radius:8px 0 0 8px;border:1px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer;font-family:var(--font);font-weight:600">
-        ⬇ Ekspor
-      </button>
-      <button
-        onclick="(function(){_closeJDrops();const d=document.getElementById('jexp-drop');d.style.display=d.style.display==='block'?'none':'block';})()"
-        style="display:flex;align-items:center;padding:7px 8px;border-radius:0 8px 8px 0;border:1px solid #e2e8f0;border-left:1px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer;font-size:10px">▾</button>
-      <div id="jexp-drop" style="display:none;position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:200px;z-index:999;padding:6px;white-space:nowrap">
-        <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;padding:4px 10px 6px;border-bottom:1px solid #f1f5f9;margin-bottom:4px">EXPORT</div>
-        <div onclick="exportJurnal();_closeJDrops()" style="padding:9px 12px;font-size:12.5px;font-weight:500;color:#0f172a;cursor:pointer;border-radius:7px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-          <span style="font-size:15px">📊</span> Excel (.xlsx) — Semua
-        </div>
-        <div onclick="exportJurnalByMonth();_closeJDrops()" style="padding:9px 12px;font-size:12.5px;font-weight:500;color:#0f172a;cursor:pointer;border-radius:7px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-          <span style="font-size:15px">📋</span> Excel (.xlsx) — Per Bulan
-        </div>
-        <div onclick="exportJurnalPDF();_closeJDrops()" style="padding:9px 12px;font-size:12.5px;font-weight:500;color:#0f172a;cursor:pointer;border-radius:7px;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-          <span style="font-size:15px">📄</span> PDF
-        </div>
-      </div>
-    </div>
-
     <button class="btn btn-bad" id="btn-bulk-del" style="display:none;align-items:center;gap:6px;font-size:12.5px;padding:7px 14px;border-radius:8px" onclick="bulkDeleteJournals()">
       🗑 Hapus (<span id="sel-count">0</span>)
     </button>
@@ -6083,13 +6036,72 @@ function renderJournal(c){
   // ── RENDER ──
   c.innerHTML=`
 
+  <!-- ══ BREADCRUMB (Neraca-style) ══ -->
+  <div class="rpt-breadcrumb">
+    <a onclick="nav('dashboard')">Beranda</a>
+    <span class="sep">·</span>
+    <span class="cur">Jurnal Umum</span>
+  </div>
+
+  <!-- ══ KLEDO HEADER (Neraca-style) ══ -->
+  <div class="rpt-kledo-header">
+    <div class="rpt-kledo-title">Jurnal Umum</div>
+    <div class="rpt-kledo-actions" id="jrn-kledo-actions">
+
+      <!-- + Journal Entry -->
+      <button class="rpt-kledo-btn" onclick="openAddJournal()"
+        style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-color:#1d4ed8;box-shadow:0 2px 6px rgba(37,99,235,.3)">
+        + Journal Entry
+      </button>
+
+      <!-- Import split-button -->
+      <div class="rpt-kledo-btn-print" id="jimp-wrap" style="border-color:#16a34a">
+        <button class="print-main" onclick="openImportJurnal()"
+          style="background:#16a34a;color:#fff;border-radius:8px 0 0 8px">
+          📥 Import
+        </button>
+        <button class="print-caret"
+          onclick="(function(){_closeJDrops();const d=document.getElementById('jimp-drop');d.style.display=d.style.display==='block'?'none':'block';})()"
+          style="background:#16a34a;color:#fff;border-left:1px solid #15803d">▾</button>
+        <div class="rpt-print-dropdown" id="jimp-drop">
+          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;padding:4px 10px 6px;border-bottom:1px solid #f1f5f9;margin-bottom:4px">IMPORT</div>
+          <div class="rpt-print-dd-item" onclick="openImportJurnal();_closeJDrops()">
+            <span>📊</span> Excel (.xlsx)
+          </div>
+        </div>
+      </div>
+
+      <!-- Ekspor split-button -->
+      <div class="rpt-kledo-btn-print" id="jexp-wrap">
+        <button class="print-main" onclick="exportJurnal();_closeJDrops()">
+          ↗ Ekspor
+        </button>
+        <button class="print-caret"
+          onclick="(function(){_closeJDrops();const d=document.getElementById('jexp-drop');d.style.display=d.style.display==='block'?'none':'block';})()"
+          >▾</button>
+        <div class="rpt-print-dropdown" id="jexp-drop">
+          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;padding:4px 10px 6px;border-bottom:1px solid #f1f5f9;margin-bottom:4px">EKSPOR</div>
+          <div class="rpt-print-dd-item" onclick="exportJurnal();_closeJDrops()">
+            <span>📊</span> Excel — Semua
+          </div>
+          <div class="rpt-print-dd-item" onclick="exportJurnalByMonth();_closeJDrops()">
+            <span>📋</span> Excel — Per Bulan
+          </div>
+          <div class="rpt-print-dd-item" onclick="exportJurnalPDF();_closeJDrops()">
+            <span>📄</span> PDF
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ══ HEADER SECTION (Kledo-exact) ══ -->
   <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px 28px;margin-bottom:0;box-shadow:0 1px 3px rgba(0,0,0,.04)">
 
-    <!-- Title + buttons row -->
+    <!-- Period toggle row -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-      <h1 style="font-size:26px;font-weight:800;color:#0f172a;margin:0;line-height:1">Jurnal</h1>
-    </div>
+      <div></div>
 
     <!-- Period toggle + date range -->
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:18px;flex-wrap:wrap">
@@ -6348,6 +6360,15 @@ function renderJournal(c){
 
   // Restore search focus
   if(window._journalSearchFocus){window._journalSearchFocus=false;setTimeout(()=>{const s=document.getElementById('journal-search');if(s){s.focus();const l=s.value.length;s.setSelectionRange(l,l);}},0);}
+
+  // Wire outside-click to close header action dropdowns
+  setTimeout(()=>{
+    document.addEventListener('click',function _jHClose(e){
+      const iw=document.getElementById('jimp-wrap');
+      const ew=document.getElementById('jexp-wrap');
+      if((!iw||!iw.contains(e.target))&&(!ew||!ew.contains(e.target))){_closeJDrops();}
+    });
+  },150);
 }
 
 function exportJurnalByMonth(){
