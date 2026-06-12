@@ -6521,7 +6521,6 @@ function _openReport(id, navTarget, action){
   c.innerHTML = `
     <button class="rpt-back-btn" onclick="renderReports(document.getElementById('content'))">‹ Kembali ke Laporan</button>
     <div class="rpt-detail-title">${item?item.label:id}</div>
-    <div class="rpt-actions-bar" id="rpt-detail-actions"></div>
     <div id="rpt-detail-body"></div>`;
   document.getElementById('topbar-actions').innerHTML = '';
   _renderReportDetail(id);
@@ -6543,7 +6542,7 @@ function _renderReportDetail(id){
     perubahanmodal: `${btnExcel}`,
     agingar:        `${btnExcel}`,
   };
-  if(actBar && actionMap[id]) actBar.innerHTML = actionMap[id];
+  // action bar dihapus — tombol sudah ada di dalam masing-masing render function
 
   // Buat container tab sesuai kebutuhan lalu render
   const makeContainer = (tabId) => {
