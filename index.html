@@ -6561,9 +6561,16 @@ function _openReport(id, navTarget, action){
         <button class="rpt-kledo-btn" id="rpt-ekspor-btn">
           <span>↗</span> Ekspor
         </button>
-        <button class="rpt-kledo-btn" onclick="alert('Bagikan laporan belum tersedia.')">
-          <span>⇉</span> Bagikan <span class="chevron">▾</span>
-        </button>
+        <div class="rpt-kledo-btn-print" id="rpt-bagikan-wrap">
+          <button class="print-main" onclick="toggleBagikanDropdown(event)">
+            ⇉ Bagikan
+          </button>
+          <button class="print-caret" onclick="toggleBagikanDropdown(event)">▾</button>
+          <div class="rpt-print-dropdown" id="rpt-bagikan-dd">
+            <div class="rpt-print-dd-item" id="rpt-share-email">✉️ Kirim Email</div>
+            <div class="rpt-print-dd-item" id="rpt-share-wa">💬 Kirim WhatsApp</div>
+          </div>
+        </div>
         <div class="rpt-kledo-btn-print" id="rpt-print-wrap">
           <button class="print-main" onclick="printReportPortrait()">
             🖨 Print
@@ -6584,8 +6591,13 @@ function _openReport(id, navTarget, action){
   setTimeout(()=>{
     const eb = document.getElementById('rpt-ekspor-btn');
     if(eb) eb.onclick = ()=>{ _rptEksporAction(id); };
-    // Close print dropdown on outside click
+    const se = document.getElementById('rpt-share-email');
+    if(se) se.onclick = ()=>{ _rptShareEmail(id); };
+    const sw = document.getElementById('rpt-share-wa');
+    if(sw) sw.onclick = ()=>{ _rptShareWA(id); };
+    // Close dropdowns on outside click
     document.addEventListener('click', _closePrintDD, {once:false});
+    document.addEventListener('click', _closeBagikanDD, {once:false});
   }, 0);
   _renderReportDetail(id);
 }
@@ -11099,6 +11111,69 @@ function _rptEksporAction(id){
   };
   if(exportMap[id]) exportPDF(exportMap[id]);
   else exportFinancialReport();
+}
+function toggleBagikanDropdown(e){
+  e.stopPropagation();
+  const dd = document.getElementById('rpt-bagikan-dd');
+  if(!dd) return;
+  // close print dd if open
+  const pdd = document.getElementById('rpt-print-dd');
+  if(pdd) pdd.classList.remove('open');
+  dd.classList.toggle('open');
+}
+function _closeBagikanDD(e){
+  const wrap = document.getElementById('rpt-bagikan-wrap');
+  if(wrap && !wrap.contains(e.target)){
+    const dd = document.getElementById('rpt-bagikan-dd');
+    if(dd) dd.classList.remove('open');
+  }
+}
+function _rptShareEmail(id){
+  const dd = document.getElementById('rpt-bagikan-dd');
+  if(dd) dd.classList.remove('open');
+  const co = DB.company || {};
+  const labelMap = {
+    neraca:'Neraca / Balance Sheet', labarugi:'Laporan Laba Rugi / P&L',
+    aruskas:'Arus Kas / Cash Flow', neracasaldo:'Neraca Saldo / Trial Balance',
+    perubahanmodal:'Perubahan Modal', agingar:'Aging AR/AP'
+  };
+  const label = labelMap[id] || id;
+  const subject = encodeURIComponent(`${label} — ${co.name || 'Perusahaan'}`);
+  const body = encodeURIComponent(
+    `Yth. Penerima,
+
+Terlampir ${label} dari ${co.name || 'perusahaan kami'}.
+
+Dokumen ini dapat diunduh melalui sistem akuntansi kami.
+
+Hormat kami,
+${co.name || ''}
+${co.phone || ''}`
+  );
+  window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+}
+function _rptShareWA(id){
+  const dd = document.getElementById('rpt-bagikan-dd');
+  if(dd) dd.classList.remove('open');
+  const co = DB.company || {};
+  const labelMap = {
+    neraca:'Neraca / Balance Sheet', labarugi:'Laporan Laba Rugi / P&L',
+    aruskas:'Arus Kas / Cash Flow', neracasaldo:'Neraca Saldo / Trial Balance',
+    perubahanmodal:'Perubahan Modal', agingar:'Aging AR/AP'
+  };
+  const label = labelMap[id] || id;
+  const today = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+  const msg = encodeURIComponent(
+    `📊 *${label}*
+🏢 ${co.name || 'Perusahaan'}
+📅 Per ${today}
+
+Dokumen laporan keuangan ini digenerate dari sistem akuntansi ${co.name || ''}.
+
+_Silakan hubungi kami untuk informasi lebih lanjut._
+${co.phone ? '📞 '+co.phone : ''}`
+  );
+  window.open(`https://wa.me/?text=${msg}`, '_blank');
 }
 function printReportPortrait(){
   window._printOrientation = 'portrait';
