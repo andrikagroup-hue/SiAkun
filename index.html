@@ -5929,6 +5929,7 @@ function renderJournal(c){
   const _hasCR=DB.transactions.some(t=>t.ref&&String(t.ref).startsWith('CR-'));
   ta.innerHTML=`
     <button class="btn btn-pri" onclick="openAddJournal()">+ Journal Entry</button>
+    <button class="btn btn-ok" onclick="openImportJurnal()">📥 Import Excel</button>
     <button class="btn btn-bad" id="btn-bulk-del" style="display:none" onclick="bulkDeleteJournals()">🗑 Delete Selected (<span id="sel-count">0</span>)</button>
     <button class="btn btn-out" onclick="exportJurnal()">⬇ Excel (All)</button>
     <button class="btn btn-out" onclick="exportJurnalByMonth()">⬇ Excel (Per Month)</button>
