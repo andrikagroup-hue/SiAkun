@@ -6577,6 +6577,81 @@ function _renderReportDetail(id){
 
 function showTab(id,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tabcnt').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById(id).classList.add('active');if(id==='neraca')renderNeraca();if(id==='labarugi')renderLabaRugi();if(id==='aruskas')renderArusKas();if(id==='neracasaldo')renderNeracaSaldo();if(id==='perubahanmodal')renderPerubahanModal();if(id==='agingar')renderAgingARAPReport();}
 
+// ── Neraca Custom Datepicker helpers ──
+function nrDpLabel(st){
+  const d=new Date(st.date+'T00:00:00');
+  const bl=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  return st.mode==='bulan'?`${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`:`${d.getFullYear()}`;
+}
+function nrDpToggle(){
+  const pop=document.getElementById('nr-dp-popup');
+  if(!pop)return;
+  if(pop.classList.contains('open')){
+    pop.classList.remove('open');
+  } else {
+    pop.classList.add('open');
+    nrDpRefreshCal();
+    // Close on outside click
+    setTimeout(()=>{
+      document.addEventListener('click',function nrDpClose(e){
+        if(!document.getElementById('nr-dp-wrap')?.contains(e.target)){
+          pop.classList.remove('open');
+          document.removeEventListener('click',nrDpClose);
+        }
+      });
+    },10);
+  }
+}
+function nrDpRefreshCal(){
+  const st=window._neracaState||{mode:'tahun',date:new Date().toISOString().slice(0,10)};
+  const selDate=new Date(st.date+'T00:00:00');
+  const yrEl=document.getElementById('nr-dp-yr');
+  if(yrEl) yrEl.textContent=selDate.getFullYear();
+  const mosEl=document.getElementById('nr-dp-months');
+  if(!mosEl)return;
+  const now=new Date();
+  const lbls=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  mosEl.innerHTML=lbls.map((lbl,m)=>{
+    const isActive=selDate.getMonth()===m;
+    const isToday=now.getFullYear()===selDate.getFullYear()&&now.getMonth()===m;
+    return`<div class="nr-dp-mo${isActive?' active':''}${isToday&&!isActive?' today-mo':''}" onclick="nrDpPickMonth(${m})">${lbl}</div>`;
+  }).join('');
+}
+function nrDpNavYear(delta){
+  const st=window._neracaState||{mode:'tahun',date:new Date().toISOString().slice(0,10)};
+  const d=new Date(st.date+'T00:00:00');
+  d.setFullYear(d.getFullYear()+delta);
+  const newDate=d.toISOString().slice(0,10);
+  window._neracaState.date=newDate;
+  const yrEl=document.getElementById('nr-dp-yr');
+  if(yrEl) yrEl.textContent=d.getFullYear();
+  nrDpRefreshCal();
+  // Update label tanpa re-render penuh
+  const lbl=document.getElementById('nr-dp-label');
+  if(lbl) lbl.textContent=nrDpLabel(window._neracaState);
+}
+function nrDpPickMonth(m){
+  const st=window._neracaState||{mode:'tahun',date:new Date().toISOString().slice(0,10)};
+  const yrEl=document.getElementById('nr-dp-yr');
+  const yr=yrEl?parseInt(yrEl.textContent):new Date(st.date).getFullYear();
+  const dd=new Date(yr,m,1);
+  const newDate=dd.toISOString().slice(0,10);
+  document.getElementById('nr-dp-popup')?.classList.remove('open');
+  renderNeraca({mode:'bulan',date:newDate});
+}
+function nrDpShortcut(type){
+  const now=new Date();
+  let d=new Date();
+  if(type==='yesterday'){d=new Date(now);d.setDate(d.getDate()-1);}
+  else if(type==='lastweek'){d=new Date(now);d.setDate(d.getDate()-7);}
+  else if(type==='lastmonth'){d=new Date(now.getFullYear(),now.getMonth()-1,1);}
+  else if(type==='lastyear'){d=new Date(now.getFullYear()-1,0,1);}
+  const newDate=d.toISOString().slice(0,10);
+  const mode=(type==='lastyear')?'tahun':'bulan';
+  document.getElementById('nr-dp-popup')?.classList.remove('open');
+  renderNeraca({mode,date:newDate});
+}
+
 function renderNeraca(opts){
   // ── State filter ──
   if(!window._neracaState){
@@ -6655,7 +6730,27 @@ function renderNeraca(opts){
     .nr-period-toggle{display:inline-flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#f1f5f9}
     .nr-period-btn{padding:6px 18px;font-size:12px;font-weight:600;border:none;background:transparent;cursor:pointer;color:#64748b;transition:all .15s}
     .nr-period-btn.active{background:#fff;color:#1e293b;box-shadow:0 1px 4px rgba(0,0,0,.1)}
-    .nr-date-input{border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:#1e293b;background:#fff}
+    .nr-date-input{border:1px solid #e2e8f0;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:#1e293b;background:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}
+    .nr-date-input:hover{border-color:#94a3b8}
+    .nr-dp-wrap{position:relative;display:inline-block}
+    .nr-dp-popup{position:absolute;right:0;top:calc(100% + 4px);z-index:9999;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);display:none;min-width:340px}
+    .nr-dp-popup.open{display:flex}
+    .nr-dp-shortcuts{width:130px;border-right:1px solid #f1f5f9;padding:10px 0}
+    .nr-dp-sc{padding:8px 16px;font-size:12px;color:#475569;cursor:pointer;border-radius:0}
+    .nr-dp-sc:hover{background:#f8fafc;color:var(--pri)}
+    .nr-dp-sc.active{color:var(--pri);font-weight:600}
+    .nr-dp-cal{flex:1;padding:14px}
+    .nr-dp-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .nr-dp-yr{font-size:13px;font-weight:700;color:#1e293b}
+    .nr-dp-nav{background:none;border:none;cursor:pointer;color:#64748b;font-size:14px;padding:2px 6px;border-radius:4px}
+    .nr-dp-nav:hover{background:#f1f5f9}
+    .nr-dp-months{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+    .nr-dp-mo{padding:6px 4px;text-align:center;font-size:11px;border-radius:6px;cursor:pointer;color:#475569}
+    .nr-dp-mo:hover{background:#f1f5f9}
+    .nr-dp-mo.active{background:var(--pri);color:#fff;font-weight:700}
+    .nr-dp-mo.today-mo{border:1px solid var(--pri);color:var(--pri)}
+    .nr-dp-footer{padding:8px 14px;border-top:1px solid #f1f5f9;display:flex;justify-content:flex-end}
+    .nr-dp-footer button{font-size:11px;color:var(--pri);background:none;border:none;cursor:pointer;font-weight:600}
     .nr-chart-panel{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px}
     .nr-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
     @media(max-width:700px){.nr-chart-grid{grid-template-columns:1fr}}
@@ -6680,10 +6775,29 @@ function renderNeraca(opts){
       <button class="nr-period-btn ${st.mode==='bulan'?'active':''}" onclick="renderNeraca({mode:'bulan'})">Bulan</button>
       <button class="nr-period-btn ${st.mode==='tahun'?'active':''}" onclick="renderNeraca({mode:'tahun'})">Tahun</button>
     </div>
-    <input type="${st.mode==='bulan'?'month':'number'}" class="nr-date-input"
-      value="${inputVal}"
-      ${st.mode==='tahun'?'min="2000" max="2099" step="1"':''}
-      onchange="renderNeraca({date: this.type==='month'? this.value+'-01' : this.value+'-06-30'})">
+    <div class="nr-dp-wrap" id="nr-dp-wrap">
+      <div class="nr-date-input" onclick="nrDpToggle()" id="nr-dp-btn">
+        📅 <span id="nr-dp-label">${nrDpLabel(st)}</span>
+      </div>
+      <div class="nr-dp-popup" id="nr-dp-popup">
+        <div class="nr-dp-shortcuts">
+          <div class="nr-dp-sc" onclick="nrDpShortcut('today')">Hari Ini</div>
+          <div class="nr-dp-sc" onclick="nrDpShortcut('yesterday')">Kemarin</div>
+          <div class="nr-dp-sc" onclick="nrDpShortcut('lastweek')">Minggu Lalu</div>
+          <div class="nr-dp-sc" onclick="nrDpShortcut('lastmonth')">Bulan Lalu</div>
+          <div class="nr-dp-sc" onclick="nrDpShortcut('lastyear')">Tahun Lalu</div>
+        </div>
+        <div class="nr-dp-cal">
+          <div class="nr-dp-cal-head">
+            <button class="nr-dp-nav" onclick="nrDpNavYear(-1)">‹</button>
+            <span class="nr-dp-yr" id="nr-dp-yr">${selDate.getFullYear()}</span>
+            <button class="nr-dp-nav" onclick="nrDpNavYear(1)">›</button>
+          </div>
+          <div class="nr-dp-months" id="nr-dp-months"></div>
+          <div class="nr-dp-footer"><button onclick="nrDpShortcut('today')">Hari ini</button></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="neraca-ratio-wrap">
