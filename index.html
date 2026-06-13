@@ -4433,11 +4433,15 @@ function openContact(id){
           :`<span style="font-size:24px">🪪</span>`}
       </div>
       <div>
-        <button type="button" class="btn btn-out btn-xs" onclick="document.getElementById('ct-foto-input').click()">📷 ${ct.fotoKartuNama?'Ganti Foto':'Upload Foto'}</button>
-        ${ct.fotoKartuNama?`<button type="button" class="btn btn-bad btn-xs" style="margin-left:6px" onclick="hapusFotoKartu()">✕ Hapus</button>`:''}
-        <p style="font-size:11px;color:#94a3b8;margin:4px 0 0">JPG/PNG, foto akan dikompress otomatis</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" class="btn btn-out btn-xs" onclick="document.getElementById('ct-foto-camera').click()">📸 Kamera</button>
+          <button type="button" class="btn btn-out btn-xs" onclick="document.getElementById('ct-foto-input').click()">🖼️ Galeri</button>
+          ${ct.fotoKartuNama?`<button type="button" class="btn btn-bad btn-xs" onclick="hapusFotoKartu()">✕ Hapus</button>`:''}
+        </div>
+        <p style="font-size:11px;color:#94a3b8;margin:4px 0 0">Foto dikompress otomatis</p>
       </div>
     </div>
+    <input type="file" id="ct-foto-camera" accept="image/*" capture="environment" style="display:none" onchange="previewFotoKartu(this)">
     <input type="file" id="ct-foto-input" accept="image/*" style="display:none" onchange="previewFotoKartu(this)">
   </div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveContact()">Save</button></div>`);}
@@ -11268,13 +11272,21 @@ function openScanKartuNama(){
   }
   openModal('📷 Scan Kartu Nama',`
     <div style="text-align:center">
-      <div id="scan-preview" style="margin-bottom:16px;min-height:80px;display:flex;align-items:center;justify-content:center">
-        <div style="border:2px dashed #cbd5e1;border-radius:12px;padding:32px 24px;color:#94a3b8;cursor:pointer;width:100%;box-sizing:border-box" onclick="document.getElementById('scan-file-input').click()">
-          <div style="font-size:36px;margin-bottom:8px">📷</div>
-          <div style="font-size:13px;font-weight:600;color:#475569">Klik untuk pilih foto kartu nama</div>
-          <div style="font-size:11px;margin-top:4px">JPG / PNG / HEIC</div>
+      <div id="scan-preview" style="margin-bottom:16px;min-height:100px;display:flex;align-items:center;justify-content:center">
+        <div style="border:2px dashed #cbd5e1;border-radius:12px;padding:24px;color:#94a3b8;width:100%;box-sizing:border-box">
+          <div style="font-size:40px;margin-bottom:10px">🪪</div>
+          <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:16px">Pilih cara ambil foto kartu nama:</div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button type="button" onclick="document.getElementById('scan-file-camera').click()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 20px;background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;cursor:pointer;font-size:12px;font-weight:600;color:#1d4ed8;min-width:100px">
+              <span style="font-size:28px">📸</span>Ambil Foto<span style="font-size:10px;font-weight:400;color:#60a5fa">Buka Kamera</span>
+            </button>
+            <button type="button" onclick="document.getElementById('scan-file-input').click()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 20px;background:#f0fdf4;border:2px solid #86efac;border-radius:12px;cursor:pointer;font-size:12px;font-weight:600;color:#16a34a;min-width:100px">
+              <span style="font-size:28px">🖼️</span>Dari Galeri<span style="font-size:10px;font-weight:400;color:#4ade80">JPG / PNG / HEIC</span>
+            </button>
+          </div>
         </div>
       </div>
+      <input type="file" id="scan-file-camera" accept="image/*" capture="environment" style="display:none" onchange="previewScanFile(this)">
       <input type="file" id="scan-file-input" accept="image/*" style="display:none" onchange="previewScanFile(this)">
       <div id="scan-result" style="display:none;text-align:left;background:#f8fafc;border-radius:10px;padding:14px;font-size:12.5px;line-height:2;margin-bottom:12px"></div>
       <div id="scan-status" style="font-size:12px;color:#64748b;margin-bottom:12px"></div>
