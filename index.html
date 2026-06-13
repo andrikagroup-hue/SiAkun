@@ -11416,7 +11416,7 @@ async function doScanOCRGratis(){
       email:emailMatch?emailMatch[0]:'',
       website:websiteMatch?websiteMatch[0].replace(/https?:\/\//,''):'',
       address:addrLine,
-      note:'(Scan OCR gratis — cek & edit sebelum simpan)\n\nTeks asli:\n'+raw.substring(0,300)
+      note:''
     };
     const resultDiv=document.getElementById('scan-result');
     resultDiv.style.display='block';
@@ -11433,7 +11433,7 @@ async function doScanOCRGratis(){
       <div style="font-size:11px;color:#94a3b8;margin-top:8px;background:#f1f5f9;padding:8px;border-radius:6px;white-space:pre-wrap">${raw.substring(0,400)}</div>
     `;
     document.getElementById('btn-scan-simpan').style.display='inline-flex';
-    document.getElementById('scan-status').textContent='Cek hasil di atas. OCR kadang kurang akurat — edit data setelah simpan ya!';
+    document.getElementById('scan-status').innerHTML='✅ Selesai! OCR kadang kurang akurat — <b>cek dulu sebelum simpan</b> ya.';
     btn.textContent='🔄 Scan Ulang';btn.disabled=false;
   }catch(err){
     document.getElementById('scan-status').textContent='❌ OCR gagal: '+err.message;
