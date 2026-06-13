@@ -4344,12 +4344,17 @@ function dashAssetChart(mode){
 
 function renderContacts(c){
   const ta=document.getElementById('topbar-actions');
-  ta.innerHTML=`<button class="btn btn-pri" onclick="openContact()">${t('btn_add')} ${getLang()==='id'?'Kontak':'Contact'}</button><button class="btn btn-out" onclick="exportContacts()">⬇ Excel</button>`;
+  ta.innerHTML=`<button class="btn btn-pri" onclick="openContact()">${t('btn_add')} ${getLang()==='id'?'Kontak':'Contact'}</button><button class="btn btn-out" onclick="openScanKartuNama()" style="background:#f0fdf4;border-color:#86efac;color:#16a34a">📷 Scan Kartu Nama</button><button class="btn btn-out" onclick="exportContacts()">⬇ Excel</button>`;
   c.innerHTML=`
   <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>${t('lbl_name')}</th><th>Perusahaan</th><th>${t('lbl_type')}</th><th>Telepon</th><th>${t('lbl_email')}</th><th>NPWP</th><th>Alamat</th><th>Catatan</th><th>${t('lbl_action')}</th></tr></thead>
+    <thead><tr><th>Foto</th><th>${t('lbl_name')}</th><th>Perusahaan</th><th>${t('lbl_type')}</th><th>Telepon</th><th>${t('lbl_email')}</th><th>NPWP</th><th>Alamat</th><th>Catatan</th><th>${t('lbl_action')}</th></tr></thead>
     <tbody>
       ${DB.contacts.length?DB.contacts.map(ct=>`<tr>
+        <td style="width:52px;text-align:center">
+          ${ct.fotoKartuNama
+            ?`<img src="${ct.fotoKartuNama}" onclick="lihatFotoKartu('${ct.id}')" style="width:44px;height:32px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.1)" title="Klik untuk lihat kartu nama">`
+            :`<div style="width:44px;height:32px;background:#f1f5f9;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer" onclick="openContact('${ct.id}')" title="Belum ada foto">🪪</div>`}
+        </td>
         <td class="fw7">${ct.name}
           ${ct.jabatan?`<br><span style="font-size:11px;color:#94a3b8;font-weight:400">${ct.jabatan}</span>`:''}</td>
         <td style="font-size:12px">${ct.perusahaan?`<span style="font-weight:600;color:#1e293b">${ct.perusahaan}</span>`:''}
@@ -4361,7 +4366,7 @@ function renderContacts(c){
         <td style="font-size:12px;color:#475569;max-width:160px;white-space:normal;word-break:break-word">${ct.address||'-'}</td>
         <td style="font-size:12px;color:#64748b;max-width:140px;white-space:normal;word-break:break-word">${ct.note||'-'}</td>
         <td class="gap8"><button class="btn btn-out btn-xs" onclick="openContact('${ct.id}')">${t('btn_edit')}</button><button class="btn btn-bad btn-xs" onclick="delContact('${ct.id}')">${t('btn_delete')}</button></td>
-      </tr>`).join(''):`<tr><td colspan="9" class="tbl-empty">${t('alert_noData')}</td></tr>`}
+      </tr>`).join(''):`<tr><td colspan="10" class="tbl-empty">${t('alert_noData')}</td></tr>`}
     </tbody>
   </table></div></div>`;
 }
@@ -11157,6 +11162,29 @@ function renderSettings(c){
     <div class="cfg-group-body">
       <div id="lock-period-card"></div>
     </div>
+  </div>
+
+  <!-- API KEY FOR AI SCAN -->
+  <div class="cfg-group">
+    <div class="cfg-group-hd" onclick="toggleCfg(this)">
+      <div style="display:flex;align-items:center;">
+        <span class="cfg-group-icon">🤖</span>
+        <div><div class="cfg-group-title">API Key AI (Scan Kartu Nama)</div><div class="cfg-group-desc">Masukkan Anthropic API key untuk fitur scan kartu nama otomatis</div></div>
+      </div>
+      <span class="cfg-group-arrow">▼</span>
+    </div>
+    <div class="cfg-group-body">
+      <p style="font-size:12.5px;color:#475569;margin:0 0 12px">API key dipakai untuk membaca kartu nama pakai AI. Disimpan hanya di browser kamu (tidak dikirim ke server manapun selain Anthropic).</p>
+      <div class="fg">
+        <label>Anthropic API Key</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="cfg-apikey" value="${localStorage.getItem('_siakun_apikey')||''}" placeholder="sk-ant-api03-..." style="flex:1;font-family:monospace;font-size:12px">
+          <button class="btn btn-out btn-xs" onclick="document.getElementById('cfg-apikey').type=document.getElementById('cfg-apikey').type==='password'?'text':'password'">👁</button>
+        </div>
+        <p style="font-size:11px;color:#94a3b8;margin-top:6px">Cara dapat API key: buka <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:#2563eb">console.anthropic.com</a> → API keys → Create key</p>
+      </div>
+      <div class="cfg-save-row"><button class="btn btn-pri" onclick="saveApiKey()">💾 Simpan API Key</button></div>
+    </div>
   </div>`:''}
 
 </div>`;
@@ -11169,6 +11197,142 @@ function renderSettings(c){
   };
 
   if(isAdmin()) setTimeout(renderLockPeriodCard, 0);
+}
+
+function lihatFotoKartu(id){
+  const ct=DB.contacts.find(x=>x.id===id);
+  if(!ct||!ct.fotoKartuNama)return;
+  openModal('🪪 Kartu Nama — '+ct.name,`
+    <div style="text-align:center">
+      <img src="${ct.fotoKartuNama}" style="max-width:100%;max-height:60vh;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.15)">
+      <div style="margin-top:12px;font-size:12px;color:#64748b">Foto kartu nama ${ct.name}</div>
+    </div>
+  `);
+}
+
+function openScanKartuNama(){
+  const apiKey=localStorage.getItem('_siakun_apikey');
+  if(!apiKey){
+    if(confirm('API key belum diset. Mau ke Settings sekarang?'))nav('settings');
+    return;
+  }
+  openModal('📷 Scan Kartu Nama',`
+    <div style="text-align:center">
+      <div id="scan-preview" style="margin-bottom:16px;min-height:80px;display:flex;align-items:center;justify-content:center">
+        <div style="border:2px dashed #cbd5e1;border-radius:12px;padding:32px 24px;color:#94a3b8;cursor:pointer;width:100%;box-sizing:border-box" onclick="document.getElementById('scan-file-input').click()">
+          <div style="font-size:36px;margin-bottom:8px">📷</div>
+          <div style="font-size:13px;font-weight:600;color:#475569">Klik untuk pilih foto kartu nama</div>
+          <div style="font-size:11px;margin-top:4px">JPG / PNG / HEIC</div>
+        </div>
+      </div>
+      <input type="file" id="scan-file-input" accept="image/*" style="display:none" onchange="previewScanFile(this)">
+      <div id="scan-result" style="display:none;text-align:left;background:#f8fafc;border-radius:10px;padding:14px;font-size:12.5px;line-height:2;margin-bottom:12px"></div>
+      <div id="scan-status" style="font-size:12px;color:#64748b;margin-bottom:12px"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-out" onclick="closeModal()">Batal</button>
+      <button class="btn btn-out" id="btn-scan-ai" onclick="doScanKartuNama()" style="display:none;background:#f0fdf4;border-color:#86efac;color:#16a34a">🤖 Scan dengan AI</button>
+      <button class="btn btn-pri" id="btn-scan-simpan" onclick="simpanHasilScan()" style="display:none">✅ Simpan ke Kontak</button>
+    </div>
+  `);
+}
+
+let _scanImageBase64='', _scanImageType='', _scanHasil={};
+
+function previewScanFile(input){
+  const file=input.files[0];if(!file)return;
+  _scanImageType=file.type||'image/jpeg';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    _scanImageBase64=e.target.result.split(',')[1];
+    document.getElementById('scan-preview').innerHTML=`<img src="${e.target.result}" style="max-width:100%;max-height:200px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.1)">`;
+    document.getElementById('btn-scan-ai').style.display='inline-flex';
+    document.getElementById('scan-status').textContent='Foto siap di-scan. Klik tombol "Scan dengan AI".';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function doScanKartuNama(){
+  const apiKey=localStorage.getItem('_siakun_apikey');
+  if(!_scanImageBase64)return;
+  const btn=document.getElementById('btn-scan-ai');
+  btn.disabled=true;btn.textContent='⏳ Membaca kartu nama...';
+  document.getElementById('scan-status').textContent='AI sedang membaca kartu nama, sebentar ya...';
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:1000,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:_scanImageType,data:_scanImageBase64}},
+          {type:'text',text:'Baca kartu nama ini dan ekstrak informasi berikut dalam format JSON. Hanya balas dengan JSON saja, tanpa penjelasan:\n{"name":"","jabatan":"","perusahaan":"","hp1":"","telpKantor":"","fax":"","email":"","website":"","address":"","note":""}. Jika ada info yang tidak ada, isi string kosong.'}
+        ]}]
+      })
+    });
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error.message);
+    const text=data.content[0].text.trim();
+    const jsonStr=text.replace(/```json|```/g,'').trim();
+    _scanHasil=JSON.parse(jsonStr);
+    const resultDiv=document.getElementById('scan-result');
+    resultDiv.style.display='block';
+    resultDiv.innerHTML=`
+      <div style="font-weight:700;color:#0f172a;margin-bottom:8px">✅ Hasil Scan:</div>
+      ${_scanHasil.name?`<div>👤 <b>Nama:</b> ${_scanHasil.name}</div>`:''}
+      ${_scanHasil.jabatan?`<div>💼 <b>Jabatan:</b> ${_scanHasil.jabatan}</div>`:''}
+      ${_scanHasil.perusahaan?`<div>🏢 <b>Perusahaan:</b> ${_scanHasil.perusahaan}</div>`:''}
+      ${_scanHasil.hp1?`<div>📱 <b>HP:</b> ${_scanHasil.hp1}</div>`:''}
+      ${_scanHasil.telpKantor?`<div>📞 <b>Kantor:</b> ${_scanHasil.telpKantor}</div>`:''}
+      ${_scanHasil.fax?`<div>📠 <b>Fax:</b> ${_scanHasil.fax}</div>`:''}
+      ${_scanHasil.email?`<div>✉️ <b>Email:</b> ${_scanHasil.email}</div>`:''}
+      ${_scanHasil.website?`<div>🌐 <b>Website:</b> ${_scanHasil.website}</div>`:''}
+      ${_scanHasil.address?`<div>📍 <b>Alamat:</b> ${_scanHasil.address}</div>`:''}
+    `;
+    document.getElementById('btn-scan-simpan').style.display='inline-flex';
+    document.getElementById('scan-status').textContent='Cek hasil di atas, lalu klik Simpan ke Kontak.';
+    btn.textContent='🔄 Scan Ulang';btn.disabled=false;
+  }catch(err){
+    document.getElementById('scan-status').textContent='❌ Gagal: '+err.message;
+    btn.textContent='🤖 Scan dengan AI';btn.disabled=false;
+  }
+}
+
+function simpanHasilScan(){
+  if(!_scanHasil.name)return alert('Nama tidak terbaca. Coba foto ulang dengan lebih jelas.');
+  // simpan foto sebagai base64 (dikompress)
+  const canvas=document.createElement('canvas');
+  const img=new Image();
+  img.onload=function(){
+    const MAX=800;
+    let w=img.width,h=img.height;
+    if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+    canvas.width=w;canvas.height=h;
+    canvas.getContext('2d').drawImage(img,0,0,w,h);
+    const fotoSmall=canvas.toDataURL('image/jpeg',0.7);
+    const newContact={
+      id:'ct_'+Date.now(),
+      ..._scanHasil,
+      phone:_scanHasil.hp1||'',
+      type:'kontak',
+      fotoKartuNama:fotoSmall
+    };
+    DB.contacts.push(newContact);
+    saveDB();
+    closeModal();
+    nav('contacts');
+    setTimeout(()=>alert('✅ Kontak berhasil ditambahkan dari kartu nama!'),200);
+  };
+  img.src='data:'+_scanImageType+';base64,'+_scanImageBase64;
+}
+
+function saveApiKey(){
+  const key=v('cfg-apikey');
+  if(!key)return alert('API key tidak boleh kosong!');
+  if(!key.startsWith('sk-ant-'))return alert('API key tidak valid. Pastikan dimulai dengan "sk-ant-"');
+  localStorage.setItem('_siakun_apikey',key);
+  alert('✅ API Key berhasil disimpan!');
 }
 
 function saveCompany(){
