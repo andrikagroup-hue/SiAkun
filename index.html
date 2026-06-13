@@ -4347,12 +4347,14 @@ function renderContacts(c){
   ta.innerHTML=`<button class="btn btn-pri" onclick="openContact()">${t('btn_add')} ${getLang()==='id'?'Kontak':'Contact'}</button><button class="btn btn-out" onclick="exportContacts()">⬇ Excel</button>`;
   c.innerHTML=`
   <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>${t('lbl_name')}</th><th>${t('lbl_type')}</th><th>${t('lbl_phone')}</th><th>${t('lbl_email')}</th><th>${getLang()==='id'?'NPWP':'Tax ID (NPWP)'}</th><th>${t('lbl_action')}</th></tr></thead>
+    <thead><tr><th>${t('lbl_name')}</th><th>Jabatan / Perusahaan</th><th>${t('lbl_type')}</th><th>Telepon</th><th>${t('lbl_email')}</th><th>${t('lbl_action')}</th></tr></thead>
     <tbody>
       ${DB.contacts.length?DB.contacts.map(ct=>`<tr>
-        <td class="fw7">${ct.name}</td>
-        <td>${ct.type==='customer'?'<span class="badge b-ok">Customer</span>':ct.type==='supplier'?'<span class="badge b-info">Supplier</span>':ct.type==='both'?'<span class="badge b-purple">Both</span>':ct.type==='vendor'?'<span class="badge b-warn">Vendor</span>':ct.type==='konsultan'?'<span class="badge b-gray">Konsultan</span>':ct.type==='partner'?'<span class="badge b-info">Partner</span>':ct.type==='kontraktor'?'<span class="badge b-bad">Kontraktor</span>':ct.type==='instansi'?'<span class="badge b-purple">Instansi/Gov</span>':ct.type==='bank'?'<span class="badge b-ok">Bank</span>':ct.type==='notaris'?'<span class="badge b-gray">Notaris</span>':`<span class="badge b-gray">${ct.type||'Other'}</span>`}</td>
-        <td>${ct.phone||'-'}</td><td>${ct.email||'-'}</td><td class="muted">${ct.npwp||'-'}</td>
+        <td class="fw7">${ct.name}${ct.note?`<br><span style="font-size:10px;color:#94a3b8;font-weight:400">${ct.note}</span>`:''}</td>
+        <td style="font-size:12px">${ct.jabatan?`<span style="font-weight:600">${ct.jabatan}</span>`:''} ${ct.perusahaan?`<br><span style="color:#64748b">${ct.perusahaan}</span>`:''}</td>
+        <td>${ct.type==='customer'?'<span class="badge b-ok">Customer</span>':ct.type==='supplier'?'<span class="badge b-info">Supplier</span>':ct.type==='both'?'<span class="badge b-purple">Both</span>':ct.type==='vendor'?'<span class="badge b-warn">Vendor</span>':ct.type==='konsultan'?'<span class="badge b-gray">Konsultan</span>':ct.type==='partner'?'<span class="badge b-info">Partner</span>':ct.type==='kontraktor'?'<span class="badge b-bad">Kontraktor</span>':ct.type==='instansi'?'<span class="badge b-purple">Instansi/Gov</span>':ct.type==='bank'?'<span class="badge b-ok">Bank</span>':ct.type==='notaris'?'<span class="badge b-gray">Notaris</span>':`<span class="badge b-gray">${ct.type||'Kontak'}</span>`}</td>
+        <td style="font-size:12px;line-height:1.8">${[ct.hp1||ct.phone,ct.hp2,ct.hp3,ct.telpKantor?'📞 '+ct.telpKantor:'',ct.telpRumah?'🏠 '+ct.telpRumah:''].filter(Boolean).join('<br>')||'-'}</td>
+        <td style="font-size:12px;line-height:1.8">${[ct.email,ct.email2].filter(Boolean).join('<br>')||'-'}</td>
         <td class="gap8"><button class="btn btn-out btn-xs" onclick="openContact('${ct.id}')">${t('btn_edit')}</button><button class="btn btn-bad btn-xs" onclick="delContact('${ct.id}')">${t('btn_delete')}</button></td>
       </tr>`).join(''):`<tr><td colspan="6" class="tbl-empty">${t('alert_noData')}</td></tr>`}
     </tbody>
@@ -4362,9 +4364,9 @@ function openContact(id){
   const ct=id?DB.contacts.find(x=>x.id===id):{};editId=id||null;
   openModal(id?'Edit Contact':'Add Contact',`
   <div class="fr2">
-    <div class="fg"><label>Name</label><input id="ct-name" value="${ct.name||''}"></div>
-    <div class="fg"><label>Type</label><select id="ct-type">
-    <option value="kontak"${ct.type==='kontak'||!ct.type?' selected':''}>Kontak / Lainnya</option>
+    <div class="fg"><label>Nama Lengkap</label><input id="ct-name" value="${ct.name||''}" placeholder="Nama lengkap"></div>
+    <div class="fg"><label>Tipe</label><select id="ct-type">
+    <option value="kontak"${(!ct.type||ct.type==='kontak')?' selected':''}>Kontak / Lainnya</option>
     <option value="customer"${ct.type==='customer'?' selected':''}>Customer (Pelanggan)</option>
     <option value="supplier"${ct.type==='supplier'?' selected':''}>Supplier (Pemasok)</option>
     <option value="both"${ct.type==='both'?' selected':''}>Both (Keduanya)</option>
@@ -4378,22 +4380,58 @@ function openContact(id){
   </select></div>
   </div>
   <div class="fr2">
-    <div class="fg"><label>Phone</label><input id="ct-phone" value="${ct.phone||''}"></div>
-    <div class="fg"><label>Email</label><input id="ct-email" value="${ct.email||''}"></div>
+    <div class="fg"><label>Jabatan / Posisi</label><input id="ct-jabatan" value="${ct.jabatan||''}" placeholder="cth: Direktur, Manager, Sales"></div>
+    <div class="fg"><label>Nama Perusahaan</label><input id="ct-perusahaan" value="${ct.perusahaan||''}" placeholder="cth: PT. Maju Jaya"></div>
   </div>
-  <div class="fg"><label>Address</label><input id="ct-addr" value="${ct.address||''}"></div>
-  <div class="fg"><label>Tax ID (NPWP)</label><input id="ct-npwp" value="${ct.npwp||''}"></div>
+  <div style="margin:10px 0 4px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px">📱 Nomor Telepon</div>
+  <div class="fr2">
+    <div class="fg"><label>No. HP 1</label><input id="ct-hp1" value="${ct.hp1||''}" placeholder="cth: 0812-3456-7890" type="tel"></div>
+    <div class="fg"><label>No. HP 2</label><input id="ct-hp2" value="${ct.hp2||''}" placeholder="cth: 0813-3456-7890" type="tel"></div>
+  </div>
+  <div class="fr2">
+    <div class="fg"><label>No. HP 3</label><input id="ct-hp3" value="${ct.hp3||''}" placeholder="cth: 0814-3456-7890" type="tel"></div>
+    <div class="fg"><label>No. Kantor</label><input id="ct-telp-kantor" value="${ct.telpKantor||''}" placeholder="cth: 021-5555-1234" type="tel"></div>
+  </div>
+  <div class="fr2">
+    <div class="fg"><label>No. Rumah</label><input id="ct-telp-rumah" value="${ct.telpRumah||''}" placeholder="cth: 021-7654-3210" type="tel"></div>
+    <div class="fg"><label>No. Fax</label><input id="ct-fax" value="${ct.fax||''}" placeholder="cth: 021-5555-9999" type="tel"></div>
+  </div>
+  <div style="margin:10px 0 4px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px">✉️ Email</div>
+  <div class="fr2">
+    <div class="fg"><label>Email 1</label><input id="ct-email" value="${ct.email||''}" placeholder="email@perusahaan.com" type="email"></div>
+    <div class="fg"><label>Email 2</label><input id="ct-email2" value="${ct.email2||''}" placeholder="email2@personal.com" type="email"></div>
+  </div>
+  <div style="margin:10px 0 4px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px">📋 Lainnya</div>
+  <div class="fg"><label>Alamat</label><input id="ct-addr" value="${ct.address||''}" placeholder="Alamat lengkap"></div>
+  <div class="fr2">
+    <div class="fg"><label>Tax ID (NPWP)</label><input id="ct-npwp" value="${ct.npwp||''}" placeholder="XX.XXX.XXX.X-XXX.XXX"></div>
+    <div class="fg"><label>Catatan</label><input id="ct-note" value="${ct.note||''}" placeholder="Catatan tambahan"></div>
+  </div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveContact()">Save</button></div>`);
 }
 function saveContact(){
-  const name=v('ct-name'),type=v('ct-type'),phone=v('ct-phone'),email=v('ct-email'),address=v('ct-addr'),npwp=v('ct-npwp');
-  if(!name)return alert('Name is required!');
-  if(editId){const ct=DB.contacts.find(x=>x.id===editId);Object.assign(ct,{name,type,phone,email,address,npwp});}
-  else DB.contacts.push({id:uid(),name,type,phone,email,address,npwp});
+  const name=v('ct-name'),type=v('ct-type');
+  const jabatan=v('ct-jabatan'),perusahaan=v('ct-perusahaan');
+  const hp1=v('ct-hp1'),hp2=v('ct-hp2'),hp3=v('ct-hp3');
+  const telpKantor=v('ct-telp-kantor'),telpRumah=v('ct-telp-rumah'),fax=v('ct-fax');
+  const email=v('ct-email'),email2=v('ct-email2');
+  const address=v('ct-addr'),npwp=v('ct-npwp'),note=v('ct-note');
+  // backward compat: phone = hp1
+  const phone=hp1;
+  if(!name)return alert('Nama wajib diisi!');
+  const data={name,type,jabatan,perusahaan,phone,hp1,hp2,hp3,telpKantor,telpRumah,fax,email,email2,address,npwp,note};
+  if(editId){const ct=DB.contacts.find(x=>x.id===editId);Object.assign(ct,data);}
+  else DB.contacts.push({id:uid(),...data});
   saveDB();closeModal();nav('contacts');
 }
 function delContact(id){if(!confirm('Delete this contact?'))return;DB.contacts=DB.contacts.filter(c=>c.id!==id);saveDB();nav('contacts');}
-function exportContacts(){exportXLSX([{name:'Kontak',data:DB.contacts.map(c=>({Nama:c.name,Tipe:c.type,Telepon:c.phone,Email:c.email,Address:c.address,NPWP:c.npwp}))}],'kontak');}
+function exportContacts(){exportXLSX([{name:'Kontak',data:DB.contacts.map(c=>({
+  Nama:c.name, Tipe:c.type, Jabatan:c.jabatan||'', Perusahaan:c.perusahaan||'',
+  'No HP 1':c.hp1||c.phone||'', 'No HP 2':c.hp2||'', 'No HP 3':c.hp3||'',
+  'Telp Kantor':c.telpKantor||'', 'Telp Rumah':c.telpRumah||'', Fax:c.fax||'',
+  Email:c.email||'', 'Email 2':c.email2||'',
+  Alamat:c.address||'', NPWP:c.npwp||'', Catatan:c.note||''
+}))}],'kontak');}
 
 // ================================================================
 //  PRODUCTS
@@ -11152,7 +11190,15 @@ function importData(input,type){
     try{
       const wb=XLSX.read(e.target.result,{type:'binary'});
       const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      if(type==='contacts'){rows.forEach(r=>{if(r['Nama'])DB.contacts.push({id:uid(),name:r['Nama'],type:r['Tipe']||'customer',phone:r['Telepon']||'',email:r['Email']||'',address:r['Address']||'',npwp:r['NPWP']||''});});}
+      if(type==='contacts'){rows.forEach(r=>{if(r['Nama'])DB.contacts.push({id:uid(),
+        name:r['Nama'],type:r['Tipe']||'kontak',
+        jabatan:r['Jabatan']||'',perusahaan:r['Perusahaan']||'',
+        hp1:r['No HP 1']||r['Telepon']||'',hp2:r['No HP 2']||'',hp3:r['No HP 3']||'',
+        phone:r['No HP 1']||r['Telepon']||'',
+        telpKantor:r['Telp Kantor']||'',telpRumah:r['Telp Rumah']||'',fax:r['Fax']||'',
+        email:r['Email']||'',email2:r['Email 2']||'',
+        address:r['Alamat']||r['Address']||'',npwp:r['NPWP']||'',note:r['Catatan']||''
+      });});}
       else if(type==='products'){rows.forEach(r=>{if(r['Nama'])DB.products.push({id:uid(),code:r['Kode']||uid(),name:r['Nama'],category:r['Kategori']||'',unit:r['Satuan']||'pcs',stock:r['Stok']||0,buyPrice:r['Harga Beli']||0,sellPrice:r['Harga Jual']||0,minStock:r['Min Stok']||0});});}
       else if(type==='employees'){rows.forEach(r=>{if(r['Nama'])DB.employees.push({id:uid(),nik:r['NIK']||uid(),name:r['Nama'],jabatan:r['Position']||'',npwp:r['NPWP']||'',ptkp:r['PTKP']||'TK/0',join:today(),gaji:r['Base Salary']||0,tunjangan:r['Allowance']||0,bpjs:r['BPJS']||0});});}
       saveDB();alert(`Berhasil import ${rows.length} data ${type}!`);
