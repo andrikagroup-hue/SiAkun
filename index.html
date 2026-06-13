@@ -6,6 +6,7 @@
 <title>SiAkun v20.0 — Financial System</title>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -11292,10 +11293,6 @@ function lihatFotoKartu(id){
 
 function openScanKartuNama(){
   const apiKey=localStorage.getItem('_siakun_apikey');
-  if(!apiKey){
-    if(confirm('API key belum diset. Mau ke Settings sekarang?'))nav('settings');
-    return;
-  }
   openModal('📷 Scan Kartu Nama',`
     <div style="text-align:center">
       <div id="scan-preview" style="margin-bottom:16px;min-height:100px;display:flex;align-items:center;justify-content:center">
@@ -11319,25 +11316,135 @@ function openScanKartuNama(){
     </div>
     <div class="modal-ft">
       <button class="btn btn-out" onclick="closeModal()">Batal</button>
-      <button class="btn btn-out" id="btn-scan-ai" onclick="doScanKartuNama()" style="display:none;background:#f0fdf4;border-color:#86efac;color:#16a34a">🤖 Scan dengan AI</button>
+      <button class="btn btn-out" id="btn-scan-ocr" onclick="doScanOCRGratis()" style="display:none;background:#fefce8;border-color:#fde047;color:#854d0e">🔍 Scan Gratis (OCR)</button>
+      <button class="btn btn-out" id="btn-scan-ai" onclick="doScanKartuNama()" style="display:none;background:#f0fdf4;border-color:#86efac;color:#16a34a">🤖 Scan AI</button>
       <button class="btn btn-pri" id="btn-scan-simpan" onclick="simpanHasilScan()" style="display:none">✅ Simpan ke Kontak</button>
     </div>
   `);
 }
 
-let _scanImageBase64='', _scanImageType='', _scanHasil={};
+let _scanImageBase64='', _scanImageType='image/jpeg', _scanHasil={};
+
+// Baca orientasi EXIF dari ArrayBuffer
+function _getExifOrientation(buffer){
+  const view=new DataView(buffer);
+  if(view.getUint16(0,false)!==0xFFD8)return -2;
+  let offset=2,length=buffer.byteLength;
+  while(offset<length){
+    if(view.getUint16(offset,false)!==0xFFE1){offset+=2+view.getUint16(offset+2,false);continue;}
+    if(view.getUint32(offset+4,false)!==0x45786966)return -1;
+    const little=view.getUint16(offset+10,false)===0x4949;
+    offset+=12;
+    const tags=view.getUint16(offset,little);
+    offset+=2;
+    for(let i=0;i<tags;i++){
+      if(view.getUint16(offset+(i*12),little)===0x0112)
+        return view.getUint16(offset+(i*12)+8,little);
+    }
+  }
+  return -1;
+}
 
 function previewScanFile(input){
   const file=input.files[0];if(!file)return;
-  _scanImageType=file.type||'image/jpeg';
-  const reader=new FileReader();
-  reader.onload=function(e){
-    _scanImageBase64=e.target.result.split(',')[1];
-    document.getElementById('scan-preview').innerHTML=`<img src="${e.target.result}" style="max-width:100%;max-height:200px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.1)">`;
-    document.getElementById('btn-scan-ai').style.display='inline-flex';
-    document.getElementById('scan-status').textContent='Foto siap di-scan. Klik tombol "Scan dengan AI".';
+  _scanImageType='image/jpeg';
+  const arrayReader=new FileReader();
+  arrayReader.onload=function(ae){
+    const orientation=_getExifOrientation(ae.target.result);
+    const dataReader=new FileReader();
+    dataReader.onload=function(de){
+      const img=new Image();
+      img.onload=function(){
+        // Tentukan rotasi berdasarkan EXIF orientation
+        let deg=0;
+        if(orientation===3)deg=180;
+        else if(orientation===6)deg=90;
+        else if(orientation===8)deg=270;
+        const rad=deg*Math.PI/180;
+        const sw=img.width,sh=img.height;
+        const cw=(deg===90||deg===270)?sh:sw;
+        const ch=(deg===90||deg===270)?sw:sh;
+        const canvas=document.createElement('canvas');
+        canvas.width=cw;canvas.height=ch;
+        const ctx=canvas.getContext('2d');
+        ctx.translate(cw/2,ch/2);
+        ctx.rotate(rad);
+        ctx.drawImage(img,-sw/2,-sh/2);
+        // Kompres max 1200px
+        const MAX=1200;
+        let fw=cw,fh=ch;
+        if(fw>MAX){fh=Math.round(fh*MAX/fw);fw=MAX;}
+        const c2=document.createElement('canvas');
+        c2.width=fw;c2.height=fh;
+        c2.getContext('2d').drawImage(canvas,0,0,fw,fh);
+        const dataUrl=c2.toDataURL('image/jpeg',0.85);
+        _scanImageBase64=dataUrl.split(',')[1];
+        document.getElementById('scan-preview').innerHTML=`<img src="${dataUrl}" style="max-width:100%;max-height:220px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.1)">`;
+        document.getElementById('btn-scan-ocr').style.display='inline-flex';
+        const apiKey=localStorage.getItem('_siakun_apikey');
+        if(apiKey)document.getElementById('btn-scan-ai').style.display='inline-flex';
+        document.getElementById('scan-status').textContent='Foto siap! Pilih "Scan Gratis" (otomatis) atau "Scan AI" (lebih akurat, perlu API key).';
+      };
+      img.src=de.target.result;
+    };
+    dataReader.readAsDataURL(file);
   };
-  reader.readAsDataURL(file);
+  arrayReader.readAsArrayBuffer(file);
+}
+
+async function doScanOCRGratis(){
+  if(!_scanImageBase64)return;
+  const btn=document.getElementById('btn-scan-ocr');
+  btn.disabled=true;btn.textContent='⏳ Membaca teks...';
+  document.getElementById('scan-status').textContent='OCR sedang membaca teks dari kartu nama, sebentar ya...';
+  try{
+    const imgSrc='data:image/jpeg;base64,'+_scanImageBase64;
+    const result=await Tesseract.recognize(imgSrc,'ind+eng',{});
+    const raw=result.data.text;
+    // Parse sederhana: cari email, telepon, website, nama dll
+    const emailMatch=raw.match(/[\w.\-+]+@[\w.\-]+\.[a-z]{2,}/i);
+    const phoneMatches=raw.match(/(\+?62|0)[\s\-]?\d{2,4}[\s\-]?\d{3,4}[\s\-]?\d{3,6}/g)||[];
+    const websiteMatch=raw.match(/(?:www\.|https?:\/\/)[^\s]+/i);
+    const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
+    // Nama biasanya baris pertama yang bukan nomor/simbol
+    const nameLine=lines.find(l=>/^[A-Za-z\s.,']+$/.test(l)&&l.split(' ').length>=2)||lines[0]||'';
+    // Perusahaan: cari baris dengan PT/CV/Tbk/Ltd/Corp
+    const compLine=lines.find(l=>/\b(PT\.?|CV\.?|Tbk|Ltd|Corp|Inc|Group|Indonesia)\b/i.test(l))||'';
+    const jabLine=lines.find(l=>/\b(Director|Manager|President|CEO|CFO|Direktur|Manajer|Staff|Engineer|Head|Chief|Officer|Supervisor)\b/i.test(l))||'';
+    const addrLine=lines.find(l=>/\b(Jl\.|Jalan|Street|Ave|Blvd|No\.|Lot|Floor|Fl\.|Suite|Tower|Building|Gedung)\b/i.test(l))||'';
+    _scanHasil={
+      name:nameLine,
+      jabatan:jabLine,
+      perusahaan:compLine,
+      hp1:phoneMatches[0]||'',
+      telpKantor:phoneMatches[1]||'',
+      fax:phoneMatches[2]||'',
+      email:emailMatch?emailMatch[0]:'',
+      website:websiteMatch?websiteMatch[0].replace(/https?:\/\//,''):'',
+      address:addrLine,
+      note:'(Scan OCR gratis — cek & edit sebelum simpan)\n\nTeks asli:\n'+raw.substring(0,300)
+    };
+    const resultDiv=document.getElementById('scan-result');
+    resultDiv.style.display='block';
+    resultDiv.innerHTML=`
+      <div style="font-weight:700;color:#0f172a;margin-bottom:8px">🔍 Hasil OCR (cek & edit setelah simpan):</div>
+      ${_scanHasil.name?`<div>👤 <b>Nama:</b> ${_scanHasil.name}</div>`:''}
+      ${_scanHasil.jabatan?`<div>💼 <b>Jabatan:</b> ${_scanHasil.jabatan}</div>`:''}
+      ${_scanHasil.perusahaan?`<div>🏢 <b>Perusahaan:</b> ${_scanHasil.perusahaan}</div>`:''}
+      ${_scanHasil.hp1?`<div>📱 <b>HP:</b> ${_scanHasil.hp1}</div>`:''}
+      ${_scanHasil.telpKantor?`<div>📞 <b>Kantor:</b> ${_scanHasil.telpKantor}</div>`:''}
+      ${_scanHasil.email?`<div>✉️ <b>Email:</b> ${_scanHasil.email}</div>`:''}
+      ${_scanHasil.website?`<div>🌐 <b>Website:</b> ${_scanHasil.website}</div>`:''}
+      ${_scanHasil.address?`<div>📍 <b>Alamat:</b> ${_scanHasil.address}</div>`:''}
+      <div style="font-size:11px;color:#94a3b8;margin-top:8px;background:#f1f5f9;padding:8px;border-radius:6px;white-space:pre-wrap">${raw.substring(0,400)}</div>
+    `;
+    document.getElementById('btn-scan-simpan').style.display='inline-flex';
+    document.getElementById('scan-status').textContent='Cek hasil di atas. OCR kadang kurang akurat — edit data setelah simpan ya!';
+    btn.textContent='🔄 Scan Ulang';btn.disabled=false;
+  }catch(err){
+    document.getElementById('scan-status').textContent='❌ OCR gagal: '+err.message;
+    btn.textContent='🔍 Scan Gratis (OCR)';btn.disabled=false;
+  }
 }
 
 async function doScanKartuNama(){
@@ -11388,31 +11495,22 @@ async function doScanKartuNama(){
 }
 
 function simpanHasilScan(){
-  if(!_scanHasil.name)return alert('Nama tidak terbaca. Coba foto ulang dengan lebih jelas.');
-  // simpan foto sebagai base64 (dikompress)
-  const canvas=document.createElement('canvas');
-  const img=new Image();
-  img.onload=function(){
-    const MAX=800;
-    let w=img.width,h=img.height;
-    if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
-    canvas.width=w;canvas.height=h;
-    canvas.getContext('2d').drawImage(img,0,0,w,h);
-    const fotoSmall=canvas.toDataURL('image/jpeg',0.7);
-    const newContact={
-      id:'ct_'+Date.now(),
-      ..._scanHasil,
-      phone:_scanHasil.hp1||'',
-      type:'kontak',
-      fotoKartuNama:fotoSmall
-    };
-    DB.contacts.push(newContact);
-    saveDB();
-    closeModal();
-    nav('contacts');
-    setTimeout(()=>alert('✅ Kontak berhasil ditambahkan dari kartu nama!'),200);
+  if(!_scanHasil.name&&!confirm('Nama tidak terdeteksi otomatis. Tetap simpan dan edit manual?'))return;
+  // Gambar sudah di-rotate & compress di previewScanFile, langsung pakai
+  const fotoSmall='data:image/jpeg;base64,'+_scanImageBase64;
+  const newContact={
+    id:'ct_'+Date.now(),
+    ..._scanHasil,
+    name:_scanHasil.name||'(edit nama)',
+    phone:_scanHasil.hp1||'',
+    type:'kontak',
+    fotoKartuNama:fotoSmall
   };
-  img.src='data:'+_scanImageType+';base64,'+_scanImageBase64;
+  DB.contacts.push(newContact);
+  saveDB();
+  closeModal();
+  nav('contacts');
+  setTimeout(()=>alert('✅ Kontak ditambahkan! Klik Edit untuk cek & lengkapi data.'),200);
 }
 
 function saveApiKey(){
