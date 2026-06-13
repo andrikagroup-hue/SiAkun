@@ -4347,19 +4347,21 @@ function renderContacts(c){
   ta.innerHTML=`<button class="btn btn-pri" onclick="openContact()">${t('btn_add')} ${getLang()==='id'?'Kontak':'Contact'}</button><button class="btn btn-out" onclick="exportContacts()">⬇ Excel</button>`;
   c.innerHTML=`
   <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>${t('lbl_name')}</th><th>Jabatan</th><th>${t('lbl_type')}</th><th>Telepon</th><th>${t('lbl_email')}</th><th>${t('lbl_action')}</th></tr></thead>
+    <thead><tr><th>${t('lbl_name')}</th><th>Jabatan</th><th>${t('lbl_type')}</th><th>Telepon</th><th>${t('lbl_email')}</th><th>NPWP</th><th>Alamat</th><th>Catatan</th><th>${t('lbl_action')}</th></tr></thead>
     <tbody>
       ${DB.contacts.length?DB.contacts.map(ct=>`<tr>
         <td class="fw7">${ct.name}
           ${ct.perusahaan?`<br><span style="font-size:11px;color:#64748b;font-weight:500">${ct.perusahaan}</span>`:''}
-          ${ct.website?`<br><a href="${ct.website.startsWith('http')?ct.website:'https://'+ct.website}" target="_blank" style="font-size:10px;color:#2563eb;font-weight:400;text-decoration:none">🌐 ${ct.website}</a>`:''}
-          ${ct.note?`<br><span style="font-size:10px;color:#94a3b8;font-weight:400">📝 ${ct.note}</span>`:''}</td>
+          ${ct.website?`<br><a href="${ct.website.startsWith('http')?ct.website:'https://'+ct.website}" target="_blank" style="font-size:10px;color:#2563eb;font-weight:400;text-decoration:none">🌐 ${ct.website}</a>`:''}</td>
         <td style="font-size:12px">${ct.jabatan?`<span style="font-weight:600">${ct.jabatan}</span>`:''}</td>
         <td>${ct.type==='customer'?'<span class="badge b-ok">Customer</span>':ct.type==='supplier'?'<span class="badge b-info">Supplier</span>':ct.type==='both'?'<span class="badge b-purple">Both</span>':ct.type==='vendor'?'<span class="badge b-warn">Vendor</span>':ct.type==='konsultan'?'<span class="badge b-gray">Konsultan</span>':ct.type==='partner'?'<span class="badge b-info">Partner</span>':ct.type==='kontraktor'?'<span class="badge b-bad">Kontraktor</span>':ct.type==='instansi'?'<span class="badge b-purple">Instansi/Gov</span>':ct.type==='bank'?'<span class="badge b-ok">Bank</span>':ct.type==='notaris'?'<span class="badge b-gray">Notaris</span>':`<span class="badge b-gray">${ct.type||'Kontak'}</span>`}</td>
         <td style="font-size:12px;line-height:1.9">${[ct.hp1||ct.phone?'📱 '+(ct.hp1||ct.phone):'',ct.hp2?'📱 '+ct.hp2:'',ct.hp3?'📱 '+ct.hp3:'',ct.telpKantor?'📞 '+ct.telpKantor:'',ct.telpRumah?'🏠 '+ct.telpRumah:'',ct.fax?'📠 '+ct.fax:''].filter(Boolean).join('<br>')||'-'}</td>
         <td style="font-size:12px;line-height:1.8">${[ct.email,ct.email2].filter(Boolean).join('<br>')||'-'}</td>
+        <td style="font-size:12px;color:#475569">${ct.npwp||'-'}</td>
+        <td style="font-size:12px;color:#475569;max-width:160px;white-space:normal;word-break:break-word">${ct.address||'-'}</td>
+        <td style="font-size:12px;color:#64748b;max-width:140px;white-space:normal;word-break:break-word">${ct.note||'-'}</td>
         <td class="gap8"><button class="btn btn-out btn-xs" onclick="openContact('${ct.id}')">${t('btn_edit')}</button><button class="btn btn-bad btn-xs" onclick="delContact('${ct.id}')">${t('btn_delete')}</button></td>
-      </tr>`).join(''):`<tr><td colspan="6" class="tbl-empty">${t('alert_noData')}</td></tr>`}
+      </tr>`).join(''):`<tr><td colspan="9" class="tbl-empty">${t('alert_noData')}</td></tr>`}
     </tbody>
   </table></div></div>`;
 }
