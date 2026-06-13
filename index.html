@@ -4107,6 +4107,32 @@ function renderDashboard(c){
   const actBtn=(lbl,fn)=>'<button onclick="'+fn+'" style="font-size:12px;color:'+C.teal+';background:none;border:none;cursor:pointer;font-weight:600">'+lbl+'</button>';
 
   c.innerHTML=`
+  <!-- Mobile Shortcut Grid — hanya muncul di HP -->
+  <div style="display:none" id="mob-shortcut-grid" class="mob-shortcut-section">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+      ${[
+        ['📒','Akuntansi',"nav('accounts')"],
+        ['💸','Operasional',"nav('transactions')"],
+        ['👥','SDM & Pajak',"nav('payroll')"],
+        ['🗂️','Dokumen',"nav('basts')"],
+        ['👤','Kontak',"nav('contacts')"],
+        ['📋','Piutang',"nav('ar')"],
+        ['🏦','Hutang',"nav('ap')"],
+        ['🏗️','Aset',"nav('assets')"],
+        ['📊','Laporan',"nav('reports')"],
+        ['📅','Kalender',"nav('calendar')"],
+        ['⚙️','Pengaturan',"nav('settings')"],
+        ['🔍','Audit',"nav('audit')"],
+      ].map(([ic,lbl,fn])=>`<div onclick="${fn}" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.07);cursor:pointer;border:1px solid #f1f5f9;active:background:#f8fafc">
+        <span style="font-size:26px">${ic}</span>
+        <span style="font-size:10px;font-weight:600;color:#475569;text-align:center;line-height:1.2">${lbl}</span>
+      </div>`).join('')}
+    </div>
+  </div>
+  <style>
+    @media(max-width:768px){#mob-shortcut-grid{display:block !important;}}
+  </style>
+
   <!-- KPI Row -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
     ${kpiHTML}
@@ -15477,6 +15503,7 @@ setTimeout(()=>{
       <div class="bnav-drawer-item" onclick="bnavGo('transactions')"><span class="ic">💸</span><span>Operasional</span></div>
       <div class="bnav-drawer-item" onclick="bnavGo('payroll')"><span class="ic">👥</span><span>SDM & Pajak</span></div>
       <div class="bnav-drawer-item" onclick="bnavGo('basts')"><span class="ic">🗂️</span><span>Dokumen</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('contacts')"><span class="ic">👤</span><span>Kontak</span></div>
       <div class="bnav-drawer-item" onclick="bnavGo('ar')"><span class="ic">📋</span><span>Piutang</span></div>
       <div class="bnav-drawer-item" onclick="bnavGo('ap')"><span class="ic">🏦</span><span>Hutang</span></div>
       <div class="bnav-drawer-item" onclick="bnavGo('assets')"><span class="ic">🏗️</span><span>Aset</span></div>
