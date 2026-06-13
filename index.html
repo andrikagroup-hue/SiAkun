@@ -5974,17 +5974,22 @@ function renderJournal(c){
   };
   const st = window._jurnalState;
   // Always keep dateFrom/dateTo consistent with mode (fix stale state)
-  if(st.mode==='bulan'){
-    const correctFrom = new Date(yr, mo, 1).toISOString().slice(0,10);
-    const correctTo   = now.toISOString().slice(0,10);
-    // Only auto-correct if not in a custom range (user hasn't manually picked dates)
-    if(!st._customRange){
-      st.dateFrom = correctFrom;
-      st.dateTo   = correctTo;
-    }
+  // _customRange=true only when user manually picks via datepicker; reset on mode button click
+  if(st.mode==='bulan' && !st._customRange){
+    st.dateFrom = new Date(yr, mo, 1).toISOString().slice(0,10);
+    st.dateTo   = now.toISOString().slice(0,10);
   } else if(st.mode==='tahun' && !st._customRange){
     st.dateFrom = yr + '-01-01';
     st.dateTo   = now.toISOString().slice(0,10);
+  }
+  // Safety: if mode=bulan but dateFrom is not in current month, force reset
+  if(st.mode==='bulan'){
+    const currentMonthPrefix = `${yr}-${String(mo+1).padStart(2,'0')}`;
+    const prevMonthPrefix    = mo===0 ? `${yr-1}-12` : `${yr}-${String(mo).padStart(2,'0')}`;
+    if(st.dateFrom && !st.dateFrom.startsWith(currentMonthPrefix) && !st._customRange){
+      st.dateFrom = new Date(yr, mo, 1).toISOString().slice(0,10);
+      st.dateTo   = now.toISOString().slice(0,10);
+    }
   }
 
   // ── Filtered transactions ─────────────────────────────────────
@@ -6562,9 +6567,19 @@ function _jurnalRenderDualCal(){
     html+=`</div>`;
     // Days grid
     html+=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">`;
-    // Prev month days
+    // Prev month filler — make clickable with correct prev-month date
+    const prevM2=m-1<0?11:m-1;
+    const prevY2=m-1<0?y-1:y;
+    const isoPrev=d=>`${prevY2}-${String(prevM2+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     for(let i=startDow-1;i>=0;i--){
-      html+=`<div style="text-align:center;padding:5px 0;font-size:12px;color:#cbd5e1">${prevDays-i}</div>`;
+      const pd=prevDays-i;
+      const prevDateStr=isoPrev(pd);
+      const isFrom=prevDateStr===selFrom, isTo=prevDateStr===selTo;
+      const inRng=selFrom&&selTo&&prevDateStr>selFrom&&prevDateStr<selTo;
+      let bg='none', col='#94a3b8', fw='400';
+      if(isFrom||isTo){bg='#2563eb';col='#fff';fw='700';}
+      else if(inRng){bg='#dbeafe';col='#6b7280';}
+      html+=`<div onclick="_jurnalDpClick('${prevDateStr}')" style="text-align:center;padding:5px 0;font-size:12px;cursor:pointer;color:${col};font-weight:${fw};background:${bg};border-radius:6px;transition:background .1s" onmouseover="if(this.style.background==='none'||this.style.background==='')this.style.background='#f0f6ff'" onmouseout="if(this.style.background==='rgb(240, 246, 255)')this.style.background='none'">${pd}</div>`;
     }
     // Current month
     for(let d=1;d<=daysInMonth;d++){
@@ -6582,10 +6597,21 @@ function _jurnalRenderDualCal(){
         onmouseout="if(this.style.background==='rgb(240, 246, 255)')this.style.background='none'"
         >${d}</div>`;
     }
-    // Next month filler
+    // Next month filler — make clickable with correct next-month date
     const total=startDow+daysInMonth;
     const remainder=total%7===0?0:7-(total%7);
-    for(let d=1;d<=remainder;d++) html+=`<div style="text-align:center;padding:5px 0;font-size:12px;color:#cbd5e1">${d}</div>`;
+    const nextM=m+1>11?0:m+1;
+    const nextY=m+1>11?y+1:y;
+    const isoNext=d=>`${nextY}-${String(nextM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    for(let d=1;d<=remainder;d++){
+      const nextDateStr=isoNext(d);
+      const isFrom=nextDateStr===selFrom, isTo=nextDateStr===selTo;
+      const inRng=selFrom&&selTo&&nextDateStr>selFrom&&nextDateStr<selTo;
+      let bg='none', col='#94a3b8', fw='400';
+      if(isFrom||isTo){bg='#2563eb';col='#fff';fw='700';}
+      else if(inRng){bg='#dbeafe';col='#6b7280';}
+      html+=`<div onclick="_jurnalDpClick('${nextDateStr}')" style="text-align:center;padding:5px 0;font-size:12px;cursor:pointer;color:${col};font-weight:${fw};background:${bg};border-radius:6px;transition:background .1s" onmouseover="if(this.style.background==='none'||this.style.background==='')this.style.background='#f0f6ff'" onmouseout="if(this.style.background==='rgb(240, 246, 255)')this.style.background='none'">${d}</div>`;
+    }
     html+=`</div></div>`;
     return html;
   }
