@@ -4417,9 +4417,50 @@ function openContact(id){
     <div class="fg"><label>Tax ID (NPWP)</label><input id="ct-npwp" value="${ct.npwp||''}" placeholder="XX.XXX.XXX.X-XXX.XXX"></div>
     <div class="fg"><label>Website</label><input id="ct-website" value="${ct.website||''}" placeholder="cth: www.perusahaan.com"></div>
   </div>
+  <div style="margin:10px 0 4px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px">📋 Lainnya</div>
+  <div class="fg"><label>Alamat</label><input id="ct-addr" value="${ct.address||''}" placeholder="Alamat lengkap"></div>
+  <div class="fr2">
+    <div class="fg"><label>Tax ID (NPWP)</label><input id="ct-npwp" value="${ct.npwp||''}" placeholder="XX.XXX.XXX.X-XXX.XXX"></div>
+    <div class="fg"><label>Website</label><input id="ct-website" value="${ct.website||''}" placeholder="cth: www.perusahaan.com"></div>
+  </div>
   <div class="fg"><label>Catatan</label><input id="ct-note" value="${ct.note||''}" placeholder="Catatan tambahan (misal: referral, notes khusus)"></div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveContact()">Save</button></div>`);
+  <div class="fg">
+    <label>📷 Foto Kartu Nama</label>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+      <div id="ct-foto-preview" style="width:80px;height:56px;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#f8fafc;cursor:pointer" onclick="document.getElementById('ct-foto-input').click()">
+        ${ct.fotoKartuNama
+          ?`<img src="${ct.fotoKartuNama}" style="width:100%;height:100%;object-fit:cover">`
+          :`<span style="font-size:24px">🪪</span>`}
+      </div>
+      <div>
+        <button type="button" class="btn btn-out btn-xs" onclick="document.getElementById('ct-foto-input').click()">📷 ${ct.fotoKartuNama?'Ganti Foto':'Upload Foto'}</button>
+        ${ct.fotoKartuNama?`<button type="button" class="btn btn-bad btn-xs" style="margin-left:6px" onclick="hapusFotoKartu()">✕ Hapus</button>`:''}
+        <p style="font-size:11px;color:#94a3b8;margin:4px 0 0">JPG/PNG, foto akan dikompress otomatis</p>
+      </div>
+    </div>
+    <input type="file" id="ct-foto-input" accept="image/*" style="display:none" onchange="previewFotoKartu(this)">
+  </div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveContact()">Save</button></div>`);}
+let _ctFotoBase64 = null;
+function previewFotoKartu(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const img=new Image();
+    img.onload=function(){
+      const canvas=document.createElement('canvas');
+      const MAX=800;let w=img.width,h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      _ctFotoBase64=canvas.toDataURL('image/jpeg',0.75);
+      document.getElementById('ct-foto-preview').innerHTML=`<img src="${_ctFotoBase64}" style="width:100%;height:100%;object-fit:cover">`;
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
+function hapusFotoKartu(){_ctFotoBase64='__hapus__';document.getElementById('ct-foto-preview').innerHTML='<span style="font-size:24px">🪪</span>';}
 function saveContact(){
   const name=v('ct-name'),type=v('ct-type');
   const jabatan=v('ct-jabatan'),perusahaan=v('ct-perusahaan');
@@ -4427,12 +4468,21 @@ function saveContact(){
   const telpKantor=v('ct-telp-kantor'),telpRumah=v('ct-telp-rumah'),fax=v('ct-fax');
   const email=v('ct-email'),email2=v('ct-email2');
   const address=v('ct-addr'),npwp=v('ct-npwp'),note=v('ct-note'),website=v('ct-website');
-  // backward compat: phone = hp1
   const phone=hp1;
   if(!name)return alert('Nama wajib diisi!');
   const data={name,type,jabatan,perusahaan,phone,hp1,hp2,hp3,telpKantor,telpRumah,fax,email,email2,address,npwp,note,website};
-  if(editId){const ct=DB.contacts.find(x=>x.id===editId);Object.assign(ct,data);}
-  else DB.contacts.push({id:uid(),...data});
+  if(editId){
+    const ct=DB.contacts.find(x=>x.id===editId);
+    // update foto: null = tidak ada perubahan, '__hapus__' = hapus, base64 = ganti
+    if(_ctFotoBase64==='__hapus__') data.fotoKartuNama='';
+    else if(_ctFotoBase64) data.fotoKartuNama=_ctFotoBase64;
+    else data.fotoKartuNama=ct.fotoKartuNama||'';
+    Object.assign(ct,data);
+  } else {
+    if(_ctFotoBase64&&_ctFotoBase64!=='__hapus__') data.fotoKartuNama=_ctFotoBase64;
+    DB.contacts.push({id:uid(),...data});
+  }
+  _ctFotoBase64=null;
   saveDB();closeModal();nav('contacts');
 }
 function delContact(id){if(!confirm('Delete this contact?'))return;DB.contacts=DB.contacts.filter(c=>c.id!==id);saveDB();nav('contacts');}
