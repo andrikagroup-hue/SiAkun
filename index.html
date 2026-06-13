@@ -4364,6 +4364,7 @@ function openContact(id){
   <div class="fr2">
     <div class="fg"><label>Name</label><input id="ct-name" value="${ct.name||''}"></div>
     <div class="fg"><label>Type</label><select id="ct-type">
+    <option value="kontak"${ct.type==='kontak'||!ct.type?' selected':''}>Kontak / Lainnya</option>
     <option value="customer"${ct.type==='customer'?' selected':''}>Customer (Pelanggan)</option>
     <option value="supplier"${ct.type==='supplier'?' selected':''}>Supplier (Pemasok)</option>
     <option value="both"${ct.type==='both'?' selected':''}>Both (Keduanya)</option>
