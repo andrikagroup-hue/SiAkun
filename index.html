@@ -5928,81 +5928,381 @@ function renderJournal(c){
   const ta=document.getElementById('topbar-actions');
   const _hasCR=DB.transactions.some(t=>t.ref&&String(t.ref).startsWith('CR-'));
   ta.innerHTML=`
-    <button class="btn btn-pri" onclick="openAddJournal()">+ Journal Entry</button>
-    <button class="btn btn-bad" id="btn-bulk-del" style="display:none" onclick="bulkDeleteJournals()">🗑 Delete Selected (<span id="sel-count">0</span>)</button>
-    <button class="btn btn-out" onclick="exportJurnal()">⬇ Excel (All)</button>
-    <button class="btn btn-out" onclick="exportJurnalByMonth()">⬇ Excel (Per Month)</button>
-    <button class="btn btn-out" onclick="exportJurnalPDF()" style="background:#ef4444;color:#fff;border-color:#ef4444">⬇ PDF</button>
-    ${_hasCR?'<button class="btn btn-bad" onclick="undoCashReportImport()">🗑 Delete Cash Report Import</button>':''}`;
+    <button class="btn btn-pri" onclick="openAddJournal()">+ Tambah Jurnal</button>
+    <button class="btn btn-bad" id="btn-bulk-del" style="display:none" onclick="bulkDeleteJournals()">🗑 Hapus Terpilih (<span id="sel-count">0</span>)</button>
+    ${_hasCR?'<button class="btn btn-bad" onclick="undoCashReportImport()">🗑 Hapus Import BSI</button>':''}`;
 
-  // Get available months from transactions
-  const allMonths=[...new Set(DB.transactions.map(t=>t.date?t.date.slice(0,7):null).filter(Boolean))].sort().reverse();
-  const curFilter=window._journalMonthFilter||'all';
-  const curSearch=(window._journalSearch||'').toLowerCase().trim();
+  const txs = DB.transactions || [];
+  const accs = DB.accounts || [];
+  const now = new Date();
+  const yr  = now.getFullYear();
+  const mo  = now.getMonth(); // 0-based
 
-  const sorted=[...DB.transactions]
-    .filter(t=>{
-      if(curFilter!=='all'&&(!t.date||!t.date.startsWith(curFilter)))return false;
-      if(!curSearch)return true;
-      const accMatch=t.entries.some(e=>{const a=DB.accounts.find(x=>x.id===e.acc);return a&&(a.name.toLowerCase().includes(curSearch)||a.code.toLowerCase().includes(curSearch));});
-      return (t.ref||'').toLowerCase().includes(curSearch)||(t.desc||'').toLowerCase().includes(curSearch)||accMatch;
-    })
-    .sort((a,b)=>new Date(b.date)-new Date(a.date));
+  // ── Period filter state ───────────────────────────────────────
+  if(!window._jurnalState) window._jurnalState = {
+    mode: 'bulan',
+    dateFrom: new Date(yr, mo, 1).toISOString().slice(0,10),
+    dateTo:   now.toISOString().slice(0,10),
+    search: '', sortBy:'tanggal', sortDir:'terbaru',
+    page:1, perPage:15
+  };
+  const st = window._jurnalState;
 
-  // Group by month for display
-  function getMonthLabel(dateStr){
-    if(!dateStr)return'—';
-    const[y,m]=dateStr.split('-');
-    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return`${months[parseInt(m)-1]} ${y}`;
+  // ── Filtered transactions ─────────────────────────────────────
+  const srch = (st.search||'').toLowerCase().trim();
+  const filtered = txs.filter(t => {
+    if(st.dateFrom && t.date && t.date < st.dateFrom) return false;
+    if(st.dateTo   && t.date && t.date > st.dateTo)   return false;
+    if(!srch) return true;
+    const accMatch = (t.entries||[]).some(e=>{
+      const a = accs.find(x=>x.id===e.acc);
+      return a && (a.name.toLowerCase().includes(srch) || (a.code||'').toLowerCase().includes(srch));
+    });
+    return (t.ref||'').toLowerCase().includes(srch) ||
+           (t.desc||'').toLowerCase().includes(srch) || accMatch;
+  }).sort((a,b)=> new Date(b.date)-new Date(a.date));
+
+  // ── KPI calculations ──────────────────────────────────────────
+  function txsInRange(arr){
+    return arr.filter(t=>(!st.dateFrom||t.date>=st.dateFrom)&&(!st.dateTo||t.date<=st.dateTo));
   }
+  const inRange = txsInRange(txs);
+  const nilaiTotal = inRange.reduce((s,t)=>{
+    const tot=(t.entries||[]).reduce((ss,e)=>ss+(e.deb||0),0);
+    return s+tot;
+  },0);
+  const jmlTotal  = inRange.length;
+  const barisTotal= inRange.reduce((s,t)=>s+(t.entries||[]).length,0);
 
-  // Build month options
-  const monthOpts=`<option value="all">All Months (${DB.transactions.length} entries)</option>`+
-    allMonths.map(m=>{const cnt=DB.transactions.filter(t=>t.date&&t.date.startsWith(m)).length;return`<option value="${m}"${curFilter===m?' selected':''}>${getMonthLabel(m+'-01')} (${cnt} entries)</option>`;}).join('');
+  // Prior period for comparison
+  const rangeDays = st.dateFrom&&st.dateTo
+    ? Math.max(1,Math.round((new Date(st.dateTo)-new Date(st.dateFrom))/(864e5)))
+    : 365;
+  const prevTo   = st.dateFrom ? new Date(new Date(st.dateFrom)-864e5).toISOString().slice(0,10) : '';
+  const prevFrom = prevTo ? new Date(new Date(prevTo)-(rangeDays-1)*864e5).toISOString().slice(0,10) : '';
+  const prevTxs  = txs.filter(t=>t.date&&t.date>=prevFrom&&t.date<=prevTo);
+  const prevNilai = prevTxs.reduce((s,t)=>s+(t.entries||[]).reduce((ss,e)=>ss+(e.deb||0),0),0);
+  const prevJml   = prevTxs.length;
+  const prevBaris = prevTxs.reduce((s,t)=>s+(t.entries||[]).length,0);
+  const chgPct = (cur,prev) => prev ? (((cur-prev)/prev)*100).toFixed(1)+'%' : (cur?'100%':'0%');
+  const arrow = (cur,prev) => cur>=prev
+    ? `<span style="color:#16a34a;font-size:10px;font-weight:700">▲ ${chgPct(cur,prev)}</span>`
+    : `<span style="color:#dc2626;font-size:10px;font-weight:700">▼ ${chgPct(cur,prev)}</span>`;
 
-  c.innerHTML=`
-  <div class="alert a-info"><b>Double-Entry:</b> every entry must have Total Debit = Total Credit. &nbsp;📅 <b>Backdate:</b> enter any date — can be set to a past date.</div>
-  <div class="card">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:12px;font-weight:700;color:var(--muted)">📅 Filter:</span>
-        <select onchange="window._journalMonthFilter=this.value;nav('journal')" style="font-size:12px;padding:5px 8px;border:1px solid var(--bdr);border-radius:6px;font-family:var(--font)">${monthOpts}</select>
+  function rp(v){return new Intl.NumberFormat('id-ID').format(Math.round(v||0));}
+  function fmtDate(d){if(!d)return'—';const[y,m,dd]=d.split('-');return`${dd}/${m}/${y}`;}
+
+  // ── Transaction types for donut ───────────────────────────────
+  const typeMap = {
+    'invoice':'Tagihan Penjualan','payment':'Terima Pembayaran Tagihan',
+    'bill':'Tagihan Pembelian','transfer':'Kirim Dana',
+    'expense':'Biaya','billpayment':'Pembayaran Pembelian',
+    'delivery':'Pengiriman Pembelian','receipt':'Terima Dana',
+    'adjustment':'Penyesuaian Stok','journal':'Jurnal Umum'
+  };
+  const typeColors = [
+    '#fb7185','#fbbf24','#34d399','#60a5fa','#a8a29e',
+    '#e879f9','#4ade80','#818cf8','#22d3ee','#f97316'
+  ];
+  const typeGroup = {};
+  inRange.forEach(t=>{
+    const tp = t.type||'journal';
+    const label = typeMap[tp]||tp;
+    typeGroup[label] = (typeGroup[label]||0) + (t.entries||[]).reduce((s,e)=>s+(e.deb||0),0);
+  });
+  const typeCountGroup = {};
+  inRange.forEach(t=>{
+    const label = typeMap[t.type||'journal']||(t.type||'journal');
+    typeCountGroup[label] = (typeCountGroup[label]||0)+1;
+  });
+
+  // ── Year trend data (last 6 years) ────────────────────────────
+  const curYr = now.getFullYear();
+  const trendYears = [curYr-5,curYr-4,curYr-3,curYr-2,curYr-1,curYr];
+  const trendNilai = trendYears.map(y=>txs.filter(t=>t.date&&t.date.startsWith(y)).reduce((s,t)=>s+(t.entries||[]).reduce((ss,e)=>ss+(e.deb||0),0),0));
+  const trendJml   = trendYears.map(y=>txs.filter(t=>t.date&&t.date.startsWith(y)).length);
+  const trendBaris = trendYears.map(y=>txs.filter(t=>t.date&&t.date.startsWith(y)).reduce((s,t)=>s+(t.entries||[]).length,0));
+
+  // ── KPI card builder ─────────────────────────────────────────
+  const kpiCard = (title,value,sub,curV,prevV,suffix='') => `
+    <div style="background:#fff;border-radius:10px;padding:16px 20px;border:1px solid #f1f5f9;box-shadow:0 1px 3px rgba(0,0,0,.04);">
+      <div style="font-size:9.5px;font-weight:800;color:#64748b;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px">${title}</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <div style="font-size:22px;font-weight:800;color:#0f172a;line-height:1">${value}</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:5px">${sub}</div>
+        </div>
+        <svg width="46" height="34" viewBox="0 0 46 34"><polyline points="${curV>=prevV?'2,32 14,22 26,18 44,4':'2,4 14,14 26,18 44,32'}" fill="none" stroke="${curV>=prevV?'#16a34a':'#dc2626'}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:12px;font-weight:700;color:var(--muted)">🔍</span>
-        <input id="journal-search" type="text" placeholder="Cari ref, deskripsi, akun..." value="${window._journalSearch||''}"
-          oninput="window._journalSearch=this.value;window._journalSearchFocus=true;nav('journal')"
-          style="font-size:12px;padding:5px 10px;border:1px solid var(--bdr);border-radius:6px;font-family:var(--font);width:220px">
-        ${curSearch?`<button onclick="window._journalSearch='';nav('journal')" style="font-size:11px;padding:3px 8px;border:1px solid var(--bdr);border-radius:6px;cursor:pointer;background:#fff">✕ Clear</button>`:''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid #f8fafc">
+        ${arrow(curV,prevV)}
+        <span style="font-size:9.5px;color:#94a3b8">vs tahun lalu</span>
       </div>
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;user-select:none">
-        <input type="checkbox" id="chk-all" onchange="toggleAllJournals(this.checked)" style="width:15px;height:15px;cursor:pointer">
-        Select All
-      </label>
-      <span style="font-size:11px;color:var(--muted)" id="sel-info"></span>
-      <span style="font-size:11px;color:var(--muted);margin-left:auto">Showing <b>${sorted.length}</b> entries</span>
+    </div>`;
+
+  // ── Build date label for period header ────────────────────────
+  const periodLabel = `${fmtDate(st.dateFrom)} — ${fmtDate(st.dateTo)}`;
+
+  // ── Pagination ────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(filtered.length / st.perPage));
+  if(st.page > totalPages) st.page = totalPages;
+  const pageStart = (st.page-1)*st.perPage;
+  const pageTxs   = filtered.slice(pageStart, pageStart+st.perPage);
+
+  // ── Build month options ───────────────────────────────────────
+  const allMonths=[...new Set(txs.map(t=>t.date?t.date.slice(0,7):null).filter(Boolean))].sort().reverse();
+  function getMonthLabel(dateStr){if(!dateStr)return'—';const[y,m]=dateStr.split('-');const ml=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];return`${ml[parseInt(m)-1]} ${y}`;}
+
+  c.innerHTML = `
+  <!-- ── Period toggle ── -->
+  <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:20px">
+    <button onclick="window._jurnalState.mode='bulan';window._jurnalState.dateFrom=new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().slice(0,10);window._jurnalState.dateTo=new Date().toISOString().slice(0,10);nav('journal')"
+      style="padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;font-weight:600;cursor:pointer;background:${st.mode==='bulan'?'#0f172a':'#fff'};color:${st.mode==='bulan'?'#fff':'#374151'}">Bulan</button>
+    <button onclick="window._jurnalState.mode='tahun';window._jurnalState.dateFrom=new Date().getFullYear()+'-01-01';window._jurnalState.dateTo=new Date().toISOString().slice(0,10);nav('journal')"
+      style="padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;font-weight:600;cursor:pointer;background:${st.mode==='tahun'?'#0f172a':'#fff'};color:${st.mode==='tahun'?'#fff':'#374151'}">Tahun</button>
+    <span style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;font-size:12px;color:#374151">
+      📅 ${periodLabel}
+    </span>
+  </div>
+
+  <!-- ── KPI Cards ── -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px">
+    ${kpiCard('Nilai Transaksi', rp(nilaiTotal), 'tahun ini', nilaiTotal, prevNilai)}
+    ${kpiCard('Jumlah Transaksi', jmlTotal, 'tahun ini', jmlTotal, prevJml)}
+    ${kpiCard('Baris Jurnal', barisTotal, 'tahun ini', barisTotal, prevBaris)}
+  </div>
+
+  <!-- ── Charts row 1 ── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;box-shadow:0 1px 3px rgba(0,0,0,.04);padding:20px">
+      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Nilai Per Tipe Transaksi</div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="flex-shrink:0"><canvas id="jrn-donut-nilai" width="200" height="200"></canvas></div>
+        <div id="jrn-legend-nilai" style="font-size:10.5px;line-height:2"></div>
+      </div>
     </div>
-    <div class="tbl-wrap"><table>
-    <thead><tr><th style="width:32px"></th><th>Date</th><th>Description</th><th>Ref</th><th>Account</th><th>Debit</th><th>Credit</th><th>Action</th></tr></thead>
-    <tbody>
-      ${sorted.length?(() => {
-        let lastMonth='';let rows='';
-        sorted.forEach(tx=>{
-          const txMonth=tx.date?tx.date.slice(0,7):'';
-          if(txMonth!==lastMonth){
-            lastMonth=txMonth;
-            rows+=`<tr><td colspan="8" style="background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;font-size:11px;font-weight:700;padding:7px 12px;letter-spacing:1px">${getMonthLabel(txMonth+'-01').toUpperCase()}</td></tr>`;
-          }
-          const txRows=tx.entries.map((e,i)=>{const a=DB.accounts.find(x=>x.id===e.acc);return`<tr>${i===0?`<td rowspan="${tx.entries.length}" style="text-align:center"><input type="checkbox" class="jchk" value="${tx.id}" onchange="updateJournalSelection()" style="width:15px;height:15px;cursor:pointer"></td><td rowspan="${tx.entries.length}">${fDate(tx.date)}</td><td rowspan="${tx.entries.length}">${tx.desc}</td><td rowspan="${tx.entries.length}" class="muted">${tx.ref||'-'}</td>`:''}<td>${a?`<small class="muted">${a.code}</small> ${a.name}`:e.acc}</td><td class="${e.deb?'ok fw7':''}">${e.deb?rp(e.deb):''}</td><td class="${e.crd?'bad fw7':''}" style="padding-left:20px">${e.crd?rp(e.crd):''}</td>${i===0?`<td rowspan="${tx.entries.length}" class="gap8"><button class="btn btn-out btn-xs" onclick="openEditJournal('${tx.id}')">✏️</button><button class="btn btn-bad btn-xs" onclick="delJournal('${tx.id}')">✕</button></td>`:''}</tr>`;}).join('');
-          rows+=txRows+'<tr><td colspan="8" style="padding:1px;background:#f8fafc"></td></tr>';
-        });
-        return rows;
-      })():`<tr><td colspan="8" class="tbl-empty">No journal entries yet</td></tr>`}
-    </tbody>
-  </table></div></div>`;
-  // Restore search focus after re-render
-  if(window._journalSearchFocus){window._journalSearchFocus=false;setTimeout(()=>{const s=document.getElementById('journal-search');if(s){s.focus();const l=s.value.length;s.setSelectionRange(l,l);}},0);}
+    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;box-shadow:0 1px 3px rgba(0,0,0,.04);padding:20px">
+      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Nilai Transaksi</div>
+      <canvas id="jrn-area-nilai" height="160"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Charts row 2 ── -->
+  <div id="jrn-charts-ext" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Jumlah Transaksi Per Tipe</div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="flex-shrink:0"><canvas id="jrn-donut-jml" width="200" height="200"></canvas></div>
+        <div id="jrn-legend-jml" style="font-size:10.5px;line-height:2"></div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Jumlah Transaksi</div>
+      <canvas id="jrn-area-jml" height="160"></canvas>
+    </div>
+    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Total Nilai Transaksi</div>
+      <canvas id="jrn-area-total-nilai" height="160"></canvas>
+    </div>
+    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Total Jumlah Transaksi</div>
+      <canvas id="jrn-area-total-jml" height="160"></canvas>
+    </div>
+    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Baris Jurnal</div>
+      <canvas id="jrn-area-baris" height="160"></canvas>
+    </div>
+    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Total Baris Jurnal</div>
+      <canvas id="jrn-area-total-baris" height="160"></canvas>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-bottom:20px">
+    <a href="#" onclick="event.preventDefault();const el=document.getElementById('jrn-charts-ext');el.style.display=el.style.display==='none'?'grid':'none';this.innerHTML=el.style.display==='none'?'▼ Tampilkan Grafik':'▲ Tutup'" 
+      style="font-size:12px;color:#2563eb;font-weight:600;text-decoration:none">▲ Tutup</a>
+  </div>
+
+  <!-- ── Table section ── -->
+  <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;box-shadow:0 1px 3px rgba(0,0,0,.04);overflow:hidden">
+    <!-- Filter bar -->
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #f1f5f9;flex-wrap:wrap">
+      <button onclick="_jurnalToggleFilter()" style="display:flex;align-items:center;gap:5px;padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;color:#374151">
+        ⊟ Filter
+      </button>
+      <button onclick="_jurnalToggleView()" style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;font-size:13px;cursor:pointer">☰</button>
+      <div style="flex:1;min-width:160px">
+        <input type="text" placeholder="🔍 Cari..." value="${st.search||''}"
+          oninput="window._jurnalState.search=this.value;window._jurnalState.page=1;nav('journal')"
+          style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit">
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+        <input type="date" value="${st.dateFrom}" onchange="window._jurnalState.dateFrom=this.value;nav('journal')"
+          style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;color:#374151">
+        <span style="color:#94a3b8;font-size:12px">—</span>
+        <input type="date" value="${st.dateTo}" onchange="window._jurnalState.dateTo=this.value;nav('journal')"
+          style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;color:#374151">
+        <button style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:13px" title="Pilih tanggal">📅</button>
+      </div>
+    </div>
+    <!-- Filter panel (hidden by default) -->
+    <div id="jrn-filter-panel" style="display:none;padding:14px 16px;background:#f8fafc;border-bottom:1px solid #f1f5f9;gap:16px">
+      <div style="display:flex;gap:20px;flex-wrap:wrap">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Urutkan</label>
+          <select onchange="window._jurnalState.sortBy=this.value;nav('journal')" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;min-width:130px">
+            <option value="tanggal" ${st.sortBy==='tanggal'?'selected':''}>Tanggal</option>
+            <option value="nilai" ${st.sortBy==='nilai'?'selected':''}>Nilai</option>
+            <option value="ref" ${st.sortBy==='ref'?'selected':''}>Referensi</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Urutkan Berdasarkan</label>
+          <select onchange="window._jurnalState.sortDir=this.value;nav('journal')" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;min-width:130px">
+            <option value="terbaru" ${st.sortDir==='terbaru'?'selected':''}>Terbaru</option>
+            <option value="terlama" ${st.sortDir==='terlama'?'selected':''}>Terlama</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <!-- Timestamp row -->
+    <div style="padding:8px 16px;background:#eff6ff;border-bottom:1px solid #dbeafe;font-size:11px;color:#2563eb;display:flex;align-items:center;gap:6px">
+      ⚡ Data per ${now.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}, ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} · Baru saja diperbarui
+    </div>
+    <!-- Table -->
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
+            <th style="padding:10px 16px;text-align:left;font-size:10.5px;font-weight:700;color:#64748b;white-space:nowrap">Tanggal</th>
+            <th style="padding:10px 16px;text-align:left;font-size:10.5px;font-weight:700;color:#64748b">Deskripsi</th>
+            <th style="padding:10px 16px;text-align:left;font-size:10.5px;font-weight:700;color:#64748b">Ref</th>
+            <th style="padding:10px 16px;text-align:left;font-size:10.5px;font-weight:700;color:#64748b">Akun</th>
+            <th style="padding:10px 16px;text-align:right;font-size:10.5px;font-weight:700;color:#64748b">Debit</th>
+            <th style="padding:10px 16px;text-align:right;font-size:10.5px;font-weight:700;color:#64748b">Kredit</th>
+            <th style="padding:10px 8px;text-align:center;font-size:10.5px;font-weight:700;color:#64748b"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${pageTxs.length ? (() => {
+            let rows = '';
+            pageTxs.forEach((tx,ti) => {
+              const entries = tx.entries||[];
+              entries.forEach((e,i) => {
+                const a = accs.find(x=>x.id===e.acc);
+                const isFirst = i===0;
+                const isLast  = i===entries.length-1;
+                rows += `<tr style="border-bottom:${isLast?'2px solid #f1f5f9':'1px solid #fafafa'};background:${ti%2===0?'#fff':'#fafafa'}">
+                  ${isFirst ? `
+                    <td rowspan="${entries.length}" style="padding:10px 16px;vertical-align:top;white-space:nowrap;color:#374151;font-size:11.5px">${fmtDate(tx.date)}</td>
+                    <td rowspan="${entries.length}" style="padding:10px 16px;vertical-align:top;color:#374151;max-width:200px">${tx.desc||'—'}</td>
+                    <td rowspan="${entries.length}" style="padding:10px 16px;vertical-align:top;color:#94a3b8;font-size:11px;white-space:nowrap">${tx.ref||'—'}</td>
+                  ` : ''}
+                  <td style="padding:7px 16px;color:#374151">${a ? `<span style="color:#94a3b8;font-size:10px">${a.code||''}</span> ${a.name}` : (e.acc||'—')}</td>
+                  <td style="padding:7px 16px;text-align:right;font-weight:600;color:#16a34a">${e.deb ? rp(e.deb) : ''}</td>
+                  <td style="padding:7px 16px;text-align:right;font-weight:600;color:#dc2626">${e.crd ? rp(e.crd) : ''}</td>
+                  ${isFirst ? `
+                    <td rowspan="${entries.length}" style="padding:10px 8px;vertical-align:top;text-align:center;white-space:nowrap">
+                      <button onclick="openEditJournal('${tx.id}')" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;font-size:11px;color:#374151;margin-bottom:3px">✏️</button>
+                      <button onclick="delJournal('${tx.id}')" style="padding:4px 8px;border:1px solid #fecaca;border-radius:6px;background:#fff;cursor:pointer;font-size:11px;color:#dc2626">✕</button>
+                    </td>
+                  ` : ''}
+                </tr>`;
+              });
+            });
+            return rows;
+          })() : `<tr><td colspan="7" style="padding:40px;text-align:center;color:#94a3b8">
+            <div style="font-size:40px;margin-bottom:8px">📭</div>
+            <div style="font-size:14px;font-weight:600">No Data</div>
+          </td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <!-- Pagination -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid #f1f5f9;flex-wrap:wrap;gap:8px">
+      <span style="font-size:11px;color:#94a3b8">${filtered.length} entri ditemukan</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        ${st.page>1?`<button onclick="window._jurnalState.page=${st.page-1};nav('journal')" style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;cursor:pointer;background:#fff">‹</button>`:''}
+        ${Array.from({length:Math.min(5,totalPages)},(_,i)=>{
+          const p=Math.max(1,Math.min(totalPages-4,st.page-2))+i;
+          return p<=totalPages?`<button onclick="window._jurnalState.page=${p};nav('journal')" style="padding:5px 10px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px;cursor:pointer;background:${p===st.page?'#0f172a':'#fff'};color:${p===st.page?'#fff':'#374151'}">${p}</button>`:'';
+        }).join('')}
+        ${st.page<totalPages?`<button onclick="window._jurnalState.page=${st.page+1};nav('journal')" style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;cursor:pointer;background:#fff">›</button>`:''}
+        <select onchange="window._jurnalState.perPage=+this.value;window._jurnalState.page=1;nav('journal')" style="padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;margin-left:8px">
+          ${[15,30,50,100].map(n=>`<option value="${n}"${st.perPage===n?' selected':''}>${n} / halaman</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <!-- Export bar -->
+    <div style="display:flex;gap:8px;padding:10px 16px;border-top:1px solid #f1f5f9;background:#f8fafc">
+      <button onclick="openAddJournal()" style="padding:7px 14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">+ Tambah Jurnal</button>
+      <button onclick="exportJurnal()" style="padding:7px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#374151">⬇ Excel</button>
+      <button onclick="exportJurnalByMonth()" style="padding:7px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#374151">⬇ Excel Per Bulan</button>
+      <button onclick="exportJurnalPDF()" style="padding:7px 14px;border:1px solid #fecaca;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#dc2626">⬇ PDF</button>
+    </div>
+  </div>`;
+
+  // ── Draw charts ───────────────────────────────────────────────
+  setTimeout(()=>{
+    if(typeof Chart==='undefined') return;
+    const pink='rgba(251,113,133,0.85)';
+    const pinkFill='rgba(251,113,133,0.2)';
+    const areaOpts = (labels,data,label) => ({
+      type:'line',
+      data:{labels,datasets:[{label,data,borderColor:pink,backgroundColor:pinkFill,fill:true,tension:.4,pointRadius:2}]},
+      options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9},callback:v=>v>=1e9?(v/1e9).toFixed(1)+'M':(v>=1e6?(v/1e6).toFixed(0)+' Jt':v)}}}}
+    });
+
+    // Donut — Nilai
+    const dnv = document.getElementById('jrn-donut-nilai');
+    if(dnv){
+      const labels=Object.keys(typeGroup), data=Object.values(typeGroup);
+      if(dnv._chart) dnv._chart.destroy();
+      dnv._chart = new Chart(dnv.getContext('2d'),{
+        type:'doughnut',data:{labels,datasets:[{data,backgroundColor:typeColors.slice(0,labels.length),borderWidth:1}]},
+        options:{responsive:false,plugins:{legend:{display:false}},cutout:'55%'}
+      });
+      document.getElementById('jrn-legend-nilai').innerHTML = labels.map((l,i)=>
+        `<div style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${typeColors[i%typeColors.length]};flex-shrink:0"></span>${l}</div>`
+      ).join('');
+    }
+    // Donut — Jumlah
+    const dnj = document.getElementById('jrn-donut-jml');
+    if(dnj){
+      const labels=Object.keys(typeCountGroup), data=Object.values(typeCountGroup);
+      if(dnj._chart) dnj._chart.destroy();
+      dnj._chart = new Chart(dnj.getContext('2d'),{
+        type:'doughnut',data:{labels,datasets:[{data,backgroundColor:typeColors.slice(0,labels.length),borderWidth:1}]},
+        options:{responsive:false,plugins:{legend:{display:false}},cutout:'55%'}
+      });
+      document.getElementById('jrn-legend-jml').innerHTML = labels.map((l,i)=>
+        `<div style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${typeColors[i%typeColors.length]};flex-shrink:0"></span>${l}</div>`
+      ).join('');
+    }
+    // Area charts
+    const charts=[
+      ['jrn-area-nilai',      trendYears, trendNilai, 'Nilai Transaksi'],
+      ['jrn-area-jml',        trendYears, trendJml,   'Jumlah Transaksi'],
+      ['jrn-area-total-nilai',trendYears, trendNilai, 'Total Nilai Transaksi'],
+      ['jrn-area-total-jml',  trendYears, trendJml,   'Total Jumlah Transaksi'],
+      ['jrn-area-baris',      trendYears, trendBaris, 'Baris Jurnal'],
+      ['jrn-area-total-baris',trendYears, trendBaris, 'Total Baris Jurnal'],
+    ];
+    charts.forEach(([id,labels,data,label])=>{
+      const el=document.getElementById(id);
+      if(!el) return;
+      if(el._chart) el._chart.destroy();
+      el._chart = new Chart(el.getContext('2d'), areaOpts(labels,data,label));
+    });
+  },100);
+}
+
+function _jurnalToggleFilter(){
+  const p=document.getElementById('jrn-filter-panel');
+  if(p) p.style.display=p.style.display==='none'?'flex':'none';
+}
+function _jurnalToggleView(){
+  // placeholder for list/grid toggle
 }
 
 function exportJurnalByMonth(){
