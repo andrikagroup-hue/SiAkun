@@ -4372,11 +4372,14 @@ function dashAssetChart(mode){
 function renderContacts(c){
   const ta=document.getElementById('topbar-actions');
   ta.innerHTML=`<button class="btn btn-pri" onclick="openContact()">${t('btn_add')} ${getLang()==='id'?'Kontak':'Contact'}</button><button class="btn btn-out" onclick="openScanKartuNama()" style="background:#f0fdf4;border-color:#86efac;color:#16a34a">📷 Scan Kartu Nama</button><button class="btn btn-out" onclick="exportContacts()">⬇ Excel</button>`;
+  const total=DB.contacts.length;
   c.innerHTML=`
+  <div style="margin-bottom:10px;font-size:13px;color:#64748b">Total kontak: <strong style="color:#0f172a">${total}</strong></div>
   <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>Foto</th><th>${t('lbl_name')}</th><th>Perusahaan</th><th>${t('lbl_type')}</th><th>Telepon</th><th>${t('lbl_email')}</th><th>NPWP</th><th>Alamat</th><th>Catatan</th><th>${t('lbl_action')}</th></tr></thead>
+    <thead><tr><th style="width:36px;text-align:center">#</th><th>Foto</th><th>${t('lbl_name')}</th><th>Perusahaan</th><th>${t('lbl_type')}</th><th>Telepon</th><th>${t('lbl_email')}</th><th>NPWP</th><th>Alamat</th><th>Catatan</th><th>${t('lbl_action')}</th></tr></thead>
     <tbody>
-      ${DB.contacts.length?DB.contacts.map(ct=>`<tr>
+      ${total?DB.contacts.map((ct,i)=>`<tr>
+        <td style="text-align:center;font-size:11px;color:#94a3b8;font-weight:600">${i+1}</td>
         <td style="width:52px;text-align:center">
           ${ct.fotoKartuNama
             ?`<img src="${ct.fotoKartuNama}" onclick="lihatFotoKartu('${ct.id}')" style="width:44px;height:32px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.1)" title="Klik untuk lihat kartu nama">`
@@ -4393,7 +4396,7 @@ function renderContacts(c){
         <td style="font-size:12px;color:#475569;max-width:160px;white-space:normal;word-break:break-word">${ct.address||'-'}</td>
         <td style="font-size:12px;color:#64748b;max-width:140px;white-space:normal;word-break:break-word">${ct.note||'-'}</td>
         <td class="gap8"><button class="btn btn-out btn-xs" onclick="openContact('${ct.id}')">${t('btn_edit')}</button><button class="btn btn-bad btn-xs" onclick="delContact('${ct.id}')">${t('btn_delete')}</button></td>
-      </tr>`).join(''):`<tr><td colspan="10" class="tbl-empty">${t('alert_noData')}</td></tr>`}
+      </tr>`).join(''):`<tr><td colspan="11" class="tbl-empty">${t('alert_noData')}</td></tr>`}
     </tbody>
   </table></div></div>`;
 }
@@ -11352,7 +11355,6 @@ function previewScanFile(input){
     dataReader.onload=function(de){
       const img=new Image();
       img.onload=function(){
-        // Tentukan rotasi berdasarkan EXIF orientation
         let deg=0;
         if(orientation===3)deg=180;
         else if(orientation===6)deg=90;
@@ -11364,10 +11366,8 @@ function previewScanFile(input){
         const canvas=document.createElement('canvas');
         canvas.width=cw;canvas.height=ch;
         const ctx=canvas.getContext('2d');
-        ctx.translate(cw/2,ch/2);
-        ctx.rotate(rad);
+        ctx.translate(cw/2,ch/2);ctx.rotate(rad);
         ctx.drawImage(img,-sw/2,-sh/2);
-        // Kompres max 1200px
         const MAX=1200;
         let fw=cw,fh=ch;
         if(fw>MAX){fh=Math.round(fh*MAX/fw);fw=MAX;}
@@ -11376,17 +11376,92 @@ function previewScanFile(input){
         c2.getContext('2d').drawImage(canvas,0,0,fw,fh);
         const dataUrl=c2.toDataURL('image/jpeg',0.85);
         _scanImageBase64=dataUrl.split(',')[1];
-        document.getElementById('scan-preview').innerHTML=`<img src="${dataUrl}" style="max-width:100%;max-height:220px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.1)">`;
+        _scanOrigDataUrl=dataUrl; // simpan original untuk crop
+        // Tampilkan preview + tombol crop
+        document.getElementById('scan-preview').innerHTML=`
+          <div style="position:relative;display:inline-block">
+            <img src="${dataUrl}" id="scan-img-preview" style="max-width:100%;max-height:200px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.1);display:block">
+          </div>
+          <div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button type="button" onclick="document.getElementById('scan-file-camera').click()" class="btn btn-out btn-xs">📸 Foto Ulang</button>
+            <button type="button" onclick="openCropScan()" class="btn btn-out btn-xs" style="background:#fefce8;border-color:#fde047;color:#854d0e">✂️ Crop</button>
+          </div>`;
         document.getElementById('btn-scan-ocr').style.display='inline-flex';
         const apiKey=localStorage.getItem('_siakun_apikey');
         if(apiKey)document.getElementById('btn-scan-ai').style.display='inline-flex';
-        document.getElementById('scan-status').textContent='Foto siap! Pilih "Scan Gratis" (otomatis) atau "Scan AI" (lebih akurat, perlu API key).';
+        document.getElementById('scan-status').textContent='Foto siap! Crop dulu kalau perlu, lalu pilih Scan.';
       };
       img.src=de.target.result;
     };
     dataReader.readAsDataURL(file);
   };
   arrayReader.readAsArrayBuffer(file);
+}
+
+let _scanOrigDataUrl='';
+function openCropScan(){
+  // Buka modal crop sederhana pakai canvas
+  const overlay=document.createElement('div');
+  overlay.id='crop-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
+  overlay.innerHTML=`
+    <div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:12px">✂️ Drag untuk pilih area kartu nama</div>
+    <div style="position:relative;max-width:100%;max-height:60vh;overflow:hidden" id="crop-container">
+      <img id="crop-src-img" src="${_scanOrigDataUrl}" style="max-width:100%;max-height:60vh;display:block;user-select:none">
+      <div id="crop-box" style="position:absolute;border:2px solid #facc15;box-shadow:0 0 0 999px rgba(0,0,0,.5);cursor:move;top:10%;left:10%;width:80%;height:80%;box-sizing:border-box"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="document.getElementById('crop-overlay').remove()" style="padding:10px 20px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Batal</button>
+      <button onclick="applyCrop()" style="padding:10px 20px;background:#facc15;color:#0f172a;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✅ Pakai Area Ini</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  // Drag logic untuk crop box
+  const box=document.getElementById('crop-box');
+  const cont=document.getElementById('crop-container');
+  let dragging=false,resizing=false,sx=0,sy=0,bx=0,by=0,bw=0,bh=0;
+  // Touch & mouse drag
+  function getXY(e){return e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};}
+  box.addEventListener('mousedown',e=>{dragging=true;const p=getXY(e);sx=p.x-box.offsetLeft;sy=p.y-box.offsetTop;e.preventDefault();});
+  box.addEventListener('touchstart',e=>{dragging=true;const p=getXY(e);sx=p.x-box.offsetLeft;sy=p.y-box.offsetTop;e.preventDefault();},{passive:false});
+  document.addEventListener('mousemove',e=>{if(!dragging)return;const p=getXY(e);const cr=cont.getBoundingClientRect();let nx=p.x-cr.left-sx,ny=p.y-cr.top-sy;nx=Math.max(0,Math.min(nx,cont.offsetWidth-box.offsetWidth));ny=Math.max(0,Math.min(ny,cont.offsetHeight-box.offsetHeight));box.style.left=nx+'px';box.style.top=ny+'px';});
+  document.addEventListener('touchmove',e=>{if(!dragging)return;const p=getXY(e);const cr=cont.getBoundingClientRect();let nx=p.x-cr.left-sx,ny=p.y-cr.top-sy;nx=Math.max(0,Math.min(nx,cont.offsetWidth-box.offsetWidth));ny=Math.max(0,Math.min(ny,cont.offsetHeight-box.offsetHeight));box.style.left=nx+'px';box.style.top=ny+'px';},{passive:false});
+  document.addEventListener('mouseup',()=>{dragging=false;});
+  document.addEventListener('touchend',()=>{dragging=false;});
+}
+
+function applyCrop(){
+  const box=document.getElementById('crop-box');
+  const imgEl=document.getElementById('crop-src-img');
+  const cont=document.getElementById('crop-container');
+  if(!box||!imgEl)return;
+  // Hitung rasio gambar asli vs tampilan
+  const dispW=imgEl.offsetWidth,dispH=imgEl.offsetHeight;
+  const natW=imgEl.naturalWidth,natH=imgEl.naturalHeight;
+  const ratX=natW/dispW,ratY=natH/dispH;
+  const bLeft=box.offsetLeft,bTop=box.offsetTop,bW=box.offsetWidth,bH=box.offsetHeight;
+  // Crop dari gambar asli
+  const cx=Math.round(bLeft*ratX),cy=Math.round(bTop*ratY);
+  const cw=Math.round(bW*ratX),ch=Math.round(bH*ratY);
+  const canvas=document.createElement('canvas');
+  canvas.width=cw;canvas.height=ch;
+  const srcImg=new Image();
+  srcImg.onload=function(){
+    canvas.getContext('2d').drawImage(srcImg,cx,cy,cw,ch,0,0,cw,ch);
+    const cropped=canvas.toDataURL('image/jpeg',0.9);
+    _scanImageBase64=cropped.split(',')[1];
+    _scanOrigDataUrl=cropped;
+    document.getElementById('scan-preview').innerHTML=`
+      <div style="position:relative;display:inline-block">
+        <img src="${cropped}" id="scan-img-preview" style="max-width:100%;max-height:200px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.1);display:block">
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button type="button" onclick="document.getElementById('scan-file-camera').click()" class="btn btn-out btn-xs">📸 Foto Ulang</button>
+        <button type="button" onclick="openCropScan()" class="btn btn-out btn-xs" style="background:#fefce8;border-color:#fde047;color:#854d0e">✂️ Crop Lagi</button>
+      </div>`;
+    document.getElementById('crop-overlay').remove();
+    document.getElementById('scan-status').textContent='✅ Foto sudah di-crop! Siap di-scan.';
+  };
+  srcImg.src=_scanOrigDataUrl;
 }
 
 async function doScanOCRGratis(){
