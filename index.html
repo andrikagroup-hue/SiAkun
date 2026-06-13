@@ -6118,55 +6118,63 @@ function renderJournal(c){
     ${kpiCard('Baris Jurnal', barisTotal, 'tahun ini', barisTotal, prevBaris)}
   </div>
 
-  <!-- ── Charts row 1 ── -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;box-shadow:0 1px 3px rgba(0,0,0,.04);padding:20px">
-      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Nilai Per Tipe Transaksi</div>
-      <div style="display:flex;align-items:center;gap:16px">
-        <div style="flex-shrink:0"><canvas id="jrn-donut-nilai" width="200" height="200"></canvas></div>
-        <div id="jrn-legend-nilai" style="font-size:10.5px;line-height:2"></div>
-      </div>
-    </div>
-    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;box-shadow:0 1px 3px rgba(0,0,0,.04);padding:20px">
-      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Nilai Transaksi</div>
-      <canvas id="jrn-area-nilai" height="160"></canvas>
-    </div>
+  <!-- ── "Lihat Selengkapnya" toggle (Kledo-style, shown when charts hidden) ── -->
+  <div id="jrn-charts-toggle-row" style="text-align:center;margin-bottom:20px">
+    <button onclick="_jurnalToggleCharts()" style="background:none;border:none;font-size:13px;color:#374151;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px">Lihat Selengkapnya <span style="font-size:11px">▾</span></button>
   </div>
 
-  <!-- ── Charts row 2 ── -->
-  <div id="jrn-charts-ext" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
-      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Jumlah Transaksi Per Tipe</div>
-      <div style="display:flex;align-items:center;gap:16px">
-        <div style="flex-shrink:0"><canvas id="jrn-donut-jml" width="200" height="200"></canvas></div>
-        <div id="jrn-legend-jml" style="font-size:10.5px;line-height:2"></div>
+  <!-- ── All Charts (collapsed by default) ── -->
+  <div id="jrn-charts-all" style="display:none">
+    <!-- Charts row 1 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;box-shadow:0 1px 3px rgba(0,0,0,.04);padding:20px">
+        <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Nilai Per Tipe Transaksi</div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="flex-shrink:0"><canvas id="jrn-donut-nilai" width="200" height="200"></canvas></div>
+          <div id="jrn-legend-nilai" style="font-size:10.5px;line-height:2"></div>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;box-shadow:0 1px 3px rgba(0,0,0,.04);padding:20px">
+        <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Nilai Transaksi</div>
+        <canvas id="jrn-area-nilai" height="160"></canvas>
       </div>
     </div>
-    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
-      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Jumlah Transaksi</div>
-      <canvas id="jrn-area-jml" height="160"></canvas>
-    </div>
-    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
-      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Total Nilai Transaksi</div>
-      <canvas id="jrn-area-total-nilai" height="160"></canvas>
-    </div>
-    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
-      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Total Jumlah Transaksi</div>
-      <canvas id="jrn-area-total-jml" height="160"></canvas>
-    </div>
-    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
-      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Baris Jurnal</div>
-      <canvas id="jrn-area-baris" height="160"></canvas>
-    </div>
-    <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
-      <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Total Baris Jurnal</div>
-      <canvas id="jrn-area-total-baris" height="160"></canvas>
-    </div>
-  </div>
 
-  <div style="text-align:center;margin-bottom:20px">
-    <a href="#" onclick="event.preventDefault();const el=document.getElementById('jrn-charts-ext');el.style.display=el.style.display==='none'?'grid':'none';this.innerHTML=el.style.display==='none'?'▼ Tampilkan Grafik':'▲ Tutup'" 
-      style="font-size:12px;color:#2563eb;font-weight:600;text-decoration:none">▲ Tutup</a>
+    <!-- Charts row 2 -->
+    <div id="jrn-charts-ext" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+        <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Jumlah Transaksi Per Tipe</div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="flex-shrink:0"><canvas id="jrn-donut-jml" width="200" height="200"></canvas></div>
+          <div id="jrn-legend-jml" style="font-size:10.5px;line-height:2"></div>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+        <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Jumlah Transaksi</div>
+        <canvas id="jrn-area-jml" height="160"></canvas>
+      </div>
+      <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+        <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Total Nilai Transaksi</div>
+        <canvas id="jrn-area-total-nilai" height="160"></canvas>
+      </div>
+      <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+        <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Total Jumlah Transaksi</div>
+        <canvas id="jrn-area-total-jml" height="160"></canvas>
+      </div>
+      <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+        <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Baris Jurnal</div>
+        <canvas id="jrn-area-baris" height="160"></canvas>
+      </div>
+      <div style="background:#fff;border-radius:10px;border:1px solid #f1f5f9;padding:20px">
+        <div style="font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px">Total Baris Jurnal</div>
+        <canvas id="jrn-area-total-baris" height="160"></canvas>
+      </div>
+    </div>
+
+    <!-- Collapse button (shown when charts are visible) -->
+    <div style="text-align:center;margin-bottom:20px">
+      <button onclick="_jurnalToggleCharts()" style="background:none;border:none;font-size:13px;color:#374151;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><span style="font-size:11px">▴</span> Tutup</button>
+    </div>
   </div>
 
   <!-- ── Table section ── -->
@@ -6340,6 +6348,14 @@ function renderJournal(c){
   },100);
 }
 
+function _jurnalToggleCharts(){
+  const all = document.getElementById('jrn-charts-all');
+  const row = document.getElementById('jrn-charts-toggle-row');
+  if(!all || !row) return;
+  const showing = all.style.display !== 'none';
+  all.style.display = showing ? 'none' : 'block';
+  row.style.display = showing ? 'block' : 'none';
+}
 function _jurnalToggleFilter(){
   const p=document.getElementById('jrn-filter-panel');
   if(p) p.style.display=p.style.display==='none'?'flex':'none';
@@ -6473,7 +6489,7 @@ function _jurnalRenderDualCal(){
   const st=window._jurnalState||{};
   if(!window._jurnalCalState) window._jurnalCalState={
     leftYear: new Date(st.dateFrom||new Date()).getFullYear(),
-    leftMonth: new Date(st.dateFrom||new Date()).getMonth()-1,
+    leftMonth: new Date(st.dateFrom||new Date()).getMonth(),
   };
   // Ensure right month is left+1
   let lY=window._jurnalCalState.leftYear, lM=window._jurnalCalState.leftMonth;
