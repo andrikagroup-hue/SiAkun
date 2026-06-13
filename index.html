@@ -5927,10 +5927,36 @@ function exportAkun(){exportXLSX([{name:'CoA',data:DB.accounts.map(a=>({Kode:a.c
 function renderJournal(c){
   const ta=document.getElementById('topbar-actions');
   const _hasCR=DB.transactions.some(t=>t.ref&&String(t.ref).startsWith('CR-'));
+  // ── Kledo-style topbar header ──
+  const tt=document.getElementById('topbar-title');
+  if(tt) tt.textContent='Jurnal';
   ta.innerHTML=`
-    <button class="btn btn-pri" onclick="openAddJournal()">+ Tambah Jurnal</button>
-    <button class="btn btn-bad" id="btn-bulk-del" style="display:none" onclick="bulkDeleteJournals()">🗑 Hapus Terpilih (<span id="sel-count">0</span>)</button>
-    ${_hasCR?'<button class="btn btn-bad" onclick="undoCashReportImport()">🗑 Hapus Import BSI</button>':''}`;
+    <button class="rpt-kledo-btn" onclick="alert('Panduan Jurnal belum tersedia.')">⊕ Panduan <span class="chevron">▾</span></button>
+    <button class="rpt-kledo-btn" onclick="_jurnalEkspor()">↗ Ekspor</button>
+    <div class="rpt-kledo-btn-print" id="jrn-bagikan-wrap">
+      <button class="print-main" onclick="_jurnalToggleBagikan(event)">⇉ Bagikan</button>
+      <button class="print-caret" onclick="_jurnalToggleBagikan(event)">▾</button>
+      <div class="rpt-print-dropdown" id="jrn-bagikan-dd">
+        <div class="rpt-print-dd-item" onclick="_jurnalShareEmail()">✉️ Kirim Email</div>
+        <div class="rpt-print-dd-item" onclick="_jurnalShareWA()">💬 Kirim WhatsApp</div>
+      </div>
+    </div>
+    <div class="rpt-kledo-btn-print" id="jrn-print-wrap">
+      <button class="print-main" onclick="printReportPortrait()">🖨 Print</button>
+      <button class="print-caret" onclick="_jurnalTogglePrint(event)">▾</button>
+      <div class="rpt-print-dropdown" id="jrn-print-dd">
+        <div class="rpt-print-dd-item" onclick="printReportPortrait()">🖨 Print</div>
+        <div class="rpt-print-dd-item" onclick="printReportWithCharts()">🖨 Print Grafik</div>
+        <div class="rpt-print-dd-item" onclick="alert('Ganti Layout belum tersedia.')">⊞ Ganti Layout</div>
+      </div>
+    </div>
+    ${_hasCR?'<button class="rpt-kledo-btn" style="color:#dc2626;border-color:#fecaca" onclick="undoCashReportImport()">🗑 Hapus Import BSI</button>':''}
+    <button class="btn btn-pri" onclick="openAddJournal()" style="margin-left:8px">+ Tambah Jurnal</button>`;
+  // Wire dropdowns
+  setTimeout(()=>{
+    document.addEventListener('click', _jurnalCloseDropdowns);
+  },0);
+
 
   const txs = DB.transactions || [];
   const accs = DB.accounts || [];
@@ -6054,15 +6080,35 @@ function renderJournal(c){
   function getMonthLabel(dateStr){if(!dateStr)return'—';const[y,m]=dateStr.split('-');const ml=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];return`${ml[parseInt(m)-1]} ${y}`;}
 
   c.innerHTML = `
-  <!-- ── Period toggle ── -->
-  <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:20px">
-    <button onclick="window._jurnalState.mode='bulan';window._jurnalState.dateFrom=new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().slice(0,10);window._jurnalState.dateTo=new Date().toISOString().slice(0,10);nav('journal')"
-      style="padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;font-weight:600;cursor:pointer;background:${st.mode==='bulan'?'#0f172a':'#fff'};color:${st.mode==='bulan'?'#fff':'#374151'}">Bulan</button>
-    <button onclick="window._jurnalState.mode='tahun';window._jurnalState.dateFrom=new Date().getFullYear()+'-01-01';window._jurnalState.dateTo=new Date().toISOString().slice(0,10);nav('journal')"
-      style="padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;font-weight:600;cursor:pointer;background:${st.mode==='tahun'?'#0f172a':'#fff'};color:${st.mode==='tahun'?'#fff':'#374151'}">Tahun</button>
-    <span style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;font-size:12px;color:#374151">
-      📅 ${periodLabel}
-    </span>
+  <!-- ── Period toggle + Dual Calendar Date Picker ── -->
+  <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:20px;position:relative">
+    <button onclick="_jurnalSetPeriod('bulan')"
+      style="padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;font-weight:600;cursor:pointer;background:${st.mode==='bulan'?'#64748b':'#fff'};color:${st.mode==='bulan'?'#fff':'#374151'}">Bulan</button>
+    <button onclick="_jurnalSetPeriod('tahun')"
+      style="padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;font-weight:600;cursor:pointer;background:${st.mode==='tahun'?'#64748b':'#fff'};color:${st.mode==='tahun'?'#fff':'#374151'}">Tahun</button>
+    <button onclick="_jurnalToggleDatePicker(event)"
+      id="jrn-dp-trigger"
+      style="padding:6px 14px;border-radius:6px;border:2px solid #6366f1;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#374151;display:flex;align-items:center;gap:6px">
+      ${periodLabel} &nbsp; 📅
+    </button>
+    <!-- Dual Calendar Dropdown -->
+    <div id="jrn-datepicker" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.14);z-index:9999;padding:0;min-width:600px">
+      <div style="display:flex">
+        <!-- Presets -->
+        <div style="padding:16px 12px;border-right:1px solid #f1f5f9;min-width:120px;display:flex;flex-direction:column;gap:2px">
+          ${['Kemarin','Hari Ini','Bulan Ini','Bulan Lalu','7 Hari Lalu','30 Hari Lalu','Tahun Ini','Tahun Lalu','1 Tahun Lalu','2 Tahun Lalu'].map(p=>
+            `<button onclick="_jurnalApplyPreset('${p}')" style="text-align:left;padding:6px 10px;border:none;background:none;font-size:12px;color:#374151;cursor:pointer;border-radius:6px;font-family:inherit;transition:background .12s" onmouseover="this.style.background='#f0f6ff';this.style.color='#2563eb'" onmouseout="this.style.background='none';this.style.color='#374151'">${p}</button>`
+          ).join('')}
+        </div>
+        <!-- Dual calendar -->
+        <div style="padding:16px;display:flex;gap:16px" id="jrn-dual-cal"></div>
+      </div>
+      <!-- Footer -->
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid #f1f5f9">
+        <button onclick="document.getElementById('jrn-datepicker').style.display='none'" style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;color:#374151">Batal</button>
+        <button onclick="_jurnalApplyDates()" style="padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#2563eb;color:#fff;border:none">Terapkan</button>
+      </div>
+    </div>
   </div>
 
   <!-- ── KPI Cards ── -->
@@ -6137,12 +6183,9 @@ function renderJournal(c){
           style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit">
       </div>
       <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-        <input type="date" value="${st.dateFrom}" onchange="window._jurnalState.dateFrom=this.value;nav('journal')"
-          style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;color:#374151">
-        <span style="color:#94a3b8;font-size:12px">—</span>
-        <input type="date" value="${st.dateTo}" onchange="window._jurnalState.dateTo=this.value;nav('journal')"
-          style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;color:#374151">
-        <button style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:13px" title="Pilih tanggal">📅</button>
+        <button onclick="_jurnalToggleDatePicker(event)" style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;cursor:pointer;background:#fff;color:#374151;display:flex;align-items:center;gap:5px">
+          ${st.dateFrom?fmtDate(st.dateFrom):'—'} → ${st.dateTo?fmtDate(st.dateTo):'—'} 📅
+        </button>
       </div>
     </div>
     <!-- Filter panel (hidden by default) -->
@@ -6303,6 +6346,215 @@ function _jurnalToggleFilter(){
 }
 function _jurnalToggleView(){
   // placeholder for list/grid toggle
+}
+
+// ── Journal Kledo-style header dropdowns ──────────────────────────────
+function _jurnalCloseDropdowns(e){
+  ['jrn-bagikan-wrap','jrn-print-wrap'].forEach(id=>{
+    const w=document.getElementById(id);
+    if(w&&!w.contains(e.target)){
+      const dd=w.querySelector('.rpt-print-dropdown');
+      if(dd) dd.classList.remove('open');
+    }
+  });
+  const dp=document.getElementById('jrn-datepicker');
+  const trig=document.getElementById('jrn-dp-trigger');
+  if(dp&&trig&&!dp.contains(e.target)&&!trig.contains(e.target)){
+    dp.style.display='none';
+  }
+}
+function _jurnalToggleBagikan(e){
+  e.stopPropagation();
+  const dd=document.getElementById('jrn-bagikan-dd');
+  const pd=document.getElementById('jrn-print-dd');
+  if(pd) pd.classList.remove('open');
+  if(dd) dd.classList.toggle('open');
+}
+function _jurnalTogglePrint(e){
+  e.stopPropagation();
+  const dd=document.getElementById('jrn-print-dd');
+  const bd=document.getElementById('jrn-bagikan-dd');
+  if(bd) bd.classList.remove('open');
+  if(dd) dd.classList.toggle('open');
+}
+function _jurnalEkspor(){
+  exportJurnal();
+}
+function _jurnalShareEmail(){
+  const co=DB.company||{};
+  const st=window._jurnalState||{};
+  const subject=encodeURIComponent(`Jurnal — ${co.name||'Perusahaan'}`);
+  const body=encodeURIComponent(`Yth. Penerima,
+
+Terlampir Laporan Jurnal dari ${co.name||'perusahaan kami'}.
+
+Hormat kami,
+${co.name||''}
+${co.phone||''}`);
+  window.open(`mailto:?subject=${subject}&body=${body}`,'_blank');
+  const dd=document.getElementById('jrn-bagikan-dd');
+  if(dd) dd.classList.remove('open');
+}
+function _jurnalShareWA(){
+  const co=DB.company||{};
+  const st=window._jurnalState||{};
+  const today=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+  const msg=encodeURIComponent(`📊 *Laporan Jurnal*
+🏢 ${co.name||'Perusahaan'}
+📅 Per ${today}
+
+Dokumen jurnal ini digenerate dari sistem akuntansi ${co.name||''}.
+${co.phone?'📞 '+co.phone:''}`);
+  window.open(`https://wa.me/?text=${msg}`,'_blank');
+  const dd=document.getElementById('jrn-bagikan-dd');
+  if(dd) dd.classList.remove('open');
+}
+
+// ── Dual Calendar Date Picker ─────────────────────────────────────────
+function _jurnalToggleDatePicker(e){
+  e.stopPropagation();
+  const dp=document.getElementById('jrn-datepicker');
+  if(!dp) return;
+  const isOpen = dp.style.display!=='none';
+  dp.style.display = isOpen?'none':'block';
+  if(!isOpen) _jurnalRenderDualCal();
+}
+function _jurnalSetPeriod(mode){
+  const st=window._jurnalState;
+  if(!st) return;
+  const now=new Date();
+  if(mode==='bulan'){
+    st.dateFrom=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+    st.dateTo=now.toISOString().slice(0,10);
+    st.mode='bulan';
+  } else {
+    st.dateFrom=now.getFullYear()+'-01-01';
+    st.dateTo=now.toISOString().slice(0,10);
+    st.mode='tahun';
+  }
+  nav('journal');
+}
+function _jurnalApplyPreset(preset){
+  const st=window._jurnalState;
+  const now=new Date();
+  const iso=d=>d.toISOString().slice(0,10);
+  const yesterday=new Date(now); yesterday.setDate(now.getDate()-1);
+  const presets={
+    'Kemarin':    [iso(yesterday), iso(yesterday)],
+    'Hari Ini':   [iso(now), iso(now)],
+    'Bulan Ini':  [iso(new Date(now.getFullYear(),now.getMonth(),1)), iso(now)],
+    'Bulan Lalu': [iso(new Date(now.getFullYear(),now.getMonth()-1,1)), iso(new Date(now.getFullYear(),now.getMonth(),0))],
+    '7 Hari Lalu':[iso(new Date(now-6*864e5)), iso(now)],
+    '30 Hari Lalu':[iso(new Date(now-29*864e5)), iso(now)],
+    'Tahun Ini':  [now.getFullYear()+'-01-01', iso(now)],
+    'Tahun Lalu': [(now.getFullYear()-1)+'-01-01', (now.getFullYear()-1)+'-12-31'],
+    '1 Tahun Lalu':[iso(new Date(now.getFullYear()-1,now.getMonth(),now.getDate())), iso(now)],
+    '2 Tahun Lalu':[iso(new Date(now.getFullYear()-2,now.getMonth(),now.getDate())), iso(now)],
+  };
+  if(presets[preset]){
+    st.dateFrom=presets[preset][0];
+    st.dateTo=presets[preset][1];
+    st.page=1;
+    document.getElementById('jrn-datepicker').style.display='none';
+    nav('journal');
+  }
+}
+function _jurnalApplyDates(){
+  const st=window._jurnalState;
+  if(window._jurnalDpFrom) st.dateFrom=window._jurnalDpFrom;
+  if(window._jurnalDpTo)   st.dateTo=window._jurnalDpTo;
+  st.page=1;
+  document.getElementById('jrn-datepicker').style.display='none';
+  nav('journal');
+}
+function _jurnalRenderDualCal(){
+  const cal=document.getElementById('jrn-dual-cal');
+  if(!cal) return;
+  const st=window._jurnalState||{};
+  if(!window._jurnalCalState) window._jurnalCalState={
+    leftYear: new Date(st.dateFrom||new Date()).getFullYear(),
+    leftMonth: new Date(st.dateFrom||new Date()).getMonth()-1,
+  };
+  // Ensure right month is left+1
+  let lY=window._jurnalCalState.leftYear, lM=window._jurnalCalState.leftMonth;
+  if(lM>11){lM=0;lY++;}
+  if(lM<0){lM=11;lY--;}
+  let rM=lM+1, rY=lY;
+  if(rM>11){rM=0;rY++;}
+  window._jurnalCalState={leftYear:lY,leftMonth:lM};
+
+  const selFrom=window._jurnalDpFrom||st.dateFrom||'';
+  const selTo=window._jurnalDpTo||st.dateTo||'';
+  const dayNames=['Sn','Sl','Rb','Km','Jm','Sb','Mg'];
+  const monthNames=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+  function buildMonth(y,m,isLeft){
+    const first=new Date(y,m,1).getDay(); // 0=Sun
+    const startDow=(first+6)%7; // Mon=0
+    const daysInMonth=new Date(y,m+1,0).getDate();
+    const prevDays=new Date(y,m,0).getDate();
+    const iso=d=>`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    let html=`<div style="min-width:220px">`;
+    // Header
+    html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">`;
+    if(isLeft){
+      html+=`<button onclick="window._jurnalCalState.leftMonth--;_jurnalRenderDualCal()" style="border:none;background:none;cursor:pointer;font-size:14px;color:#64748b;padding:2px 6px">‹‹</button>
+             <button onclick="window._jurnalCalState.leftMonth--;_jurnalRenderDualCal()" style="border:none;background:none;cursor:pointer;font-size:14px;color:#64748b;padding:2px 4px">‹</button>`;
+    } else {
+      html+=`<div></div><div></div>`;
+    }
+    html+=`<div style="font-size:13px;font-weight:700;color:#0f172a">${monthNames[m]}  ${y}</div>`;
+    if(!isLeft){
+      html+=`<button onclick="window._jurnalCalState.leftMonth++;_jurnalRenderDualCal()" style="border:none;background:none;cursor:pointer;font-size:14px;color:#64748b;padding:2px 4px">›</button>
+             <button onclick="window._jurnalCalState.leftMonth++;_jurnalRenderDualCal()" style="border:none;background:none;cursor:pointer;font-size:14px;color:#64748b;padding:2px 6px">››</button>`;
+    } else {
+      html+=`<div></div><div></div>`;
+    }
+    html+=`</div>`;
+    // Day names
+    html+=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">`;
+    dayNames.forEach(d=>html+=`<div style="text-align:center;font-size:10px;font-weight:700;color:#94a3b8;padding:3px 0">${d}</div>`);
+    html+=`</div>`;
+    // Days grid
+    html+=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">`;
+    // Prev month days
+    for(let i=startDow-1;i>=0;i--){
+      html+=`<div style="text-align:center;padding:5px 0;font-size:12px;color:#cbd5e1">${prevDays-i}</div>`;
+    }
+    // Current month
+    for(let d=1;d<=daysInMonth;d++){
+      const dateStr=iso(d);
+      const isFrom=dateStr===selFrom, isTo=dateStr===selTo;
+      const inRange=selFrom&&selTo&&dateStr>selFrom&&dateStr<selTo;
+      const isToday=dateStr===new Date().toISOString().slice(0,10);
+      let bg='none', color='#374151', fw='400', br='6px';
+      if(isFrom||isTo){bg='#2563eb';color='#fff';fw='700';}
+      else if(inRange){bg='#dbeafe';color='#1e40af';}
+      else if(isToday){color='#2563eb';fw='700';}
+      html+=`<div onclick="_jurnalDpClick('${dateStr}')" 
+        style="text-align:center;padding:5px 0;font-size:12px;cursor:pointer;background:${bg};color:${color};font-weight:${fw};border-radius:${br};transition:background .1s"
+        onmouseover="if(this.style.background==='none'||this.style.background==='')this.style.background='#f0f6ff'"
+        onmouseout="if(this.style.background==='rgb(240, 246, 255)')this.style.background='none'"
+        >${d}</div>`;
+    }
+    // Next month filler
+    const total=startDow+daysInMonth;
+    const remainder=total%7===0?0:7-(total%7);
+    for(let d=1;d<=remainder;d++) html+=`<div style="text-align:center;padding:5px 0;font-size:12px;color:#cbd5e1">${d}</div>`;
+    html+=`</div></div>`;
+    return html;
+  }
+
+  cal.innerHTML = buildMonth(lY,lM,true) + buildMonth(rY,rM,false);
+}
+function _jurnalDpClick(dateStr){
+  if(!window._jurnalDpFrom||window._jurnalDpTo||(window._jurnalDpFrom&&dateStr<window._jurnalDpFrom)){
+    window._jurnalDpFrom=dateStr;
+    window._jurnalDpTo='';
+  } else {
+    window._jurnalDpTo=dateStr;
+  }
+  _jurnalRenderDualCal();
 }
 
 function exportJurnalByMonth(){
