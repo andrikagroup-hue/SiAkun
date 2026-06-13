@@ -4444,12 +4444,6 @@ function openContact(id){
     <div class="fg"><label>Tax ID (NPWP)</label><input id="ct-npwp" value="${ct.npwp||''}" placeholder="XX.XXX.XXX.X-XXX.XXX"></div>
     <div class="fg"><label>Website</label><input id="ct-website" value="${ct.website||''}" placeholder="cth: www.perusahaan.com"></div>
   </div>
-  <div style="margin:10px 0 4px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px">📋 Lainnya</div>
-  <div class="fg"><label>Alamat</label><input id="ct-addr" value="${ct.address||''}" placeholder="Alamat lengkap"></div>
-  <div class="fr2">
-    <div class="fg"><label>Tax ID (NPWP)</label><input id="ct-npwp" value="${ct.npwp||''}" placeholder="XX.XXX.XXX.X-XXX.XXX"></div>
-    <div class="fg"><label>Website</label><input id="ct-website" value="${ct.website||''}" placeholder="cth: www.perusahaan.com"></div>
-  </div>
   <div class="fg"><label>Catatan</label><input id="ct-note" value="${ct.note||''}" placeholder="Catatan tambahan (misal: referral, notes khusus)"></div>
   <div class="fg">
     <label>📷 Foto Kartu Nama</label>
@@ -11462,7 +11456,19 @@ async function doScanKartuNama(){
         max_tokens:1000,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:_scanImageType,data:_scanImageBase64}},
-          {type:'text',text:'Baca kartu nama ini dan ekstrak informasi berikut dalam format JSON. Hanya balas dengan JSON saja, tanpa penjelasan:\n{"name":"","jabatan":"","perusahaan":"","hp1":"","telpKantor":"","fax":"","email":"","website":"","address":"","note":""}. Jika ada info yang tidak ada, isi string kosong.'}
+          {type:'text',text:`Kamu adalah sistem ekstraksi data kartu nama. Baca kartu nama ini dengan teliti dan ekstrak informasi ke dalam JSON berikut.
+
+ATURAN PENTING:
+- "address" = alamat fisik/kantor (jalan, gedung, kota, kodepos) — JANGAN taruh di "note"
+- "hp1" = nomor HP/mobile (biasanya diawali 08 atau +62 8)
+- "telpKantor" = nomor telepon kantor/office (biasanya diawali 021 atau kode kota)
+- "fax" = nomor fax jika ada
+- "website" = URL website (tanpa http)
+- "note" = KOSONGKAN saja, jangan isi dengan alamat atau info lain
+- Jika info tidak ada, isi string kosong ""
+
+Balas HANYA dengan JSON ini, tanpa penjelasan apapun:
+{"name":"","jabatan":"","perusahaan":"","hp1":"","telpKantor":"","fax":"","email":"","website":"","address":"","note":""}`}
         ]}]
       })
     });
@@ -11489,7 +11495,11 @@ async function doScanKartuNama(){
     document.getElementById('scan-status').textContent='Cek hasil di atas, lalu klik Simpan ke Kontak.';
     btn.textContent='🔄 Scan Ulang';btn.disabled=false;
   }catch(err){
-    document.getElementById('scan-status').textContent='❌ Gagal: '+err.message;
+    const msg=err.message||'';
+    const isCredit=msg.toLowerCase().includes('credit')||msg.toLowerCase().includes('billing');
+    document.getElementById('scan-status').innerHTML=isCredit
+      ?'❌ Saldo API habis. <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:#2563eb;font-weight:600">Isi saldo di sini →</a> (mulai dari $5)'
+      :'❌ Gagal: '+msg;
     btn.textContent='🤖 Scan dengan AI';btn.disabled=false;
   }
 }
