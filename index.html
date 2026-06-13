@@ -5973,6 +5973,19 @@ function renderJournal(c){
     page:1, perPage:15
   };
   const st = window._jurnalState;
+  // Always keep dateFrom/dateTo consistent with mode (fix stale state)
+  if(st.mode==='bulan'){
+    const correctFrom = new Date(yr, mo, 1).toISOString().slice(0,10);
+    const correctTo   = now.toISOString().slice(0,10);
+    // Only auto-correct if not in a custom range (user hasn't manually picked dates)
+    if(!st._customRange){
+      st.dateFrom = correctFrom;
+      st.dateTo   = correctTo;
+    }
+  } else if(st.mode==='tahun' && !st._customRange){
+    st.dateFrom = yr + '-01-01';
+    st.dateTo   = now.toISOString().slice(0,10);
+  }
 
   // ── Filtered transactions ─────────────────────────────────────
   const srch = (st.search||'').toLowerCase().trim();
@@ -6433,12 +6446,22 @@ function _jurnalToggleDatePicker(e){
   if(!dp) return;
   const isOpen = dp.style.display!=='none';
   dp.style.display = isOpen?'none':'block';
-  if(!isOpen) _jurnalRenderDualCal();
+  if(!isOpen){
+    // Reset calendar position to show month of current dateFrom
+    window._jurnalCalState=null;
+    window._jurnalDpFrom='';
+    window._jurnalDpTo='';
+    _jurnalRenderDualCal();
+  }
 }
 function _jurnalSetPeriod(mode){
   const st=window._jurnalState;
   if(!st) return;
   const now=new Date();
+  st._customRange=false;
+  window._jurnalCalState=null; // reset calendar position
+  window._jurnalDpFrom='';
+  window._jurnalDpTo='';
   if(mode==='bulan'){
     st.dateFrom=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
     st.dateTo=now.toISOString().slice(0,10);
@@ -6452,6 +6475,9 @@ function _jurnalSetPeriod(mode){
 }
 function _jurnalApplyPreset(preset){
   const st=window._jurnalState;
+  if(!st) return;
+  st._customRange=true; // user explicitly chose a preset
+  window._jurnalCalState=null; // reset calendar nav position
   const now=new Date();
   const iso=d=>d.toISOString().slice(0,10);
   const yesterday=new Date(now); yesterday.setDate(now.getDate()-1);
@@ -6477,8 +6503,10 @@ function _jurnalApplyPreset(preset){
 }
 function _jurnalApplyDates(){
   const st=window._jurnalState;
+  if(!st) return;
   if(window._jurnalDpFrom) st.dateFrom=window._jurnalDpFrom;
   if(window._jurnalDpTo)   st.dateTo=window._jurnalDpTo;
+  st._customRange=true; // prevent auto-reset on re-render
   st.page=1;
   document.getElementById('jrn-datepicker').style.display='none';
   nav('journal');
@@ -6491,10 +6519,11 @@ function _jurnalRenderDualCal(){
     leftYear: new Date(st.dateFrom||new Date()).getFullYear(),
     leftMonth: new Date(st.dateFrom||new Date()).getMonth(),
   };
-  // Ensure right month is left+1
+  // Ensure right month is left+1 (with proper year rollover)
   let lY=window._jurnalCalState.leftYear, lM=window._jurnalCalState.leftMonth;
-  if(lM>11){lM=0;lY++;}
-  if(lM<0){lM=11;lY--;}
+  // Normalize leftMonth across year boundaries
+  while(lM>11){lM-=12;lY++;}
+  while(lM<0){lM+=12;lY--;}
   let rM=lM+1, rY=lY;
   if(rM>11){rM=0;rY++;}
   window._jurnalCalState={leftYear:lY,leftMonth:lM};
