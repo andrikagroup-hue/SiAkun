@@ -11405,28 +11405,90 @@ function openCropScan(){
   overlay.id='crop-overlay';
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
   overlay.innerHTML=`
-    <div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:12px">✂️ Drag untuk pilih area kartu nama</div>
-    <div style="position:relative;max-width:100%;max-height:60vh;overflow:hidden" id="crop-container">
-      <img id="crop-src-img" src="${_scanOrigDataUrl}" style="max-width:100%;max-height:60vh;display:block;user-select:none">
-      <div id="crop-box" style="position:absolute;border:2px solid #facc15;box-shadow:0 0 0 999px rgba(0,0,0,.5);cursor:move;top:10%;left:10%;width:80%;height:80%;box-sizing:border-box"></div>
+    <div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:10px">✂️ Drag/resize area, atau putar dulu kalau miring</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button onclick="rotateCropImage(-90)" style="padding:8px 14px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">↺ Putar Kiri</button>
+      <button onclick="rotateCropImage(90)" style="padding:8px 14px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Putar Kanan ↻</button>
     </div>
-    <div style="display:flex;gap:10px;margin-top:16px">
+    <div style="position:relative;max-width:100%;max-height:55vh;overflow:hidden" id="crop-container">
+      <img id="crop-src-img" src="${_scanOrigDataUrl}" style="max-width:100%;max-height:55vh;display:block;user-select:none">
+      <div id="crop-box" style="position:absolute;border:2px solid #facc15;box-shadow:0 0 0 999px rgba(0,0,0,.5);cursor:move;top:10%;left:10%;width:80%;height:80%;box-sizing:border-box">
+        <div id="crop-resize-handle" style="position:absolute;right:-8px;bottom:-8px;width:22px;height:22px;background:#facc15;border:2px solid #0f172a;border-radius:50%;cursor:nwse-resize"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px">
       <button onclick="document.getElementById('crop-overlay').remove()" style="padding:10px 20px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Batal</button>
       <button onclick="applyCrop()" style="padding:10px 20px;background:#facc15;color:#0f172a;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✅ Pakai Area Ini</button>
     </div>`;
   document.body.appendChild(overlay);
-  // Drag logic untuk crop box
+  initCropBoxInteraction();
+}
+
+function initCropBoxInteraction(){
   const box=document.getElementById('crop-box');
   const cont=document.getElementById('crop-container');
-  let dragging=false,resizing=false,sx=0,sy=0,bx=0,by=0,bw=0,bh=0;
-  // Touch & mouse drag
+  const handle=document.getElementById('crop-resize-handle');
+  let dragging=false,resizingBox=false,sx=0,sy=0;
   function getXY(e){return e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};}
-  box.addEventListener('mousedown',e=>{dragging=true;const p=getXY(e);sx=p.x-box.offsetLeft;sy=p.y-box.offsetTop;e.preventDefault();});
-  box.addEventListener('touchstart',e=>{dragging=true;const p=getXY(e);sx=p.x-box.offsetLeft;sy=p.y-box.offsetTop;e.preventDefault();},{passive:false});
-  document.addEventListener('mousemove',e=>{if(!dragging)return;const p=getXY(e);const cr=cont.getBoundingClientRect();let nx=p.x-cr.left-sx,ny=p.y-cr.top-sy;nx=Math.max(0,Math.min(nx,cont.offsetWidth-box.offsetWidth));ny=Math.max(0,Math.min(ny,cont.offsetHeight-box.offsetHeight));box.style.left=nx+'px';box.style.top=ny+'px';});
-  document.addEventListener('touchmove',e=>{if(!dragging)return;const p=getXY(e);const cr=cont.getBoundingClientRect();let nx=p.x-cr.left-sx,ny=p.y-cr.top-sy;nx=Math.max(0,Math.min(nx,cont.offsetWidth-box.offsetWidth));ny=Math.max(0,Math.min(ny,cont.offsetHeight-box.offsetHeight));box.style.left=nx+'px';box.style.top=ny+'px';},{passive:false});
-  document.addEventListener('mouseup',()=>{dragging=false;});
-  document.addEventListener('touchend',()=>{dragging=false;});
+  // Drag (geser) crop box
+  box.addEventListener('mousedown',e=>{if(e.target===handle)return;dragging=true;const p=getXY(e);sx=p.x-box.offsetLeft;sy=p.y-box.offsetTop;e.preventDefault();});
+  box.addEventListener('touchstart',e=>{if(e.target===handle)return;dragging=true;const p=getXY(e);sx=p.x-box.offsetLeft;sy=p.y-box.offsetTop;e.preventDefault();},{passive:false});
+  // Resize crop box
+  handle.addEventListener('mousedown',e=>{resizingBox=true;e.stopPropagation();e.preventDefault();});
+  handle.addEventListener('touchstart',e=>{resizingBox=true;e.stopPropagation();e.preventDefault();},{passive:false});
+  document.addEventListener('mousemove',e=>{
+    const p=getXY(e);const cr=cont.getBoundingClientRect();
+    if(dragging){
+      let nx=p.x-cr.left-sx,ny=p.y-cr.top-sy;
+      nx=Math.max(0,Math.min(nx,cont.offsetWidth-box.offsetWidth));
+      ny=Math.max(0,Math.min(ny,cont.offsetHeight-box.offsetHeight));
+      box.style.left=nx+'px';box.style.top=ny+'px';
+    } else if(resizingBox){
+      let nw=p.x-cr.left-box.offsetLeft, nh=p.y-cr.top-box.offsetTop;
+      nw=Math.max(40,Math.min(nw,cont.offsetWidth-box.offsetLeft));
+      nh=Math.max(40,Math.min(nh,cont.offsetHeight-box.offsetTop));
+      box.style.width=nw+'px';box.style.height=nh+'px';
+    }
+  });
+  document.addEventListener('touchmove',e=>{
+    if(!dragging&&!resizingBox)return;
+    const p=getXY(e);const cr=cont.getBoundingClientRect();
+    if(dragging){
+      let nx=p.x-cr.left-sx,ny=p.y-cr.top-sy;
+      nx=Math.max(0,Math.min(nx,cont.offsetWidth-box.offsetWidth));
+      ny=Math.max(0,Math.min(ny,cont.offsetHeight-box.offsetHeight));
+      box.style.left=nx+'px';box.style.top=ny+'px';
+    } else if(resizingBox){
+      let nw=p.x-cr.left-box.offsetLeft, nh=p.y-cr.top-box.offsetTop;
+      nw=Math.max(40,Math.min(nw,cont.offsetWidth-box.offsetLeft));
+      nh=Math.max(40,Math.min(nh,cont.offsetHeight-box.offsetTop));
+      box.style.width=nw+'px';box.style.height=nh+'px';
+    }
+    e.preventDefault();
+  },{passive:false});
+  document.addEventListener('mouseup',()=>{dragging=false;resizingBox=false;});
+  document.addEventListener('touchend',()=>{dragging=false;resizingBox=false;});
+}
+
+function rotateCropImage(deg){
+  const imgEl=document.getElementById('crop-src-img');
+  const src=new Image();
+  src.onload=function(){
+    const sw=src.width,sh=src.height;
+    const canvas=document.createElement('canvas');
+    canvas.width=sh;canvas.height=sw; // 90° → tukar lebar/tinggi
+    const ctx=canvas.getContext('2d');
+    ctx.translate(canvas.width/2,canvas.height/2);
+    ctx.rotate(deg*Math.PI/180);
+    ctx.drawImage(src,-sw/2,-sh/2);
+    const rotated=canvas.toDataURL('image/jpeg',0.9);
+    _scanOrigDataUrl=rotated;
+    imgEl.src=rotated;
+    // Reset crop box ke posisi default setelah rotate
+    const box=document.getElementById('crop-box');
+    box.style.left='10%';box.style.top='10%';box.style.width='80%';box.style.height='80%';
+  };
+  src.src=_scanOrigDataUrl;
 }
 
 function applyCrop(){
