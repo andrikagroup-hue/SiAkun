@@ -11673,6 +11673,7 @@ function saveApiKey(){
 function saveCompany(){
   DB.company={...DB.company,name:v('co-name'),npwp:v('co-npwp'),address:v('co-addr'),phone:v('co-phone'),email:v('co-email'),signatory:v('co-signatory'),bank:v('co-bank'),norek:v('co-norek'),atasnama:v('co-atasnama'),kota:v('co-kota'),year:parseInt(v('co-year'))||new Date().getFullYear()};
   saveDB();document.getElementById('sb-coname').textContent=DB.company.name;updateSidebarLogo();alert('Profil disimpan!');
+}
 function saveTaxSettings(){
   if(!DB.taxSettings)DB.taxSettings={};
   DB.taxSettings.ppnRate=parseFloat(v('ts-ppn'))||11;
@@ -11681,7 +11682,6 @@ function saveTaxSettings(){
   saveDB();alert('✅ Tarif pajak disimpan. Invoice baru akan menggunakan tarif ini.');
 }
 
-}
 function handleLogoUpload(input){
   const f=input.files[0];if(!f)return;if(f.size>2097152)return alert('Maks 2MB!');
   const reader=new FileReader();reader.onload=e=>{DB.company.logo=e.target.result;saveDB();updateSidebarLogo();const w=document.getElementById('logo-pw');if(w)w.innerHTML=`<img src="${DB.company.logo}" class="logo-preview"><br><button class="btn btn-bad btn-xs" style="margin-top:6px" onclick="removeLogo()">✕ Hapus</button>`;};reader.readAsDataURL(f);
