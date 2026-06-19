@@ -11968,11 +11968,39 @@ async function doScanOCRGratis(){
       if(altJabIdx!==-1){jabLine=lines[altJabIdx];usedIdx.add(altJabIdx);}
     }
 
-    // ── 4. Perusahaan: baris dengan suffix PT/CV/Tbk/dll ──
-    const compLine=lines.find((l,i)=>!usedIdx.has(i)&&compSuffixRe.test(l));
-    if(compLine)lines.forEach((l,i)=>{if(l===compLine)usedIdx.add(i);});
+    // ── 4. Perusahaan: cari baris dengan suffix PT/CV/Tbk/dll ──
+    // Kalau nama perusahaan "nyangkut" di tengah baris Jabatan/Alamat (bukan baris
+    // sendiri), potong bagian itu dan pindahkan ke kolom Perusahaan, sisakan
+    // teks yang tersisa di baris asalnya.
+    let compLine='';
+    const compFullLineIdx=lines.findIndex((l,i)=>!usedIdx.has(i)&&compSuffixRe.test(l));
+    if(compFullLineIdx!==-1){
+      compLine=lines[compFullLineIdx];
+      usedIdx.add(compFullLineIdx);
+    } else {
+      // Cek apakah PT/CV nyangkut di baris Jabatan
+      const compInJabatan=jabLine.match(/(PT\.?|CV\.?|Tbk|Ltd|Inc|Corp|Co\.|LLC|Group)\s+[A-Za-z0-9\s&.\-]+/i);
+      if(compInJabatan){
+        compLine=compInJabatan[0].trim();
+        jabLine=jabLine.replace(compInJabatan[0],'').trim().replace(/^[,.\-\s]+|[,.\-\s]+$/g,'');
+      }
+    }
 
-    // ── 5. Alamat: baris tersisa yang cocok kamus alamat ATAU mengandung kode pos,
+    // ── 5. Nomor HP/Telp: koreksi otomatis kesalahan baca OCR umum ──
+    // OCR sering salah baca tanda "+" sebagai angka "1", sehingga "+62" terbaca "162".
+    function fixPhoneOCR(num){
+      if(!num)return num;
+      let fixed=num.trim();
+      if(/^162\d{7,12}$/.test(fixed.replace(/[\s.\-]/g,''))){
+        fixed=fixed.replace(/^162/,'+62');
+      }
+      return fixed;
+    }
+    hp1=fixPhoneOCR(hp1);
+    telpKantor=fixPhoneOCR(telpKantor);
+    fax=fixPhoneOCR(fax);
+
+    // ── 6. Alamat: baris tersisa yang cocok kamus alamat ATAU mengandung kode pos,
     //     plus baris pendek berikutnya yang masih nyambung (lanjutan alamat) ──
     let addrLines=[];
     const firstAddrIdx=lines.findIndex((l,i)=>!usedIdx.has(i)&&!labelRe.test(l)&&(addrKeywordRe.test(l)||postalRe.test(l)));
@@ -11982,7 +12010,15 @@ async function doScanOCRGratis(){
         const l=lines[i];
         if(labelRe.test(l))break; // baris berikutnya sudah masuk bagian kontak lain
         if(/^[\d\s.\-+()]+$/.test(l))continue; // baris cuma angka/simbol, skip
-        addrLines.push(l);
+        // Kalau PT/CV nyangkut di baris alamat, potong & pindahkan ke Perusahaan
+        const compInAddr=!compLine&&l.match(/(PT\.?|CV\.?|Tbk|Ltd|Inc|Corp|Co\.|LLC|Group)\s+[A-Za-z0-9\s&.\-]+/i);
+        if(compInAddr){
+          compLine=compInAddr[0].trim();
+          const sisaAddr=l.replace(compInAddr[0],'').trim().replace(/^[,.\-\s]+|[,.\-\s]+$/g,'');
+          if(sisaAddr)addrLines.push(sisaAddr);
+        } else {
+          addrLines.push(l);
+        }
         usedIdx.add(i);
       }
     }
