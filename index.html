@@ -11713,6 +11713,14 @@ function initCropBoxInteraction(){
   const box=document.getElementById('crop-box');
   const cont=document.getElementById('crop-container');
   const handle=document.getElementById('crop-resize-handle');
+  // Konversi posisi awal dari % ke px supaya perhitungan batas akurat
+  requestAnimationFrame(()=>{
+    const cw=cont.offsetWidth,ch=cont.offsetHeight;
+    box.style.left=Math.round(cw*0.1)+'px';
+    box.style.top=Math.round(ch*0.1)+'px';
+    box.style.width=Math.round(cw*0.8)+'px';
+    box.style.height=Math.round(ch*0.8)+'px';
+  });
   let dragging=false,resizingBox=false,sx=0,sy=0;
   function getXY(e){return e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};}
   // Drag (geser) crop box
@@ -11721,34 +11729,32 @@ function initCropBoxInteraction(){
   // Resize crop box
   handle.addEventListener('mousedown',e=>{resizingBox=true;e.stopPropagation();e.preventDefault();});
   handle.addEventListener('touchstart',e=>{resizingBox=true;e.stopPropagation();e.preventDefault();},{passive:false});
+  function doDrag(p){
+    const cr=cont.getBoundingClientRect();
+    const maxX=cont.offsetWidth-box.offsetWidth;
+    const maxY=cont.offsetHeight-box.offsetHeight;
+    let nx=p.x-cr.left-sx,ny=p.y-cr.top-sy;
+    nx=Math.max(0,Math.min(nx,Math.max(0,maxX)));
+    ny=Math.max(0,Math.min(ny,Math.max(0,maxY)));
+    box.style.left=nx+'px';box.style.top=ny+'px';
+  }
+  function doResize(p){
+    const cr=cont.getBoundingClientRect();
+    let nw=p.x-cr.left-box.offsetLeft, nh=p.y-cr.top-box.offsetTop;
+    const maxW=cont.offsetWidth-box.offsetLeft;
+    const maxH=cont.offsetHeight-box.offsetTop;
+    nw=Math.max(40,Math.min(nw,maxW));
+    nh=Math.max(40,Math.min(nh,maxH));
+    box.style.width=nw+'px';box.style.height=nh+'px';
+  }
   document.addEventListener('mousemove',e=>{
-    const p=getXY(e);const cr=cont.getBoundingClientRect();
-    if(dragging){
-      let nx=p.x-cr.left-sx,ny=p.y-cr.top-sy;
-      nx=Math.max(0,Math.min(nx,cont.offsetWidth-box.offsetWidth));
-      ny=Math.max(0,Math.min(ny,cont.offsetHeight-box.offsetHeight));
-      box.style.left=nx+'px';box.style.top=ny+'px';
-    } else if(resizingBox){
-      let nw=p.x-cr.left-box.offsetLeft, nh=p.y-cr.top-box.offsetTop;
-      nw=Math.max(40,Math.min(nw,cont.offsetWidth-box.offsetLeft));
-      nh=Math.max(40,Math.min(nh,cont.offsetHeight-box.offsetTop));
-      box.style.width=nw+'px';box.style.height=nh+'px';
-    }
+    if(dragging)doDrag(getXY(e));
+    else if(resizingBox)doResize(getXY(e));
   });
   document.addEventListener('touchmove',e=>{
     if(!dragging&&!resizingBox)return;
-    const p=getXY(e);const cr=cont.getBoundingClientRect();
-    if(dragging){
-      let nx=p.x-cr.left-sx,ny=p.y-cr.top-sy;
-      nx=Math.max(0,Math.min(nx,cont.offsetWidth-box.offsetWidth));
-      ny=Math.max(0,Math.min(ny,cont.offsetHeight-box.offsetHeight));
-      box.style.left=nx+'px';box.style.top=ny+'px';
-    } else if(resizingBox){
-      let nw=p.x-cr.left-box.offsetLeft, nh=p.y-cr.top-box.offsetTop;
-      nw=Math.max(40,Math.min(nw,cont.offsetWidth-box.offsetLeft));
-      nh=Math.max(40,Math.min(nh,cont.offsetHeight-box.offsetTop));
-      box.style.width=nw+'px';box.style.height=nh+'px';
-    }
+    if(dragging)doDrag(getXY(e));
+    else if(resizingBox)doResize(getXY(e));
     e.preventDefault();
   },{passive:false});
   document.addEventListener('mouseup',()=>{dragging=false;resizingBox=false;});
