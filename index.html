@@ -4606,24 +4606,26 @@ function rotateCTFoto(deg){
 function openCropCTFoto(){
   const overlay=document.createElement('div');
   overlay.id='crop-overlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;flex-direction:column;align-items:center;padding:12px;box-sizing:border-box;overflow:hidden';
   overlay.innerHTML=`
-    <div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:10px">✂️ Drag/resize area yang mau dipakai</div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button onclick="rotateCTFotoInCrop(-90)" style="padding:8px 14px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">↺ Putar Kiri</button>
-      <button onclick="rotateCTFotoInCrop(90)" style="padding:8px 14px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Putar Kanan ↻</button>
+    <div style="color:#fff;font-size:13px;font-weight:700;margin:4px 0;text-align:center">✂️ Drag/resize area, scroll kalau gambar panjang</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-shrink:0">
+      <button onclick="rotateCTFotoInCrop(-90)" style="padding:7px 12px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">↺ Putar Kiri</button>
+      <button onclick="rotateCTFotoInCrop(90)" style="padding:7px 12px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Putar Kanan ↻</button>
     </div>
-    <div style="position:relative;max-width:100%;max-height:55vh;overflow:hidden" id="crop-container">
-      <img id="crop-src-img" src="${_ctFotoOrigDataUrl}" style="max-width:100%;max-height:55vh;display:block;user-select:none;pointer-events:none">
-      <div id="crop-dim-top" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
-      <div id="crop-dim-bottom" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
-      <div id="crop-dim-left" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
-      <div id="crop-dim-right" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
-      <div id="crop-box" style="position:absolute;border:2px solid #facc15;cursor:move;top:10%;left:10%;width:80%;height:80%;box-sizing:border-box">
-        <div id="crop-resize-handle" style="position:absolute;right:-12px;bottom:-12px;width:28px;height:28px;background:#facc15;border:2px solid #0f172a;border-radius:50%;cursor:nwse-resize"></div>
+    <div style="flex:1;width:100%;max-width:900px;overflow:auto;border:1px solid #334155;border-radius:8px;background:#0f172a" id="crop-scroll-area">
+      <div style="position:relative;display:inline-block;min-width:100%" id="crop-container">
+        <img id="crop-src-img" src="${_ctFotoOrigDataUrl}" style="display:block;width:100%;user-select:none;pointer-events:none">
+        <div id="crop-dim-top" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+        <div id="crop-dim-bottom" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+        <div id="crop-dim-left" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+        <div id="crop-dim-right" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+        <div id="crop-box" style="position:absolute;border:2px solid #facc15;cursor:move;top:5%;left:5%;width:40%;height:25%;box-sizing:border-box">
+          <div id="crop-resize-handle" style="position:absolute;right:-12px;bottom:-12px;width:28px;height:28px;background:#facc15;border:2px solid #0f172a;border-radius:50%;cursor:nwse-resize"></div>
+        </div>
       </div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:14px">
+    <div style="display:flex;gap:10px;margin-top:10px;flex-shrink:0">
       <button onclick="document.getElementById('crop-overlay').remove()" style="padding:10px 20px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Batal</button>
       <button onclick="applyCropCTFoto()" style="padding:10px 20px;background:#facc15;color:#0f172a;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✅ Pakai Area Ini</button>
     </div>`;
@@ -11593,7 +11595,8 @@ function openScanKartuNama(){
       <div id="scan-preview" style="margin-bottom:14px;display:flex;align-items:center;justify-content:center">
         <div style="border:2px dashed #cbd5e1;border-radius:12px;padding:24px;color:#94a3b8;width:100%;box-sizing:border-box;text-align:center">
           <div style="font-size:40px;margin-bottom:10px">🪪</div>
-          <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:16px">Pilih cara ambil foto kartu nama:</div>
+          <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:4px">Pilih cara ambil foto kartu nama:</div>
+          <div style="font-size:11px;color:#94a3b8;margin-bottom:14px">💡 Tip: foto <b>1 kartu nama saja</b> per scan supaya hasilnya akurat. Kalau foto berisi banyak kartu sekaligus, pakai <b>✂️ Crop</b> dulu untuk pilih satu per satu.</div>
           <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
             <button type="button" onclick="document.getElementById('scan-file-camera').click()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 20px;background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;cursor:pointer;font-size:12px;font-weight:600;color:#1d4ed8;min-width:100px">
               <span style="font-size:28px">📸</span>Ambil Foto<span style="font-size:10px;font-weight:400;color:#60a5fa">Buka Kamera</span>
@@ -11689,27 +11692,28 @@ function previewScanFile(input){
 
 let _scanOrigDataUrl='';
 function openCropScan(){
-  // Buka modal crop sederhana pakai canvas
   const overlay=document.createElement('div');
   overlay.id='crop-overlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;flex-direction:column;align-items:center;padding:12px;box-sizing:border-box;overflow:hidden';
   overlay.innerHTML=`
-    <div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:10px">✂️ Drag/resize area, atau putar dulu kalau miring</div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button onclick="rotateCropImage(-90)" style="padding:8px 14px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">↺ Putar Kiri</button>
-      <button onclick="rotateCropImage(90)" style="padding:8px 14px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Putar Kanan ↻</button>
+    <div style="color:#fff;font-size:13px;font-weight:700;margin:4px 0;text-align:center">✂️ Drag/resize area, scroll kalau gambar panjang</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-shrink:0">
+      <button onclick="rotateCropImage(-90)" style="padding:7px 12px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">↺ Putar Kiri</button>
+      <button onclick="rotateCropImage(90)" style="padding:7px 12px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Putar Kanan ↻</button>
     </div>
-    <div style="position:relative;max-width:100%;max-height:55vh;overflow:hidden" id="crop-container">
-      <img id="crop-src-img" src="${_scanOrigDataUrl}" style="max-width:100%;max-height:55vh;display:block;user-select:none;pointer-events:none">
-      <div id="crop-dim-top" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
-      <div id="crop-dim-bottom" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
-      <div id="crop-dim-left" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
-      <div id="crop-dim-right" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
-      <div id="crop-box" style="position:absolute;border:2px solid #facc15;cursor:move;top:10%;left:10%;width:80%;height:80%;box-sizing:border-box">
-        <div id="crop-resize-handle" style="position:absolute;right:-12px;bottom:-12px;width:28px;height:28px;background:#facc15;border:2px solid #0f172a;border-radius:50%;cursor:nwse-resize"></div>
+    <div style="flex:1;width:100%;max-width:900px;overflow:auto;border:1px solid #334155;border-radius:8px;background:#0f172a" id="crop-scroll-area">
+      <div style="position:relative;display:inline-block;min-width:100%" id="crop-container">
+        <img id="crop-src-img" src="${_scanOrigDataUrl}" style="display:block;width:100%;user-select:none;pointer-events:none">
+        <div id="crop-dim-top" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+        <div id="crop-dim-bottom" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+        <div id="crop-dim-left" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+        <div id="crop-dim-right" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+        <div id="crop-box" style="position:absolute;border:2px solid #facc15;cursor:move;top:5%;left:5%;width:40%;height:25%;box-sizing:border-box">
+          <div id="crop-resize-handle" style="position:absolute;right:-12px;bottom:-12px;width:28px;height:28px;background:#facc15;border:2px solid #0f172a;border-radius:50%;cursor:nwse-resize"></div>
+        </div>
       </div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:14px">
+    <div style="display:flex;gap:10px;margin-top:10px;flex-shrink:0">
       <button onclick="document.getElementById('crop-overlay').remove()" style="padding:10px 20px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Batal</button>
       <button onclick="applyCrop()" style="padding:10px 20px;background:#facc15;color:#0f172a;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✅ Pakai Area Ini</button>
     </div>`;
@@ -11741,13 +11745,15 @@ function initCropBoxInteraction(){
   const box=document.getElementById('crop-box');
   const cont=document.getElementById('crop-container');
   const handle=document.getElementById('crop-resize-handle');
-  // Konversi posisi awal dari % ke px supaya perhitungan batas akurat
+  // Konversi posisi awal dari % ke px supaya perhitungan batas akurat.
+  // Box default lebih kecil (40% x 25%) supaya pas untuk crop 1 kartu nama
+  // dari gambar yang berisi banyak kartu sekaligus.
   requestAnimationFrame(()=>{
     const cw=cont.offsetWidth,ch=cont.offsetHeight;
-    box.style.left=Math.round(cw*0.1)+'px';
-    box.style.top=Math.round(ch*0.1)+'px';
-    box.style.width=Math.round(cw*0.8)+'px';
-    box.style.height=Math.round(ch*0.8)+'px';
+    box.style.left=Math.round(cw*0.05)+'px';
+    box.style.top=Math.round(ch*0.05)+'px';
+    box.style.width=Math.round(cw*0.4)+'px';
+    box.style.height=Math.round(ch*0.25)+'px';
     _updateCropDimPanels();
   });
   let dragging=false,resizingBox=false,sx=0,sy=0;
@@ -11903,7 +11909,27 @@ async function doScanOCRGratis(){
     const nameLine=nameCandidate||lines[0]||'';
     const compLine=lines.find(l=>/\b(PT\.?|CV\.?|Tbk|Ltd|Corp|Inc|Group|Indonesia)\b/i.test(l))||'';
     const jabLine=lines.find(l=>/\b(Director|Manager|President|CEO|CFO|Direktur|Manajer|Staff|Engineer|Head|Chief|Officer|Supervisor)\b/i.test(l))||'';
-    const addrLine=lines.find(l=>/\b(Jl\.|Jalan|Street|Ave|Blvd|No\.|Lot|Floor|Fl\.|Suite|Tower|Building|Gedung)\b/i.test(l))||'';
+    // ── Deteksi alamat: gabung baris berurutan yang mengandung kata kunci alamat ──
+    // Alamat di kartu nama biasanya 2-4 baris (jalan, gedung/lantai, kota, kodepos),
+    // bukan cuma 1 baris — jadi cari index baris pertama yang match, lalu gabung
+    // baris-baris berikutnya selama masih terlihat seperti bagian alamat.
+    const addrKeywordRe=/\b(Jl\.?|Jalan|Street|Ave|Blvd|No\.?|Lot|Floor|Fl\.?|Suite|Tower|Building|Gedung|Kav\.?|RT|RW|Kel\.?|Kec\.?|Kota|Plaza)\b/i;
+    const cityPostalRe=/\b(Jakarta|Bandung|Surabaya|Medan|Semarang|Bekasi|Depok|Tangerang|Bogor|Selatan|Utara|Barat|Timur|Pusat)\b|\b\d{5}\b/i;
+    const stopWordsRe=/\b(Tel|Fax|Phone|Mobile|HP|Email|Website|www\.|@)\b/i;
+    let addrLines=[];
+    const startIdx=lines.findIndex(l=>addrKeywordRe.test(l));
+    if(startIdx!==-1){
+      addrLines.push(lines[startIdx]);
+      // Tarik baris berikutnya selama bukan kontak (tel/fax/email) dan masih pendek (ciri alamat)
+      for(let i=startIdx+1;i<lines.length&&addrLines.length<4;i++){
+        const l=lines[i];
+        if(stopWordsRe.test(l))break; // berhenti kalau sudah masuk bagian kontak
+        if(/^[A-Za-z\s.,\-\d]+$/.test(l)&&(addrKeywordRe.test(l)||cityPostalRe.test(l)||l.length<40)){
+          addrLines.push(l);
+        } else break;
+      }
+    }
+    const addrLine=addrLines.join(', ');
     _scanHasil={
       name:nameLine,
       jabatan:jabLine,
