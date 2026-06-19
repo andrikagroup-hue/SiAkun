@@ -4516,7 +4516,7 @@ function openContact(id){
           :`<span style="font-size:24px">🪪</span>`}
       </div>
       <div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div id="ct-foto-btn-area" style="display:flex;gap:6px;flex-wrap:wrap">
           <button type="button" class="btn btn-out btn-xs" onclick="document.getElementById('ct-foto-camera').click()">📸 Kamera</button>
           <button type="button" class="btn btn-out btn-xs" onclick="document.getElementById('ct-foto-input').click()">🖼️ Galeri</button>
           ${ct.fotoKartuNama?`<button type="button" class="btn btn-bad btn-xs" onclick="hapusFotoKartu()">✕ Hapus</button>`:''}
@@ -4529,23 +4529,146 @@ function openContact(id){
   </div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveContact()">Save</button></div>`);}
 let _ctFotoBase64 = null;
+let _ctFotoOrigDataUrl='';
 function previewFotoKartu(input){
   const file=input.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const img=new Image();
-    img.onload=function(){
-      const canvas=document.createElement('canvas');
-      const MAX=800;let w=img.width,h=img.height;
-      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
-      canvas.width=w;canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      _ctFotoBase64=canvas.toDataURL('image/jpeg',0.75);
-      document.getElementById('ct-foto-preview').innerHTML=`<img src="${_ctFotoBase64}" style="width:100%;height:100%;object-fit:cover">`;
+  const arrayReader=new FileReader();
+  arrayReader.onload=function(ae){
+    const orientation=_getExifOrientation(ae.target.result);
+    const dataReader=new FileReader();
+    dataReader.onload=function(de){
+      const img=new Image();
+      img.onload=function(){
+        let deg=0;
+        if(orientation===3)deg=180;
+        else if(orientation===6)deg=90;
+        else if(orientation===8)deg=270;
+        const rad=deg*Math.PI/180;
+        const sw=img.width,sh=img.height;
+        const cw=(deg===90||deg===270)?sh:sw;
+        const ch=(deg===90||deg===270)?sw:sh;
+        const canvas=document.createElement('canvas');
+        canvas.width=cw;canvas.height=ch;
+        const ctx=canvas.getContext('2d');
+        ctx.translate(cw/2,ch/2);ctx.rotate(rad);
+        ctx.drawImage(img,-sw/2,-sh/2);
+        const MAX=1200;let fw=cw,fh=ch;
+        if(fw>MAX){fh=Math.round(fh*MAX/fw);fw=MAX;}
+        const c2=document.createElement('canvas');
+        c2.width=fw;c2.height=fh;
+        c2.getContext('2d').drawImage(canvas,0,0,fw,fh);
+        const dataUrl=c2.toDataURL('image/jpeg',0.85);
+        _ctFotoBase64=dataUrl;
+        _ctFotoOrigDataUrl=dataUrl;
+        _updateCtFotoPreview(dataUrl);
+      };
+      img.src=de.target.result;
     };
-    img.src=e.target.result;
+    dataReader.readAsDataURL(file);
   };
-  reader.readAsDataURL(file);
+  arrayReader.readAsArrayBuffer(file);
+}
+
+function _updateCtFotoPreview(dataUrl){
+  document.getElementById('ct-foto-preview').innerHTML=`<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover">`;
+  // Tambah tombol rotate & crop di bawah preview
+  const btnArea=document.getElementById('ct-foto-btn-area');
+  if(btnArea){
+    btnArea.innerHTML=`
+      <button type="button" class="btn btn-out btn-xs" onclick="document.getElementById('ct-foto-camera').click()">📸 Kamera</button>
+      <button type="button" class="btn btn-out btn-xs" onclick="document.getElementById('ct-foto-input').click()">🖼️ Galeri</button>
+      <button type="button" class="btn btn-out btn-xs" onclick="rotateCTFoto(-90)" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8">↺ Kiri</button>
+      <button type="button" class="btn btn-out btn-xs" onclick="rotateCTFoto(90)" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8">↻ Kanan</button>
+      <button type="button" class="btn btn-out btn-xs" onclick="openCropCTFoto()" style="background:#fefce8;border-color:#fde047;color:#854d0e">✂️ Crop</button>
+      <button type="button" class="btn btn-bad btn-xs" onclick="hapusFotoKartu()">✕ Hapus</button>
+    `;
+  }
+}
+
+function rotateCTFoto(deg){
+  const src=new Image();
+  src.onload=function(){
+    const sw=src.width,sh=src.height;
+    const canvas=document.createElement('canvas');
+    canvas.width=sh;canvas.height=sw;
+    const ctx=canvas.getContext('2d');
+    ctx.translate(canvas.width/2,canvas.height/2);
+    ctx.rotate(deg*Math.PI/180);
+    ctx.drawImage(src,-sw/2,-sh/2);
+    const rotated=canvas.toDataURL('image/jpeg',0.9);
+    _ctFotoBase64=rotated;
+    _ctFotoOrigDataUrl=rotated;
+    _updateCtFotoPreview(rotated);
+  };
+  src.src=_ctFotoOrigDataUrl||_ctFotoBase64;
+}
+
+function openCropCTFoto(){
+  const overlay=document.createElement('div');
+  overlay.id='crop-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
+  overlay.innerHTML=`
+    <div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:10px">✂️ Drag/resize area yang mau dipakai</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button onclick="rotateCTFotoInCrop(-90)" style="padding:8px 14px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">↺ Putar Kiri</button>
+      <button onclick="rotateCTFotoInCrop(90)" style="padding:8px 14px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Putar Kanan ↻</button>
+    </div>
+    <div style="position:relative;max-width:100%;max-height:55vh;overflow:hidden" id="crop-container">
+      <img id="crop-src-img" src="${_ctFotoOrigDataUrl}" style="max-width:100%;max-height:55vh;display:block;user-select:none">
+      <div id="crop-box" style="position:absolute;border:2px solid #facc15;box-shadow:0 0 0 999px rgba(0,0,0,.5);cursor:move;top:10%;left:10%;width:80%;height:80%;box-sizing:border-box">
+        <div id="crop-resize-handle" style="position:absolute;right:-8px;bottom:-8px;width:22px;height:22px;background:#facc15;border:2px solid #0f172a;border-radius:50%;cursor:nwse-resize"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button onclick="document.getElementById('crop-overlay').remove()" style="padding:10px 20px;background:#475569;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Batal</button>
+      <button onclick="applyCropCTFoto()" style="padding:10px 20px;background:#facc15;color:#0f172a;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✅ Pakai Area Ini</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  initCropBoxInteraction();
+}
+
+function rotateCTFotoInCrop(deg){
+  const imgEl=document.getElementById('crop-src-img');
+  const src=new Image();
+  src.onload=function(){
+    const sw=src.width,sh=src.height;
+    const canvas=document.createElement('canvas');
+    canvas.width=sh;canvas.height=sw;
+    const ctx=canvas.getContext('2d');
+    ctx.translate(canvas.width/2,canvas.height/2);
+    ctx.rotate(deg*Math.PI/180);
+    ctx.drawImage(src,-sw/2,-sh/2);
+    const rotated=canvas.toDataURL('image/jpeg',0.9);
+    _ctFotoOrigDataUrl=rotated;
+    imgEl.src=rotated;
+    const box=document.getElementById('crop-box');
+    box.style.left='10%';box.style.top='10%';box.style.width='80%';box.style.height='80%';
+  };
+  src.src=_ctFotoOrigDataUrl;
+}
+
+function applyCropCTFoto(){
+  const box=document.getElementById('crop-box');
+  const imgEl=document.getElementById('crop-src-img');
+  const cont=document.getElementById('crop-container');
+  if(!box||!imgEl)return;
+  const dispW=imgEl.offsetWidth,dispH=imgEl.offsetHeight;
+  const natW=imgEl.naturalWidth,natH=imgEl.naturalHeight;
+  const ratX=natW/dispW,ratY=natH/dispH;
+  const cx=Math.round(box.offsetLeft*ratX),cy=Math.round(box.offsetTop*ratY);
+  const cw=Math.round(box.offsetWidth*ratX),ch=Math.round(box.offsetHeight*ratY);
+  const canvas=document.createElement('canvas');
+  canvas.width=cw;canvas.height=ch;
+  const srcImg=new Image();
+  srcImg.onload=function(){
+    canvas.getContext('2d').drawImage(srcImg,cx,cy,cw,ch,0,0,cw,ch);
+    const cropped=canvas.toDataURL('image/jpeg',0.9);
+    _ctFotoBase64=cropped;
+    _ctFotoOrigDataUrl=cropped;
+    _updateCtFotoPreview(cropped);
+    document.getElementById('crop-overlay').remove();
+  };
+  srcImg.src=_ctFotoOrigDataUrl;
 }
 function hapusFotoKartu(){_ctFotoBase64='__hapus__';document.getElementById('ct-foto-preview').innerHTML='<span style="font-size:24px">🪪</span>';}
 async function saveContact(){
