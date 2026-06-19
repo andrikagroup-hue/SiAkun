@@ -4430,7 +4430,7 @@ function dashAssetChart(mode){
 
 function renderContacts(c){
   const ta=document.getElementById('topbar-actions');
-  ta.innerHTML=`<button class="btn btn-pri" onclick="openContact()">${t('btn_add')} ${getLang()==='id'?'Kontak':'Contact'}</button><button class="btn btn-out" onclick="openScanKartuNama()" style="background:#f0fdf4;border-color:#86efac;color:#16a34a">📷 Scan Kartu Nama</button><button class="btn btn-out" onclick="exportContacts()">⬇ Excel</button><button class="btn btn-out" onclick="exportContactsPDF()">📄 PDF </button>`;
+  ta.innerHTML=`<button class="btn btn-pri" onclick="openContact()">${t('btn_add')} ${getLang()==='id'?'Kontak':'Contact'}</button><button class="btn btn-out" onclick="openScanKartuNama()" style="background:#f0fdf4;border-color:#86efac;color:#16a34a">📷 Scan Kartu Nama</button><button class="btn btn-out" onclick="exportContacts()">⬇ Excel</button><button class="btn btn-out" onclick="exportContactsPDF()">📄 PDF (dgn foto)</button>`;
   const total=DB.contacts.length;
   c.innerHTML=`
   <div style="margin-bottom:10px;font-size:13px;color:#64748b">Total kontak: <strong style="color:#0f172a">${total}</strong></div>
@@ -11901,67 +11901,91 @@ async function doScanOCRGratis(){
     const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l.length>1);
 
     // ════════════════════════════════════════════════════════════
-    //  Parsing berbasis LABEL — pola umum kartu nama Indonesia:
-    //  Baris 1: Nama
-    //  Baris 2: Jabatan
-    //  Baris berlabel: T/Tel = telp kantor, M/Mobile/HP = HP,
-    //                  F/Fax = fax, E/Email = email
-    //  Sisanya (yang bukan label & bukan nama/jabatan/perusahaan) = alamat
+    //  Kamus kata kunci (diperluas) untuk klasifikasi tiap baris.
+    //  Label kontak harus diikuti separator (: . -) supaya "T" tidak
+    //  ketangkep dari kata biasa yang kebetulan diawali T.
     // ════════════════════════════════════════════════════════════
-    const labelRe=/^(T|M|F|E)\s*[:.\-]\s*(.+)$|^(Tel|Telp|Mobile|HP|Fax|Email|E-mail|Website|Web)\s*[:.\-]\s*(.+)$/i;
-    const usedIdx=new Set(); // index baris yang sudah "dipakai" supaya tidak masuk ke alamat
+    const labelRe=/^(T|M|F|E)\s*[:.\-]\s*(.+)$|^(Telp|Tel|No\.?\s?HP|Handphone|Hubungi|Kontak|Faks|Fax|Ponsel|WA|WhatsApp|Phone|Mobile|Cell|Mob|Telephone|Direct|Office|FX|Ext|Ph|Email|E-mail|Website|Web|Site)\s*[:.\-]\s*(.+)$/i;
+    const jabatanKeywordRe=/\b(Direktur|Direksi|Manajer|Manager|Staff|Staf|Pemilik|Pendiri|Kepala|Supervisor|Admin|Sekretaris|Bendahara|SVP|VP|Ketua|Pengelola|CEO|CFO|COO|CTO|CMO|Founder|Co-Founder|Managing Director|President|Vice President|Lead|Head of|Head|Executive|Specialist|Consultant|Associate|Officer|Developer|Engineer)\b/i;
+    const addrKeywordRe=/\b(Jl\.?|Jalan|Gedung|Ruko|Menara|Tower|Lantai|Blok|Kav\.?|Kavling|RT|RW|Kelurahan|Kecamatan|Kota|Kabupaten|Provinsi|Kode\s?Pos|St\.?|Street|Ave\.?|Avenue|Blvd\.?|Boulevard|Rd\.?|Road|Suite|Floor|Fl\.?|Building|Bldg|PO\s?Box|Zip\s?Code|Postal\s?Code|City|State|Country|HQ|Address|No\.?)\b/i;
+    const compSuffixRe=/\b(PT\.?|CV\.?|Tbk|Ltd|Corp|Inc|Group|Indonesia)\b/i;
+    const websiteKeywordRe=/\b(www\.|https?:\/\/|Website|Web|Site)\b/i;
+    const postalRe=/\b\d{5}\b/;
+
+    const usedIdx=new Set(); // index baris yang sudah "dipakai" supaya tidak dobel-pakai
     let hp1='',telpKantor='',fax='',email='',website='';
+
+    // ── 1. Tangkap baris berlabel eksplisit (T:/M:/F:/E:/Telp:/dst) ──
     lines.forEach((l,i)=>{
       const m=l.match(labelRe);
       if(!m)return;
-      const label=(m[1]||m[3]).toUpperCase();
+      const label=(m[1]||m[3]).toUpperCase().replace(/\s+/g,'');
       const val=(m[2]||m[4]).trim();
-      if(/^(T|TEL|TELP)$/.test(label)&&!telpKantor){telpKantor=val;usedIdx.add(i);}
-      else if(/^(M|MOBILE|HP)$/.test(label)&&!hp1){hp1=val;usedIdx.add(i);}
-      else if(/^(F|FAX)$/.test(label)&&!fax){fax=val;usedIdx.add(i);}
+      if(/^(T|TEL|TELP|PHONE|TELEPHONE|DIRECT|OFFICE|PH)$/.test(label)&&!telpKantor){telpKantor=val;usedIdx.add(i);}
+      else if(/^(M|MOBILE|HP|NOHP|HANDPHONE|HUBUNGI|KONTAK|CELL|MOB|PONSEL|WA|WHATSAPP)$/.test(label)&&!hp1){hp1=val;usedIdx.add(i);}
+      else if(/^(F|FAX|FAKS|FX)$/.test(label)&&!fax){fax=val;usedIdx.add(i);}
       else if(/^(E|EMAIL|E-MAIL)$/.test(label)&&!email){email=val;usedIdx.add(i);}
-      else if(/^(WEBSITE|WEB)$/.test(label)&&!website){website=val;usedIdx.add(i);}
+      else if(/^(WEBSITE|WEB|SITE)$/.test(label)&&!website){website=val;usedIdx.add(i);}
     });
-    // Fallback: kalau label T/M/F/E tidak kedetect, cari pola umum tanpa label
+
+    // ── 2. Fallback regex murni — kalau label tidak kedetect OCR ──
     if(!email){
-      const em=raw.match(/[\w.\-+]+@[\w.\-]+\.[a-zA-Z]{2,}/);
+      const em=raw.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}/);
       if(em){email=em[0];lines.forEach((l,i)=>{if(l.includes(em[0]))usedIdx.add(i);});}
     }
     if(!hp1||!telpKantor){
-      const phoneMatches=[...raw.matchAll(/(?:\+62|62|0)[\s.\-]?8\d{2}[\s.\-]?\d{3,4}[\s.\-]?\d{3,5}|(?:\+62|62|0)[\s.\-]?2[1-9][\s.\-]?\d{3,4}[\s.\-]?\d{3,5}/g)].map(m=>m[0]);
-      // Nomor diawali 08/+628 → HP. Nomor diawali 021/kode area → kantor.
+      // Pola nomor telepon Indonesia & internasional umum, termasuk ext kantor
+      const phoneRe=/(?:\+?\d{1,3}[\s.\-]?)?\(?\d{2,4}\)?[\s.\-]?\d{3,4}[\s.\-]?\d{3,4}[\s.\-]?\d{0,4}/g;
+      const phoneMatches=[...raw.matchAll(phoneRe)].map(m=>m[0].trim()).filter(p=>p.replace(/\D/g,'').length>=8);
       phoneMatches.forEach(p=>{
-        const isMobile=/^(\+?62)?0?8/.test(p.replace(/[\s.\-]/g,''));
+        const digits=p.replace(/[\s.\-()]/g,'');
+        const isMobile=/^(\+?62)?0?8/.test(digits);
         if(isMobile&&!hp1)hp1=p;
         else if(!isMobile&&!telpKantor)telpKantor=p;
       });
     }
     if(!website){
-      const wm=raw.match(/(?:www\.|https?:\/\/)[^\s,]+/i);
-      if(wm){website=wm[0].replace(/https?:\/\//,'');lines.forEach((l,i)=>{if(l.includes(wm[0]))usedIdx.add(i);});}
+      const wm=raw.match(/(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+(?:\/[\w\-./?%&=]*)?/);
+      if(wm&&!wm[0].includes('@')&&websiteKeywordRe.test(wm[0])){
+        website=wm[0].replace(/https?:\/\//,'');
+        lines.forEach((l,i)=>{if(l.includes(wm[0]))usedIdx.add(i);});
+      }
     }
 
-    // ── Nama & Jabatan: posisi tetap (baris 1 = nama, baris 2 = jabatan) ──
-    // Lewati baris yang kebetulan adalah nama perusahaan/logo di paling atas
+    // ── 3. Nama & Jabatan: posisi tetap (baris 1 = nama, baris 2 = jabatan) ──
+    // tapi kalau baris 2 cocok kamus kata kunci jabatan, makin yakin itu benar jabatan.
     let startContentIdx=0;
-    while(startContentIdx<lines.length&&(usedIdx.has(startContentIdx)||/^(PT\.?|CV\.?|Tbk)\b/i.test(lines[startContentIdx])))startContentIdx++;
+    while(startContentIdx<lines.length&&(usedIdx.has(startContentIdx)||compSuffixRe.test(lines[startContentIdx])))startContentIdx++;
     const nameLine=lines[startContentIdx]||'';
     usedIdx.add(startContentIdx);
     let jabIdx=startContentIdx+1;
     while(jabIdx<lines.length&&usedIdx.has(jabIdx))jabIdx++;
-    const jabLine=lines[jabIdx]||'';
+    let jabLine=lines[jabIdx]||'';
     if(jabIdx<lines.length)usedIdx.add(jabIdx);
+    // Kalau baris tepat di bawah nama TIDAK cocok kamus jabatan, coba cari di baris-baris berikutnya
+    if(jabLine&&!jabatanKeywordRe.test(jabLine)){
+      const altJabIdx=lines.findIndex((l,i)=>!usedIdx.has(i)&&jabatanKeywordRe.test(l));
+      if(altJabIdx!==-1){jabLine=lines[altJabIdx];usedIdx.add(altJabIdx);}
+    }
 
-    const compLine=lines.find((l,i)=>!usedIdx.has(i)&&/\b(PT\.?|CV\.?|Tbk|Ltd|Corp|Inc|Group|Indonesia)\b/i.test(l));
+    // ── 4. Perusahaan: baris dengan suffix PT/CV/Tbk/dll ──
+    const compLine=lines.find((l,i)=>!usedIdx.has(i)&&compSuffixRe.test(l));
     if(compLine)lines.forEach((l,i)=>{if(l===compLine)usedIdx.add(i);});
 
-    // ── Alamat: semua baris tersisa yang belum "dipakai" dan terlihat seperti teks alamat ──
-    const addrLines=lines.filter((l,i)=>{
-      if(usedIdx.has(i))return false;
-      if(labelRe.test(l))return false; // jaga-jaga kalau ada label belum ke-capture
-      if(/^[\d\s.\-+()]+$/.test(l))return false; // baris cuma angka/simbol, bukan alamat
-      return true;
-    });
+    // ── 5. Alamat: baris tersisa yang cocok kamus alamat ATAU mengandung kode pos,
+    //     plus baris pendek berikutnya yang masih nyambung (lanjutan alamat) ──
+    let addrLines=[];
+    const firstAddrIdx=lines.findIndex((l,i)=>!usedIdx.has(i)&&!labelRe.test(l)&&(addrKeywordRe.test(l)||postalRe.test(l)));
+    if(firstAddrIdx!==-1){
+      for(let i=firstAddrIdx;i<lines.length&&addrLines.length<5;i++){
+        if(usedIdx.has(i))continue;
+        const l=lines[i];
+        if(labelRe.test(l))break; // baris berikutnya sudah masuk bagian kontak lain
+        if(/^[\d\s.\-+()]+$/.test(l))continue; // baris cuma angka/simbol, skip
+        addrLines.push(l);
+        usedIdx.add(i);
+      }
+    }
     const addrLine=addrLines.join(', ');
 
     _scanHasil={
