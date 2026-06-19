@@ -4430,7 +4430,7 @@ function dashAssetChart(mode){
 
 function renderContacts(c){
   const ta=document.getElementById('topbar-actions');
-  ta.innerHTML=`<button class="btn btn-pri" onclick="openContact()">${t('btn_add')} ${getLang()==='id'?'Kontak':'Contact'}</button><button class="btn btn-out" onclick="openScanKartuNama()" style="background:#f0fdf4;border-color:#86efac;color:#16a34a">📷 Scan Kartu Nama</button><button class="btn btn-out" onclick="exportContacts()">⬇ Excel</button><button class="btn btn-out" onclick="exportContactsPDF()">📄 PDF (dgn foto)</button>`;
+  ta.innerHTML=`<button class="btn btn-pri" onclick="openContact()">${t('btn_add')} ${getLang()==='id'?'Kontak':'Contact'}</button><button class="btn btn-out" onclick="openScanKartuNama()" style="background:#f0fdf4;border-color:#86efac;color:#16a34a">📷 Scan Kartu Nama</button><button class="btn btn-out" onclick="exportContacts()">⬇ Excel</button><button class="btn btn-out" onclick="exportContactsPDF()">📄 PDF </button>`;
   const total=DB.contacts.length;
   c.innerHTML=`
   <div style="margin-bottom:10px;font-size:13px;color:#64748b">Total kontak: <strong style="color:#0f172a">${total}</strong></div>
