@@ -4614,9 +4614,13 @@ function openCropCTFoto(){
       <button onclick="rotateCTFotoInCrop(90)" style="padding:8px 14px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Putar Kanan ↻</button>
     </div>
     <div style="position:relative;max-width:100%;max-height:55vh;overflow:hidden" id="crop-container">
-      <img id="crop-src-img" src="${_ctFotoOrigDataUrl}" style="max-width:100%;max-height:55vh;display:block;user-select:none">
-      <div id="crop-box" style="position:absolute;border:2px solid #facc15;box-shadow:0 0 0 999px rgba(0,0,0,.5);cursor:move;top:10%;left:10%;width:80%;height:80%;box-sizing:border-box">
-        <div id="crop-resize-handle" style="position:absolute;right:-8px;bottom:-8px;width:22px;height:22px;background:#facc15;border:2px solid #0f172a;border-radius:50%;cursor:nwse-resize"></div>
+      <img id="crop-src-img" src="${_ctFotoOrigDataUrl}" style="max-width:100%;max-height:55vh;display:block;user-select:none;pointer-events:none">
+      <div id="crop-dim-top" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+      <div id="crop-dim-bottom" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+      <div id="crop-dim-left" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+      <div id="crop-dim-right" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+      <div id="crop-box" style="position:absolute;border:2px solid #facc15;cursor:move;top:10%;left:10%;width:80%;height:80%;box-sizing:border-box">
+        <div id="crop-resize-handle" style="position:absolute;right:-12px;bottom:-12px;width:28px;height:28px;background:#facc15;border:2px solid #0f172a;border-radius:50%;cursor:nwse-resize"></div>
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:14px">
@@ -11696,9 +11700,13 @@ function openCropScan(){
       <button onclick="rotateCropImage(90)" style="padding:8px 14px;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Putar Kanan ↻</button>
     </div>
     <div style="position:relative;max-width:100%;max-height:55vh;overflow:hidden" id="crop-container">
-      <img id="crop-src-img" src="${_scanOrigDataUrl}" style="max-width:100%;max-height:55vh;display:block;user-select:none">
-      <div id="crop-box" style="position:absolute;border:2px solid #facc15;box-shadow:0 0 0 999px rgba(0,0,0,.5);cursor:move;top:10%;left:10%;width:80%;height:80%;box-sizing:border-box">
-        <div id="crop-resize-handle" style="position:absolute;right:-8px;bottom:-8px;width:22px;height:22px;background:#facc15;border:2px solid #0f172a;border-radius:50%;cursor:nwse-resize"></div>
+      <img id="crop-src-img" src="${_scanOrigDataUrl}" style="max-width:100%;max-height:55vh;display:block;user-select:none;pointer-events:none">
+      <div id="crop-dim-top" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+      <div id="crop-dim-bottom" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+      <div id="crop-dim-left" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+      <div id="crop-dim-right" style="position:absolute;background:rgba(0,0,0,.55);pointer-events:none"></div>
+      <div id="crop-box" style="position:absolute;border:2px solid #facc15;cursor:move;top:10%;left:10%;width:80%;height:80%;box-sizing:border-box">
+        <div id="crop-resize-handle" style="position:absolute;right:-12px;bottom:-12px;width:28px;height:28px;background:#facc15;border:2px solid #0f172a;border-radius:50%;cursor:nwse-resize"></div>
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:14px">
@@ -11707,6 +11715,26 @@ function openCropScan(){
     </div>`;
   document.body.appendChild(overlay);
   initCropBoxInteraction();
+}
+
+function _updateCropDimPanels(){
+  const box=document.getElementById('crop-box');
+  const cont=document.getElementById('crop-container');
+  if(!box||!cont)return;
+  const cw=cont.offsetWidth,ch=cont.offsetHeight;
+  const bl=box.offsetLeft,bt=box.offsetTop,bw=box.offsetWidth,bh=box.offsetHeight;
+  const top=document.getElementById('crop-dim-top');
+  const bottom=document.getElementById('crop-dim-bottom');
+  const left=document.getElementById('crop-dim-left');
+  const right=document.getElementById('crop-dim-right');
+  // Top: full width, dari 0 sampai atas box
+  top.style.left='0px';top.style.top='0px';top.style.width=cw+'px';top.style.height=bt+'px';
+  // Bottom: full width, dari bawah box sampai akhir container
+  bottom.style.left='0px';bottom.style.top=(bt+bh)+'px';bottom.style.width=cw+'px';bottom.style.height=Math.max(0,ch-(bt+bh))+'px';
+  // Left: dari atas box sampai bawah box, kiri saja
+  left.style.left='0px';left.style.top=bt+'px';left.style.width=bl+'px';left.style.height=bh+'px';
+  // Right: dari atas box sampai bawah box, kanan saja
+  right.style.left=(bl+bw)+'px';right.style.top=bt+'px';right.style.width=Math.max(0,cw-(bl+bw))+'px';right.style.height=bh+'px';
 }
 
 function initCropBoxInteraction(){
@@ -11720,6 +11748,7 @@ function initCropBoxInteraction(){
     box.style.top=Math.round(ch*0.1)+'px';
     box.style.width=Math.round(cw*0.8)+'px';
     box.style.height=Math.round(ch*0.8)+'px';
+    _updateCropDimPanels();
   });
   let dragging=false,resizingBox=false,sx=0,sy=0;
   function getXY(e){return e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};}
@@ -11737,6 +11766,7 @@ function initCropBoxInteraction(){
     nx=Math.max(0,Math.min(nx,Math.max(0,maxX)));
     ny=Math.max(0,Math.min(ny,Math.max(0,maxY)));
     box.style.left=nx+'px';box.style.top=ny+'px';
+    _updateCropDimPanels();
   }
   function doResize(p){
     const cr=cont.getBoundingClientRect();
@@ -11746,6 +11776,7 @@ function initCropBoxInteraction(){
     nw=Math.max(40,Math.min(nw,maxW));
     nh=Math.max(40,Math.min(nh,maxH));
     box.style.width=nw+'px';box.style.height=nh+'px';
+    _updateCropDimPanels();
   }
   document.addEventListener('mousemove',e=>{
     if(dragging)doDrag(getXY(e));
@@ -11820,20 +11851,56 @@ function applyCrop(){
 async function doScanOCRGratis(){
   if(!_scanImageBase64)return;
   const btn=document.getElementById('btn-scan-ocr');
-  btn.disabled=true;btn.textContent='⏳ Membaca teks...';
-  document.getElementById('scan-status').textContent='OCR sedang membaca teks dari kartu nama, sebentar ya...';
+  btn.disabled=true;btn.textContent='⏳ Menyiapkan gambar...';
+  document.getElementById('scan-status').textContent='Mempertajam gambar dulu biar OCR lebih akurat...';
   try{
+    // ── Pre-processing: grayscale + tingkatkan kontras ──
+    // Tesseract jauh lebih akurat di gambar hitam-putih kontras tinggi
+    // dibanding foto berwarna biasa.
     const imgSrc='data:image/jpeg;base64,'+_scanImageBase64;
-    const result=await Tesseract.recognize(imgSrc,'ind+eng',{});
+    const processedSrc=await new Promise((resolve)=>{
+      const img=new Image();
+      img.onload=function(){
+        // Upscale 1.5x kalau gambar kecil — bantu OCR baca huruf kecil
+        const scale=img.width<1000?1.5:1;
+        const canvas=document.createElement('canvas');
+        canvas.width=Math.round(img.width*scale);
+        canvas.height=Math.round(img.height*scale);
+        const ctx=canvas.getContext('2d');
+        ctx.imageSmoothingEnabled=true;
+        ctx.imageSmoothingQuality='high';
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        const imgData=ctx.getImageData(0,0,canvas.width,canvas.height);
+        const d=imgData.data;
+        // Grayscale + peningkatan kontras sederhana
+        const contrast=1.35; // >1 = lebih kontras
+        const intercept=128*(1-contrast);
+        for(let i=0;i<d.length;i+=4){
+          const gray=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+          let v=gray*contrast+intercept;
+          v=Math.max(0,Math.min(255,v));
+          d[i]=d[i+1]=d[i+2]=v;
+        }
+        ctx.putImageData(imgData,0,0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.src=imgSrc;
+    });
+    btn.textContent='⏳ Membaca teks...';
+    document.getElementById('scan-status').textContent='OCR sedang membaca teks dari kartu nama, sebentar ya...';
+    const result=await Tesseract.recognize(processedSrc,'ind+eng',{
+      tessedit_pageseg_mode:6 // asumsikan 1 blok teks seragam — lebih akurat untuk kartu nama tunggal
+    });
     const raw=result.data.text;
-    // Parse sederhana: cari email, telepon, website, nama dll
-    const emailMatch=raw.match(/[\w.\-+]+@[\w.\-]+\.[a-z]{2,}/i);
-    const phoneMatches=raw.match(/(\+?62|0)[\s\-]?\d{2,4}[\s\-]?\d{3,4}[\s\-]?\d{3,6}/g)||[];
-    const websiteMatch=raw.match(/(?:www\.|https?:\/\/)[^\s]+/i);
-    const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
-    // Nama biasanya baris pertama yang bukan nomor/simbol
-    const nameLine=lines.find(l=>/^[A-Za-z\s.,']+$/.test(l)&&l.split(' ').length>=2)||lines[0]||'';
-    // Perusahaan: cari baris dengan PT/CV/Tbk/Ltd/Corp
+    // Parse: cari email, telepon, website, nama dll
+    const emailMatch=raw.match(/[\w.\-+]+@[\w.\-]+\.[a-zA-Z]{2,}/);
+    // Nomor telepon Indonesia — lebih ketat, hindari salah tangkap angka random
+    const phoneMatches=[...raw.matchAll(/(?:\+62|62|0)[\s.\-]?8\d{2}[\s.\-]?\d{3,4}[\s.\-]?\d{3,5}|(?:\+62|62|0)[\s.\-]?2[1-9][\s.\-]?\d{3,4}[\s.\-]?\d{3,5}/g)].map(m=>m[0]);
+    const websiteMatch=raw.match(/(?:www\.|https?:\/\/)[^\s,]+/i);
+    const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l.length>1);
+    // Nama: baris huruf saja, 2+ kata, tidak ada digit, biasanya di awal & huruf besar
+    const nameCandidate=lines.find(l=>/^[A-Za-z\s.,'\-]+$/.test(l)&&l.split(' ').filter(Boolean).length>=2&&l.length<50&&!/\b(PT|CV|Tbk|Director|Manager|Tel|Fax|Email|Phone|Mobile|HP)\b/i.test(l));
+    const nameLine=nameCandidate||lines[0]||'';
     const compLine=lines.find(l=>/\b(PT\.?|CV\.?|Tbk|Ltd|Corp|Inc|Group|Indonesia)\b/i.test(l))||'';
     const jabLine=lines.find(l=>/\b(Director|Manager|President|CEO|CFO|Direktur|Manajer|Staff|Engineer|Head|Chief|Officer|Supervisor)\b/i.test(l))||'';
     const addrLine=lines.find(l=>/\b(Jl\.|Jalan|Street|Ave|Blvd|No\.|Lot|Floor|Fl\.|Suite|Tower|Building|Gedung)\b/i.test(l))||'';
@@ -11863,7 +11930,7 @@ async function doScanOCRGratis(){
       ${_scanHasil.address?`<div>📍 <b>Alamat:</b> ${_scanHasil.address}</div>`:''}
     `;
     document.getElementById('btn-scan-simpan').style.display='inline-flex';
-    document.getElementById('scan-status').innerHTML='✅ Selesai! OCR kadang kurang akurat — <b>cek dulu sebelum simpan</b> ya.';
+    document.getElementById('scan-status').innerHTML='✅ Selesai! OCR gratis tidak akan 100% akurat — <b>cek dulu sebelum simpan</b> ya. Untuk hasil terbaik, pakai 🤖 Scan AI.';
     btn.textContent='🔄 Scan Ulang';btn.disabled=false;
   }catch(err){
     document.getElementById('scan-status').textContent='❌ OCR gagal: '+err.message;
