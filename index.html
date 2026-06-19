@@ -3158,6 +3158,58 @@ async function sbSave(data){
   });
 }
 
+// ================================================================
+//  SUPABASE STORAGE — Foto Kartu Nama (bucket: SiAkun, folder: kartu-nama)
+//  Disimpan sebagai file di Storage, bukan base64 di localStorage,
+//  supaya tidak bikin penyimpanan browser penuh.
+// ================================================================
+const STORAGE_BUCKET='SiAkun';
+const STORAGE_FOLDER='kartu-nama';
+
+// Upload foto (dataUrl base64) ke Supabase Storage, return URL publik
+async function uploadFotoKartuNama(dataUrl,contactId){
+  // dataUrl format: "data:image/jpeg;base64,XXXXX"
+  const match=dataUrl.match(/^data:(image\/\w+);base64,(.*)$/);
+  if(!match)throw new Error('Format foto tidak valid');
+  const mime=match[1];
+  const base64=match[2];
+  // base64 → binary blob
+  const byteChars=atob(base64);
+  const byteNumbers=new Array(byteChars.length);
+  for(let i=0;i<byteChars.length;i++)byteNumbers[i]=byteChars.charCodeAt(i);
+  const blob=new Blob([new Uint8Array(byteNumbers)],{type:mime});
+  const ext=mime.split('/')[1]||'jpg';
+  const path=`${STORAGE_FOLDER}/${contactId}_${Date.now()}.${ext}`;
+  const r=await fetch(`${SUPA_URL}/storage/v1/object/${STORAGE_BUCKET}/${path}`,{
+    method:'POST',
+    headers:{
+      'apikey':SUPA_KEY,
+      'Authorization':'Bearer '+SUPA_KEY,
+      'Content-Type':mime
+    },
+    body:blob
+  });
+  if(!r.ok){
+    const errText=await r.text();
+    throw new Error('Upload gagal: '+errText);
+  }
+  // URL publik (karena bucket PUBLIC)
+  return `${SUPA_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${path}`;
+}
+
+// Hapus foto lama dari Storage (best-effort, tidak throw kalau gagal)
+async function hapusFotoKartuNamaDariStorage(publicUrl){
+  if(!publicUrl||!publicUrl.includes('/storage/v1/object/public/'))return;
+  try{
+    const path=publicUrl.split(`/storage/v1/object/public/${STORAGE_BUCKET}/`)[1];
+    if(!path)return;
+    await fetch(`${SUPA_URL}/storage/v1/object/${STORAGE_BUCKET}/${path}`,{
+      method:'DELETE',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+  }catch(e){console.warn('Hapus foto storage gagal (diabaikan):',e);}
+}
+
 // ── Pastikan accounts selalu format Kledo ──
 function ensureKledoCOA(db){
   // [FIXED] Never overwrite user CoA — localStorage siakun_coa_v2 is the single source
@@ -4378,7 +4430,7 @@ function dashAssetChart(mode){
 
 function renderContacts(c){
   const ta=document.getElementById('topbar-actions');
-  ta.innerHTML=`<button class="btn btn-pri" onclick="openContact()">${t('btn_add')} ${getLang()==='id'?'Kontak':'Contact'}</button><button class="btn btn-out" onclick="openScanKartuNama()" style="background:#f0fdf4;border-color:#86efac;color:#16a34a">📷 Scan Kartu Nama</button><button class="btn btn-out" onclick="exportContacts()">⬇ Excel</button>`;
+  ta.innerHTML=`<button class="btn btn-pri" onclick="openContact()">${t('btn_add')} ${getLang()==='id'?'Kontak':'Contact'}</button><button class="btn btn-out" onclick="openScanKartuNama()" style="background:#f0fdf4;border-color:#86efac;color:#16a34a">📷 Scan Kartu Nama</button><button class="btn btn-out" onclick="exportContacts()">⬇ Excel</button><button class="btn btn-out" onclick="exportContactsPDF()">📄 PDF (dgn foto)</button>`;
   const total=DB.contacts.length;
   c.innerHTML=`
   <div style="margin-bottom:10px;font-size:13px;color:#64748b">Total kontak: <strong style="color:#0f172a">${total}</strong></div>
@@ -4496,7 +4548,7 @@ function previewFotoKartu(input){
   reader.readAsDataURL(file);
 }
 function hapusFotoKartu(){_ctFotoBase64='__hapus__';document.getElementById('ct-foto-preview').innerHTML='<span style="font-size:24px">🪪</span>';}
-function saveContact(){
+async function saveContact(){
   const name=v('ct-name'),type=v('ct-type');
   const jabatan=v('ct-jabatan'),perusahaan=v('ct-perusahaan');
   const hp1=v('ct-hp1'),hp2=v('ct-hp2'),hp3=v('ct-hp3');
@@ -4506,28 +4558,116 @@ function saveContact(){
   const phone=hp1;
   if(!name)return alert('Nama wajib diisi!');
   const data={name,type,jabatan,perusahaan,phone,hp1,hp2,hp3,telpKantor,telpRumah,fax,email,email2,address,npwp,note,website};
+  const saveBtn=document.querySelector('.modal-ft .btn-pri');
+  const targetId=editId||uid();
+  let fotoLamaUntukDihapus=null;
+  // Upload foto baru ke Storage kalau ada perubahan
+  if(_ctFotoBase64&&_ctFotoBase64!=='__hapus__'){
+    if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Upload foto...';}
+    try{
+      const url=await uploadFotoKartuNama(_ctFotoBase64,targetId);
+      data.fotoKartuNama=url;
+      if(editId){const ct=DB.contacts.find(x=>x.id===editId);if(ct&&ct.fotoKartuNama)fotoLamaUntukDihapus=ct.fotoKartuNama;}
+    }catch(e){
+      alert('⚠️ Foto gagal terupload (cek koneksi internet). Data lain tetap disimpan, coba upload foto lagi nanti.');
+      if(editId){const ct=DB.contacts.find(x=>x.id===editId);data.fotoKartuNama=ct?ct.fotoKartuNama||'':'';}
+    }
+    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Save';}
+  } else if(_ctFotoBase64==='__hapus__'){
+    if(editId){const ct=DB.contacts.find(x=>x.id===editId);if(ct&&ct.fotoKartuNama)fotoLamaUntukDihapus=ct.fotoKartuNama;}
+    data.fotoKartuNama='';
+  } else if(editId){
+    const ct=DB.contacts.find(x=>x.id===editId);
+    data.fotoKartuNama=ct?ct.fotoKartuNama||'':'';
+  }
   if(editId){
     const ct=DB.contacts.find(x=>x.id===editId);
-    // update foto: null = tidak ada perubahan, '__hapus__' = hapus, base64 = ganti
-    if(_ctFotoBase64==='__hapus__') data.fotoKartuNama='';
-    else if(_ctFotoBase64) data.fotoKartuNama=_ctFotoBase64;
-    else data.fotoKartuNama=ct.fotoKartuNama||'';
     Object.assign(ct,data);
   } else {
-    if(_ctFotoBase64&&_ctFotoBase64!=='__hapus__') data.fotoKartuNama=_ctFotoBase64;
-    DB.contacts.push({id:uid(),...data});
+    DB.contacts.push({id:targetId,...data});
   }
   _ctFotoBase64=null;
   saveDB();closeModal();nav('contacts');
+  // Hapus foto lama dari Storage di belakang (tidak perlu ditunggu)
+  if(fotoLamaUntukDihapus)hapusFotoKartuNamaDariStorage(fotoLamaUntukDihapus);
 }
-function delContact(id){if(!confirm('Delete this contact?'))return;DB.contacts=DB.contacts.filter(c=>c.id!==id);saveDB();nav('contacts');}
+function delContact(id){
+  if(!confirm('Delete this contact?'))return;
+  const ct=DB.contacts.find(c=>c.id===id);
+  const fotoUrl=ct?ct.fotoKartuNama:null;
+  DB.contacts=DB.contacts.filter(c=>c.id!==id);
+  saveDB();nav('contacts');
+  if(fotoUrl)hapusFotoKartuNamaDariStorage(fotoUrl);
+}
 function exportContacts(){exportXLSX([{name:'Kontak',data:DB.contacts.map(c=>({
   Nama:c.name, Tipe:c.type, Jabatan:c.jabatan||'', Perusahaan:c.perusahaan||'',
   'No HP 1':c.hp1||c.phone||'', 'No HP 2':c.hp2||'', 'No HP 3':c.hp3||'',
   'Telp Kantor':c.telpKantor||'', 'Telp Rumah':c.telpRumah||'', Fax:c.fax||'',
   Email:c.email||'', 'Email 2':c.email2||'',
-  Alamat:c.address||'', NPWP:c.npwp||'', Website:c.website||'', Catatan:c.note||''
+  Alamat:c.address||'', NPWP:c.npwp||'', Website:c.website||'', Catatan:c.note||'',
+  'Foto Kartu Nama':c.fotoKartuNama||''
 }))}],'kontak');}
+
+// ── Export PDF kartu kontak — foto kartu nama tampil langsung ──
+async function exportContactsPDF(){
+  if(!DB.contacts.length)return alert('Belum ada kontak untuk diexport.');
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const pageW=210,pageH=297,margin=12;
+  let y=margin;
+  doc.setFontSize(16);doc.setFont(undefined,'bold');
+  doc.text('Daftar Kontak',margin,y);y+=8;
+  doc.setFontSize(9);doc.setFont(undefined,'normal');
+  doc.text(`Total: ${DB.contacts.length} kontak — dicetak ${today()}`,margin,y);y+=8;
+  for(let i=0;i<DB.contacts.length;i++){
+    const c=DB.contacts[i];
+    const cardH=38;
+    if(y+cardH>pageH-margin){doc.addPage();y=margin;}
+    doc.setDrawColor(226,232,240);doc.roundedRect(margin,y,pageW-margin*2,cardH,2,2);
+    // Foto di kiri (kalau ada)
+    const imgX=margin+3,imgY=y+3,imgW=30,imgH=cardH-6;
+    if(c.fotoKartuNama){
+      try{
+        const imgData=await loadImageAsBase64(c.fotoKartuNama);
+        doc.addImage(imgData,'JPEG',imgX,imgY,imgW,imgH);
+      }catch(e){
+        doc.setFillColor(241,245,249);doc.rect(imgX,imgY,imgW,imgH,'F');
+        doc.setFontSize(7);doc.setTextColor(148,163,184);doc.text('(foto gagal)',imgX+2,imgY+imgH/2);
+      }
+    } else {
+      doc.setFillColor(241,245,249);doc.rect(imgX,imgY,imgW,imgH,'F');
+      doc.setFontSize(7);doc.setTextColor(148,163,184);doc.text('(tanpa foto)',imgX+2,imgY+imgH/2);
+    }
+    // Teks di kanan
+    const txX=margin+38;let ty=y+7;
+    doc.setTextColor(15,23,42);doc.setFontSize(11);doc.setFont(undefined,'bold');
+    doc.text(c.name||'-',txX,ty);ty+=4.5;
+    doc.setFontSize(8);doc.setFont(undefined,'normal');doc.setTextColor(100,116,139);
+    if(c.jabatan){doc.text(c.jabatan,txX,ty);ty+=4;}
+    if(c.perusahaan){doc.setFont(undefined,'bold');doc.setTextColor(30,41,59);doc.text(c.perusahaan,txX,ty);doc.setFont(undefined,'normal');doc.setTextColor(100,116,139);ty+=4;}
+    const kontakInfo=[c.hp1||c.phone,c.telpKantor,c.email].filter(Boolean).join('  |  ');
+    if(kontakInfo){doc.text(kontakInfo,txX,ty,{maxWidth:pageW-margin-txX});ty+=4;}
+    if(c.address){doc.setFontSize(7);doc.text(c.address,txX,ty,{maxWidth:pageW-margin-txX});}
+    y+=cardH+4;
+  }
+  doc.save(`kontak_${today()}.pdf`);
+}
+
+// Helper: load image URL → base64 (untuk jsPDF addImage)
+function loadImageAsBase64(url){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=function(){
+      const canvas=document.createElement('canvas');
+      canvas.width=img.width;canvas.height=img.height;
+      canvas.getContext('2d').drawImage(img,0,0);
+      resolve(canvas.toDataURL('image/jpeg',0.8));
+    };
+    img.onerror=reject;
+    img.src=url;
+  });
+}
 
 // ================================================================
 //  PRODUCTS
@@ -11665,18 +11805,27 @@ Balas HANYA dengan JSON ini, tanpa penjelasan apapun:
   }
 }
 
-function simpanHasilScan(){
+async function simpanHasilScan(){
   if(!_scanHasil.name&&!confirm('Nama tidak terdeteksi otomatis. Tetap simpan dan edit manual?'))return;
-  // Gambar sudah di-rotate & compress di previewScanFile, langsung pakai
-  const fotoSmall='data:image/jpeg;base64,'+_scanImageBase64;
+  const btnSimpan=document.getElementById('btn-scan-simpan');
+  if(btnSimpan){btnSimpan.disabled=true;btnSimpan.textContent='⏳ Menyimpan foto...';}
+  const newId='ct_'+Date.now();
   const newContact={
-    id:'ct_'+Date.now(),
+    id:newId,
     ..._scanHasil,
     name:_scanHasil.name||'(edit nama)',
     phone:_scanHasil.hp1||'',
     type:'kontak',
-    fotoKartuNama:fotoSmall
+    fotoKartuNama:'' // diisi setelah upload sukses
   };
+  try{
+    const fotoSmall='data:image/jpeg;base64,'+_scanImageBase64;
+    const url=await uploadFotoKartuNama(fotoSmall,newId);
+    newContact.fotoKartuNama=url;
+  }catch(e){
+    console.warn('Upload foto ke Storage gagal, kontak disimpan tanpa foto:',e);
+    alert('⚠️ Kontak disimpan, tapi foto kartu nama gagal terupload (cek koneksi internet). Bisa upload ulang lewat Edit kontak.');
+  }
   DB.contacts.push(newContact);
   saveDB();
   closeModal();
