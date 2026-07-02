@@ -10653,6 +10653,33 @@ function printReceipt(id){
 function delReceipt(id){if(!confirm('Hapus kwitansi ini secara permanen?'))return;DB.receipts=(DB.receipts||[]).filter(r=>r.id!==id);saveDB();nav('receipts');}
 
 
+function formatSyaratHtml(syarat){
+  if(!syarat)return'';
+  let html='',open=false;
+  syarat.split('\n').forEach(raw=>{
+    if(!raw.trim())return;
+    const isSub=/^[ \t]/.test(raw);
+    const text=raw.trim();
+    if(isSub&&open){
+      html+=`<div style="padding-left:14px;margin-top:1px">${text}</div>`;
+    } else {
+      if(open)html+='</li>';
+      html+=`<li>${text}`;
+      open=true;
+    }
+  });
+  if(open)html+='</li>';
+  return `<ul style="margin:6px 0 0;padding-left:18px;line-height:1.9">${html}</ul>`;
+}
+function formatSignatoryHtml(str){
+  if(!str)return'-';
+  const idx=str.indexOf(' - ');
+  if(idx===-1)return str;
+  const name=str.slice(0,idx).trim();
+  const role=str.slice(idx+3).trim();
+  return `${name}<br><span style="font-weight:400;font-size:11px;color:#64748b">${role}</span>`;
+}
+
 function genSphId(){
   const yr=new Date().getFullYear();
   const nums=(DB.sphs||[]).map(s=>{
@@ -10839,7 +10866,8 @@ function openAddSph(id){
     </div>
     <div style="padding:0 28px 20px">
       <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">SYARAT & KETENTUAN</label>
-      <textarea id="sph-syarat" rows="6" placeholder="Tulis 1 poin per baris, contoh:&#10;Harga di atas belum termasuk PPN 11%.&#10;Harga di atas belum termasuk biaya pengiriman.&#10;Penawaran berlaku 14 hari sejak tanggal quotation." style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical">${s?s.syarat:''}</textarea>
+      <textarea id="sph-syarat" rows="7" placeholder="Tulis 1 poin per baris. Kasih SPASI di depan baris untuk menjadikannya sub-baris (tanpa bullet) di bawah poin sebelumnya, contoh:&#10;Harga di atas belum termasuk PPN 11%.&#10;Pembayaran melalui Bank Mandiri, Cabang Cideng, Jakarta&#10;  Atas Nama: Andri Ajis&#10;  Nomor Rekening: 1210004693135&#10;Penawaran berlaku 14 hari sejak tanggal quotation." style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical">${s?s.syarat:''}</textarea>
+      <p style="font-size:10.5px;color:#94a3b8;margin:4px 0 0">Tips: baris yang diberi spasi/indent di depan akan tampil sebagai sub-baris tanpa bullet, menempel di bawah poin di atasnya.</p>
     </div>
     <div style="padding:16px 28px;background:#f8fafc;border-top:1px solid #f1f5f9;display:flex;justify-content:flex-end;gap:10px">
       <button onclick="document.getElementById('sph-modal').remove()" style="padding:9px 20px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;color:#475569">Batal</button>
@@ -10967,7 +10995,7 @@ function viewSph(id){
         <tbody>${(s.items||[]).map(i=>`<tr style="border-top:1px solid #f1f5f9"><td style="padding:9px 12px">${i.desc||'-'}</td><td style="padding:9px 8px;text-align:right">${i.qty}</td><td style="padding:9px 8px">${i.satuan||''}</td><td style="padding:9px 8px;text-align:right">${rp(i.harga||0)}</td><td style="padding:9px 8px;text-align:right;font-weight:600">${rp((i.qty||0)*(i.harga||0))}</td></tr>`).join('')}</tbody>
         <tfoot><tr style="background:#f8fafc;border-top:2px solid #e2e8f0"><td colspan="4" style="padding:10px 12px;text-align:right;font-weight:700;font-size:13px">TOTAL</td><td style="padding:10px 8px;text-align:right;font-weight:800;font-size:14px;color:#0e7490">${rp(total)}</td></tr></tfoot>
       </table>
-      ${s.syarat?`<div style="margin-top:14px;padding:12px 14px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#78350f"><b>Syarat & Ketentuan:</b><ul style="margin:6px 0 0;padding-left:18px;line-height:1.9">${s.syarat.split('\n').map(l=>l.trim()).filter(l=>l).map(l=>`<li>${l}</li>`).join('')}</ul></div>`:''}
+      ${s.syarat?`<div style="margin-top:14px;padding:12px 14px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#78350f"><b>Syarat & Ketentuan:</b>${formatSyaratHtml(s.syarat)}</div>`:''}
     </div>
     <div style="padding:16px 28px;background:#f8fafc;border-top:1px solid #f1f5f9;display:flex;justify-content:flex-end;gap:10px">
       <button onclick="document.getElementById('sph-view-modal').remove();openAddSph('${s.id}')" style="padding:9px 20px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;color:#475569">✏️ Edit</button>
@@ -11108,13 +11136,13 @@ function printSph(id){
           <td style="text-align:right;padding:12px 8px;font-size:15px;font-weight:900;color:#0e7490;white-space:nowrap">${rp(total)}</td>
         </tr></tfoot>
       </table>
-      ${s.syarat?`<div class="syarat"><div class="syarat-label">Syarat &amp; Ketentuan:</div><ul style="margin:6px 0 0;padding-left:18px;line-height:1.9">${s.syarat.split('\n').map(l=>l.trim()).filter(l=>l).map(l=>`<li>${l}</li>`).join('')}</ul></div>`:''}
+      ${s.syarat?`<div class="syarat"><div class="syarat-label">Syarat &amp; Ketentuan:</div>${formatSyaratHtml(s.syarat)}</div>`:''}
       <div class="sig">
         <div class="sig-col">
           <div class="sig-kota">${kota}, ${tglSph}</div>
           <div class="sig-label" style="padding-bottom:${s.ttd?'6px':'50px'}">Dibuat oleh,</div>
           ${s.ttd?`<img src="${s.ttd}" style="height:50px;object-fit:contain;display:block;margin:0 auto 4px">`:''}
-          <div class="sig-name">${s.penandatangan||co.signatory||'-'}</div>
+          <div class="sig-name">${formatSignatoryHtml(s.penandatangan||co.signatory||'')}</div>
         </div>
       </div>
       <div style="margin-top:18px;font-size:10px;color:#94a3b8;text-align:center;font-style:italic">Dokumen ini diterbitkan secara elektronik dan tetap sah / valid meskipun tanpa tanda tangan basah atau digital.</div>
