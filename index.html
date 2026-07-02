@@ -10756,6 +10756,7 @@ function openAddSph(id){
   </tr>`).join('');
 
   window._sphItems=items.map(x=>({...x}));
+  window._sphTtd=s&&s.ttd?s.ttd:'';
 
   const mo=document.createElement('div');
   mo.id='sph-modal';
@@ -10797,6 +10798,17 @@ function openAddSph(id){
         <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">DITANDATANGANI OLEH (Nama - Jabatan)</label>
         <input id="sph-penandatangan" value="${s&&s.penandatangan?s.penandatangan:(DB.company&&DB.company.signatory?DB.company.signatory:'')}" placeholder="Contoh: Andri Ajis - Manager Marketing" style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
       </div>
+      <div style="grid-column:1/-1">
+        <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">TANDA TANGAN DIGITAL (opsional)</label>
+        <div style="margin-top:5px;display:flex;align-items:center;gap:14px">
+          <div class="logo-upload-area" style="width:180px;padding:10px;flex-shrink:0">
+            <input type="file" accept="image/*" onchange="handleSphTtdUpload(this)">
+            <div id="sph-ttd-pw">${window._sphTtd?`<img src="${window._sphTtd}" class="logo-preview" style="max-height:56px">`:`<div style="font-size:18px;margin-bottom:2px">✍️</div><p style="font-size:10.5px;color:var(--muted)">Klik untuk upload foto/scan TTD</p>`}</div>
+          </div>
+          <div id="sph-ttd-actions">${window._sphTtd?`<button type="button" class="btn btn-bad btn-xs" onclick="removeSphTtd()">✕ Hapus TTD</button>`:''}</div>
+          <p style="font-size:11px;color:#94a3b8;line-height:1.5;margin:0">Gunakan foto tanda tangan di atas kertas putih, atau tanda tangan di app seperti Notes/Paint lalu screenshot. Format PNG dengan latar transparan hasilnya paling rapi.</p>
+        </div>
+      </div>
       <div>
         <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">STATUS</label>
         <select id="sph-status" style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
@@ -10836,6 +10848,26 @@ function openAddSph(id){
     </div>
   </div>`;
   document.body.appendChild(mo);
+}
+
+function handleSphTtdUpload(input){
+  const f=input.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    window._sphTtd=e.target.result;
+    const w=document.getElementById('sph-ttd-pw');
+    if(w)w.innerHTML=`<img src="${window._sphTtd}" class="logo-preview" style="max-height:56px">`;
+    const a=document.getElementById('sph-ttd-actions');
+    if(a)a.innerHTML=`<button type="button" class="btn btn-bad btn-xs" onclick="removeSphTtd()">✕ Hapus TTD</button>`;
+  };
+  reader.readAsDataURL(f);
+}
+function removeSphTtd(){
+  window._sphTtd='';
+  const w=document.getElementById('sph-ttd-pw');
+  if(w)w.innerHTML=`<div style="font-size:18px;margin-bottom:2px">✍️</div><p style="font-size:10.5px;color:var(--muted)">Klik untuk upload foto/scan TTD</p>`;
+  const a=document.getElementById('sph-ttd-actions');
+  if(a)a.innerHTML='';
 }
 
 function sphAddRow(){
@@ -10888,6 +10920,7 @@ function saveSph(asDraft){
   const berlaku=document.getElementById('sph-berlaku').value;
   const syarat=document.getElementById('sph-syarat').value.trim();
   const penandatangan=document.getElementById('sph-penandatangan').value.trim();
+  const ttd=window._sphTtd||'';
   const statusEl=document.getElementById('sph-status').value;
   if(!noSph||!tgl||!pihak)return alert('No. SPH, Tanggal, dan Nama Pihak wajib diisi.');
   const items=(window._sphItems||[]).filter(i=>i.desc||i.harga>0);
@@ -10896,9 +10929,9 @@ function saveSph(asDraft){
   const now=Date.now();
   if(window._sphEditId){
     const idx=DB.sphs.findIndex(x=>x.id===window._sphEditId);
-    if(idx>-1){DB.sphs[idx]={...DB.sphs[idx],noSph,tanggal:tgl,tujuan,pihak,perihal,berlaku,syarat,penandatangan,items,status,updated_at:now};}
+    if(idx>-1){DB.sphs[idx]={...DB.sphs[idx],noSph,tanggal:tgl,tujuan,pihak,perihal,berlaku,syarat,penandatangan,ttd,items,status,updated_at:now};}
   } else {
-    DB.sphs.push({id:uid(),noSph,tanggal:tgl,tujuan,pihak,perihal,berlaku,syarat,penandatangan,items,status,link_invoice_id:null,created_at:now,updated_at:now});
+    DB.sphs.push({id:uid(),noSph,tanggal:tgl,tujuan,pihak,perihal,berlaku,syarat,penandatangan,ttd,items,status,link_invoice_id:null,created_at:now,updated_at:now});
   }
   saveDB();
   document.getElementById('sph-modal').remove();
@@ -10925,6 +10958,7 @@ function viewSph(id){
       <div><span style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px">TUJUAN</span><div style="margin-top:4px;font-weight:600">${s.tujuan==='customer'?'Customer':'Vendor'}</div></div>
       <div><span style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px">STATUS</span><div style="margin-top:4px">${{draft:'<span style="background:#fef9c3;color:#854d0e;font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600">Draft</span>',sent:'<span style="background:#dbeafe;color:#1e40af;font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600">Terkirim</span>',accepted:'<span style="background:#d1fae5;color:#065f46;font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600">Diterima</span>',rejected:'<span style="background:#fee2e2;color:#991b1b;font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600">Ditolak</span>'}[s.status]||s.status}</div></div>
       <div style="grid-column:1/-1"><span style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px">PIHAK</span><div style="margin-top:4px;font-weight:600">${s.pihak||'-'}</div></div>
+      <div style="grid-column:1/-1"><span style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px">TANDA TANGAN DIGITAL</span><div style="margin-top:4px">${s.ttd?`<img src="${s.ttd}" style="height:40px;object-fit:contain;display:block">`:'<span style="color:#94a3b8;font-size:12px">Belum diupload (dokumen tetap sah)</span>'}</div></div>
     </div>
     <div style="padding:0 28px 20px">
       <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px;margin-bottom:10px">ITEM</div>
@@ -10972,15 +11006,15 @@ function printSph(id){
       <td style="padding:9px 12px">${it.desc||'-'}</td>
       <td style="padding:9px 8px;text-align:center">${it.qty||0}</td>
       <td style="padding:9px 8px;text-align:center">${it.satuan||'unit'}</td>
-      <td style="padding:9px 8px;text-align:right">${rp(it.harga||0)}</td>
-      <td style="padding:9px 8px;text-align:right;font-weight:700">${rp((parseFloat(it.qty)||0)*(parseFloat(it.harga)||0))}</td>
+      <td style="padding:9px 8px;text-align:right;white-space:nowrap">${rp(it.harga||0)}</td>
+      <td style="padding:9px 8px;text-align:right;font-weight:700;white-space:nowrap">${rp((parseFloat(it.qty)||0)*(parseFloat(it.harga)||0))}</td>
     </tr>`).join('');
   const statusLabel={draft:'DRAFT',sent:'TERKIRIM',accepted:'DITERIMA',rejected:'DITOLAK'}[s.status]||'';
   const tujuanLabel=s.tujuan==='vendor'?'Permintaan Harga kepada Vendor':'Penawaran Harga kepada Customer';
   const w=window.open('','_blank','width=860,height=760,scrollbars=yes');
   if(!w)return alert('Pop-up diblokir browser. Izinkan pop-up untuk mencetak.');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>SPH ${s.noSph}<\/title>
+  <title>${s.noSph}<\/title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:'Segoe UI',Arial,sans-serif;background:#f1f5f9;padding:30px;color:#1e293b;}
@@ -11071,17 +11105,19 @@ function printSph(id){
         <tbody>${itemRows}</tbody>
         <tfoot><tr>
           <td colspan="5" style="text-align:right;padding:12px 8px;font-size:13px;font-weight:800;color:#0f172a">TOTAL</td>
-          <td style="text-align:right;padding:12px 8px;font-size:15px;font-weight:900;color:#0e7490">${rp(total)}</td>
+          <td style="text-align:right;padding:12px 8px;font-size:15px;font-weight:900;color:#0e7490;white-space:nowrap">${rp(total)}</td>
         </tr></tfoot>
       </table>
       ${s.syarat?`<div class="syarat"><div class="syarat-label">Syarat &amp; Ketentuan:</div><ul style="margin:6px 0 0;padding-left:18px;line-height:1.9">${s.syarat.split('\n').map(l=>l.trim()).filter(l=>l).map(l=>`<li>${l}</li>`).join('')}</ul></div>`:''}
       <div class="sig">
         <div class="sig-col">
           <div class="sig-kota">${kota}, ${tglSph}</div>
-          <div class="sig-label">Dibuat oleh,</div>
+          <div class="sig-label" style="padding-bottom:${s.ttd?'6px':'50px'}">Dibuat oleh,</div>
+          ${s.ttd?`<img src="${s.ttd}" style="height:50px;object-fit:contain;display:block;margin:0 auto 4px">`:''}
           <div class="sig-name">${s.penandatangan||co.signatory||'-'}</div>
         </div>
       </div>
+      <div style="margin-top:18px;font-size:10px;color:#94a3b8;text-align:center;font-style:italic">Dokumen ini diterbitkan secara elektronik dan tetap sah / valid meskipun tanpa tanda tangan basah atau digital.</div>
     </div>
     <div class="no-print">
       <button class="btn-c" onclick="window.close()">&#x2715; Tutup</button>
