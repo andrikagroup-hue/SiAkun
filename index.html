@@ -11,6 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -917,6 +918,7 @@ items:[
 ['📊','Expense Analytics',"nav('expenseChart')"],
 ['🎯','Budget',"nav('budget')"],
 ['🏢','Aset Tetap',"nav('assets')"],
+['📋','Inventory',"nav('inventory')"],
 ['📆','Prepaid',"nav('prepaid')"]
 ]},
 
@@ -942,7 +944,8 @@ items:[
   items:[
     ['📄','BAST',"nav('basts')"],
     ['🧾','Kwitansi',"nav('receipts')"],
-    ['📑','SPH',"nav('sphs')"]
+    ['📑','SPH',"nav('sphs')"],
+    ['💲','Referensi Harga',"nav('pricerefs')"]
   ]
 }
 };
@@ -1010,7 +1013,7 @@ const TR={
     nav_contacts:'Kontak',nav_accounts:'Bagan Akun (CoA)',
     nav_journal:'Jurnal Umum',nav_ledger:'Buku Besar',
     nav_reports:'Laporan Keuangan',nav_transactions:'Pemasukan & Pengeluaran',
-    nav_budget:'Anggaran & Perencanaan',nav_assets:'Aset Tetap',
+    nav_budget:'Anggaran & Perencanaan',nav_assets:'Aset Tetap',nav_inventory:'Inventory',
     nav_payroll:'Penggajian',nav_tax:'Pajak (PPN & PPh)',
     nav_receipts:'Kwitansi',nav_settings:'Pengaturan & Ekspor',nav_rekon:'Rekonsiliasi Bank',nav_faq:'FAQ & Panduan',
     nav_users:'Manajemen Pengguna',nav_audit:'Jejak Audit',
@@ -1021,7 +1024,7 @@ const TR={
     page_contacts:'Kontak',page_accounts:'Bagan Akun (CoA)',
     page_journal:'Jurnal Umum',page_ledger:'Buku Besar',
     page_reports:'Laporan Keuangan',page_transactions:'Pemasukan & Pengeluaran',
-    page_budget:'Anggaran & Perencanaan',page_assets:'Aset Tetap',
+    page_budget:'Anggaran & Perencanaan',page_assets:'Aset Tetap',page_inventory:'Inventory Barang',
     page_payroll:'Penggajian',page_tax:'Pajak (PPN & PPh)',
     page_receipts:'Kwitansi',page_settings:'Pengaturan & Ekspor',
     page_users:'Manajemen Pengguna',page_audit:'Jejak Audit',page_basts:'BAST',page_faq:'FAQ & Panduan',
@@ -3371,6 +3374,8 @@ function migrateV2(old){
   d.budgets=old.budgets||[];
   d.assets=old.assets||[];
   d.receipts=old.receipts||[];
+  d.inventory=old.inventory||[];
+  d.invMaster=old.invMaster||{};
   return d;
 }
 
@@ -3379,7 +3384,7 @@ function defaultDB(){
     company:{name:'Andrika Mitra Solusi',npwp:'00.000.000.0-000.000',address:'Jakarta, Indonesia',phone:'021-0000000',email:'info@andrikamitra.co.id',year:new Date().getFullYear(),logo:''},
     accounts:[],  // [FIXED] No default accounts — use Import or Add Account
     contacts:[],products:[],invoices:[],purchases:[],transactions:[],quicktx:[],
-    employees:[],payroll:[],budgets:[],assets:[],receipts:[],
+    employees:[],payroll:[],budgets:[],assets:[],receipts:[],inventory:[],invMaster:{},
     users:[
     {id:'usr_ratu',username:'Ratu',password:'',role:'Admin',name:'Ratu Azzahra',bypassPassword:true,createdAt:new Date().toISOString()},
     {id:'usr_admin',username:'admin',password:'AMS2025!',role:'Admin',name:'Administrator',createdAt:new Date().toISOString()},
@@ -3898,6 +3903,7 @@ function nav(page){
     if(!DB.receipts)DB.receipts=[];
     if(!DB.sphs)DB.sphs=[];
     if(!DB.quicktx)DB.quicktx=[];
+    if(!DB.priceRefs)DB.priceRefs=[];
   }
   // Auto-close sidebar di mobile setelah pilih menu
   if(window.innerWidth<=768)closeSidebar();
@@ -3914,7 +3920,7 @@ function nav(page){
   destroyCharts();
   const c=document.getElementById('content');
   c.innerHTML='';
-  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,prepaid:renderPrepaid,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,sphs:renderSphs,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon,expenseChart:renderExpenseChart,operator:renderOperator,basts:renderBasts,faq:renderFAQ};
+  const pages={dashboard:renderDashboard,invoices:renderInvoices,ar:renderAR,purchases:renderPurchases,ap:renderAP,products:renderProducts,contacts:renderContacts,accounts:renderAccounts,journal:renderJournal,ledger:renderLedger,reports:renderReports,transactions:renderTransactions,budget:renderBudget,assets:renderAssets,inventory:renderInventory,invlabels:renderInvLabels,prepaid:renderPrepaid,payroll:renderPayroll,calendar:renderCalendar,tax:renderTax,receipts:renderReceipts,sphs:renderSphs,settings:renderSettings,users:renderUsers,audit:renderAudit,rekon:renderRekon,expenseChart:renderExpenseChart,operator:renderOperator,basts:renderBasts,faq:renderFAQ,pricerefs:renderPriceRefs};
   if(pages[page]){
     try{pages[page](c);}catch(e){
       console.error('[SiAkun]',page,e);
@@ -6353,6 +6359,7 @@ function renderJournal(c){
         <div class="rpt-print-dd-item" onclick="alert('Ganti Layout belum tersedia.')">⊞ Ganti Layout</div>
       </div>
     </div>
+    <button class="rpt-kledo-btn" onclick="openImportJournalExcel()">📥 Import Cash Report</button>
     ${_hasCR?'<button class="rpt-kledo-btn" style="color:#dc2626;border-color:#fecaca" onclick="undoCashReportImport()">🗑 Hapus Import BSI</button>':''}
     <button class="btn btn-pri" onclick="openAddJournal()" style="margin-left:8px">+ Tambah Jurnal</button>`;
   // Wire dropdowns
@@ -8903,7 +8910,7 @@ function renderAssets(c){
   <div class="card"><div class="tbl-wrap"><table>
     <thead><tr><th>Nama Aset</th><th>Kategori</th><th>Tgl Perolehan</th><th>Nilai Perolehan</th><th>Metode</th><th>Umur (Thn)</th><th>Penyusutan/thn</th><th>Akum.</th><th>Nilai Buku</th><th>Aksi</th></tr></thead>
     <tbody>
-      ${DB.assets.length?DB.assets.map(a=>{const p=calcPenyusutan(a);return`<tr><td class="fw7">${a.name}</td><td><span class="badge b-info">${a.cat}</span></td><td>${fDate(a.date)}</td><td>${rp(a.value)}</td><td>${a.method}</td><td>${a.life} thn</td><td class="bad">${rp(p.annualDep)}</td><td class="bad">${rp(p.akum)}</td><td class="ok fw7">${rp(p.bookVal)}</td><td class="gap8"><button class="btn btn-out btn-xs" onclick="openEditAsset('${a.id}')">✏️</button><button class="btn btn-bad btn-xs" onclick="delAsset('${a.id}')">✕</button></td></tr>`;}).join(''):`<tr><td colspan="10" class="tbl-empty">Belum ada aset</td></tr>`}
+      ${DB.assets.length?DB.assets.map(a=>{const p=calcPenyusutan(a);const linkBadge=a.sourceInventoryId?' <span class="badge b-info" title="Otomatis dari Inventory">🔗 Inventory</span>':'';const delBtn=a.sourceInventoryId?'':`<button class="btn btn-bad btn-xs" onclick="delAsset('${a.id}')">✕</button>`;return`<tr><td class="fw7">${a.name}${linkBadge}</td><td><span class="badge b-info">${a.cat}</span></td><td>${fDate(a.date)}</td><td>${rp(a.value)}</td><td>${a.method}</td><td>${a.life} thn</td><td class="bad">${rp(p.annualDep)}</td><td class="bad">${rp(p.akum)}</td><td class="ok fw7">${rp(p.bookVal)}</td><td class="gap8"><button class="btn btn-out btn-xs" onclick="openEditAsset('${a.id}')">✏️</button>${delBtn}</td></tr>`;}).join(''):`<tr><td colspan="10" class="tbl-empty">Belum ada aset</td></tr>`}
     </tbody>
   </table></div></div>`;
 
@@ -9027,18 +9034,22 @@ function openEditAsset(id){
   const cats=['Tanah','Bangunan','Kendaraan','Mesin & Peralatan','Inventaris Kantor','Komputer & IT','Lainnya'];
   const catOpts=cats.map(c=>`<option${c===a.cat?' selected':''}>${c}</option>`).join('');
   const methOpts=['Straight-Line','Declining Balance'].map(m=>`<option${m===a.method?' selected':''}>${m}</option>`).join('');
+  const locked=!!a.sourceInventoryId;
+  const roStyle='readonly style="background:#f1f5f9;color:#64748b"';
+  const lockNote=locked?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;font-size:12px;color:#1d4ed8;margin-bottom:10px">🔗 Nama, Kategori, Tanggal, Nilai & Umur barang ini otomatis sinkron dari menu <b>Inventory</b>. Untuk mengubahnya, edit barangnya di menu Inventory. Metode & Nilai Residu tetap bisa diubah di sini.</div>`:'';
   openModal('Edit Fixed Asset',`
+  ${lockNote}
   <input type="hidden" id="as-id" value="${a.id}">
-  <div class="fg"><label>Asset Name</label><input id="as-name" value="${a.name}"></div>
+  <div class="fg"><label>Asset Name</label><input id="as-name" value="${a.name}" ${locked?roStyle:''}></div>
   <div class="fr3">
-    <div class="fg"><label>Category</label><select id="as-cat">${catOpts}</select></div>
-    <div class="fg"><label>Acquisition Date</label><input type="date" id="as-date" value="${a.date}"></div>
+    <div class="fg"><label>Category</label><select id="as-cat" ${locked?'disabled style="background:#f1f5f9;color:#64748b"':''}>${catOpts}</select></div>
+    <div class="fg"><label>Acquisition Date</label><input type="date" id="as-date" value="${a.date}" ${locked?roStyle:''}></div>
     <div class="fg"><label>Method</label><select id="as-method">${methOpts}</select></div>
   </div>
   <div class="fr3">
-    <div class="fg"><label>Acquisition Value</label><input type="number" id="as-value" value="${a.value}"></div>
+    <div class="fg"><label>Acquisition Value</label><input type="number" id="as-value" value="${a.value}" ${locked?roStyle:''}></div>
     <div class="fg"><label>Residual Value</label><input type="number" id="as-residual" value="${a.residual||0}"></div>
-    <div class="fg"><label>Useful Life (Yrs)</label><input type="number" id="as-life" value="${a.life}" min="1"></div>
+    <div class="fg"><label>Useful Life (Yrs)</label><input type="number" id="as-life" value="${a.life}" min="1" ${locked?roStyle:''}></div>
   </div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="updateAsset()">Update Asset</button></div>`);
 }
@@ -9051,8 +9062,528 @@ function updateAsset(){
   DB.assets[idx]={...DB.assets[idx],name,cat,date,method,value,residual,life};
   saveDB();closeModal();nav('assets');
 }
-function delAsset(id){if(!confirm('Delete this asset?'))return;DB.assets=DB.assets.filter(a=>a.id!==id);saveDB();nav('assets');}
+function delAsset(id){
+  const a=DB.assets.find(x=>x.id===id);
+  if(a&&a.sourceInventoryId)return alert('Aset ini otomatis dari Inventory. Untuk menghapus/mengubahnya, buka menu Inventory (ubah Jenis Aset jadi "Non Fixed Asset" atau hapus barangnya).');
+  if(!confirm('Delete this asset?'))return;DB.assets=DB.assets.filter(a=>a.id!==id);saveDB();nav('assets');
+}
 function exportAssets(){exportXLSX([{name:'Aset',data:DB.assets.map(a=>{const p=calcPenyusutan(a);return{Nama:a.name,Kategori:a.cat,'Acquisition Date':a.date,'Acquisition Value':a.value,Method:a.method,'Useful Life (Thn)':a.life,'Akum Penyusutan':p.akum,'Book Value':p.bookVal};})}],'aset_tetap');}
+
+// ===== Tahap 2: Sinkronisasi Inventory -> Aset Tetap =====
+// Barang Inventory yang jenis asetnya "Fixed Asset" otomatis dibuatkan/di-update
+// datanya di modul Aset Tetap (DB.assets), supaya penyusutannya kehitung tanpa isi data 2x.
+const INV_TO_ASSET_CAT={'Furniture':'Inventaris Kantor','IT Equipment':'Komputer & IT','Electronics':'Mesin & Peralatan','Security Equipment':'Mesin & Peralatan','Office Supplies':'Inventaris Kantor','Consumables':'Lainnya','Pantry Supplies':'Lainnya','Cleaning Supplies':'Lainnya','Vehicles':'Kendaraan'};
+function mapInvCatToAssetCat(cat){return INV_TO_ASSET_CAT[cat]||'Lainnya';}
+function syncInventoryAssetLink(item){
+  if(!DB.assets)DB.assets=[];
+  if(item.assetType==='Fixed Asset'){
+    const life=item.life||1;
+    let asset=item.linkedAssetId?DB.assets.find(a=>a.id===item.linkedAssetId):null;
+    if(asset){
+      asset.name=item.name;asset.cat=mapInvCatToAssetCat(item.category);asset.date=item.purchaseDate;asset.value=item.cost;asset.life=life;
+    }else{
+      const newAsset={id:uid(),name:item.name,cat:mapInvCatToAssetCat(item.category),date:item.purchaseDate,method:'Straight-Line',value:item.cost,residual:0,life,sourceInventoryId:item.id};
+      DB.assets.push(newAsset);item.linkedAssetId=newAsset.id;
+    }
+  }else if(item.linkedAssetId){
+    DB.assets=DB.assets.filter(a=>a.id!==item.linkedAssetId);
+    item.linkedAssetId=null;
+  }
+}
+function syncAllInventoryAssets(){
+  if(!DB.assets)DB.assets=[];
+  let changed=false;
+  (DB.inventory||[]).forEach(item=>{
+    if(item.assetType==='Fixed Asset'&&(!item.linkedAssetId||!DB.assets.find(a=>a.id===item.linkedAssetId))){
+      syncInventoryAssetLink(item);changed=true;
+    }
+  });
+  if(changed)saveDB();
+}
+
+CATALOG_PREFIX={'Furniture':'FUR','IT Equipment':'IT','Electronics':'ELC','Security Equipment':'SEC','Office Supplies':'OFF','Consumables':'CON','Pantry Supplies':'PAN','Cleaning Supplies':'CLN','Vehicles':'VEH'};
+// Umur ekonomis default per kategori sesuai Kelompok Harta PPh (fiskal Indonesia) — dipakai kalau barang belum ada di katalog
+const CATEGORY_DEFAULT_LIFE={'Furniture':4,'IT Equipment':4,'Electronics':4,'Security Equipment':4,'Vehicles':4,'Office Supplies':0,'Consumables':0,'Pantry Supplies':0,'Cleaning Supplies':0};
+CATALOG_ITEMS=[{n:'Work Desk',c:'Furniture',l:8},{n:'Staff Work Desk',c:'Furniture',l:8},{n:'Executive Director Desk with Credenza',c:'Furniture',l:8},{n:'Meeting Table',c:'Furniture',l:8},{n:'Reception Desk',c:'Furniture',l:8},{n:'Office Chair',c:'Furniture',l:8},{n:'Executive Director Chair',c:'Furniture',l:8},{n:'Visitor Chair',c:'Furniture',l:8},{n:'Executive Director Side Chair',c:'Furniture',l:8},{n:'Side Chair',c:'Furniture',l:8},{n:'Meeting Chair',c:'Furniture',l:8},{n:'Waiting Sofa',c:'Furniture',l:8},{n:'Office Partition',c:'Furniture',l:8},{n:'Filing Cabinet',c:'Furniture',l:8},{n:'Document Rack',c:'Furniture',l:8},{n:'Pantry Rack',c:'Furniture',l:8},{n:'Whiteboard',c:'Furniture',l:8},{n:'Podium',c:'Furniture',l:8},{n:'Bookshelf',c:'Furniture',l:8},{n:'Storage Cabinet',c:'Furniture',l:8},{n:'Credenza',c:'Furniture',l:8},{n:'Corner Table',c:'Furniture',l:8},{n:'Built-in Pantry Cabinet',c:'Furniture',l:8},{n:'Acrylic Company Logo',c:'Furniture',l:4},{n:'Desktop PC',c:'IT Equipment',l:4},{n:'Laptop',c:'IT Equipment',l:4},{n:'Lenovo ThinkPad Laptop',c:'IT Equipment',l:4},{n:'Monitor',c:'IT Equipment',l:4},{n:'Keyboard',c:'IT Equipment',l:4},{n:'Mouse',c:'IT Equipment',l:4},{n:'Printer',c:'IT Equipment',l:4},{n:'Epson L3210 Printer',c:'IT Equipment',l:4},{n:'Scanner',c:'IT Equipment',l:4},{n:'IP Phone',c:'IT Equipment',l:4},{n:'Fingerprint Device',c:'IT Equipment',l:4},{n:'Router',c:'IT Equipment',l:4},{n:'Network Switch',c:'IT Equipment',l:4},{n:'UPS',c:'IT Equipment',l:4},{n:'Webcam',c:'IT Equipment',l:4},{n:'Server',c:'IT Equipment',l:4},{n:'NAS Storage',c:'IT Equipment',l:4},{n:'External Hard Drive',c:'IT Equipment',l:4},{n:'USB Flash Drive',c:'IT Equipment',l:4},{n:'Access Point',c:'IT Equipment',l:4},{n:'Server Rack',c:'IT Equipment',l:4},{n:'Firewall Device',c:'IT Equipment',l:4},{n:'LAN Cable Tester',c:'IT Equipment',l:4},{n:'Patch Panel',c:'IT Equipment',l:4},{n:'LAN Cable',c:'IT Equipment',l:4},{n:'Battery Backup UPS',c:'IT Equipment',l:4},{n:'Mobile Phone',c:'IT Equipment',l:4},{n:'Smartphone',c:'IT Equipment',l:4},{n:'Operational Mobile Phone',c:'IT Equipment',l:4},{n:'Office Mobile Phone',c:'IT Equipment',l:4},{n:'Executive Mobile Phone',c:'IT Equipment',l:4},{n:'Admin Mobile Phone',c:'IT Equipment',l:4},{n:'Marketing Mobile Phone',c:'IT Equipment',l:4},{n:'Samsung Galaxy Mobile Phone',c:'IT Equipment',l:4},{n:'iPhone Mobile Phone',c:'IT Equipment',l:4},{n:'Xiaomi Mobile Phone',c:'IT Equipment',l:4},{n:'Photocopier',c:'Electronics',l:4},{n:'Projector',c:'Electronics',l:4},{n:'Presentation Pointer',c:'Electronics',l:4},{n:'LED TV',c:'Electronics',l:4},{n:'Conference Display',c:'Electronics',l:4},{n:'Speaker',c:'Electronics',l:4},{n:'Conference Microphone',c:'Electronics',l:4},{n:'Split Air Conditioner 1,5 HP',c:'Electronics',l:4},{n:'Standing Fan',c:'Electronics',l:4},{n:'Extension Cable',c:'Electronics',l:4},{n:'Power Strip',c:'Electronics',l:4},{n:'AC Deflector',c:'Electronics',l:4},{n:'CCTV Camera',c:'Security Equipment',l:4},{n:'Fire Extinguisher',c:'Security Equipment',l:4},{n:'First Aid Box',c:'Security Equipment',l:4},{n:'Fire Alarm',c:'Security Equipment',l:4},{n:'Smoke Detector',c:'Security Equipment',l:4},{n:'Emergency Light',c:'Security Equipment',l:4},{n:'Evacuation Sign',c:'Security Equipment',l:4},{n:'Door Access Device',c:'Security Equipment',l:4},{n:'Safety Helmet',c:'Security Equipment',l:4},{n:'Paper Shredder',c:'Office Supplies',l:0},{n:'Stapler',c:'Office Supplies',l:0},{n:'Hole Punch',c:'Office Supplies',l:0},{n:'Scissors',c:'Office Supplies',l:0},{n:'Cutter Knife',c:'Office Supplies',l:0},{n:'Ruler',c:'Office Supplies',l:0},{n:'Calculator',c:'Office Supplies',l:0},{n:'Label Maker',c:'Office Supplies',l:0},{n:'Binding Machine',c:'Office Supplies',l:0},{n:'Laminating Machine',c:'Office Supplies',l:0},{n:'Clipboard',c:'Office Supplies',l:0},{n:'Folder',c:'Office Supplies',l:0},{n:'Lever Arch File',c:'Office Supplies',l:0},{n:'Tissue Holder',c:'Office Supplies',l:0},{n:'Desk Organizer',c:'Office Supplies',l:0},{n:'Correction Fluid',c:'Office Supplies',l:0},{n:'Correction Tape',c:'Office Supplies',l:0},{n:'Staples',c:'Office Supplies',l:0},{n:'Pen Holder',c:'Office Supplies',l:0},{n:'Copy Paper',c:'Consumables',l:0},{n:'Ballpoint Pen',c:'Consumables',l:0},{n:'Pencil',c:'Consumables',l:0},{n:'Marker',c:'Consumables',l:0},{n:'Highlighter',c:'Consumables',l:0},{n:'Sticky Notes',c:'Consumables',l:0},{n:'Envelope',c:'Consumables',l:0},{n:'Printer Ink',c:'Consumables',l:0},{n:'Toner Cartridge',c:'Consumables',l:0},{n:'Paper Clip',c:'Consumables',l:0},{n:'Binder Clip',c:'Consumables',l:0},{n:'Adhesive Tape',c:'Consumables',l:0},{n:'Glue',c:'Consumables',l:0},{n:'Whiteboard Eraser',c:'Consumables',l:0},{n:'Whiteboard Marker',c:'Consumables',l:0},{n:'Water Gallon',c:'Consumables',l:0},{n:'Cleaning Liquid',c:'Consumables',l:0},{n:'Hand Soap',c:'Consumables',l:0},{n:'Air Freshener',c:'Consumables',l:0},{n:'Tissue',c:'Consumables',l:0},{n:'Double-Sided Tape',c:'Consumables',l:0},{n:'Water Dispenser',c:'Pantry Supplies',l:0},{n:'Refrigerator',c:'Pantry Supplies',l:0},{n:'Microwave Oven',c:'Pantry Supplies',l:0},{n:'Electric Kettle',c:'Pantry Supplies',l:0},{n:'Coffee Machine',c:'Pantry Supplies',l:0},{n:'Glass',c:'Pantry Supplies',l:0},{n:'Cup',c:'Pantry Supplies',l:0},{n:'Plate',c:'Pantry Supplies',l:0},{n:'Spoon and Fork Set',c:'Pantry Supplies',l:0},{n:'Tray',c:'Pantry Supplies',l:0},{n:'Rice Cooker',c:'Pantry Supplies',l:0},{n:'Bowl',c:'Pantry Supplies',l:0},{n:'Cup Lid',c:'Pantry Supplies',l:0},{n:'Vacuum Cleaner',c:'Cleaning Supplies',l:0},{n:'Broom',c:'Cleaning Supplies',l:0},{n:'Mop',c:'Cleaning Supplies',l:0},{n:'Bucket',c:'Cleaning Supplies',l:0},{n:'Trash Bin',c:'Cleaning Supplies',l:0},{n:'Tissue Dispenser',c:'Cleaning Supplies',l:0},{n:'Dustpan',c:'Cleaning Supplies',l:0},{n:'Floor Wiper',c:'Cleaning Supplies',l:0},{n:'Paper Towel Dispenser',c:'Cleaning Supplies',l:0},{n:'Toilet Tissue Dispenser',c:'Cleaning Supplies',l:0},{n:'Duster',c:'Cleaning Supplies',l:0},{n:'Operational Vehicle',c:'Vehicles',l:4},{n:'Operational Motorcycle',c:'Vehicles',l:4},{n:'Vehicle Helmet',c:'Vehicles',l:4},{n:'GPS Tracker',c:'Vehicles',l:4},{n:'Dash Camera',c:'Vehicles',l:4}];
+DEFAULT_LOCATIONS=['Admin Room','Reception Area','Finance Room','Vacant Room','Meeting Room','Director Room','Pantry','Mushola','Storage Room','Server Room','BD Room','GA Room','With Staff','Front Office Outside','3rd Floor Entrance','Parking Area','Building Entrance','Lobby'];
+DEFAULT_STATUS=['Active','Inactive','Assigned','Unassigned','Standby','In Stock','Low Stock','Out of Stock','Reserved','On Loan','In Transit','With Staff','Under Maintenance','Under Inspection','Pending Approval','Awaiting Delivery','Pending Disposal','Disposed','Returned','Archived'];
+DEFAULT_CONDITION=['New','Like New','Excellent','Very Good','Good','Fair','Worn','Minor Damage','Moderate Damage','Major Damage','Broken','Unusable','Needs Cleaning','Dirty','Refurbished','Missing Parts','Obsolete','Scrap','Expired'];
+
+function ensureInvMaster(){
+  if(!DB.invMaster)DB.invMaster={};
+  if(!DB.invMaster.locations)DB.invMaster.locations=[...DEFAULT_LOCATIONS];
+  if(!DB.invMaster.statusList)DB.invMaster.statusList=[...DEFAULT_STATUS];
+  if(!DB.invMaster.conditionList)DB.invMaster.conditionList=[...DEFAULT_CONDITION];
+  if(!DB.invMaster.customItems)DB.invMaster.customItems=[];
+  if(!DB.invMaster.customPIC)DB.invMaster.customPIC=[];
+}
+function invCatalogForCategory(cat){
+  ensureInvMaster();
+  const base=CATALOG_ITEMS.filter(x=>x.c===cat);
+  const custom=DB.invMaster.customItems.filter(x=>x.c===cat);
+  return [...base,...custom];
+}
+function genInventoryId(category){
+  const prefix=CATALOG_PREFIX[category]||'LAIN';
+  const nums=(DB.inventory||[]).filter(i=>i.assetId&&i.assetId.startsWith('INV-'+prefix+'-')).map(i=>parseInt(i.assetId.split('-').pop())||0);
+  const next=(nums.length?Math.max(...nums):0)+1;
+  return 'INV-'+prefix+'-'+String(next).padStart(3,'0');
+}
+function invPicOptionsList(){
+  ensureInvMaster();
+  const users=(DB.users||[]).map(u=>u.name).filter(Boolean);
+  return [...new Set([...users,...DB.invMaster.customPIC])];
+}
+function invSelectOpts(list,selected,addNewLabel){
+  return list.map(x=>`<option${x===selected?' selected':''}>${x}</option>`).join('')+`<option value="__add__">➕ ${addNewLabel}</option>`;
+}
+function invPicSelectOpts(selected){
+  const list=invPicOptionsList();
+  let opts=list.map(x=>`<option${x===selected?' selected':''}>${x}</option>`).join('');
+  opts+=`<option value="__add__">➕ Tambah PIC Baru</option>`;
+  return opts;
+}
+function invNameOpts(category,selected){
+  const list=invCatalogForCategory(category);
+  let opts=list.map(x=>`<option value="${x.n.replace(/"/g,'&quot;')}"${x.n===selected?' selected':''}>${x.n}</option>`).join('');
+  if(selected&&!list.some(x=>x.n===selected))opts+=`<option value="${selected.replace(/"/g,'&quot;')}" selected>${selected}</option>`;
+  opts+=`<option value="__add__">➕ Tambah Nama Baru</option>`;
+  return opts;
+}
+function onInvCatChange(){
+  const cat=v('inv-cat');
+  document.getElementById('inv-name-wrap').innerHTML=`<label>Nama Barang</label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(cat,'')}</select>`;
+  onInvNameChange();
+}
+function onInvNameChange(){
+  const sel=document.getElementById('inv-name');
+  if(!sel)return;
+  if(sel.value==='__add__'){
+    const val=prompt('Nama barang baru:');
+    if(val){
+      ensureInvMaster();
+      DB.invMaster.customItems.push({n:val,c:v('inv-cat'),l:0});
+      saveDB();
+      sel.innerHTML=invNameOpts(v('inv-cat'),val);
+    }else{sel.selectedIndex=0;}
+    return;
+  }
+  const cat=v('inv-cat');
+  const item=invCatalogForCategory(cat).find(x=>x.n===sel.value);
+  const lifeEl=document.getElementById('inv-life');
+  if(lifeEl)lifeEl.value=item?(item.l||0):(CATEGORY_DEFAULT_LIFE[cat]||0);
+}
+function onInvSelectChange(selId,masterKey,promptLabel){
+  const sel=document.getElementById(selId);
+  if(sel.value==='__add__'){
+    const val=prompt(promptLabel);
+    if(val){
+      ensureInvMaster();
+      if(!DB.invMaster[masterKey].includes(val))DB.invMaster[masterKey].push(val);
+      saveDB();
+      sel.innerHTML=invSelectOpts(DB.invMaster[masterKey],val,promptLabel.replace(':',''));
+    }else{sel.selectedIndex=0;}
+  }
+}
+function onInvPicChange(){
+  const sel=document.getElementById('inv-pic');
+  if(sel.value==='__add__'){
+    const val=prompt('Nama PIC baru:');
+    if(val){
+      ensureInvMaster();
+      if(!DB.invMaster.customPIC.includes(val))DB.invMaster.customPIC.push(val);
+      saveDB();
+      sel.innerHTML=invPicSelectOpts(val);
+    }else{sel.selectedIndex=0;}
+  }
+}
+const OFFICE_INVENTORY_SEED=[
+{assetId:'INV-FUR-001',name:'Executive Director Chair',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Director Room',pic:'',condition:'New',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-002',name:'Executive Director Desk with credenza',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Director Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-003',name:'Executive Director Side Chair',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Director Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-004',name:'Executive Director Side Chair',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Director Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-ELC-001',name:'LED TV',category:'Electronics',brand:'Samsung',purchaseDate:'2026-03-31',cost:0,life:4,stock:1,location:'Director Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:'Gift bougt the house'},
+{assetId:'INV-IT-001',name:'IP Phone',category:'IT Equipment',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Director Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-ELC-002',name:'Split Air Conditioner 1,5 HP',category:'Electronics',brand:'Gree',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Director Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-CON-001',name:'Air Freshener',category:'Consumables',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'Director Room',pic:'',condition:'Excellent',status:'In Stock',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-ELC-003',name:'AC Deflector',category:'Electronics',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Director Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-IT-002',name:'IP Phone',category:'IT Equipment',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-005',name:'Work Desk',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-006',name:'Office Chair',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-IT-003',name:'Laptop',category:'IT Equipment',brand:'Lenovo',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'With Staff',pic:'DEDI CANDRA PUTRA',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-IT-004',name:'Laptop',category:'IT Equipment',brand:'Lenovo',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'With Staff',pic:'RATU',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-IT-005',name:'Printer',category:'IT Equipment',brand:'Epson',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:'L3211'},
+{assetId:'INV-OFF-001',name:'Calculator',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CON-002',name:'Tissue',category:'Consumables',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'In Stock',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-OFF-002',name:'Desk Organizer',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CON-003',name:'Copy Paper',category:'Consumables',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'In Stock',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-IT-006',name:'Mobile Phone',category:'IT Equipment',brand:'Samsung',purchaseDate:'2026-03-07',cost:3800000.0,life:4,stock:1,location:'With Staff',pic:'',condition:'New',status:'Active',assetType:'Non Fixed Asset',notes:'Include SIM Card 081299997697'},
+{assetId:'INV-CON-004',name:'Adhesive Tape',category:'Consumables',brand:'',purchaseDate:'2026-04-22',cost:10000.0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'In Stock',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CON-005',name:'Double-Sided Tape',category:'Consumables',brand:'',purchaseDate:'2026-04-22',cost:16000.0,life:0,stock:2,location:'',pic:'',condition:'Good',status:'In Stock',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CON-006',name:'Ballpoint Pen',category:'Consumables',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'In Stock',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CON-007',name:'Paper Clip',category:'Consumables',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'In Stock',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CON-008',name:'Binder Clip',category:'Consumables',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'In Stock',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CLN-001',name:'Trash Bin',category:'Cleaning Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-OFF-003',name:'Correction Fluid',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-OFF-004',name:'Correction Tape',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-OFF-005',name:'Stapler',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-OFF-006',name:'Staples',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-OFF-007',name:'Hole Punch',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CLN-002',name:'Duster',category:'Cleaning Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CLN-003',name:'Broom',category:'Cleaning Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CLN-004',name:'Broom',category:'Cleaning Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CLN-005',name:'Mop',category:'Cleaning Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CLN-006',name:'Mop',category:'Cleaning Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Unusable',status:'Active',assetType:'Non Fixed Asset',notes:'Kain Mopnya robek, pegangannya masih bagus'},
+{assetId:'INV-CLN-007',name:'Bucket',category:'Cleaning Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-CLN-008',name:'Bucket',category:'Cleaning Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-PAN-001',name:'Rice Cooker',category:'Pantry Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-PAN-002',name:'Plate',category:'Pantry Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-PAN-003',name:'Glass',category:'Pantry Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-PAN-004',name:'Cup',category:'Pantry Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-PAN-005',name:'Bowl',category:'Pantry Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-PAN-006',name:'Spoon and Fork Set',category:'Pantry Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-PAN-007',name:'Cup Lid',category:'Pantry Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-OFF-008',name:'Pen Holder',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'Director Room',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-OFF-009',name:'Pen Holder',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-OFF-010',name:'Scissors',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-OFF-011',name:'Scissors',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-SEC-001',name:'CCTV Camera',category:'Security Equipment',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Parking Area',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-SEC-002',name:'CCTV Camera',category:'Security Equipment',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Front Office Outside',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-SEC-003',name:'CCTV Camera',category:'Security Equipment',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Reception Area',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-SEC-004',name:'CCTV Camera',category:'Security Equipment',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Pantry',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-SEC-005',name:'CCTV Camera',category:'Security Equipment',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Storage Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-SEC-006',name:'CCTV Camera',category:'Security Equipment',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-SEC-007',name:'CCTV Camera',category:'Security Equipment',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Vacant Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-SEC-008',name:'CCTV Camera',category:'Security Equipment',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'3rd Floor Entrance',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-IT-007',name:'IP Phone',category:'IT Equipment',brand:'',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Vacant Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-PAN-008',name:'Water Dispenser',category:'Pantry Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'Pantry',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-OFF-012',name:'Cutter Knife',category:'Office Supplies',brand:'',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'Active',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-FUR-007',name:'Meeting Table',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Meeting Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-008',name:'Meeting Chair',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Meeting Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-009',name:'Meeting Chair',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Meeting Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-010',name:'Meeting Chair',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Meeting Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-011',name:'Meeting Chair',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Meeting Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-012',name:'Meeting Chair',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Meeting Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-013',name:'Meeting Chair',category:'Furniture',brand:'',purchaseDate:'2026-07-16',cost:0,life:8,stock:1,location:'Meeting Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-ELC-004',name:'LED TV',category:'Electronics',brand:'Samsung',purchaseDate:'2026-03-31',cost:0,life:4,stock:1,location:'Meeting Room',pic:'',condition:'Excellent',status:'Active',assetType:'Fixed Asset',notes:'Gift bougt the house'},
+{assetId:'INV-FUR-014',name:'Corner Table',category:'Furniture',brand:'Unbranded',purchaseDate:'2026-04-09',cost:157200.0,life:8,stock:1,location:'Meeting Room',pic:'',condition:'New',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-ELC-005',name:'Presentation Pointer',category:'Electronics',brand:'D-Link',purchaseDate:'2026-04-07',cost:171500.0,life:4,stock:1,location:'Meeting Room',pic:'',condition:'New',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-ELC-006',name:'Split Air Conditioner 1,5 HP',category:'Electronics',brand:'Gree',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Meeting Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-CON-009',name:'Tissue',category:'Consumables',brand:'Tessa',purchaseDate:'2026-07-16',cost:0,life:0,stock:1,location:'Meeting Room',pic:'',condition:'Good',status:'In Stock',assetType:'Non Fixed Asset',notes:''},
+{assetId:'INV-FUR-015',name:'Built-in Pantry Cabinet',category:'Furniture',brand:'Custom',purchaseDate:'2026-03-31',cost:0,life:8,stock:1,location:'Pantry',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-IT-008',name:'IP Phone',category:'IT Equipment',brand:'',purchaseDate:'2026-03-31',cost:0,life:4,stock:1,location:'Meeting Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-IT-009',name:'IP Phone',category:'IT Equipment',brand:'',purchaseDate:'2026-03-31',cost:0,life:4,stock:1,location:'Pantry',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-IT-010',name:'IP Phone',category:'IT Equipment',brand:'',purchaseDate:'2026-03-31',cost:0,life:4,stock:1,location:'Reception Area',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-016',name:'Reception Desk',category:'Furniture',brand:'Custom',purchaseDate:'2026-03-31',cost:0,life:8,stock:1,location:'Reception Area',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-017',name:'Office Chair',category:'Furniture',brand:'',purchaseDate:'2026-03-31',cost:0,life:8,stock:1,location:'Reception Area',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-FUR-018',name:'Acrylic Company Logo',category:'Furniture',brand:'Custom',purchaseDate:'2026-04-18',cost:0,life:4,stock:1,location:'Reception Area',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-ELC-007',name:'Split Air Conditioner 1,5 HP',category:'Electronics',brand:'Gree',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Reception Area',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-ELC-008',name:'Split Air Conditioner 1,5 HP',category:'Electronics',brand:'Gree',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Admin Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''},
+{assetId:'INV-ELC-009',name:'Split Air Conditioner 1,5 HP',category:'Electronics',brand:'Gree',purchaseDate:'2026-07-16',cost:0,life:4,stock:1,location:'Vacant Room',pic:'',condition:'Good',status:'Active',assetType:'Fixed Asset',notes:''}
+];
+function seedOfficeInventoryDemo(){
+  if(!DB.inventory)DB.inventory=[];
+  if(DB.inventory.length>0||DB.invDemoSeeded)return false;
+  ensureInvMaster();
+  OFFICE_INVENTORY_SEED.forEach(s=>{
+    const item={id:uid(),...s};
+    DB.inventory.push(item);
+    syncInventoryAssetLink(item);
+  });
+  DB.invDemoSeeded=true;
+  saveDB();
+  return true;
+}
+
+function getInvDistinct(field){
+  const vals=(DB.inventory||[]).map(i=>(i[field]||'').toString().trim()).filter(v=>v);
+  return [...new Set(vals)].sort((a,b)=>a.localeCompare(b));
+}
+function invFilterOpts(list,selected){
+  return '<option value="">Semua</option>'+list.map(val=>`<option value="${val}"${val===selected?' selected':''}>${val}</option>`).join('');
+}
+function onInvFilterChange(){
+  window._invFilters={
+    lokasi:v('inv-filter-lokasi'),kondisi:v('inv-filter-kondisi'),status:v('inv-filter-status'),
+    brand:v('inv-filter-brand'),jenis:v('inv-filter-jenis'),pic:v('inv-filter-pic')
+  };
+  renderInventory(document.getElementById('content'));
+}
+function resetInvFilters(){
+  window._invFilters={lokasi:'',kondisi:'',status:'',brand:'',jenis:'',pic:''};
+  renderInventory(document.getElementById('content'));
+}
+function renderInventory(c){
+  ensureInvMaster();
+  seedOfficeInventoryDemo();
+  syncAllInventoryAssets();
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openInventoryItem()">+ Tambah Barang</button><button class="btn btn-out" onclick="nav('invlabels')">🏷️ Cetak Label</button><button class="btn btn-out" onclick="exportInventory()">⬇ Excel</button>`;
+  const allItems=DB.inventory||[];
+  const totalItems=allItems.length;
+  const totalValue=allItems.reduce((s,i)=>s+(i.cost||0),0);
+  const fixedCount=allItems.filter(i=>i.assetType==='Fixed Asset').length;
+
+  if(!window._invFilters)window._invFilters={lokasi:'',kondisi:'',status:'',brand:'',jenis:'',pic:''};
+  const filters=window._invFilters;
+  const items=allItems.filter(i=>{
+    if(filters.lokasi&&i.location!==filters.lokasi)return false;
+    if(filters.kondisi&&i.condition!==filters.kondisi)return false;
+    if(filters.status&&i.status!==filters.status)return false;
+    if(filters.brand&&(i.brand||'')!==filters.brand)return false;
+    if(filters.jenis&&i.assetType!==filters.jenis)return false;
+    if(filters.pic&&(i.pic||'')!==filters.pic)return false;
+    return true;
+  });
+  const hasActiveFilter=Object.values(filters).some(f=>f);
+
+  // Ringkasan: jumlah unit & total nilai per nama barang (digabung per Nama+Kategori)
+  const summaryMap={};
+  items.forEach(i=>{
+    const key=i.name+'||'+i.category;
+    if(!summaryMap[key])summaryMap[key]={name:i.name,category:i.category,qty:0,value:0};
+    summaryMap[key].qty+=(i.stock||1);
+    summaryMap[key].value+=(i.cost||0);
+  });
+  const summaryRows=Object.values(summaryMap).sort((a,b)=>b.qty-a.qty||a.name.localeCompare(b.name));
+  if(typeof window._invSummaryOpen==='undefined')window._invSummaryOpen=true;
+
+  c.innerHTML=`
+  <div class="stats">
+    <div class="stat b"><div class="stat-lbl">Total Barang</div><div class="stat-val">${totalItems}</div></div>
+    <div class="stat g"><div class="stat-lbl">Total Nilai</div><div class="stat-val">${rp(totalValue)}</div></div>
+    <div class="stat r"><div class="stat-lbl">Fixed Asset</div><div class="stat-val">${fixedCount}</div></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:10px">🔍 Filter</div>
+    <div class="fr3">
+      <div class="fg"><label>Lokasi</label><select id="inv-filter-lokasi" onchange="onInvFilterChange()">${invFilterOpts(getInvDistinct('location'),filters.lokasi)}</select></div>
+      <div class="fg"><label>Kondisi</label><select id="inv-filter-kondisi" onchange="onInvFilterChange()">${invFilterOpts(getInvDistinct('condition'),filters.kondisi)}</select></div>
+      <div class="fg"><label>Status</label><select id="inv-filter-status" onchange="onInvFilterChange()">${invFilterOpts(getInvDistinct('status'),filters.status)}</select></div>
+    </div>
+    <div class="fr3" style="margin-top:12px">
+      <div class="fg"><label>Brand</label><select id="inv-filter-brand" onchange="onInvFilterChange()">${invFilterOpts(getInvDistinct('brand'),filters.brand)}</select></div>
+      <div class="fg"><label>Jenis Aset</label><select id="inv-filter-jenis" onchange="onInvFilterChange()">${invFilterOpts(['Fixed Asset','Non Fixed Asset'],filters.jenis)}</select></div>
+      <div class="fg"><label>Person in Charge</label><select id="inv-filter-pic" onchange="onInvFilterChange()">${invFilterOpts(getInvDistinct('pic'),filters.pic)}</select></div>
+    </div>
+    ${hasActiveFilter?`<div style="margin-top:12px;display:flex;align-items:center;gap:10px"><button class="btn btn-out btn-xs" onclick="resetInvFilters()">✕ Reset Filter</button><span style="font-size:12px;color:#64748b">Menampilkan ${items.length} dari ${totalItems} barang</span></div>`:''}
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleInvSummary()">
+      <div style="font-size:14px;font-weight:700;color:#0f172a">📊 Ringkasan per Barang (${summaryRows.length} jenis)</div>
+      <span id="inv-summary-toggle-icon">${window._invSummaryOpen?'▲':'▼'}</span>
+    </div>
+    <div id="inv-summary-body" style="${window._invSummaryOpen?'':'display:none;'}margin-top:12px">
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Nama Barang</th><th>Kategori</th><th>Jumlah Unit</th><th>Total Nilai</th></tr></thead>
+        <tbody>
+          ${summaryRows.length?summaryRows.map(s=>`<tr><td class="fw7">${s.name}</td><td><span class="badge b-info">${s.category}</span></td><td>${s.qty}</td><td>${rp(s.value)}</td></tr>`).join(''):`<tr><td colspan="4" class="tbl-empty">Belum ada barang</td></tr>`}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table>
+    <thead><tr><th>Asset ID</th><th>Nama Barang</th><th>Kategori</th><th>Lokasi</th><th>PIC</th><th>Kondisi</th><th>Status</th><th>Jenis</th><th>Aksi</th></tr></thead>
+    <tbody>
+      ${items.length?items.map(i=>`<tr>
+        <td class="fw7">${i.assetId||'-'}</td>
+        <td>${i.name}</td>
+        <td><span class="badge b-info">${i.category}</span></td>
+        <td>${i.location||'-'}</td>
+        <td>${i.pic||'-'}</td>
+        <td>${i.condition||'-'}</td>
+        <td>${i.status||'-'}</td>
+        <td>${i.assetType==='Fixed Asset'?'<span class="badge b-ok">Fixed Asset</span>':'<span class="badge b-info">Non Fixed</span>'}</td>
+        <td class="gap8"><button class="btn btn-out btn-xs" onclick="printInventoryLabels(['${i.id}'])" title="Cetak Label QR">🏷️</button><button class="btn btn-out btn-xs" onclick="openEditInventoryItem('${i.id}')">✏️</button><button class="btn btn-bad btn-xs" onclick="delInventoryItem('${i.id}')">✕</button></td>
+      </tr>`).join(''):`<tr><td colspan="9" class="tbl-empty">Tidak ada barang yang cocok dengan filter</td></tr>`}
+    </tbody>
+  </table></div></div>`;
+}
+function toggleInvSummary(){
+  window._invSummaryOpen=!window._invSummaryOpen;
+  const body=document.getElementById('inv-summary-body');
+  const icon=document.getElementById('inv-summary-toggle-icon');
+  if(body)body.style.display=window._invSummaryOpen?'':'none';
+  if(icon)icon.textContent=window._invSummaryOpen?'▲':'▼';
+}
+
+// ===== Tahap 3: QR Code Label untuk Inventory =====
+function renderInvLabels(c){
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-out" onclick="nav('inventory')">← Kembali ke Inventory</button>`;
+  const items=DB.inventory||[];
+  c.innerHTML=`
+  <div class="card" style="margin-bottom:16px">
+    <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">🏷️ Cetak Label QR Code</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:14px">Centang barang yang mau dicetak labelnya, lalu klik "Cetak Label Terpilih". Tiap label berisi QR Code + info barang (Asset ID, Nama, Kategori, Lokasi, PIC, Kondisi, Status) — kalau QR-nya di-scan pakai HP, info ini langsung muncul tanpa perlu internet.</div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn btn-out btn-xs" onclick="toggleAllInvLabelCheck(true)">☑ Pilih Semua</button>
+      <button class="btn btn-out btn-xs" onclick="toggleAllInvLabelCheck(false)">☐ Batal Semua</button>
+      <button class="btn btn-pri" style="margin-left:auto" onclick="printSelectedInvLabels()">🖨️ Cetak Label Terpilih</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th style="width:36px"></th><th>Asset ID</th><th>Nama Barang</th><th>Kategori</th><th>Lokasi</th></tr></thead>
+      <tbody>
+        ${items.length?items.map(i=>`<tr>
+          <td><input type="checkbox" class="inv-label-chk" value="${i.id}"></td>
+          <td class="fw7">${i.assetId||'-'}</td>
+          <td>${i.name}</td>
+          <td><span class="badge b-info">${i.category}</span></td>
+          <td>${i.location||'-'}</td>
+        </tr>`).join(''):`<tr><td colspan="5" class="tbl-empty">Belum ada barang inventory</td></tr>`}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+function toggleAllInvLabelCheck(state){
+  document.querySelectorAll('.inv-label-chk').forEach(cb=>cb.checked=state);
+}
+function printSelectedInvLabels(){
+  const ids=[...document.querySelectorAll('.inv-label-chk:checked')].map(cb=>cb.value);
+  if(!ids.length)return alert('Pilih minimal 1 barang dulu!');
+  printInventoryLabels(ids);
+}
+function printInventoryLabels(ids){
+  const items=(DB.inventory||[]).filter(i=>ids.includes(i.id));
+  if(!items.length)return alert('Barang tidak ditemukan!');
+  const companyName=(DB.company&&DB.company.name)||'PT. Andrika Mitra Solusi';
+  const labelData=items.map(i=>({
+    assetId:i.assetId||'-',
+    name:i.name,
+    location:i.location||'-',
+    qrText:['AMS INVENTORY','Asset ID: '+(i.assetId||'-'),'Nama: '+i.name,'Kategori: '+(i.category||'-'),'Lokasi: '+(i.location||'-'),'PIC: '+(i.pic||'-'),'Kondisi: '+(i.condition||'-'),'Status: '+(i.status||'-'),'Jenis: '+(i.assetType||'-')].join('\n')
+  }));
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Cetak Label Inventory</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;background:#fff}
+    .sheet{display:flex;flex-wrap:wrap;gap:8px;padding:8px}
+    .label{width:190px;border:1px dashed #94a3b8;border-radius:6px;padding:8px;display:flex;gap:8px;align-items:center;break-inside:avoid;page-break-inside:avoid}
+    .qr{width:64px;height:64px;flex-shrink:0}
+    .info{font-size:9px;line-height:1.4;overflow:hidden}
+    .info .aid{font-weight:700;font-size:10px}
+    .info .name{font-weight:600}
+    .info .loc{color:#475569}
+    .info .co{color:#94a3b8;font-size:8px;margin-top:2px}
+    @media print{@page{size:A4;margin:8mm}.label{border:1px solid #cbd5e1}}
+  </style>
+  </head><body>
+  <div class="sheet" id="sheet"></div>
+  <script>
+    var LABELS=${JSON.stringify(labelData)};
+    var companyName=${JSON.stringify(companyName)};
+    var sheet=document.getElementById('sheet');
+    LABELS.forEach(function(d){
+      var card=document.createElement('div');card.className='label';
+      var qrBox=document.createElement('div');qrBox.className='qr';
+      var info=document.createElement('div');info.className='info';
+      info.innerHTML='<div class="aid"></div><div class="name"></div><div class="loc"></div><div class="co"></div>';
+      card.appendChild(qrBox);card.appendChild(info);
+      sheet.appendChild(card);
+      info.querySelector('.aid').textContent=d.assetId;
+      info.querySelector('.name').textContent=d.name;
+      info.querySelector('.loc').textContent=d.location;
+      info.querySelector('.co').textContent=companyName;
+      new QRCode(qrBox,{text:d.qrText,width:64,height:64,correctLevel:QRCode.CorrectLevel.M});
+    });
+    window.onload=function(){setTimeout(function(){window.print()},700)};
+  <\/script>
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+  else alert('Pop-up diblokir browser. Aktifkan pop-up untuk print.');
+}
+function openInventoryItem(){
+  ensureInvMaster();
+  const catOpts=Object.keys(CATALOG_PREFIX).map(c=>`<option>${c}</option>`).join('');
+  const firstCat=Object.keys(CATALOG_PREFIX)[0];
+  openModal('Tambah Barang Inventory',`
+  <div class="fr3">
+    <div class="fg"><label>Kategori</label><select id="inv-cat" onchange="onInvCatChange()">${catOpts}</select></div>
+    <div class="fg" id="inv-name-wrap"><label>Nama Barang</label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(firstCat,'')}</select></div>
+    <div class="fg"><label>Merk/Tipe</label><input id="inv-brand"></div>
+  </div>
+  <div class="fr3">
+    <div class="fg"><label>Tgl Beli</label><input type="date" id="inv-date" value="${today()}"></div>
+    <div class="fg"><label>Harga Perolehan</label><input type="number" id="inv-cost" placeholder="0"></div>
+    <div class="fg"><label>Umur Ekonomis (Thn) <span style="font-weight:400;color:#94a3b8">— otomatis</span></label><input type="number" id="inv-life" placeholder="0" min="0" readonly style="background:#f1f5f9;color:#64748b"></div>
+  </div>
+  <div class="fr3">
+    <div class="fg"><label>Stock</label><input type="number" id="inv-stock" value="1" min="1"></div>
+    <div class="fg"><label>Lokasi</label><select id="inv-location" onchange="onInvSelectChange('inv-location','locations','Lokasi baru:')">${invSelectOpts(DB.invMaster.locations,'','Tambah Lokasi Baru')}</select></div>
+    <div class="fg"><label>Person in Charge</label><select id="inv-pic" onchange="onInvPicChange()">${invPicSelectOpts('')}</select></div>
+  </div>
+  <div class="fr3">
+    <div class="fg"><label>Kondisi</label><select id="inv-condition" onchange="onInvSelectChange('inv-condition','conditionList','Kondisi baru:')">${invSelectOpts(DB.invMaster.conditionList,'','Tambah Kondisi Baru')}</select></div>
+    <div class="fg"><label>Status</label><select id="inv-status" onchange="onInvSelectChange('inv-status','statusList','Status baru:')">${invSelectOpts(DB.invMaster.statusList,'','Tambah Status Baru')}</select></div>
+    <div class="fg"><label>Jenis Aset</label><select id="inv-type"><option>Non Fixed Asset</option><option>Fixed Asset</option></select></div>
+  </div>
+  <div class="fg"><label>Notes</label><input id="inv-notes"></div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveInventoryItem()">Save</button></div>`);
+  onInvNameChange();
+}
+function saveInventoryItem(){
+  const name=v('inv-name'),category=v('inv-cat');
+  if(!name||name==='__add__')return alert('Nama barang wajib diisi!');
+  const item={
+    id:uid(),assetId:genInventoryId(category),name,category,
+    brand:v('inv-brand'),purchaseDate:v('inv-date'),cost:parseFloat(v('inv-cost'))||0,
+    life:parseInt(v('inv-life'))||0,
+    stock:parseInt(v('inv-stock'))||1,location:v('inv-location'),pic:v('inv-pic'),
+    condition:v('inv-condition'),status:v('inv-status'),assetType:v('inv-type'),notes:v('inv-notes')
+  };
+  DB.inventory.push(item);syncInventoryAssetLink(item);saveDB();closeModal();nav('inventory');
+}
+function openEditInventoryItem(id){
+  ensureInvMaster();
+  const i=(DB.inventory||[]).find(x=>x.id===id);if(!i)return;
+  const catOpts=Object.keys(CATALOG_PREFIX).map(c=>`<option${c===i.category?' selected':''}>${c}</option>`).join('');
+  const typeOpts=['Non Fixed Asset','Fixed Asset'].map(t=>`<option${t===i.assetType?' selected':''}>${t}</option>`).join('');
+  openModal('Edit Barang Inventory ('+i.assetId+')',`
+  <input type="hidden" id="inv-id" value="${i.id}">
+  <div class="fr3">
+    <div class="fg"><label>Kategori</label><select id="inv-cat" onchange="onInvCatChange()">${catOpts}</select></div>
+    <div class="fg" id="inv-name-wrap"><label>Nama Barang</label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(i.category,i.name)}</select></div>
+    <div class="fg"><label>Merk/Tipe</label><input id="inv-brand" value="${i.brand||''}"></div>
+  </div>
+  <div class="fr3">
+    <div class="fg"><label>Tgl Beli</label><input type="date" id="inv-date" value="${i.purchaseDate||today()}"></div>
+    <div class="fg"><label>Harga Perolehan</label><input type="number" id="inv-cost" value="${i.cost||0}"></div>
+    <div class="fg"><label>Umur Ekonomis (Thn) <span style="font-weight:400;color:#94a3b8">— otomatis</span></label><input type="number" id="inv-life" value="${i.life||0}" min="0" readonly style="background:#f1f5f9;color:#64748b"></div>
+  </div>
+  <div class="fr3">
+    <div class="fg"><label>Stock</label><input type="number" id="inv-stock" value="${i.stock||1}" min="1"></div>
+    <div class="fg"><label>Lokasi</label><select id="inv-location" onchange="onInvSelectChange('inv-location','locations','Lokasi baru:')">${invSelectOpts(DB.invMaster.locations,i.location,'Tambah Lokasi Baru')}</select></div>
+    <div class="fg"><label>Person in Charge</label><select id="inv-pic" onchange="onInvPicChange()">${invPicSelectOpts(i.pic)}</select></div>
+  </div>
+  <div class="fr3">
+    <div class="fg"><label>Kondisi</label><select id="inv-condition" onchange="onInvSelectChange('inv-condition','conditionList','Kondisi baru:')">${invSelectOpts(DB.invMaster.conditionList,i.condition,'Tambah Kondisi Baru')}</select></div>
+    <div class="fg"><label>Status</label><select id="inv-status" onchange="onInvSelectChange('inv-status','statusList','Status baru:')">${invSelectOpts(DB.invMaster.statusList,i.status,'Tambah Status Baru')}</select></div>
+    <div class="fg"><label>Jenis Aset</label><select id="inv-type">${typeOpts}</select></div>
+  </div>
+  <div class="fg"><label>Notes</label><input id="inv-notes" value="${i.notes||''}"></div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="updateInventoryItem()">Update</button></div>`);
+}
+function updateInventoryItem(){
+  const id=v('inv-id');
+  const idx=(DB.inventory||[]).findIndex(x=>x.id===id);
+  if(idx<0)return alert('Barang tidak ditemukan!');
+  const name=v('inv-name');
+  if(!name||name==='__add__')return alert('Nama barang wajib diisi!');
+  DB.inventory[idx]={...DB.inventory[idx],name,category:v('inv-cat'),brand:v('inv-brand'),
+    purchaseDate:v('inv-date'),cost:parseFloat(v('inv-cost'))||0,life:parseInt(v('inv-life'))||0,
+    stock:parseInt(v('inv-stock'))||1,location:v('inv-location'),pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),
+    assetType:v('inv-type'),notes:v('inv-notes')};
+  syncInventoryAssetLink(DB.inventory[idx]);
+  saveDB();closeModal();nav('inventory');
+}
+function delInventoryItem(id){
+  if(!confirm('Hapus barang ini dari Inventory?'))return;
+  const item=(DB.inventory||[]).find(i=>i.id===id);
+  if(item&&item.linkedAssetId)DB.assets=(DB.assets||[]).filter(a=>a.id!==item.linkedAssetId);
+  DB.inventory=(DB.inventory||[]).filter(i=>i.id!==id);saveDB();nav('inventory');
+}
+function exportInventory(){exportXLSX([{name:'Inventory',data:(DB.inventory||[]).map(i=>({'Asset ID':i.assetId,'Nama Barang':i.name,Kategori:i.category,'Merk/Tipe':i.brand,'Tgl Beli':i.purchaseDate,'Harga Perolehan':i.cost,'Umur Ekonomis':i.life,Stock:i.stock,Lokasi:i.location,PIC:i.pic,Kondisi:i.condition,Status:i.status,'Jenis Aset':i.assetType,Notes:i.notes}))}],'inventory_kantor');}
 
 // ── AMS PRODUCT / SERVICE SEED (v2 — Full Catalog) ──────────────────────────
 function seedAMSProducts(){
@@ -10741,7 +11272,7 @@ function renderSphs(c){
         <th style="padding:11px 12px;text-align:center;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">AKSI</th>
       </tr></thead>
       <tbody>${list.length?list.map(s=>{
-        const total=(s.items||[]).reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
+        const total=(typeof s.total==='number')?s.total:(s.items||[]).reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
         const canInvoice=s.tujuan==='customer'&&s.status==='accepted'&&!s.link_invoice_id;
         const linked=s.tujuan==='customer'&&s.status==='accepted'&&s.link_invoice_id;
         return`<tr style="border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
@@ -10765,24 +11296,277 @@ function renderSphs(c){
   </div>`;
 }
 
+// ==================== MODUL: REFERENSI HARGA ====================
+// Master harga acuan dari proyek lain (mis. file GSD yang sudah di-approve pembeli),
+// dipakai sebagai pembanding saat menentukan markup harga jual di SPH.
+// Struktur 1 baris DB.priceRefs: {id, source, category, desc, spec, brand, satuan, hargaMaterial, hargaJasa, tanggal, created_at}
+
+function priceRefTotal(r){ return (parseFloat(r.hargaMaterial)||0)+(parseFloat(r.hargaJasa)||0); }
+
+function renderPriceRefs(c){
+  DB.priceRefs=DB.priceRefs||[];
+  const fSearch=(window._prefSearch||'').toLowerCase();
+  const fSource=window._prefSource||'';
+  const fCat=window._prefCat||'';
+  let list=[...DB.priceRefs];
+  if(fSearch)list=list.filter(r=>(r.desc||'').toLowerCase().includes(fSearch)||(r.spec||'').toLowerCase().includes(fSearch)||(r.brand||'').toLowerCase().includes(fSearch));
+  if(fSource)list=list.filter(r=>r.source===fSource);
+  if(fCat)list=list.filter(r=>r.category===fCat);
+  const sources=[...new Set(DB.priceRefs.map(r=>r.source).filter(Boolean))];
+  const cats=[...new Set(DB.priceRefs.map(r=>r.category).filter(Boolean))];
+  document.getElementById('topbar-actions').innerHTML='';
+  c.innerHTML=`<div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
+    <div style="padding:20px 24px;border-bottom:1px solid #f1f5f9;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div><div style="font-size:18px;font-weight:700;color:#0f172a">💲 Referensi Harga</div><div style="font-size:12px;color:#94a3b8;margin-top:2px">Kumpulan harga acuan dari proyek lain (mis. proyek yang sudah di-approve pembeli), buat bandingin harga beli sebelum tentuin markup di SPH.</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-out" onclick="document.getElementById('pref-import-file').click()">⬆ Impor dari Excel</button>
+        <input id="pref-import-file" type="file" accept=".xlsx,.xls" style="display:none" onchange="handlePriceRefImport(this)">
+        <button class="btn btn-pri" onclick="openAddPriceRef()">+ Tambah Manual</button>
+      </div>
+    </div>
+    <div style="padding:16px 24px;background:#f8fafc;border-bottom:1px solid #f1f5f9;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px;margin-bottom:5px">CARI</div>
+        <input placeholder="Nama barang / spesifikasi / merk..." value="${fSearch}" oninput="window._prefSearch=this.value;renderPriceRefs(document.getElementById('content'))" style="width:100%;padding:7px 11px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="min-width:180px">
+        <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px;margin-bottom:5px">SUMBER PROYEK</div>
+        <select onchange="window._prefSource=this.value;renderPriceRefs(document.getElementById('content'))" style="width:100%;padding:7px 11px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px">
+          <option value="">Semua Sumber</option>
+          ${sources.map(s=>`<option value="${escAttr(s)}" ${fSource===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div style="min-width:160px">
+        <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px;margin-bottom:5px">KATEGORI</div>
+        <select onchange="window._prefCat=this.value;renderPriceRefs(document.getElementById('content'))" style="width:100%;padding:7px 11px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px">
+          <option value="">Semua Kategori</option>
+          ${cats.map(s=>`<option value="${escAttr(s)}" ${fCat===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div style="padding:10px 24px;font-size:12px;color:#64748b">Menampilkan <b>${list.length}</b> dari ${DB.priceRefs.length} item referensi</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b">DESKRIPSI</th>
+        <th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SPESIFIKASI / MERK</th>
+        <th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SAT</th>
+        <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#64748b">MATERIAL</th>
+        <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#64748b">JASA</th>
+        <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#64748b">TOTAL/UNIT</th>
+        <th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SUMBER</th>
+        <th style="padding:10px 10px;text-align:center;font-size:11px;font-weight:700;color:#64748b">AKSI</th>
+      </tr></thead>
+      <tbody>${list.length?list.map(r=>`<tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:9px 14px;font-weight:600;color:#1e293b">${r.desc||'-'}${r.category?`<div style="font-size:10.5px;color:#94a3b8;font-weight:400">${r.category}</div>`:''}</td>
+        <td style="padding:9px 10px;color:#64748b;max-width:260px">${[r.spec,r.brand].filter(Boolean).join(' — ')||'-'}</td>
+        <td style="padding:9px 10px;color:#64748b">${r.satuan||'-'}</td>
+        <td style="padding:9px 10px;text-align:right">${rp(r.hargaMaterial||0)}</td>
+        <td style="padding:9px 10px;text-align:right">${rp(r.hargaJasa||0)}</td>
+        <td style="padding:9px 10px;text-align:right;font-weight:700;color:#0f172a">${rp(priceRefTotal(r))}</td>
+        <td style="padding:9px 10px;color:#64748b">${r.source||'-'}</td>
+        <td style="padding:9px 10px;text-align:center;white-space:nowrap">
+          <button onclick="openAddPriceRef('${r.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button>
+          <button onclick="delPriceRef('${r.id}')" title="Hapus" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button>
+        </td>
+      </tr>`).join(''):`<tr><td colspan="8" style="padding:40px;text-align:center;color:#94a3b8;font-size:13px">Belum ada data referensi. Klik "⬆ Impor dari Excel" atau "+ Tambah Manual" untuk mulai.</td></tr>`}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+function escAttr(s){ return String(s||'').replace(/"/g,'&quot;'); }
+
+function openAddPriceRef(id){
+  const r=id?(DB.priceRefs||[]).find(x=>x.id===id):null;
+  const isEdit=!!r;
+  openModal(isEdit?'Edit Referensi Harga':'Tambah Referensi Harga',`
+    <div class="fr2">
+      <div class="fg"><label>Deskripsi / Nama Barang</label><input id="pref-desc" value="${r?escAttr(r.desc):''}" placeholder="Contoh: Gate Valve OS&amp;Y 6&quot;"></div>
+      <div class="fg"><label>Kategori</label><input id="pref-cat" value="${r?escAttr(r.category):''}" placeholder="Contoh: VALVE & ACCESSORIES"></div>
+    </div>
+    <div class="fg"><label>Spesifikasi / Merk</label><input id="pref-spec" value="${r?escAttr(r.spec):''}" placeholder="Detail spesifikasi teknis atau merk"></div>
+    <div class="fr3">
+      <div class="fg"><label>Satuan</label><input id="pref-satuan" value="${r?escAttr(r.satuan):'unit'}"></div>
+      <div class="fg"><label>Harga Material (per unit)</label><input id="pref-material" type="number" min="0" value="${r?r.hargaMaterial||0:0}"></div>
+      <div class="fg"><label>Harga Jasa (per unit)</label><input id="pref-jasa" type="number" min="0" value="${r?r.hargaJasa||0:0}"></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label>Sumber Proyek</label><input id="pref-source" value="${r?escAttr(r.source):''}" placeholder="Contoh: GSD - K-TEL-002-2026"></div>
+      <div class="fg"><label>Tanggal</label><input id="pref-tgl" type="date" value="${r&&r.tanggal?r.tanggal:today()}"></div>
+    </div>
+    <div style="text-align:right;margin-top:14px">
+      <button class="btn btn-pri" onclick="savePriceRef('${id||''}')">💾 Simpan</button>
+    </div>
+  `);
+}
+
+function savePriceRef(id){
+  const desc=document.getElementById('pref-desc').value.trim();
+  if(!desc)return alert('Deskripsi wajib diisi.');
+  const data={
+    desc,
+    category:document.getElementById('pref-cat').value.trim(),
+    spec:document.getElementById('pref-spec').value.trim(),
+    satuan:document.getElementById('pref-satuan').value.trim()||'unit',
+    hargaMaterial:parseFloat(document.getElementById('pref-material').value)||0,
+    hargaJasa:parseFloat(document.getElementById('pref-jasa').value)||0,
+    source:document.getElementById('pref-source').value.trim(),
+    tanggal:document.getElementById('pref-tgl').value||today()
+  };
+  DB.priceRefs=DB.priceRefs||[];
+  if(id){
+    const idx=DB.priceRefs.findIndex(x=>x.id===id);
+    if(idx>-1)DB.priceRefs[idx]={...DB.priceRefs[idx],...data};
+  } else {
+    DB.priceRefs.push({id:uid(),...data,created_at:Date.now()});
+  }
+  saveDB();closeModal();nav('pricerefs');
+}
+
+function delPriceRef(id){
+  if(!confirm('Hapus item referensi ini?'))return;
+  DB.priceRefs=(DB.priceRefs||[]).filter(x=>x.id!==id);
+  saveDB();nav('pricerefs');
+}
+
+// Impor massal dari file Excel gaya BOQ (No | Deskripsi | Spesifikasi | Vol | Satuan | Harga Material | Harga Jasa),
+// dengan baris judul kategori (mis. "FIRE PUMP SYSTEM") yang cuma isi kolom Deskripsi.
+async function handlePriceRefImport(input){
+  const file=input.files[0];if(!file)return;
+  const sourceName=prompt('Nama sumber proyek untuk data ini (contoh: GSD - K-TEL-002-2026):', file.name.replace(/\.(xlsx|xls)$/i,''));
+  if(sourceName===null){input.value='';return;}
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const norm=v=>String(v||'').trim().toLowerCase();
+
+    // Cari baris header (mengandung 'deskripsi')
+    let headerRow=-1,colNo=-1,colDesc=-1,colSpec=-1,colVol=-1,colSat=-1;
+    for(let i=0;i<Math.min(rows.length,30);i++){
+      const r=rows[i];
+      const dIdx=r.findIndex(v=>norm(v)==='deskripsi'||norm(v)==='nama barang'||norm(v)==='description');
+      if(dIdx>-1){
+        headerRow=i;colDesc=dIdx;
+        colNo=r.findIndex(v=>norm(v)==='no'||norm(v)==='no.');
+        colSpec=r.findIndex(v=>norm(v).startsWith('spesifikasi')||norm(v).startsWith('specification'));
+        colVol=r.findIndex(v=>norm(v).startsWith('vol'));
+        colSat=r.findIndex(v=>norm(v)==='satuan'||norm(v)==='unit');
+        break;
+      }
+    }
+    if(headerRow===-1)throw new Error('Kolom "Deskripsi" tidak ditemukan di file ini. Pastikan file punya kolom header Deskripsi.');
+
+    // Cari kolom Material & Jasa di 2 baris setelah header
+    let colMaterial=-1,colJasa=-1;
+    for(let i=headerRow;i<Math.min(headerRow+3,rows.length);i++){
+      const r=rows[i];
+      const mIdx=r.findIndex(v=>norm(v)==='material');
+      const jIdx=r.findIndex(v=>norm(v)==='jasa'||norm(v)==='labour'||norm(v)==='labor');
+      if(mIdx>-1)colMaterial=mIdx;
+      if(jIdx>-1)colJasa=jIdx;
+    }
+    if(colMaterial===-1&&colSat>-1)colMaterial=colSat+1;
+    if(colJasa===-1&&colMaterial>-1)colJasa=colMaterial+1;
+
+    let lastCategory='';
+    const imported=[];
+    for(let i=headerRow+1;i<rows.length;i++){
+      const r=rows[i];
+      const descVal=String(r[colDesc]||'').trim();
+      if(!descVal)continue;
+      const noVal=colNo>-1?r[colNo]:'';
+      const matVal=colMaterial>-1?parseFloat(r[colMaterial]):NaN;
+      const jasaVal=colJasa>-1?parseFloat(r[colJasa]):NaN;
+      const isItemRow=(typeof noVal==='number'||(!isNaN(parseFloat(noVal))&&noVal!==''))&&(!isNaN(matVal)||!isNaN(jasaVal));
+      if(isItemRow){
+        imported.push({
+          desc:descVal,
+          category:lastCategory,
+          spec:colSpec>-1?String(r[colSpec]||'').trim():'',
+          satuan:colSat>-1?String(r[colSat]||'').trim():'unit',
+          hargaMaterial:isNaN(matVal)?0:matVal,
+          hargaJasa:isNaN(jasaVal)?0:jasaVal,
+          source:sourceName,
+          tanggal:today()
+        });
+      } else {
+        // Baris tanpa No & tanpa harga → dianggap judul kategori
+        const volVal=colVol>-1?r[colVol]:'';
+        if(!volVal && isNaN(matVal) && isNaN(jasaVal)) lastCategory=descVal;
+      }
+    }
+    if(!imported.length)throw new Error('Tidak ada baris item (dengan No & harga) yang berhasil terbaca dari file ini.');
+
+    DB.priceRefs=DB.priceRefs||[];
+    imported.forEach(it=>DB.priceRefs.push({id:uid(),...it,created_at:Date.now()}));
+    saveDB();
+    input.value='';
+    alert(`✅ Impor selesai!\n\n• ${imported.length} item referensi ditambahkan dari "${sourceName}"\n• Total referensi harga sekarang: ${DB.priceRefs.length} item`);
+    nav('pricerefs');
+  }catch(e){
+    input.value='';
+    alert('❌ Gagal impor: '+e.message);
+  }
+}
+
+// Modal pencarian referensi harga, dipanggil dari baris item SPH untuk cek pembanding
+function openPriceRefPicker(rowIdx){
+  window._prefPickRow=rowIdx;
+  const mo=document.createElement('div');
+  mo.id='pref-pick-modal';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1100;display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto';
+  mo.innerHTML=`<div style="background:#fff;border-radius:14px;width:100%;max-width:640px;box-shadow:0 8px 40px rgba(0,0,0,.18);overflow:hidden">
+    <div style="background:linear-gradient(135deg,#0891b2,#0e7490);padding:16px 22px;display:flex;justify-content:space-between;align-items:center">
+      <div style="color:#fff;font-size:15px;font-weight:700">🔍 Cek Harga Referensi</div>
+      <button onclick="document.getElementById('pref-pick-modal').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;cursor:pointer;border-radius:8px;width:30px;height:30px">✕</button>
+    </div>
+    <div style="padding:16px 22px">
+      <input id="pref-pick-search" placeholder="Ketik nama barang / spesifikasi..." oninput="renderPriceRefPickResults()" style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box" autofocus>
+      <div id="pref-pick-results" style="margin-top:12px;max-height:400px;overflow-y:auto"></div>
+    </div>
+  </div>`;
+  document.body.appendChild(mo);
+  renderPriceRefPickResults();
+}
+
+function renderPriceRefPickResults(){
+  const q=(document.getElementById('pref-pick-search')?.value||'').toLowerCase().trim();
+  let list=[...(DB.priceRefs||[])];
+  if(q)list=list.filter(r=>(r.desc||'').toLowerCase().includes(q)||(r.spec||'').toLowerCase().includes(q)||(r.brand||'').toLowerCase().includes(q));
+  list=list.slice(0,40);
+  const box=document.getElementById('pref-pick-results');
+  if(!box)return;
+  if(!list.length){box.innerHTML=`<div style="text-align:center;padding:24px;color:#94a3b8;font-size:12.5px">${DB.priceRefs.length?'Tidak ada hasil. Coba kata kunci lain.':'Belum ada data referensi. Isi dulu di menu "Referensi Harga".'}</div>`;return;}
+  box.innerHTML=list.map(r=>`<div onclick="pickPriceRefForRow('${r.id}')" style="padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;cursor:pointer" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='#fff'">
+    <div style="font-weight:600;font-size:12.5px;color:#0f172a">${r.desc}</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:2px">${[r.spec,r.source].filter(Boolean).join(' • ')||'-'}</div>
+    <div style="font-size:12px;margin-top:4px;color:#0e7490;font-weight:700">Rp ${rp(priceRefTotal(r)).replace('Rp','').trim()} / ${r.satuan||'unit'} <span style="font-weight:400;color:#64748b">(Material ${rp(r.hargaMaterial||0)} + Jasa ${rp(r.hargaJasa||0)})</span></div>
+  </div>`).join('');
+}
+
+function pickPriceRefForRow(refId){
+  const r=(DB.priceRefs||[]).find(x=>x.id===refId);
+  const rowIdx=window._prefPickRow;
+  if(r&&window._sphItems&&window._sphItems[rowIdx]!==undefined){
+    window._sphItems[rowIdx].refId=refId;
+  }
+  const m=document.getElementById('pref-pick-modal');if(m)m.remove();
+  sphRenderRows();
+}
+
 function openAddSph(id){
   window._sphEditId=id||null;
   const s=id?(DB.sphs||[]).find(x=>x.id===id):null;
   const isEdit=!!s;
   const noSph=s?s.noSph:genSphId();
-  const items=s?s.items:[{desc:'',qty:1,satuan:'unit',harga:0}];
+  const items=s?s.items:[{desc:'',qty:1,satuan:'unit',hargaBeli:0,markup:'',harga:0,refId:null}];
 
-  const itemRows=()=>items.map((it,i)=>`<tr id="sph-row-${i}">
-    <td style="padding:6px 8px"><input value="${it.desc||''}" oninput="window._sphItems[${i}].desc=this.value" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
-    <td style="padding:6px 4px"><input type="number" value="${it.qty||1}" min="0" oninput="window._sphItems[${i}].qty=parseFloat(this.value)||0;sphRecalc()" style="width:70px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
-    <td style="padding:6px 4px"><input value="${it.satuan||'unit'}" oninput="window._sphItems[${i}].satuan=this.value" style="width:70px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
-    <td style="padding:6px 4px"><input type="number" value="${it.harga||0}" min="0" oninput="window._sphItems[${i}].harga=parseFloat(this.value)||0;sphRecalc()" style="width:120px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
-    <td style="padding:6px 4px;text-align:right;font-weight:600;font-size:12px;color:#0f172a" id="sph-sub-${i}">${rp((it.qty||0)*(it.harga||0))}</td>
-    <td style="padding:6px 4px;text-align:center"><button onclick="sphDelRow(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px">✕</button></td>
-  </tr>`).join('');
-
-  window._sphItems=items.map(x=>({...x}));
+  window._sphItems=items.map(x=>({desc:'',qty:1,satuan:'unit',hargaBeli:0,markup:'',harga:0,refId:null,...x}));
   window._sphTtd=s&&s.ttd?s.ttd:'';
+  window._sphPpn=s?!!s.ppn:false;
+  window._sphPpnRate=s&&s.ppnRate?s.ppnRate:((DB.taxSettings&&DB.taxSettings.ppnRate)||11);
 
   const mo=document.createElement('div');
   mo.id='sph-modal';
@@ -10846,22 +11630,45 @@ function openAddSph(id){
       </div>
     </div>
     <div style="padding:0 28px 24px">
-      <div style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px;margin-bottom:10px">ITEM / RINCIAN HARGA</div>
-      <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">ITEM / RINCIAN HARGA</div>
+        <div style="display:flex;align-items:center;gap:6px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:5px 8px">
+          <span style="font-size:11px;color:#0369a1;font-weight:600">Markup semua (%)</span>
+          <input id="sph-markup-all" type="number" step="0.1" placeholder="cth. 20" style="width:60px;padding:3px 6px;border:1px solid #bae6fd;border-radius:5px;font-size:12px;text-align:right">
+          <button onclick="sphApplyMarkupAll()" style="padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600">Terapkan</button>
+        </div>
+      </div>
+      <p style="font-size:10.5px;color:#94a3b8;margin:0 0 10px">Isi <b>Harga Beli</b> (harga dari partner/vendor) lalu <b>Markup %</b> per baris — Harga Jual otomatis kehitung. Klik 🔍 untuk cek harga acuan (referensi) sebelum menentukan markup. Kolom Harga Beli &amp; Markup ini tidak akan tercetak di dokumen SPH untuk klien.</p>
+      <div style="border:1px solid #e2e8f0;border-radius:10px;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:920px">
           <thead><tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
             <th style="padding:9px 8px;text-align:left;font-size:11px;font-weight:700;color:#64748b">DESKRIPSI</th>
             <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">QTY</th>
-            <th style="padding:9px 4px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SATUAN</th>
-            <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">HARGA SATUAN</th>
+            <th style="padding:9px 4px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SAT</th>
+            <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">HARGA BELI</th>
+            <th style="padding:9px 4px;text-align:center;font-size:11px;font-weight:700;color:#64748b">🔍</th>
+            <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">MARKUP %</th>
+            <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#0e7490">HARGA JUAL</th>
             <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">SUBTOTAL</th>
             <th style="padding:9px 4px"></th>
           </tr></thead>
-          <tbody id="sph-items">${itemRows()}</tbody>
+          <tbody id="sph-items">${sphRenderRows()}</tbody>
         </table>
       </div>
       <button onclick="sphAddRow()" style="margin-top:10px;padding:7px 16px;background:#f0f9ff;border:1px dashed #0891b2;border-radius:7px;font-size:12px;color:#0891b2;cursor:pointer;font-weight:600">+ Tambah Item</button>
-      <div style="margin-top:16px;text-align:right;font-size:15px;font-weight:700;color:#0f172a">Total: <span id="sph-total" style="color:#0e7490">${rp(items.reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0))}</span></div>
+      <div style="margin-top:16px;display:flex;justify-content:flex-end">
+        <div style="min-width:260px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding-bottom:8px;border-bottom:1px solid #e2e8f0;margin-bottom:8px">
+            <input type="checkbox" id="sph-ppn" ${window._sphPpn?'checked':''} onchange="window._sphPpn=this.checked;sphRecalc()">
+            <span>PPN</span>
+            <input id="sph-ppn-rate" type="number" min="0" max="100" step="0.1" value="${window._sphPpnRate}" oninput="window._sphPpnRate=parseFloat(this.value)||0;sphRecalc()" style="width:48px;padding:2px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;text-align:center">%
+            <span style="margin-left:auto;font-size:10.5px;color:#94a3b8">(dihitung dari subtotal)</span>
+          </label>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0;color:#475569"><span>Subtotal</span><span id="sph-subtotal">${rp(0)}</span></div>
+          <div id="sph-ppn-row" style="display:none;justify-content:space-between;font-size:12.5px;padding:2px 0;color:#d97706"><span>PPN</span><span id="sph-ppn-amt">${rp(0)}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:#0f172a;padding-top:6px;margin-top:4px;border-top:1px solid #e2e8f0">Total<span id="sph-total" style="color:#0e7490">${rp(0)}</span></div>
+        </div>
+      </div>
     </div>
     <div style="padding:0 28px 20px">
       <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">SYARAT & KETENTUAN</label>
@@ -10875,6 +11682,7 @@ function openAddSph(id){
     </div>
   </div>`;
   document.body.appendChild(mo);
+  sphRecalc();
 }
 
 function handleSphTtdUpload(input){
@@ -10897,33 +11705,85 @@ function removeSphTtd(){
   if(a)a.innerHTML='';
 }
 
+// Baris badge kecil pembanding harga referensi (GSD dkk) vs harga beli SKK/partner
+function sphRefBadgeHtml(it){
+  if(!it.refId)return '';
+  const r=(DB.priceRefs||[]).find(x=>x.id===it.refId);
+  if(!r)return '';
+  const refTotal=priceRefTotal(r);
+  const beli=parseFloat(it.hargaBeli)||0;
+  let diffHtml='';
+  if(refTotal>0&&beli>0){
+    const diffPct=((beli-refTotal)/refTotal*100);
+    const naik=diffPct>0;
+    diffHtml=`<span style="color:${naik?'#dc2626':'#16a34a'};font-weight:700">${naik?'▲':'▼'} ${Math.abs(diffPct).toFixed(1)}% ${naik?'lebih mahal':'lebih murah'} dari ref</span>`;
+  }
+  return `<div style="font-size:10px;color:#64748b;margin-top:3px;line-height:1.5">Ref (${r.source||'-'}): ${rp(refTotal)}${diffHtml?' • '+diffHtml:''}</div>`;
+}
+
+function sphRenderRows(){
+  const items=window._sphItems||[];
+  return items.map((it,i)=>`<tr id="sph-row-${i}">
+    <td style="padding:6px 8px"><input value="${it.desc||''}" oninput="window._sphItems[${i}].desc=this.value" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
+    <td style="padding:6px 4px"><input type="number" value="${it.qty||1}" min="0" oninput="window._sphItems[${i}].qty=parseFloat(this.value)||0;sphRecalc()" style="width:60px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
+    <td style="padding:6px 4px"><input value="${it.satuan||'unit'}" oninput="window._sphItems[${i}].satuan=this.value" style="width:60px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
+    <td style="padding:6px 4px">
+      <input type="number" value="${it.hargaBeli||0}" min="0" oninput="sphOnHargaBeliInput(${i},this.value)" style="width:110px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right">
+      ${sphRefBadgeHtml(it)}
+    </td>
+    <td style="padding:6px 4px;text-align:center"><button onclick="openPriceRefPicker(${i})" title="Cek harga referensi" style="background:none;border:1px solid #e2e8f0;border-radius:5px;padding:4px 7px;font-size:12px;cursor:pointer">🔍</button></td>
+    <td style="padding:6px 4px"><input type="number" value="${it.markup===''||it.markup===undefined||it.markup===null?'':it.markup}" step="0.1" placeholder="0" oninput="sphOnMarkupInput(${i},this.value)" style="width:64px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
+    <td style="padding:6px 4px"><input type="number" value="${it.harga||0}" min="0" oninput="window._sphItems[${i}].harga=parseFloat(this.value)||0;sphRecalc()" style="width:110px;padding:5px 6px;border:1px solid #0891b2;border-radius:5px;font-size:12px;text-align:right;font-weight:600;color:#0e7490"></td>
+    <td style="padding:6px 4px;text-align:right;font-weight:600;font-size:12px;color:#0f172a" id="sph-sub-${i}">${rp((it.qty||0)*(it.harga||0))}</td>
+    <td style="padding:6px 4px;text-align:center"><button onclick="sphDelRow(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px">✕</button></td>
+  </tr>`).join('');
+}
+
+// Harga Beli berubah → hitung ulang Harga Jual kalau markup sudah diisi
+function sphOnHargaBeliInput(i,val){
+  const it=window._sphItems[i];
+  it.hargaBeli=parseFloat(val)||0;
+  if(it.markup!==''&&it.markup!==null&&it.markup!==undefined){
+    it.harga=Math.round(it.hargaBeli*(1+(parseFloat(it.markup)||0)/100));
+  }
+  document.getElementById('sph-items').innerHTML=sphRenderRows();
+  sphRecalc();
+}
+
+// Markup % berubah → hitung ulang Harga Jual dari Harga Beli
+function sphOnMarkupInput(i,val){
+  const it=window._sphItems[i];
+  it.markup=val;
+  if(val!==''&&(parseFloat(it.hargaBeli)||0)>0){
+    it.harga=Math.round((parseFloat(it.hargaBeli)||0)*(1+(parseFloat(val)||0)/100));
+  }
+  document.getElementById('sph-items').innerHTML=sphRenderRows();
+  sphRecalc();
+}
+
+// Terapkan 1 angka markup ke semua baris sekaligus (baris yang sudah ada Harga Beli-nya)
+function sphApplyMarkupAll(){
+  const val=document.getElementById('sph-markup-all').value;
+  if(val==='')return alert('Isi dulu angka markup-nya.');
+  (window._sphItems||[]).forEach(it=>{
+    it.markup=val;
+    if((parseFloat(it.hargaBeli)||0)>0){
+      it.harga=Math.round((parseFloat(it.hargaBeli)||0)*(1+(parseFloat(val)||0)/100));
+    }
+  });
+  document.getElementById('sph-items').innerHTML=sphRenderRows();
+  sphRecalc();
+}
+
 function sphAddRow(){
-  window._sphItems.push({desc:'',qty:1,satuan:'unit',harga:0});
-  const i=window._sphItems.length-1;
-  const tr=document.createElement('tr');
-  tr.id='sph-row-'+i;
-  tr.innerHTML=`
-    <td style="padding:6px 8px"><input value="" oninput="window._sphItems[${i}].desc=this.value" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
-    <td style="padding:6px 4px"><input type="number" value="1" min="0" oninput="window._sphItems[${i}].qty=parseFloat(this.value)||0;sphRecalc()" style="width:70px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
-    <td style="padding:6px 4px"><input value="unit" oninput="window._sphItems[${i}].satuan=this.value" style="width:70px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
-    <td style="padding:6px 4px"><input type="number" value="0" min="0" oninput="window._sphItems[${i}].harga=parseFloat(this.value)||0;sphRecalc()" style="width:120px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
-    <td style="padding:6px 4px;text-align:right;font-weight:600;font-size:12px;color:#0f172a" id="sph-sub-${i}">${rp(0)}</td>
-    <td style="padding:6px 4px;text-align:center"><button onclick="sphDelRow(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px">✕</button></td>`;
-  document.getElementById('sph-items').appendChild(tr);
+  window._sphItems.push({desc:'',qty:1,satuan:'unit',hargaBeli:0,markup:'',harga:0,refId:null});
+  document.getElementById('sph-items').innerHTML=sphRenderRows();
+  sphRecalc();
 }
 
 function sphDelRow(i){
   window._sphItems.splice(i,1);
-  // Re-render items in modal
-  const items=window._sphItems;
-  document.getElementById('sph-items').innerHTML=items.map((it,idx)=>`<tr id="sph-row-${idx}">
-    <td style="padding:6px 8px"><input value="${it.desc||''}" oninput="window._sphItems[${idx}].desc=this.value" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
-    <td style="padding:6px 4px"><input type="number" value="${it.qty||1}" min="0" oninput="window._sphItems[${idx}].qty=parseFloat(this.value)||0;sphRecalc()" style="width:70px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
-    <td style="padding:6px 4px"><input value="${it.satuan||'unit'}" oninput="window._sphItems[${idx}].satuan=this.value" style="width:70px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
-    <td style="padding:6px 4px"><input type="number" value="${it.harga||0}" min="0" oninput="window._sphItems[${idx}].harga=parseFloat(this.value)||0;sphRecalc()" style="width:120px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
-    <td style="padding:6px 4px;text-align:right;font-weight:600;font-size:12px;color:#0f172a" id="sph-sub-${idx}">${rp((it.qty||0)*(it.harga||0))}</td>
-    <td style="padding:6px 4px;text-align:center"><button onclick="sphDelRow(${idx})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px">✕</button></td>
-  </tr>`).join('');
+  document.getElementById('sph-items').innerHTML=sphRenderRows();
   sphRecalc();
 }
 
@@ -10933,9 +11793,17 @@ function sphRecalc(){
     const el=document.getElementById('sph-sub-'+i);
     if(el)el.textContent=rp((parseFloat(it.qty)||0)*(parseFloat(it.harga)||0));
   });
-  const total=items.reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
-  const tel=document.getElementById('sph-total');
-  if(tel)tel.textContent=rp(total);
+  const subtotal=items.reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
+  const hasPpn=!!(document.getElementById('sph-ppn')&&document.getElementById('sph-ppn').checked);
+  const ppnRate=parseFloat(document.getElementById('sph-ppn-rate')?.value)||0;
+  const ppnAmt=hasPpn?Math.round(subtotal*ppnRate/100):0;
+  const total=subtotal+ppnAmt;
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  set('sph-subtotal',rp(subtotal));
+  set('sph-ppn-amt',rp(ppnAmt));
+  set('sph-total',rp(total));
+  const ppnRow=document.getElementById('sph-ppn-row');
+  if(ppnRow)ppnRow.style.display=hasPpn?'flex':'none';
 }
 
 function saveSph(asDraft){
@@ -10952,13 +11820,18 @@ function saveSph(asDraft){
   if(!noSph||!tgl||!pihak)return alert('No. SPH, Tanggal, dan Nama Pihak wajib diisi.');
   const items=(window._sphItems||[]).filter(i=>i.desc||i.harga>0);
   const status=asDraft?'draft':statusEl;
+  const subtotal=items.reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
+  const ppn=!!document.getElementById('sph-ppn').checked;
+  const ppnRate=parseFloat(document.getElementById('sph-ppn-rate').value)||0;
+  const ppnAmt=ppn?Math.round(subtotal*ppnRate/100):0;
+  const total=subtotal+ppnAmt;
   DB.sphs=DB.sphs||[];
   const now=Date.now();
   if(window._sphEditId){
     const idx=DB.sphs.findIndex(x=>x.id===window._sphEditId);
-    if(idx>-1){DB.sphs[idx]={...DB.sphs[idx],noSph,tanggal:tgl,tujuan,pihak,perihal,berlaku,syarat,penandatangan,ttd,items,status,updated_at:now};}
+    if(idx>-1){DB.sphs[idx]={...DB.sphs[idx],noSph,tanggal:tgl,tujuan,pihak,perihal,berlaku,syarat,penandatangan,ttd,items,status,subtotal,ppn,ppnRate,ppnAmt,total,updated_at:now};}
   } else {
-    DB.sphs.push({id:uid(),noSph,tanggal:tgl,tujuan,pihak,perihal,berlaku,syarat,penandatangan,ttd,items,status,link_invoice_id:null,created_at:now,updated_at:now});
+    DB.sphs.push({id:uid(),noSph,tanggal:tgl,tujuan,pihak,perihal,berlaku,syarat,penandatangan,ttd,items,status,subtotal,ppn,ppnRate,ppnAmt,total,link_invoice_id:null,created_at:now,updated_at:now});
   }
   saveDB();
   document.getElementById('sph-modal').remove();
@@ -10967,7 +11840,9 @@ function saveSph(asDraft){
 
 function viewSph(id){
   const s=(DB.sphs||[]).find(x=>x.id===id);if(!s)return;
-  const total=(s.items||[]).reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
+  const subtotal=(typeof s.subtotal==='number')?s.subtotal:(s.items||[]).reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
+  const ppnAmt=s.ppn?(s.ppnAmt||0):0;
+  const total=(typeof s.total==='number')?s.total:subtotal+ppnAmt;
   const linkedInv=s.link_invoice_id?(DB.invoices||[]).find(x=>x.id===s.link_invoice_id):null;
   const statusLabel={draft:'Draft',sent:'Terkirim',accepted:'Diterima',rejected:'Ditolak'}[s.status]||s.status;
   const mo=document.createElement('div');
@@ -10992,7 +11867,11 @@ function viewSph(id){
       <table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
         <thead><tr style="background:#f8fafc"><th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:#64748b">DESKRIPSI</th><th style="padding:9px 8px;text-align:right;font-size:11px;font-weight:700;color:#64748b">QTY</th><th style="padding:9px 8px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SAT</th><th style="padding:9px 8px;text-align:right;font-size:11px;font-weight:700;color:#64748b">HARGA</th><th style="padding:9px 8px;text-align:right;font-size:11px;font-weight:700;color:#64748b">SUBTOTAL</th></tr></thead>
         <tbody>${(s.items||[]).map(i=>`<tr style="border-top:1px solid #f1f5f9"><td style="padding:9px 12px">${i.desc||'-'}</td><td style="padding:9px 8px;text-align:right">${i.qty}</td><td style="padding:9px 8px">${i.satuan||''}</td><td style="padding:9px 8px;text-align:right">${rp(i.harga||0)}</td><td style="padding:9px 8px;text-align:right;font-weight:600">${rp((i.qty||0)*(i.harga||0))}</td></tr>`).join('')}</tbody>
-        <tfoot><tr style="background:#f8fafc;border-top:2px solid #e2e8f0"><td colspan="4" style="padding:10px 12px;text-align:right;font-weight:700;font-size:13px">TOTAL</td><td style="padding:10px 8px;text-align:right;font-weight:800;font-size:14px;color:#0e7490">${rp(total)}</td></tr></tfoot>
+        <tfoot>
+          ${s.ppn?`<tr style="background:#fff"><td colspan="4" style="padding:6px 12px;text-align:right;font-size:12px;color:#64748b">Subtotal</td><td style="padding:6px 8px;text-align:right;font-size:12px;color:#64748b">${rp(subtotal)}</td></tr>
+          <tr style="background:#fff"><td colspan="4" style="padding:6px 12px;text-align:right;font-size:12px;color:#d97706">PPN ${s.ppnRate||0}%</td><td style="padding:6px 8px;text-align:right;font-size:12px;color:#d97706">${rp(ppnAmt)}</td></tr>`:''}
+          <tr style="background:#f8fafc;border-top:2px solid #e2e8f0"><td colspan="4" style="padding:10px 12px;text-align:right;font-weight:700;font-size:13px">TOTAL</td><td style="padding:10px 8px;text-align:right;font-weight:800;font-size:14px;color:#0e7490">${rp(total)}</td></tr>
+        </tfoot>
       </table>
       ${s.syarat?`<div style="margin-top:14px;padding:12px 14px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#78350f"><b>Syarat & Ketentuan:</b>${formatSyaratHtml(s.syarat)}</div>`:''}
     </div>
@@ -11019,7 +11898,9 @@ function openInvoiceFromSph(sphId){
 function printSph(id){
   const s=(DB.sphs||[]).find(x=>x.id===id);if(!s)return;
   const co=DB.company||{};
-  const total=(s.items||[]).reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
+  const subtotal=(typeof s.subtotal==='number')?s.subtotal:(s.items||[]).reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
+  const ppnAmt=s.ppn?(s.ppnAmt||0):0;
+  const total=(typeof s.total==='number')?s.total:subtotal+ppnAmt;
   const kota=co.kota||'';
   const tglSph=fDate(s.tanggal||'');
   const tglBerlaku=s.berlaku?fDate(s.berlaku):'-';
@@ -11130,10 +12011,20 @@ function printSph(id){
           <th class="r" style="width:130px">SUBTOTAL</th>
         </tr></thead>
         <tbody>${itemRows}</tbody>
-        <tfoot><tr>
-          <td colspan="5" style="text-align:right;padding:12px 8px;font-size:13px;font-weight:800;color:#0f172a">TOTAL</td>
-          <td style="text-align:right;padding:12px 8px;font-size:15px;font-weight:900;color:#0e7490;white-space:nowrap">${rp(total)}</td>
-        </tr></tfoot>
+        <tfoot>
+          ${s.ppn?`<tr style="background:#fff">
+            <td colspan="5" style="text-align:right;padding:6px 8px;font-size:12px;color:#64748b">Subtotal</td>
+            <td style="text-align:right;padding:6px 8px;font-size:12px;color:#64748b;white-space:nowrap">${rp(subtotal)}</td>
+          </tr>
+          <tr style="background:#fff">
+            <td colspan="5" style="text-align:right;padding:6px 8px;font-size:12px;color:#d97706">PPN ${s.ppnRate||0}%</td>
+            <td style="text-align:right;padding:6px 8px;font-size:12px;color:#d97706;white-space:nowrap">${rp(ppnAmt)}</td>
+          </tr>`:''}
+          <tr>
+            <td colspan="5" style="text-align:right;padding:12px 8px;font-size:13px;font-weight:800;color:#0f172a">TOTAL</td>
+            <td style="text-align:right;padding:12px 8px;font-size:15px;font-weight:900;color:#0e7490;white-space:nowrap">${rp(total)}</td>
+          </tr>
+        </tfoot>
       </table>
       ${s.syarat?`<div class="syarat"><div class="syarat-label">Syarat &amp; Ketentuan:</div>${formatSyaratHtml(s.syarat)}</div>`:''}
       <div class="sig">
