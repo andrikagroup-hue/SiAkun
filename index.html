@@ -3605,6 +3605,41 @@ function defaultCoA(){
     {id:'9-90001',code:'9-90001',name:'Beban Pajak - Tangguhan',           type:'beban',sub:'pajak',category:'Beban Lainnya'},
   ];
 }
+
+// ── Perbaiki Tipe & Sub akun berdasarkan daftar kode standar SiAkun ──
+// Tidak mengubah saldo/transaksi apapun, cuma label Tipe & Sub tiap akun.
+function repairAccountTypes(){
+  if(!confirm('Perbaiki Tipe & Sub akun berdasarkan kode akun standar SiAkun?\n\nSaldo dan data jurnal TIDAK akan berubah — cuma label Tipe/Sub tiap akun yang dirapikan.'))return;
+  const std = defaultCoA();
+  const stdMap = {};
+  std.forEach(a=>{
+    // 'pasiva' di template ini disamakan ke 'kewajiban' — itu istilah yang beneran dipakai laporan
+    stdMap[a.code] = { type: a.type==='pasiva'?'kewajiban':a.type, sub: a.sub||'' };
+  });
+  let fixed=0; const notFound=[];
+  (DB.accounts||[]).forEach(acc=>{
+    const ref = stdMap[acc.code];
+    if(ref){
+      let changed=false;
+      if(acc.type!==ref.type){ acc.type=ref.type; changed=true; }
+      if((acc.sub||'')!==ref.sub){ acc.sub=ref.sub; changed=true; }
+      if(changed) fixed++;
+    } else if(acc.code){
+      notFound.push(`${acc.code} — ${acc.name}`);
+    }
+  });
+  localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts));
+  saveDB();
+  let msg = fixed>0
+    ? `✅ Selesai! ${fixed} akun diperbaiki Tipe/Sub-nya.\n\nSilakan cek ulang Laporan Laba Rugi & Neraca.`
+    : `ℹ️ Tidak ada akun yang perlu diperbaiki (semua sudah sesuai standar).`;
+  if(notFound.length){
+    msg += `\n\n⚠️ ${notFound.length} akun custom (kode tidak dikenal SiAkun) dilewati — cek manual kalau perlu:\n`+notFound.slice(0,10).join('\n')+(notFound.length>10?`\n...dan ${notFound.length-10} lainnya`:'');
+  }
+  alert(msg);
+  nav('accounts');
+}
+
 function uid(){
   return typeof crypto.randomUUID==='function'
     ? crypto.randomUUID().replace(/-/g,'')
@@ -5757,6 +5792,7 @@ function renderAccounts(c){
       <button class="btn btn-out" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('open')" title="Opsi lainnya">⋮</button>
       <div class="btn-dropdown-menu" style="right:0;left:auto;min-width:180px">
         <div class="btn-dropdown-item" onclick="manualRecalcBalances()">🔄 Recalc Saldo</div>
+        <div class="btn-dropdown-item" style="color:#0369a1" onclick="repairAccountTypes()">🔧 Perbaiki Tipe Akun</div>
         <div class="btn-dropdown-item" id="coa-menu-del-selected" style="display:none;color:#ef4444" onclick="coaDeleteSelected()">🗑 Hapus Dipilih</div>
         <div class="btn-dropdown-item" style="color:#ef4444" onclick="deleteAllCOA()">🗑 Hapus Semua CoA</div>
       </div>
