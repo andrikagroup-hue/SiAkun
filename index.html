@@ -3939,6 +3939,7 @@ function nav(page){
     if(!DB.sphs)DB.sphs=[];
     if(!DB.quicktx)DB.quicktx=[];
     if(!DB.priceRefs)DB.priceRefs=[];
+    repairSphVeaSplit();
   }
   // Auto-close sidebar di mobile setelah pilih menu
   if(window.innerWidth<=768)closeSidebar();
@@ -11691,16 +11692,47 @@ function genSphId(){
 }
 
 // Buat draft SPH awal untuk PT. Vision Ease Asia dari SKK_VEA_BOQ_SEED (sekali saja, kalau belum pernah dibuat)
+// Perbaikan sekali-jalan buat draft SPH VEA yang sempat kebentuk sebelum perbaikan ini:
+// 1) pisah field "hargaBeli" lama jadi Material & Jasa (ambil dari data asli SKK_VEA_BOQ_SEED)
+// 2) hapus catatan internal yang sempat kebawa ke Perihal (harusnya ga boleh kecetak ke klien)
+function repairSphVeaSplit(){
+  if(!DB.sphs)DB.sphs=[];
+  if(DB.sphVeaSplitRepaired)return false;
+  DB.sphVeaSplitRepaired=true;
+  let changed=false;
+  DB.sphs.forEach(s=>{
+    if(s.pihak==='PT. Vision Ease Asia'&&Array.isArray(s.items)&&s.items.some(it=>it.hargaBeli!==undefined)){
+      s.items.forEach(it=>{
+        if(it.hargaBeli!==undefined){
+          const baseDesc=(it.desc||'').split(' — ')[0];
+          const src=(typeof SKK_VEA_BOQ_SEED!=='undefined')?SKK_VEA_BOQ_SEED.find(x=>x.desc===baseDesc):null;
+          if(src){ it.hargaBeliMaterial=src.material||0; it.hargaBeliJasa=src.labour||0; }
+          else { it.hargaBeliMaterial=it.hargaBeli; it.hargaBeliJasa=0; }
+          delete it.hargaBeli;
+          changed=true;
+        }
+      });
+    }
+    if(s.perihal&&s.perihal.includes('markup 20% default')){
+      s.perihal='Penawaran Pengadaan & Pemasangan Fire Fighting System';
+      changed=true;
+    }
+  });
+  if(changed)saveDB();
+  return changed;
+}
+
 function seedSphVeaDemo(){
   if(!DB.sphs)DB.sphs=[];
   if(DB.sphVeaSeeded)return false;
   DB.sphVeaSeeded=true;
   seedPriceRefDemo();
   const items=SKK_VEA_BOQ_SEED.map(it=>{
-    const hargaBeli=(it.material||0)+(it.labour||0);
+    const hargaBeliMaterial=it.material||0;
+    const hargaBeliJasa=it.labour||0;
     const markup=20;
-    const harga=Math.round(hargaBeli*(1+markup/100));
-    return {desc:it.brand?it.desc+' — '+it.brand:it.desc,qty:it.qty,satuan:it.satuan,hargaBeli,markup,harga,refId:it.refId||null};
+    const harga=Math.round((hargaBeliMaterial+hargaBeliJasa)*(1+markup/100));
+    return {desc:it.brand?it.desc+' — '+it.brand:it.desc,qty:it.qty,satuan:it.satuan,hargaBeliMaterial,hargaBeliJasa,markup,harga,refId:it.refId||null};
   });
   const subtotal=items.reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
   const ppn=true;
@@ -11711,7 +11743,7 @@ function seedSphVeaDemo(){
   const d=new Date();d.setDate(d.getDate()+14);
   DB.sphs.push({
     id:uid(),noSph:genSphId(),tanggal:today(),tujuan:'customer',pihak:'PT. Vision Ease Asia',
-    perihal:'Penawaran Fire Fighting System (berdasarkan BOQ SKK Ref: 1-028/QT/SKK-VEA/FFS/26-R0) — markup 20% default, tolong cek & sesuaikan per item pakai 🔍 referensi sebelum dikirim ke klien',
+    perihal:'Penawaran Pengadaan & Pemasangan Fire Fighting System',
     berlaku:d.toISOString().slice(0,10),syarat:'',penandatangan:'',ttd:'',
     items,status:'draft',subtotal,ppn,ppnRate,ppnAmt,total,
     link_invoice_id:null,created_at:now,updated_at:now
@@ -12069,7 +12101,8 @@ function pickPriceRefForRow(refId){
     window._sphItems[rowIdx].refId=refId;
   }
   const m=document.getElementById('pref-pick-modal');if(m)m.remove();
-  sphRenderRows();
+  document.getElementById('sph-items').innerHTML=sphRenderRows();
+  sphRecalc();
 }
 
 function openAddSph(id){
@@ -12077,9 +12110,17 @@ function openAddSph(id){
   const s=id?(DB.sphs||[]).find(x=>x.id===id):null;
   const isEdit=!!s;
   const noSph=s?s.noSph:genSphId();
-  const items=s?s.items:[{desc:'',qty:1,satuan:'unit',hargaBeli:0,markup:'',harga:0,refId:null}];
+  const items=s?s.items:[{desc:'',qty:1,satuan:'unit',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:0,refId:null}];
 
-  window._sphItems=items.map(x=>({desc:'',qty:1,satuan:'unit',hargaBeli:0,markup:'',harga:0,refId:null,...x}));
+  window._sphItems=items.map(x=>{
+    const it={desc:'',qty:1,satuan:'unit',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:0,refId:null,...x};
+    // migrasi data lama yang masih pakai 1 field gabungan "hargaBeli"
+    if(x.hargaBeli!==undefined&&x.hargaBeliMaterial===undefined&&x.hargaBeliJasa===undefined){
+      it.hargaBeliMaterial=x.hargaBeli;it.hargaBeliJasa=0;
+    }
+    delete it.hargaBeli;
+    return it;
+  });
   window._sphTtd=s&&s.ttd?s.ttd:'';
   window._sphPpn=s?!!s.ppn:false;
   window._sphPpnRate=s&&s.ppnRate?s.ppnRate:((DB.taxSettings&&DB.taxSettings.ppnRate)||11);
@@ -12154,14 +12195,15 @@ function openAddSph(id){
           <button onclick="sphApplyMarkupAll()" style="padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600">Terapkan</button>
         </div>
       </div>
-      <p style="font-size:10.5px;color:#94a3b8;margin:0 0 10px">Isi <b>Harga Beli</b> (harga dari partner/vendor) lalu <b>Markup %</b> per baris — Harga Jual otomatis kehitung. Klik 🔍 untuk cek harga acuan (referensi) sebelum menentukan markup. Kolom Harga Beli &amp; Markup ini tidak akan tercetak di dokumen SPH untuk klien.</p>
+      <p style="font-size:10.5px;color:#94a3b8;margin:0 0 10px">Isi <b>Material</b> &amp; <b>Jasa</b> (harga dari partner/vendor, persis kayak kolom di Excel) lalu <b>Markup %</b> per baris — Harga Jual otomatis kehitung dari (Material+Jasa) × markup. Klik 🔍 untuk cek harga acuan (referensi) sebelum menentukan markup. Kolom Material, Jasa &amp; Markup ini tidak akan tercetak di dokumen SPH untuk klien.</p>
       <div style="border:1px solid #e2e8f0;border-radius:10px;overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:920px">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:1020px">
           <thead><tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
             <th style="padding:9px 8px;text-align:left;font-size:11px;font-weight:700;color:#64748b">DESKRIPSI</th>
             <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">QTY</th>
             <th style="padding:9px 4px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SAT</th>
-            <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">HARGA BELI</th>
+            <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">MATERIAL</th>
+            <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">JASA</th>
             <th style="padding:9px 4px;text-align:center;font-size:11px;font-weight:700;color:#64748b">🔍</th>
             <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">MARKUP %</th>
             <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#0e7490">HARGA JUAL</th>
@@ -12221,70 +12263,76 @@ function removeSphTtd(){
   if(a)a.innerHTML='';
 }
 
-// Baris badge kecil pembanding harga referensi (GSD dkk) vs harga beli SKK/partner
+// Baris badge kecil pembanding harga referensi (GSD dkk) vs harga beli SKK/partner — dipecah Material & Jasa
 function sphRefBadgeHtml(it){
   if(!it.refId)return '';
   const r=(DB.priceRefs||[]).find(x=>x.id===it.refId);
   if(!r)return '';
-  const refTotal=priceRefTotal(r);
-  const beli=parseFloat(it.hargaBeli)||0;
+  const refMat=parseFloat(r.hargaMaterial)||0;
+  const refJasa=parseFloat(r.hargaJasa)||0;
+  const refTotal=refMat+refJasa;
+  const beliMat=parseFloat(it.hargaBeliMaterial)||0;
+  const beliJasa=parseFloat(it.hargaBeliJasa)||0;
+  const beliTotal=beliMat+beliJasa;
   let diffHtml='';
-  if(refTotal>0&&beli>0){
-    const diffPct=((beli-refTotal)/refTotal*100);
+  if(refTotal>0&&beliTotal>0){
+    const diffPct=((beliTotal-refTotal)/refTotal*100);
     const naik=diffPct>0;
-    diffHtml=`<span style="color:${naik?'#dc2626':'#16a34a'};font-weight:700">${naik?'▲':'▼'} ${Math.abs(diffPct).toFixed(1)}% ${naik?'lebih mahal':'lebih murah'} dari ref</span>`;
+    diffHtml=` • <span style="color:${naik?'#dc2626':'#16a34a'};font-weight:700">${naik?'▲':'▼'} ${Math.abs(diffPct).toFixed(1)}% ${naik?'lebih mahal':'lebih murah'} dari ref</span>`;
   }
-  return `<div style="font-size:10px;color:#64748b;margin-top:3px;line-height:1.5">Ref (${r.source||'-'}): ${rp(refTotal)}${diffHtml?' • '+diffHtml:''}</div>`;
+  return `<div style="font-size:10px;color:#64748b;margin-top:3px;line-height:1.5;grid-column:1/-1">🔗 Ref (${r.source||'-'}): Material ${rp(refMat)} + Jasa ${rp(refJasa)} = ${rp(refTotal)}${diffHtml}</div>`;
 }
 
 function sphRenderRows(){
   const items=window._sphItems||[];
   return items.map((it,i)=>`<tr id="sph-row-${i}">
     <td style="padding:6px 8px"><input value="${it.desc||''}" oninput="window._sphItems[${i}].desc=this.value" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
-    <td style="padding:6px 4px"><input type="number" value="${it.qty||1}" min="0" oninput="window._sphItems[${i}].qty=parseFloat(this.value)||0;sphRecalc()" style="width:60px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
-    <td style="padding:6px 4px"><input value="${it.satuan||'unit'}" oninput="window._sphItems[${i}].satuan=this.value" style="width:60px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
-    <td style="padding:6px 4px">
-      <input type="number" value="${it.hargaBeli||0}" min="0" oninput="sphOnHargaBeliInput(${i},this.value)" style="width:110px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right">
-      ${sphRefBadgeHtml(it)}
-    </td>
+    <td style="padding:6px 4px"><input type="number" value="${it.qty||1}" min="0" oninput="window._sphItems[${i}].qty=parseFloat(this.value)||0;sphRecalc()" style="width:56px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
+    <td style="padding:6px 4px"><input value="${it.satuan||'unit'}" oninput="window._sphItems[${i}].satuan=this.value" style="width:56px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
+    <td style="padding:6px 4px"><input type="number" value="${it.hargaBeliMaterial||0}" min="0" oninput="sphOnHargaBeliInput(${i},'Material',this.value)" style="width:100px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
+    <td style="padding:6px 4px"><input type="number" value="${it.hargaBeliJasa||0}" min="0" oninput="sphOnHargaBeliInput(${i},'Jasa',this.value)" style="width:100px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
     <td style="padding:6px 4px;text-align:center"><button onclick="openPriceRefPicker(${i})" title="Cek harga referensi" style="background:none;border:1px solid #e2e8f0;border-radius:5px;padding:4px 7px;font-size:12px;cursor:pointer">🔍</button></td>
-    <td style="padding:6px 4px"><input type="number" value="${it.markup===''||it.markup===undefined||it.markup===null?'':it.markup}" step="0.1" placeholder="0" oninput="sphOnMarkupInput(${i},this.value)" style="width:64px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
+    <td style="padding:6px 4px"><input type="number" value="${it.markup===''||it.markup===undefined||it.markup===null?'':it.markup}" step="0.1" placeholder="0" oninput="sphOnMarkupInput(${i},this.value)" style="width:60px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
     <td style="padding:6px 4px"><input type="number" value="${it.harga||0}" min="0" oninput="window._sphItems[${i}].harga=parseFloat(this.value)||0;sphRecalc()" style="width:110px;padding:5px 6px;border:1px solid #0891b2;border-radius:5px;font-size:12px;text-align:right;font-weight:600;color:#0e7490"></td>
     <td style="padding:6px 4px;text-align:right;font-weight:600;font-size:12px;color:#0f172a" id="sph-sub-${i}">${rp((it.qty||0)*(it.harga||0))}</td>
     <td style="padding:6px 4px;text-align:center"><button onclick="sphDelRow(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px">✕</button></td>
-  </tr>`).join('');
+  </tr>${it.refId?`<tr><td></td><td colspan="9" style="padding:0 4px 8px">${sphRefBadgeHtml(it)}</td></tr>`:''}`).join('');
 }
 
-// Harga Beli berubah → hitung ulang Harga Jual kalau markup sudah diisi
-function sphOnHargaBeliInput(i,val){
+// Material / Jasa berubah → hitung ulang Harga Jual kalau markup sudah diisi
+function sphOnHargaBeliInput(i,field,val){
   const it=window._sphItems[i];
-  it.hargaBeli=parseFloat(val)||0;
+  if(field==='Material')it.hargaBeliMaterial=parseFloat(val)||0;
+  else it.hargaBeliJasa=parseFloat(val)||0;
   if(it.markup!==''&&it.markup!==null&&it.markup!==undefined){
-    it.harga=Math.round(it.hargaBeli*(1+(parseFloat(it.markup)||0)/100));
+    const total=(parseFloat(it.hargaBeliMaterial)||0)+(parseFloat(it.hargaBeliJasa)||0);
+    it.harga=Math.round(total*(1+(parseFloat(it.markup)||0)/100));
   }
   document.getElementById('sph-items').innerHTML=sphRenderRows();
   sphRecalc();
 }
 
-// Markup % berubah → hitung ulang Harga Jual dari Harga Beli
+// Markup % berubah → hitung ulang Harga Jual dari (Material+Jasa)
 function sphOnMarkupInput(i,val){
   const it=window._sphItems[i];
   it.markup=val;
-  if(val!==''&&(parseFloat(it.hargaBeli)||0)>0){
-    it.harga=Math.round((parseFloat(it.hargaBeli)||0)*(1+(parseFloat(val)||0)/100));
+  const total=(parseFloat(it.hargaBeliMaterial)||0)+(parseFloat(it.hargaBeliJasa)||0);
+  if(val!==''&&total>0){
+    it.harga=Math.round(total*(1+(parseFloat(val)||0)/100));
   }
   document.getElementById('sph-items').innerHTML=sphRenderRows();
   sphRecalc();
 }
 
-// Terapkan 1 angka markup ke semua baris sekaligus (baris yang sudah ada Harga Beli-nya)
+// Terapkan 1 angka markup ke semua baris sekaligus (baris yang sudah ada Material/Jasa-nya)
 function sphApplyMarkupAll(){
   const val=document.getElementById('sph-markup-all').value;
   if(val==='')return alert('Isi dulu angka markup-nya.');
   (window._sphItems||[]).forEach(it=>{
     it.markup=val;
-    if((parseFloat(it.hargaBeli)||0)>0){
-      it.harga=Math.round((parseFloat(it.hargaBeli)||0)*(1+(parseFloat(val)||0)/100));
+    const total=(parseFloat(it.hargaBeliMaterial)||0)+(parseFloat(it.hargaBeliJasa)||0);
+    if(total>0){
+      it.harga=Math.round(total*(1+(parseFloat(val)||0)/100));
     }
   });
   document.getElementById('sph-items').innerHTML=sphRenderRows();
@@ -12292,7 +12340,7 @@ function sphApplyMarkupAll(){
 }
 
 function sphAddRow(){
-  window._sphItems.push({desc:'',qty:1,satuan:'unit',hargaBeli:0,markup:'',harga:0,refId:null});
+  window._sphItems.push({desc:'',qty:1,satuan:'unit',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:0,refId:null});
   document.getElementById('sph-items').innerHTML=sphRenderRows();
   sphRecalc();
 }
