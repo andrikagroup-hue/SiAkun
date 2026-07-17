@@ -9235,342 +9235,356 @@ function onInvPicChange(){
   }
 }
 // ==================== DATA AWAL: REFERENSI HARGA GSD & BOQ SKK (PT. VISION EASE ASIA) ====================
-// GSD_PRICE_REF_SEED: 334 item harga acuan dari proyek GSD (K-TEL-002-2026) yang sudah di-approve pembeli.
+// GSD_PRICE_REF_SEED: 343 item harga acuan dari proyek GSD (K-TEL-002-2026) yang sudah di-approve pembeli.
+// Setiap item juga punya field "vol" (volume/qty asli di Excel) supaya TOTAL keseluruhan bisa dicocokkan
+// persis dengan baris "TOTAL HARGA" di file Excel aslinya (Rp 130.050.644.600).
+// Catatan: 9 item modul (Zone Module, Control Module, Monitor Module dkk di bawah kategori FIRE ALARM
+// SYSTEM) sempat tidak ke-import sebelumnya karena baris-baris itu di Excel tidak punya nomor urut "No" —
+// sekarang sudah ditambahkan manual supaya totalnya pas.
 const GSD_PRICE_REF_SEED=[
-{id:'pref-gsd-000',desc:'Electric motor-driven pump (750 GPM)',category:'FIRE PUMP SYSTEM',spec:'FIRE PUMP (END SUCTION TYPE, UL FM APPROVED)',satuan:'unit',hargaMaterial:1010000000,hargaJasa:101000000},
-{id:'pref-gsd-001',desc:'Diesel engine-driven pump (750 GPM)',category:'FIRE PUMP SYSTEM',spec:'FIRE PUMP (END SUCTION TYPE, UL FM APPROVED)',satuan:'unit',hargaMaterial:1900000000,hargaJasa:190000000},
-{id:'pref-gsd-002',desc:'Electric motor-driven pump (500 GPM)',category:'FIRE PUMP SYSTEM',spec:'FIRE PUMP (END SUCTION TYPE, UL FM APPROVED)',satuan:'unit',hargaMaterial:433450000,hargaJasa:43000000},
-{id:'pref-gsd-003',desc:'Diesel engine-driven pump (500 GPM)',category:'FIRE PUMP SYSTEM',spec:'FIRE PUMP (END SUCTION TYPE, UL FM APPROVED)',satuan:'unit',hargaMaterial:1100000000,hargaJasa:110000000},
-{id:'pref-gsd-004',desc:'Jockey Pump (25 GPM)',category:'FIRE PUMP SYSTEM',spec:'FIRE PUMP (END SUCTION TYPE, UL FM APPROVED)',satuan:'unit',hargaMaterial:58000000,hargaJasa:5000000},
-{id:'pref-gsd-005',desc:'Ball Valve 1/2"',category:'VALVE & ACCESSORIES',spec:'Ball valve 1/2", brass/bronze material, WOG non-shock 400 psi (27,6 bar), threaded connection',satuan:'ea.',hargaMaterial:175000,hargaJasa:25000},
-{id:'pref-gsd-006',desc:'Ball Valve 1/2"',category:'VALVE & ACCESSORIES',spec:'Ball valve 1/2" brass/bronze type 400, threaded',satuan:'ea.',hargaMaterial:175000,hargaJasa:25000},
-{id:'pref-gsd-007',desc:'Ball Valve 1/2"',category:'VALVE & ACCESSORIES',spec:'Ball valve 1/2" threaded',satuan:'ea.',hargaMaterial:175000,hargaJasa:25000},
-{id:'pref-gsd-008',desc:'Ball Valve 3/4"',category:'VALVE & ACCESSORIES',spec:'Ball valve  3/4", brass material, WOG non-shock 400 psi (27,6 bar), threaded connection',satuan:'ea.',hargaMaterial:220000,hargaJasa:31000},
-{id:'pref-gsd-009',desc:'Ball Valve 1"',category:'VALVE & ACCESSORIES',spec:'Ball valve 1", brass material, WOG non-shock 400 psi (27,6 bar), threaded connection',satuan:'ea.',hargaMaterial:310000,hargaJasa:43000},
-{id:'pref-gsd-010',desc:'Ball Valve 1"',category:'VALVE & ACCESSORIES',spec:'Ball valve threaded',satuan:'ea.',hargaMaterial:310000,hargaJasa:43000},
-{id:'pref-gsd-011',desc:'Pressure Gauge 3.5"',category:'VALVE & ACCESSORIES',spec:'Pressure gauge diameter 3,5" (89 mm), 300 psi (21 bar)',satuan:'ea.',hargaMaterial:483000,hargaJasa:38700},
-{id:'pref-gsd-012',desc:'Water Pressure Gauge 1/2" NPT',category:'VALVE & ACCESSORIES',spec:'Pressure gauge 1/2" NPT, 300 psi',satuan:'ea.',hargaMaterial:483000,hargaJasa:38700},
-{id:'pref-gsd-013',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y diameter 6", ductile iron ASTM A536, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:10142100,hargaJasa:204300},
-{id:'pref-gsd-014',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 6" ANSI UL/FM 300psi/21bar untuk suction & discharge electric & diesel pump',satuan:'ea.',hargaMaterial:13000000,hargaJasa:204300},
-{id:'pref-gsd-015',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 6" ANSI UL/FM 300psi/21bar untuk flowmeter',satuan:'ea.',hargaMaterial:13000000,hargaJasa:204300},
-{id:'pref-gsd-016',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 6" ANSI UL/FM 300psi/21bar untuk pressure reducing valve',satuan:'ea.',hargaMaterial:13000000,hargaJasa:204300},
-{id:'pref-gsd-017',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 6" ANSI UL/FM 300psi/21bar untuk water tank',satuan:'ea.',hargaMaterial:13000000,hargaJasa:204300},
-{id:'pref-gsd-018',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 6" ANSI UL/FM 300psi/21bar',satuan:'ea.',hargaMaterial:13000000,hargaJasa:204300},
-{id:'pref-gsd-019',desc:'Gate Valve OS&Y 4"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y diameter 4", ductile iron ASTM A536, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:6278500,hargaJasa:90800},
-{id:'pref-gsd-020',desc:'Gate Valve OS&Y 4"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 4" ANSI UL/FM 300psi/21bar',satuan:'ea.',hargaMaterial:6943000,hargaJasa:90800},
-{id:'pref-gsd-021',desc:'Gate Valve OS&Y 3"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y diameter 3", ductile iron ASTM A536, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:5162800,hargaJasa:90800},
-{id:'pref-gsd-022',desc:'Gate Valve OS&Y 2"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y diameter 2", ductile iron ASTM A536, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:4185700,hargaJasa:90800},
-{id:'pref-gsd-023',desc:'Gate Valve OS&Y 2"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 2" ANSI UL/FM 300psi/21bar untuk suction & discharge jockey pump',satuan:'ea.',hargaMaterial:4185700,hargaJasa:90800},
-{id:'pref-gsd-024',desc:'Strainer Y-type 6"',category:'VALVE & ACCESSORIES',spec:'Strainer Y-type diameter 6", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:6230900,hargaJasa:289800},
-{id:'pref-gsd-025',desc:'Y Strainer 6"',category:'VALVE & ACCESSORIES',spec:'Y Strainer diameter 6" flanged untuk suction electric & diesel pump',satuan:'ea.',hargaMaterial:6230900,hargaJasa:289800},
-{id:'pref-gsd-026',desc:'Strainer Y-type 4"',category:'VALVE & ACCESSORIES',spec:'Strainer Y-type diameter 4", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:1317400,hargaJasa:75300},
-{id:'pref-gsd-027',desc:'Strainer Y-type 2"',category:'VALVE & ACCESSORIES',spec:'Strainer Y-type diameter 2", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:1317400,hargaJasa:75300},
-{id:'pref-gsd-028',desc:'Y Strainer 2"',category:'VALVE & ACCESSORIES',spec:'Y Strainer diameter 2" flanged untuk suction jockey pump',satuan:'ea.',hargaMaterial:1317400,hargaJasa:75300},
-{id:'pref-gsd-029',desc:'Flexible Expansion Joint 6"',category:'VALVE & ACCESSORIES',spec:'Flexible expansion joint diameter 6", material metal, flanged connection',satuan:'ea.',hargaMaterial:4069200,hargaJasa:245500},
-{id:'pref-gsd-030',desc:'Flexible Expansion Joint 2"',category:'VALVE & ACCESSORIES',spec:'Flexible expansion joint diameter 2", material metal, flanged connection',satuan:'ea.',hargaMaterial:1560000,hargaJasa:109000},
-{id:'pref-gsd-031',desc:'Expansion Joint Flange 2"',category:'VALVE & ACCESSORIES',spec:'Expansion joint flange diameter 2" untuk suction & discharge jockey pump',satuan:'ea.',hargaMaterial:1560000,hargaJasa:109000},
-{id:'pref-gsd-032',desc:'Expansion Joint Flange 6"',category:'VALVE & ACCESSORIES',spec:'Expansion joint flange diameter 6" untuk suction & discharge electric & diesel pump',satuan:'ea.',hargaMaterial:4069200,hargaJasa:245500},
-{id:'pref-gsd-033',desc:'Swing Check Valve 6"',category:'VALVE & ACCESSORIES',spec:'Swing check valve diameter 6", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:9047400,hargaJasa:204300},
-{id:'pref-gsd-034',desc:'Swing Check Valve 6"',category:'VALVE & ACCESSORIES',spec:'Swing check valve 6" ANSI/PN UL/FM 300psi/21bar untuk discharge electric & diesel pump',satuan:'ea.',hargaMaterial:9047400,hargaJasa:204300},
-{id:'pref-gsd-035',desc:'Swing Check Valve 4"',category:'VALVE & ACCESSORIES',spec:'Swing check valve diameter 4", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:6000000,hargaJasa:204300},
-{id:'pref-gsd-036',desc:'Swing Check Valve 4"',category:'VALVE & ACCESSORIES',spec:'Swing check valve 4" ANSI UL/FM 300psi/21bar',satuan:'ea.',hargaMaterial:6000000,hargaJasa:204300},
-{id:'pref-gsd-037',desc:'Swing Check Valve 2"',category:'VALVE & ACCESSORIES',spec:'Swing check valve diameter 2", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:2253800,hargaJasa:75300},
-{id:'pref-gsd-038',desc:'Swing Check Valve 2"',category:'VALVE & ACCESSORIES',spec:'Swing check valve 2" ANSI UL/FM 300psi/21bar untuk discharge jockey pump',satuan:'ea.',hargaMaterial:2492400,hargaJasa:75300},
-{id:'pref-gsd-039',desc:'Swing Check Valve 1/2"',category:'VALVE & ACCESSORIES',spec:'Swing check valve diameter 1/2", bronze material, 200 psi (13,8 bar), threaded connection',satuan:'ea.',hargaMaterial:102000,hargaJasa:15500},
-{id:'pref-gsd-040',desc:'Swing Check Valve with Orifice Hole',category:'VALVE & ACCESSORIES',spec:'Swing check valve dengan orifice hole 2-3 m 1/2 in',satuan:'ea.',hargaMaterial:102000,hargaJasa:15500},
-{id:'pref-gsd-041',desc:'Pressure Relief Valve 1"',category:'VALVE & ACCESSORIES',spec:'Pressure relief valve diameter 1"',satuan:'ea.',hargaMaterial:1090000,hargaJasa:43000},
-{id:'pref-gsd-042',desc:'Pressure Relief Valve 6"',category:'VALVE & ACCESSORIES',spec:'Pressure relief valve diameter 6"',satuan:'ea.',hargaMaterial:41000000,hargaJasa:6150000},
-{id:'pref-gsd-043',desc:'Automatic Air Vent 3/4"',category:'VALVE & ACCESSORIES',spec:'Automatic air vent diameter 3/4", threaded connection',satuan:'ea.',hargaMaterial:1186900,hargaJasa:29400},
-{id:'pref-gsd-044',desc:'Automatic Air Vent 1"',category:'VALVE & ACCESSORIES',spec:'Automatic air vent diameter 1", threaded connection',satuan:'ea.',hargaMaterial:1931900,hargaJasa:113700},
-{id:'pref-gsd-045',desc:'Air Release Valve 1"',category:'VALVE & ACCESSORIES',spec:'Air release valve diameter 1", red paint',satuan:'ea.',hargaMaterial:1310000,hargaJasa:99000},
-{id:'pref-gsd-046',desc:'Pressure Reducing Valve 6"',category:'VALVE & ACCESSORIES',spec:'Pressure reducing valve flanged ANSI 6", dilengkapi 2 pressure gauge in & out',satuan:'ea.',hargaMaterial:65000000,hargaJasa:13150000},
-{id:'pref-gsd-047',desc:'Branch Control Valve 3"',category:'VALVE & ACCESSORIES',spec:'Branch control valve diameter 3" lengkap dengan butterfly valve (supervisory), flow switch, test & drain valve 1", pressure gauge',satuan:'ea.',hargaMaterial:9450000,hargaJasa:1200000},
-{id:'pref-gsd-048',desc:'Branch Control Valve 4"',category:'VALVE & ACCESSORIES',spec:'Branch control valve diameter 4" lengkap dengan butterfly valve (supervisory), flow switch, test & drain valve 1", pressure gauge',satuan:'ea.',hargaMaterial:10100000,hargaJasa:1350000},
-{id:'pref-gsd-049',desc:'Branch Control Valve 4"',category:'VALVE & ACCESSORIES',spec:'Branch control valve 4", lengkap',satuan:'ea.',hargaMaterial:10100000,hargaJasa:1350000},
-{id:'pref-gsd-050',desc:'Pipe Galvanized 1/2"',category:'PIPE',spec:'Pipa ASTM A53 Grade A ERW, Sch. 40, galvanized PE, diameter 1/2"',satuan:'btg',hargaMaterial:345685,hargaJasa:40000},
-{id:'pref-gsd-051',desc:'Pipe Black Steel 1/2" (Gauge)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 1/2" untuk gauge',satuan:'btg',hargaMaterial:280000,hargaJasa:40000},
-{id:'pref-gsd-052',desc:'Pipe Black Steel 1/2" (Fuel Out)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 1/2" untuk fuel out',satuan:'btg',hargaMaterial:280000,hargaJasa:40000},
-{id:'pref-gsd-053',desc:'Pipe Black Steel 3/4"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 3/4"',satuan:'btg',hargaMaterial:324500,hargaJasa:40000},
-{id:'pref-gsd-054',desc:'Pipe Black Steel 3/4" (Air Vent & Relief)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 3/4" untuk air vent & relief',satuan:'btg',hargaMaterial:324500,hargaJasa:40000},
-{id:'pref-gsd-055',desc:'Pipe Black Steel 3/4" (Fuel In)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 3/4" untuk fuel in',satuan:'btg',hargaMaterial:324500,hargaJasa:40000},
-{id:'pref-gsd-056',desc:'Pipe Black Steel 2"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 2"',satuan:'btg',hargaMaterial:753800,hargaJasa:92000},
-{id:'pref-gsd-057',desc:'Pipe Black Steel 2" (Jockey Suction & Discharge)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 2" untuk jockey suction & discharge',satuan:'btg',hargaMaterial:853800,hargaJasa:168400},
-{id:'pref-gsd-058',desc:'Pipe Black Steel 3"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 3"',satuan:'btg',hargaMaterial:753800,hargaJasa:268400},
-{id:'pref-gsd-059',desc:'Pipe Black Steel 4"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 4"',satuan:'btg',hargaMaterial:856000,hargaJasa:268400},
-{id:'pref-gsd-060',desc:'Pipe Black Steel 4" (Relief In)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 4" untuk relief in',satuan:'btg',hargaMaterial:941900,hargaJasa:268400},
-{id:'pref-gsd-061',desc:'Pipe Black Steel 6"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 6"',satuan:'btg',hargaMaterial:3896500,hargaJasa:320000},
-{id:'pref-gsd-062',desc:'Pipe Black Steel 6" (Relief Out)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 6" untuk relief out',satuan:'btg',hargaMaterial:4396500,hargaJasa:885800},
-{id:'pref-gsd-063',desc:'Pipe Galvanized 6" (Suction)',category:'PIPE',spec:'Pipa ERW galvanis ASTM A53 Grade A Sch. 40, diameter 6" untuk suction',satuan:'btg',hargaMaterial:3896500,hargaJasa:320000},
-{id:'pref-gsd-064',desc:'Pipe Black Steel 6" (Discharge Header)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 6" untuk discharge header',satuan:'btg',hargaMaterial:4396500,hargaJasa:885800},
-{id:'pref-gsd-065',desc:'Pipe Black Steel 6" (Flowmeter)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 6" untuk flowmeter',satuan:'btg',hargaMaterial:4396500,hargaJasa:885800},
-{id:'pref-gsd-066',desc:'Pipe Black Steel 8"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 8"',satuan:'btg',hargaMaterial:5948800,hargaJasa:436000},
-{id:'pref-gsd-067',desc:'Pipe Black Steel 8" (Header)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 8" untuk header',satuan:'btg',hargaMaterial:6948800,hargaJasa:1116100},
-{id:'pref-gsd-068',desc:'Pipe Galvanized 1" (Drain)',category:'PIPE',spec:'Pipa ERW galvanis ASTM A53 Grade B Sch. 40, diameter 1" untuk drain',satuan:'btg',hargaMaterial:640845,hargaJasa:100000},
-{id:'pref-gsd-069',desc:'Elbow 90° 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° long-turn, ASTM A234 WPB-S BW, Sch. 40, dia. 6"',satuan:'ea.',hargaMaterial:467400,hargaJasa:126100},
-{id:'pref-gsd-070',desc:'Elbow 90° 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° ASTM A234 BW, Sch. 40, dia. 6"',satuan:'ea.',hargaMaterial:467400,hargaJasa:126100},
-{id:'pref-gsd-071',desc:'Elbow 90° 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° ASTM A234 BW, Sch. 40, dia. 2"',satuan:'ea.',hargaMaterial:80800,hargaJasa:16600},
-{id:'pref-gsd-072',desc:'Elbow 90° 3"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° long-turn, ASTM A234 WPB-S BW, Sch. 40, dia. 3"',satuan:'ea.',hargaMaterial:136900,hargaJasa:34500},
-{id:'pref-gsd-073',desc:'Elbow 90° 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° short-turn, ASTM A234 WPB-S BW, Sch. 40, dia. 2"',satuan:'ea.',hargaMaterial:80800,hargaJasa:16600},
-{id:'pref-gsd-074',desc:'Elbow 90° 3/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° short-turn, ASTM A197 class 150, dia. 3/4"',satuan:'ea.',hargaMaterial:25100,hargaJasa:8500},
-{id:'pref-gsd-075',desc:'Tee Reducer 6"x3"',category:'FITTING, GASKET & STUDBOLT',spec:'Tee reducer, ASTM A234 WPB-S BW, Sch. 40, dia. 6"x3"',satuan:'ea.',hargaMaterial:414200,hargaJasa:126100},
-{id:'pref-gsd-076',desc:'Eccentric Reducer 6"x4"',category:'FITTING, GASKET & STUDBOLT',spec:'Eccentric reducer, ASTM A234 WPB-S BW, Sch. 40, dia. 6"x4"',satuan:'ea.',hargaMaterial:118775,hargaJasa:85725},
-{id:'pref-gsd-077',desc:'Eccentric Reducer DN150x125',category:'FITTING, GASKET & STUDBOLT',spec:'Eccentric reducer ASTM WPB-S BW Sch. 40 DN 150x125',satuan:'ea.',hargaMaterial:78400,hargaJasa:85725},
-{id:'pref-gsd-078',desc:'Eccentric Reducer 2"x1-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Eccentric reducer, ASTM A234 WPB-S BW, Sch. 40, dia. 2"x1-1/4"',satuan:'ea.',hargaMaterial:69400,hargaJasa:10000},
-{id:'pref-gsd-079',desc:'Concentric Reducer 6"x4"',category:'FITTING, GASKET & STUDBOLT',spec:'Concentric reducer ASTM A234 BW Sch. 40, dia. 6"x4"',satuan:'ea.',hargaMaterial:78400,hargaJasa:85725},
-{id:'pref-gsd-080',desc:'Concentric Reducer 6"x3"',category:'FITTING, GASKET & STUDBOLT',spec:'Concentric reducer ASTM A234 WPB-S BW Sch. 40, dia. 6"x3"',satuan:'ea.',hargaMaterial:114500,hargaJasa:90000},
-{id:'pref-gsd-081',desc:'Concentric Reducer 2"x1-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Concentric reducer ASTM A234 WPB-S BW Sch. 40, dia. 2"x1-1/4"',satuan:'ea.',hargaMaterial:61200,hargaJasa:9000},
-{id:'pref-gsd-082',desc:'Weldolet 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Weldolet dia. 6"',satuan:'ea.',hargaMaterial:241600,hargaJasa:126100},
-{id:'pref-gsd-083',desc:'Weldolet 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Weldolet dia. 2"',satuan:'ea.',hargaMaterial:277700,hargaJasa:90000},
-{id:'pref-gsd-084',desc:'Flange Slip-on 8"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 8"',satuan:'ea.',hargaMaterial:848300,hargaJasa:150000},
-{id:'pref-gsd-085',desc:'Flange Slip-on 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 6"',satuan:'ea.',hargaMaterial:499200,hargaJasa:90000},
-{id:'pref-gsd-086',desc:'Flange Slip-on 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange Slip On FF ANSI #150 dia. 6"',satuan:'ea.',hargaMaterial:463100,hargaJasa:86700},
-{id:'pref-gsd-087',desc:'Flange Slip-on 4"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 4"',satuan:'ea.',hargaMaterial:450000,hargaJasa:60000},
-{id:'pref-gsd-088',desc:'Flange Slip-on 4"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange Slip On FF ANSI #150 dia. 4"',satuan:'ea.',hargaMaterial:450000,hargaJasa:60000},
-{id:'pref-gsd-089',desc:'Flange Slip-on 3"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 3"',satuan:'ea.',hargaMaterial:202700,hargaJasa:40000},
-{id:'pref-gsd-090',desc:'Flange Slip-on 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 2"',satuan:'ea.',hargaMaterial:184800,hargaJasa:30000},
-{id:'pref-gsd-091',desc:'Flange Slip-on 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange Slip On FF ANSI #150 dia. 2"',satuan:'ea.',hargaMaterial:124300,hargaJasa:29500},
-{id:'pref-gsd-092',desc:'Flange Slip-on 1-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 1-1/4"',satuan:'ea.',hargaMaterial:100000,hargaJasa:16000},
-{id:'pref-gsd-093',desc:'Blind Flange 8"',category:'FITTING, GASKET & STUDBOLT',spec:'Blind flange, ASTM A105 class 150, dia. 8"',satuan:'ea.',hargaMaterial:871100,hargaJasa:171800},
-{id:'pref-gsd-094',desc:'Gasket Rubber 8"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 8"',satuan:'ea.',hargaMaterial:33400,hargaJasa:6000},
-{id:'pref-gsd-095',desc:'Gasket Rubber 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 6"',satuan:'ea.',hargaMaterial:26800,hargaJasa:4000},
-{id:'pref-gsd-096',desc:'Gasket Rubber 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Rubber gasket ANSI for FF#150 dia. 6"',satuan:'ea.',hargaMaterial:26800,hargaJasa:4000},
-{id:'pref-gsd-097',desc:'Gasket Rubber 4"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 4"',satuan:'ea.',hargaMaterial:20700,hargaJasa:3000},
-{id:'pref-gsd-098',desc:'Gasket Rubber 4"',category:'FITTING, GASKET & STUDBOLT',spec:'Rubber gasket ANSI for FF#150 dia. 4"',satuan:'ea.',hargaMaterial:20700,hargaJasa:3000},
-{id:'pref-gsd-099',desc:'Gasket Rubber 3"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 3"',satuan:'ea.',hargaMaterial:15700,hargaJasa:1000},
-{id:'pref-gsd-100',desc:'Gasket Rubber 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 2"',satuan:'ea.',hargaMaterial:10000,hargaJasa:1000},
-{id:'pref-gsd-101',desc:'Gasket Rubber 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Rubber gasket ANSI for FF#150 dia. 2"',satuan:'ea.',hargaMaterial:10000,hargaJasa:1000},
-{id:'pref-gsd-102',desc:'Gasket Rubber 1-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 1-1/4"',satuan:'ea.',hargaMaterial:8000,hargaJasa:1000},
-{id:'pref-gsd-103',desc:'Stud Bolt 3/4"x4-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Grade B7 galvanized, complete with 2 nuts, dia. 3/4"x4-1/4" (110 mm)',satuan:'ea.',hargaMaterial:41500,hargaJasa:2800},
-{id:'pref-gsd-104',desc:'Stud Bolt 3/4"x4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Grade B7 galvanized, complete with 2 nuts, dia. 3/4"x4" (100 mm)',satuan:'ea.',hargaMaterial:41500,hargaJasa:2800},
-{id:'pref-gsd-105',desc:'Stud Bolt 3/4"x4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Gr B7 + 2 Nut A194 2H, ukuran 3/4"x4" (untuk flange 6")',satuan:'ea.',hargaMaterial:25000,hargaJasa:2800},
-{id:'pref-gsd-106',desc:'Stud Bolt 5/8"x3-1/2"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Grade B7 galvanized, complete with 2 nuts, dia. 5/8"x3-1/2" (90 mm)',satuan:'ea.',hargaMaterial:27700,hargaJasa:2800},
-{id:'pref-gsd-107',desc:'Stud Bolt 5/8"x3-1/2"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Gr B7 + 2 Nut A194 2H, ukuran 5/8"x3-1/2" (untuk flange 4")',satuan:'ea.',hargaMaterial:27700,hargaJasa:2800},
-{id:'pref-gsd-108',desc:'Stud Bolt 5/8"x3-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Grade B7 galvanized, complete with 2 nuts, dia. 5/8"x3-1/4" (85 mm)',satuan:'ea.',hargaMaterial:27700,hargaJasa:2800},
-{id:'pref-gsd-109',desc:'Stud Bolt 5/8"x3-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Gr B7 + 2 Nut A194 2H, ukuran 5/8"x3-1/4" (untuk flange 2")',satuan:'ea.',hargaMaterial:27700,hargaJasa:2800},
-{id:'pref-gsd-110',desc:'Stud Bolt 1/2"x2-3/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Grade B7 galvanized, complete with 2 nuts, dia. 1/2"x2-3/4" (70 mm)',satuan:'ea.',hargaMaterial:20800,hargaJasa:2800},
-{id:'pref-gsd-111',desc:'Pump Distribution Power Panel',category:'ELECTRICAL INSTALLATION WORKS',spec:'Panel distribusi daya untuk pompa',satuan:'Set',hargaMaterial:18000000,hargaJasa:1850000},
-{id:'pref-gsd-112',desc:'Distribution Power Panel Fire Pump Room',category:'ELECTRICAL INSTALLATION WORKS',spec:'Panel distribusi daya ruang pompa kebakaran',satuan:'Set',hargaMaterial:18000000,hargaJasa:1850000},
-{id:'pref-gsd-113',desc:'Cable FRC 4C x 70 mm² + NYA 1C x 25 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 70 mm² + kabel NYA 1 inti 25 mm², dari panel MDP ke panel SDP ruang pompa',satuan:'m',hargaMaterial:831000,hargaJasa:122742},
-{id:'pref-gsd-114',desc:'Cable FRC 4C x 95 mm² + NYA 1C x 25 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 95 mm² + kabel NYA 1 inti 25 mm², dari panel MDP ke panel SDP ruang pompa',satuan:'m',hargaMaterial:1150000,hargaJasa:150000},
-{id:'pref-gsd-115',desc:'Cable FRC 4C x 4 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 4 mm², panel distribusi ke panel kontrol jockey pump',satuan:'m',hargaMaterial:88400,hargaJasa:13000},
-{id:'pref-gsd-116',desc:'Cable FRC 4C x 50 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 50 mm², panel distribusi ke panel kontrol electric pump',satuan:'m',hargaMaterial:620000,hargaJasa:56000},
-{id:'pref-gsd-117',desc:'Cable FRC 4C x 95 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 95 mm², panel distribusi ke panel kontrol electric pump',satuan:'m',hargaMaterial:1150000,hargaJasa:160000},
-{id:'pref-gsd-118',desc:'Cable FRC 3C x 4 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 3 inti 4 mm², panel distribusi ke panel kontrol diesel pump',satuan:'m',hargaMaterial:38826,hargaJasa:10000},
-{id:'pref-gsd-119',desc:'Cable FRC 4C x 4 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 4 mm², panel kontrol jockey pump ke motor jockey pump',satuan:'m',hargaMaterial:89400,hargaJasa:2800},
-{id:'pref-gsd-120',desc:'Cable FRC 7C x 35 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 7 inti 35 mm², panel kontrol electric pump ke motor electric pump',satuan:'m',hargaMaterial:786400,hargaJasa:2800},
-{id:'pref-gsd-121',desc:'Cable FRC (4C x 2.5 mm²) x 3',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 2.5 mm² x 3, panel kontrol diesel pump ke panel kontrol engine pump',satuan:'m',hargaMaterial:48000,hargaJasa:7000},
-{id:'pref-gsd-122',desc:'Cable FRC 4C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 2.5 mm², untuk battery charger DFP',satuan:'m',hargaMaterial:48000,hargaJasa:7000},
-{id:'pref-gsd-123',desc:'Cable NYM 3C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel NYM 3 inti 2.5 mm², panel distribusi ke panel kontrol WLC',satuan:'m',hargaMaterial:20000,hargaJasa:2800},
-{id:'pref-gsd-124',desc:'Cable NYY 3C x 2.5 mm² + NYA 1C x 1.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel NYY 3 inti 2.5 mm² + kabel NYA 1 inti 1.5 mm², panel kontrol WLC ke motor sump pump',satuan:'m',hargaMaterial:33000,hargaJasa:2800},
-{id:'pref-gsd-125',desc:'Cable NYY 3C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel NYY 3 inti 2.5 mm², panel kontrol WLC ke motor sump pump',satuan:'m',hargaMaterial:33000,hargaJasa:2800},
-{id:'pref-gsd-126',desc:'Cable NYM 3C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel NYM 3 inti 2.5 mm², untuk power TL lamp, emergency lamp, exhaust fan',satuan:'m',hargaMaterial:20000,hargaJasa:2800},
-{id:'pref-gsd-127',desc:'Straight Tray U Type 200x100 mm',category:'ELECTRICAL INSTALLATION WORKS',spec:'Straight tray tipe U ukuran 200x100 mm lengkap dengan cover (panel MDP ke panel SDP ruang pompa)',satuan:'m',hargaMaterial:442100,hargaJasa:100000},
-{id:'pref-gsd-128',desc:'Straight Tray U Type 200x100 mm',category:'ELECTRICAL INSTALLATION WORKS',spec:'Straight tray tipe U ukuran 200x100 mm lengkap dengan cover',satuan:'m',hargaMaterial:442100,hargaJasa:100000},
-{id:'pref-gsd-129',desc:'Straight Tray U Type 200x100 mm',category:'ELECTRICAL INSTALLATION WORKS',spec:'Straight tray tipe U ukuran 200x100 mm lengkap dengan cover (panel SDP ruang pompa ke panel kontrol & motor/engine pump)',satuan:'m',hargaMaterial:442100,hargaJasa:100000},
-{id:'pref-gsd-130',desc:'Cable FRC 4C x 90 mm² + NYA 1C x 25 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 90 mm² + kabel NYA 1 inti 25 mm², dari panel MDP ke panel SDP ruang pompa',satuan:'m',hargaMaterial:1191000,hargaJasa:178500},
-{id:'pref-gsd-131',desc:'Cable FRC 4C x 70 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 70 mm², panel distribusi ke panel kontrol electric pump',satuan:'m',hargaMaterial:892000,hargaJasa:133000},
-{id:'pref-gsd-132',desc:'Cable FRC 7C x 50 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 7 inti 50 mm², panel kontrol electric pump ke motor electric pump',satuan:'m',hargaMaterial:628500,hargaJasa:94000},
-{id:'pref-gsd-133',desc:'Cable FRC 1C x 2.5 mm² x 2',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 1 inti 2.5 mm² x 2, untuk over speed protection DFP',satuan:'m',hargaMaterial:15525,hargaJasa:3500},
-{id:'pref-gsd-134',desc:'Cable FRC 4C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 2.5 mm², untuk overspeed & low oil protection',satuan:'m',hargaMaterial:48000,hargaJasa:7000},
-{id:'pref-gsd-135',desc:'Cable FRC 2C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 2 inti 2.5 mm², untuk high temperature DFP',satuan:'m',hargaMaterial:26000,hargaJasa:3500},
-{id:'pref-gsd-136',desc:'Cable FRC 4C x 1.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 1.5 mm², untuk starter 1 & starter 2 (crank)',satuan:'m',hargaMaterial:34000,hargaJasa:5000},
-{id:'pref-gsd-137',desc:'Cable FRC 4C (1C-4 mm²)',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti (1C-4 mm²), untuk baterai',satuan:'m',hargaMaterial:90000,hargaJasa:12700},
-{id:'pref-gsd-138',desc:'Fitting & Accessories',category:'ELECTRICAL INSTALLATION WORKS',spec:'Perlengkapan pendukung instalasi kabel',satuan:'lot',hargaMaterial:800000,hargaJasa:300000},
-{id:'pref-gsd-139',desc:'Fitting Cable Tray & Accessories',category:'ELECTRICAL INSTALLATION WORKS',spec:'Aksesoris kabel tray (cable skun, cable gland, flexible conduit, dll)',satuan:'Lot',hargaMaterial:800000,hargaJasa:300000},
-{id:'pref-gsd-140',desc:'Support',category:'ELECTRICAL INSTALLATION WORKS',spec:'Sistem support untuk kabel & tray',satuan:'Lot',hargaMaterial:6650549,hargaJasa:1500000},
-{id:'pref-gsd-141',desc:'Terminal Box Interkoneksi',category:'ELECTRICAL INSTALLATION WORKS',spec:'Terminal box interkoneksi panel pompa ke fire alarm',satuan:'unit',hargaMaterial:400000,hargaJasa:60000},
-{id:'pref-gsd-142',desc:'Hydrant Pillar Two-Way',category:'HYDRANT EQUIPMENT',spec:'Pillar hydrant dua arah, warna merah glossy, ukuran 4" x 2-1/2" x 2-1/2", lengkap dengan machino coupling & cap',satuan:'set',hargaMaterial:6500000,hargaJasa:652000},
-{id:'pref-gsd-143',desc:'Hydrant Pillar Two-Way JIS 20K',category:'HYDRANT EQUIPMENT',spec:'Pillar hydrant dua arah dengan machino coupling JIS 20K',satuan:'Pcs',hargaMaterial:6500000,hargaJasa:652000},
-{id:'pref-gsd-144',desc:'Outdoor Hydrant Box Type C',category:'HYDRANT EQUIPMENT',spec:'Box hydrant outdoor tipe C, dilengkapi dengan: 1 selang 2-1/2" panjang 30 m, 1 hose rack aluminium, 1 jet spray nozzle 2-1/2" aluminium, pedestal',satuan:'set',hargaMaterial:3550000,hargaJasa:500000},
-{id:'pref-gsd-145',desc:'Outdoor Hydrant Box Type C (Powder Coating)',category:'HYDRANT EQUIPMENT',spec:'Box hydrant outdoor tipe C (tebal 1,2 mm), powder coating warna merah, ukuran 950 x 660 x 200 mm',satuan:'Set',hargaMaterial:3550000,hargaJasa:500000},
-{id:'pref-gsd-146',desc:'Indoor Hydrant Box Class 3',category:'HYDRANT EQUIPMENT',spec:'Box hydrant indoor Class 3, dilengkapi dengan: 1 landing valve 2-1/2", 1 landing valve 1-1/2", 1 selang 1-1/2" panjang 30 m, 1 hose rack aluminium, 1 jet spray nozzle 1-1/2" aluminium',satuan:'set',hargaMaterial:5800000,hargaJasa:850000},
-{id:'pref-gsd-147',desc:'Indoor Hydrant Box Type B (Powder Coating)',category:'HYDRANT EQUIPMENT',spec:'Box hydrant indoor tipe B (tebal 1,2 mm), powder coating warna merah, ukuran 1250 x 750 x 180 mm',satuan:'Set',hargaMaterial:5800000,hargaJasa:850000},
-{id:'pref-gsd-148',desc:'Siamese Connection',category:'HYDRANT EQUIPMENT',spec:'Siamese connection ukuran 4" x 2-1/2" x 2-1/2", material kuningan dengan chrome plated, lengkap dengan machino coupling & cap',satuan:'set',hargaMaterial:4800000,hargaJasa:450000},
-{id:'pref-gsd-149',desc:'Wet Sprinkler System 4"',category:'SPRINKLER SYSTEM',spec:'Sistem sprinkler basah diameter 4", koneksi flanged ANSI, lengkap dengan alarm check valve, vertical trim piping galvanized, retard chamber, water motor alarm gong, pressure switch, dan temper switch',satuan:'set',hargaMaterial:27368900,hargaJasa:938600},
-{id:'pref-gsd-150',desc:'Wet Sprinkler System 6"',category:'SPRINKLER SYSTEM',spec:'Sistem sprinkler basah diameter 6", koneksi flanged ANSI, lengkap dengan alarm check valve, vertical trim piping galvanized, retard chamber, water motor alarm gong, pressure switch, dan temper switch',satuan:'set',hargaMaterial:27368900,hargaJasa:938600},
-{id:'pref-gsd-151',desc:'Sprinkler Head Pendent 200°F (93°C)',category:'SPRINKLER SYSTEM',spec:'Sprinkler head standard response, tipe pendent, chrome finish, suhu kerja 200°F/93°C, K-5,6 (80,6), koneksi NPT 1/2"',satuan:'ea',hargaMaterial:103500,hargaJasa:19400},
-{id:'pref-gsd-152',desc:'Sprinkler Head Pendent 175°F (79°C)',category:'SPRINKLER SYSTEM',spec:'Sprinkler head standard response, tipe pendent, chrome finish, suhu kerja 175°F/79°C, K-5,6 (80,6), koneksi NPT 1/2"',satuan:'ea',hargaMaterial:103500,hargaJasa:19400},
-{id:'pref-gsd-153',desc:'Sprinkler Head Upright 175°F (79°C)',category:'SPRINKLER SYSTEM',spec:'Sprinkler head standard response, tipe upright, K-8.0, suhu kerja 175°F/79°C, koneksi NPT 3/4", chrome finish, deflektor SS',satuan:'ea',hargaMaterial:93500,hargaJasa:29400},
-{id:'pref-gsd-154',desc:'Sprinkler Head Pendent 155°F (68°C)',category:'SPRINKLER SYSTEM',spec:'Sprinkler head standard response, tipe pendent, chrome finish, suhu kerja 155°F/68°C, K-5,6 (80,6), koneksi NPT 1/2"',satuan:'ea',hargaMaterial:104900,hargaJasa:18000},
-{id:'pref-gsd-155',desc:'Sprinkler Head Pendent 155°F (68°C)',category:'SPRINKLER SYSTEM',spec:'Sprinkler head standard response, tipe pendent, chrome finish, suhu kerja 155°F/68°C, K-8.0 (80,6), koneksi NPT 1/2"',satuan:'ea',hargaMaterial:104900,hargaJasa:18000},
-{id:'pref-gsd-156',desc:'Test & Drain Valve',category:'SPRINKLER SYSTEM',spec:'Valve test & drain, diameter 1", material bronze, tekanan kerja 300 psi (21 bar), koneksi threaded',satuan:'ea',hargaMaterial:1900000,hargaJasa:45000},
-{id:'pref-gsd-157',desc:'Deluge Valve System 4"',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Deluge valve electric actuation diameter 4", termasuk trim set galvanis, electric release trim, solenoid valve, water motor alarm gong, pressure switch, dan temper switch',satuan:'set',hargaMaterial:40000000,hargaJasa:1350000},
-{id:'pref-gsd-158',desc:'Spray Nozzle Medium Velocity',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Nozzle semprotan medium velocity, material brass, sudut semprotan 180°, K-4.1 (59), koneksi NPT 1/2"',satuan:'ea.',hargaMaterial:750000,hargaJasa:45000},
-{id:'pref-gsd-159',desc:'Main Control Panel Water Spray Releasing',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Panel kontrol utama sistem water spray releasing, termasuk backup battery',satuan:'ea',hargaMaterial:32000000,hargaJasa:1800000},
-{id:'pref-gsd-160',desc:'Heat Detector Explosion Proof',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Detektor panas tipe stick, explosion proof',satuan:'ea',hargaMaterial:3000000,hargaJasa:168000},
-{id:'pref-gsd-161',desc:'Horn Strobe Outdoor',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Horn strobe untuk area luar/tingkat perlindungan weather proof',satuan:'ea',hargaMaterial:2800000,hargaJasa:200000},
-{id:'pref-gsd-162',desc:'Fire Alarm Bell',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Alarm bell dilengkapi back box',satuan:'ea',hargaMaterial:1223000,hargaJasa:100000},
-{id:'pref-gsd-163',desc:'Manual Pull Station Outdoor',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Manual pull station tipe outdoor, weather proof',satuan:'ea',hargaMaterial:1484400,hargaJasa:122800},
-{id:'pref-gsd-164',desc:'Power Cable',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Kabel daya FRC 3 x 2.5 mm² dengan conduit PVC 20 mm² untuk MCFA',satuan:'m',hargaMaterial:38000,hargaJasa:5000},
-{id:'pref-gsd-165',desc:'FRC Cable Control',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'FRC cable 2Cx1.5 mm² dengan metal conduit E19 accessories',satuan:'titik',hargaMaterial:19000,hargaJasa:2000},
-{id:'pref-gsd-166',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, termasuk fitting, support, pengecatan & material habis pakai, instalasi bawah tanah lengkap dengan wrapping, backfilling & pelindung beton',satuan:'m',hargaMaterial:2950000,hargaJasa:900000},
-{id:'pref-gsd-167',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, crossing ring utama tanpa aspal',satuan:'m',hargaMaterial:2950000,hargaJasa:900000},
-{id:'pref-gsd-168',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, crossing ring utama dengan aspal',satuan:'m',hargaMaterial:2950000,hargaJasa:900000},
-{id:'pref-gsd-169',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, dari pump room ke main ring',satuan:'m',hargaMaterial:2950000,hargaJasa:900000},
-{id:'pref-gsd-170',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, untuk hydrant main ring',satuan:'m',hargaMaterial:2950000,hargaJasa:900000},
-{id:'pref-gsd-171',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, untuk riser sprinkler',satuan:'m',hargaMaterial:2950000,hargaJasa:900000},
-{id:'pref-gsd-172',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 4 inci, termasuk fitting, support, pengecatan & material habis pakai, instalasi bawah tanah lengkap dengan wrapping, backfilling & pelindung beton',satuan:'m',hargaMaterial:1580000,hargaJasa:500000},
-{id:'pref-gsd-173',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 4 inci, crossing ke siamese connection dengan aspal',satuan:'m',hargaMaterial:3200000,hargaJasa:500000},
-{id:'pref-gsd-174',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 4 inci, dari pump room ke siamese',satuan:'m',hargaMaterial:1580000,hargaJasa:500000},
-{id:'pref-gsd-175',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 4 inci, untuk hydrant pillar',satuan:'m',hargaMaterial:856200,hargaJasa:390000},
-{id:'pref-gsd-176',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 4 inci, untuk hydrant riser',satuan:'m',hargaMaterial:856200,hargaJasa:390000},
-{id:'pref-gsd-177',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 3"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 3 inci, termasuk fitting, support, pengecatan & material habis pakai, instalasi bawah tanah lengkap dengan wrapping, backfilling & pelindung beton',satuan:'m',hargaMaterial:856200,hargaJasa:390000},
-{id:'pref-gsd-178',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 3"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 3 inci, umum',satuan:'m',hargaMaterial:946200,hargaJasa:300000},
-{id:'pref-gsd-179',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 2-1/2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 2-1/2 inci, untuk IHB Valve',satuan:'m',hargaMaterial:457000,hargaJasa:223000},
-{id:'pref-gsd-180',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 2 inci',satuan:'m',hargaMaterial:432000,hargaJasa:170000},
-{id:'pref-gsd-181',desc:'Pipe ERW Galvanized ASTM A53 Grade A Sch.40, dia. 2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja galvanis ERW ASTM A53 Grade A Schedule 40, diameter 2 inci, untuk drain sprinkler',satuan:'m',hargaMaterial:432000,hargaJasa:170000},
-{id:'pref-gsd-182',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1-1/2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1-1/2 inci, umum',satuan:'m',hargaMaterial:363000,hargaJasa:100000},
-{id:'pref-gsd-183',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1-1/4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1-1/4 inci',satuan:'m',hargaMaterial:280000,hargaJasa:100000},
-{id:'pref-gsd-184',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1 inci',satuan:'m',hargaMaterial:340000,hargaJasa:40000},
-{id:'pref-gsd-185',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 3/4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 3/4 inci',satuan:'m',hargaMaterial:223000,hargaJasa:40000},
-{id:'pref-gsd-186',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1/2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1/2 inci',satuan:'m',hargaMaterial:223000,hargaJasa:40000},
-{id:'pref-gsd-187',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1-1/4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1-1/4 inci, termasuk fitting, support, pengecatan & material habis pakai',satuan:'m',hargaMaterial:268000,hargaJasa:100000},
-{id:'pref-gsd-188',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1 inci, termasuk fitting, support, pengecatan & material habis pakai',satuan:'m',hargaMaterial:224600,hargaJasa:40000},
-{id:'pref-gsd-189',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1" (Relocation)',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1 inci, untuk pekerjaan relokasi, termasuk fitting, support, pengecatan & material habis pakai',satuan:'m',hargaMaterial:224600,hargaJasa:40000},
-{id:'pref-gsd-190',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 3/4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 3/4 inci, termasuk fitting, support, pengecatan & material habis pakai',satuan:'m',hargaMaterial:223000,hargaJasa:40000},
-{id:'pref-gsd-191',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1/2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1/2 inci, termasuk fitting, support, pengecatan & material habis pakai',satuan:'m',hargaMaterial:223000,hargaJasa:40000},
-{id:'pref-gsd-192',desc:'Fitting Pipe',category:'OTHERS',spec:'Fitting pipa, material ASTM A53 Grade A Schedule 40',satuan:'lot',hargaMaterial:325800,hargaJasa:65200},
-{id:'pref-gsd-193',desc:'Supporting Materials',category:'OTHERS',spec:'Material pendukung instalasi',satuan:'lot',hargaMaterial:2430000,hargaJasa:900000},
-{id:'pref-gsd-194',desc:'Pipe Support Material',category:'OTHERS',spec:'Material penyangga pipa',satuan:'ea.',hargaMaterial:7000000,hargaJasa:2000000},
-{id:'pref-gsd-195',desc:'Painting with Primer & Red Glossy Finish',category:'OTHERS',spec:'Pengecatan dengan primer coating & finishing merah glossy',satuan:'lot',hargaMaterial:1850000,hargaJasa:1000000},
-{id:'pref-gsd-196',desc:'Painting (Primer & Topcoat - Signal Red)',category:'OTHERS',spec:'Pengecatan dengan primer & topcoat warna merah (Signal Red)',satuan:'ea.',hargaMaterial:1850000,hargaJasa:1000000},
-{id:'pref-gsd-197',desc:'Drain Piping',category:'OTHERS',spec:'Pemasangan pipa drainase',satuan:'lot',hargaMaterial:2700000,hargaJasa:500000},
-{id:'pref-gsd-198',desc:'Consumable Materials & Miscellaneous',category:'OTHERS',spec:'Material habis pakai & item tambahan',satuan:'lot',hargaMaterial:2800000,hargaJasa:1000000},
-{id:'pref-gsd-199',desc:'Anti-vortex Assembly 6"',category:'OTHERS',spec:'Anti-vortex assembly ukuran min. 340 x 340 mm, plat besi galvanil tebal 3 mm, untuk pipa diameter 6 inci',satuan:'ea.',hargaMaterial:2500000,hargaJasa:1000000},
-{id:'pref-gsd-200',desc:'Anti-vortex Assembly 2"',category:'OTHERS',spec:'Anti-vortex assembly ukuran min. 64 x 64 mm, plat besi galvanil tebal 3 mm, untuk pipa diameter 2 inci',satuan:'ea.',hargaMaterial:1500000,hargaJasa:500000},
-{id:'pref-gsd-201',desc:'Vortex Inhibitor 6"',category:'OTHERS',spec:'Vortex inhibitor diameter 6 inci',satuan:'ea.',hargaMaterial:2500000,hargaJasa:245000},
-{id:'pref-gsd-202',desc:'Vortex Inhibitor 2"',category:'OTHERS',spec:'Vortex inhibitor diameter 2 inci',satuan:'ea.',hargaMaterial:1500000,hargaJasa:75000},
-{id:'pref-gsd-203',desc:'Water Stop Plate 6"',category:'OTHERS',spec:'Pelat penahan air diameter 6 inci',satuan:'ea.',hargaMaterial:1000000,hargaJasa:99000},
-{id:'pref-gsd-204',desc:'Water Stop Plate 2"',category:'OTHERS',spec:'Pelat penahan air diameter 2 inci',satuan:'ea.',hargaMaterial:300000,hargaJasa:50000},
-{id:'pref-gsd-205',desc:'Water Level Sensor',category:'OTHERS',spec:'Sensor ketinggian air',satuan:'set',hargaMaterial:562800,hargaJasa:100000},
-{id:'pref-gsd-206',desc:'Water Level Control (Floatless Switch)',category:'OTHERS',spec:'Kontrol level air floatless switch 220 VAC',satuan:'set',hargaMaterial:485000,hargaJasa:80000},
-{id:'pref-gsd-207',desc:'TL Lamp LED 18W',category:'OTHERS',spec:'Lampu TL LED 18 watt',satuan:'ea.',hargaMaterial:80000,hargaJasa:13000},
-{id:'pref-gsd-208',desc:'Emergency Lamp 18W',category:'OTHERS',spec:'Lampu darurat 18 watt',satuan:'ea.',hargaMaterial:500000,hargaJasa:65000},
-{id:'pref-gsd-209',desc:'Exhaust Fan 33.5 m³/min',category:'OTHERS',spec:'Exhaust fan kapasitas 33,5 m³/menit',satuan:'ea.',hargaMaterial:1000000,hargaJasa:133500},
-{id:'pref-gsd-210',desc:'Box APD',category:'OTHERS',spec:'Box perlengkapan alat pelindung diri (APD)',satuan:'lot',hargaMaterial:2600000,hargaJasa:300000},
-{id:'pref-gsd-211',desc:'Transfer Pump to Water Tank',category:'OTHERS',spec:'Pompa transfer air bersih ke tangki air',satuan:'Unit',hargaMaterial:16900000,hargaJasa:2500000},
-{id:'pref-gsd-212',desc:'Installation of Transfer Pump',category:'OTHERS',spec:'Instalasi pompa transfer air ke tangki',satuan:'Unit',hargaMaterial:3000000,hargaJasa:650000},
-{id:'pref-gsd-213',desc:'Water Tank 100 m³ Above Ground',category:'OTHERS',spec:'Tangki air kapasitas 100 m³, di atas tanah, material FRP',satuan:'m3',hargaMaterial:3150000,hargaJasa:405000},
-{id:'pref-gsd-214',desc:'Water Tank 192 m³ Above Ground',category:'OTHERS',spec:'Tangki air kapasitas 192 m³, di atas tanah, material FRP',satuan:'m3',hargaMaterial:3150000,hargaJasa:405000},
-{id:'pref-gsd-215',desc:'Hydrostatic Test',category:'OTHERS',spec:'Pengujian hydrostatic untuk instalasi pipa & tangki',satuan:'lot',hargaMaterial:0,hargaJasa:2300000},
-{id:'pref-gsd-216',desc:'Test & Commissioning',category:'OTHERS',spec:'Pengujian & commissioning sistem proteksi kebakaran (Hydrant System)',satuan:'lot',hargaMaterial:0,hargaJasa:2000000},
-{id:'pref-gsd-217',desc:'Demolition of Existing Installation',category:'OTHERS',spec:'Pekerjaan pembongkaran (demolish) instalasi existing',satuan:'ea.',hargaMaterial:0,hargaJasa:2400000},
-{id:'pref-gsd-218',desc:'Ceiling Repair',category:'OTHERS',spec:'Perbaikan plafon setelah pekerjaan instalasi',satuan:'Titik',hargaMaterial:270000,hargaJasa:75000},
-{id:'pref-gsd-219',desc:'Certification (Disnaker)',category:'OTHERS',spec:'Sertifikasi Disnaker untuk instalasi hydrant, fire alarm, dan fire suppression',satuan:'Lot',hargaMaterial:0,hargaJasa:20000000},
-{id:'pref-gsd-220',desc:'Main Control Fire Alarm Panel Addressable',category:'FIRE ALARM SYSTEM',spec:'Panel kontrol utama fire alarm tipe addressable, kapasitas minimal 2 loop, minimum 127 address per loop, dilengkapi network interface & battery backup',satuan:'Unit',hargaMaterial:61500000,hargaJasa:2750000},
-{id:'pref-gsd-221',desc:'Auxiliary Power Supply 10A 24VDC',category:'FIRE ALARM SYSTEM',spec:'Power supply tambahan 10A 24VDC, warna merah',satuan:'Unit',hargaMaterial:1825000,hargaJasa:70000},
-{id:'pref-gsd-222',desc:'Isolator Module',category:'FIRE ALARM SYSTEM',spec:'Modul isolator untuk sistem fire alarm addressable',satuan:'Ea',hargaMaterial:1200000,hargaJasa:150000},
-{id:'pref-gsd-223',desc:'Network Annunciator',category:'FIRE ALARM SYSTEM',spec:'Perangkat annunciator jaringan untuk monitoring fire alarm',satuan:'Unit',hargaMaterial:11100000,hargaJasa:1100000},
-{id:'pref-gsd-224',desc:'Photoelectric Beam Detector',category:'FIRE ALARM SYSTEM',spec:'Detektor beam photoelectric',satuan:'Ea',hargaMaterial:14000000,hargaJasa:1400000},
-{id:'pref-gsd-225',desc:'Photoelectric Smoke Detector Addressable',category:'FIRE ALARM SYSTEM',spec:'Detektor asap photoelectric tipe addressable lengkap dengan base',satuan:'Ea',hargaMaterial:1255000,hargaJasa:190000},
-{id:'pref-gsd-226',desc:'Temperature Heat Detector Addressable',category:'FIRE ALARM SYSTEM',spec:'Detektor panas tipe addressable lengkap dengan base',satuan:'Ea',hargaMaterial:1000000,hargaJasa:100000},
-{id:'pref-gsd-227',desc:'Manual Pull Station Addressable',category:'FIRE ALARM SYSTEM',spec:'Tombol manual pull station tipe addressable lengkap dengan backbox',satuan:'Ea',hargaMaterial:1550000,hargaJasa:95000},
-{id:'pref-gsd-228',desc:'Strobe with Horn',category:'FIRE ALARM SYSTEM',spec:'Strobe light dengan horn lengkap dengan backbox',satuan:'Ea',hargaMaterial:1550000,hargaJasa:190000},
-{id:'pref-gsd-229',desc:'ETS 1000VA SM2 Wallmount',category:'Module',spec:'UPS 1000VA tipe wallmount, single phase',satuan:'Unit',hargaMaterial:5500000,hargaJasa:1000000},
-{id:'pref-gsd-230',desc:'Main Distribution Frame for Module',category:'Module',spec:'Main distribution frame untuk modul fire alarm',satuan:'Unit',hargaMaterial:1150000,hargaJasa:110000},
-{id:'pref-gsd-231',desc:'Fire Alarm Terminal Box',category:'Module',spec:'Terminal box untuk instalasi fire alarm',satuan:'Unit',hargaMaterial:2900000,hargaJasa:400000},
-{id:'pref-gsd-232',desc:'Power Cable FRC 3 x 2.5 mm²',category:'INSTALLATION MATERIAL',spec:'Kabel daya FRC 3 x 2.5 mm² lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk MCFA & auxiliary supply',satuan:'m',hargaMaterial:37000,hargaJasa:5000},
-{id:'pref-gsd-233',desc:'Data Cable AWG 18 1P',category:'INSTALLATION MATERIAL',spec:'Kabel data AWG 18 1P lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk input equipment',satuan:'Titik',hargaMaterial:700000,hargaJasa:100000},
-{id:'pref-gsd-234',desc:'Bell or Horn Strobe Cable',category:'INSTALLATION MATERIAL',spec:'Kabel FRC 2 x 1.5 mm² lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk bell atau horn strobe',satuan:'Titik',hargaMaterial:850000,hargaJasa:100000},
-{id:'pref-gsd-235',desc:'Data Cable AWG 18 1P',category:'INSTALLATION MATERIAL',spec:'Kabel data AWG 18 1P lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk monitor module & control module',satuan:'Titik',hargaMaterial:700000,hargaJasa:100000},
-{id:'pref-gsd-236',desc:'Data Cable AWG 18 1P + FRC 2 x 1.5 mm²',category:'INSTALLATION MATERIAL',spec:'Kabel data AWG 18 1P ditambah kabel FRC 2 x 1.5 mm² lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk annunciator',satuan:'Titik',hargaMaterial:102000,hargaJasa:46500},
-{id:'pref-gsd-237',desc:'Data Cable 2 x AWG 18 1P',category:'INSTALLATION MATERIAL',spec:'Kabel data (2 x AWG 18 1P) lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk integrasi panel ke panel',satuan:'Titik',hargaMaterial:700000,hargaJasa:100000},
-{id:'pref-gsd-238',desc:'Power Cable Feeder FRC 2 x 1.5 mm²',category:'KABEL FEEDER PANEL TO TB LOOPING',spec:'Kabel feeder daya FRC 2 x 1.5 mm² lengkap dengan PVC conduit 20 mm² dan aksesoris',satuan:'Titik',hargaMaterial:850000,hargaJasa:100000},
-{id:'pref-gsd-239',desc:'Data Cable Feeder FRC AWG 2 x 1.5 mm²',category:'KABEL FEEDER PANEL TO TB LOOPING',spec:'Kabel feeder data FRC AWG 2 x 1.5 mm² lengkap dengan PVC conduit 20 mm² dan aksesoris',satuan:'Titik',hargaMaterial:850000,hargaJasa:100000},
-{id:'pref-gsd-240',desc:'Perapihan Jalur Pipa & Plafon',category:'OTHERS',spec:'Pekerjaan perapihan jalur pipa conduit (kabel) dan perapihan plafon',satuan:'lot',hargaMaterial:4000000,hargaJasa:2000000},
-{id:'pref-gsd-241',desc:'Dismantle Detector & Existing',category:'OTHERS',spec:'Pekerjaan pembongkaran (dismantle) detektor dan instalasi existing',satuan:'lot',hargaMaterial:450000,hargaJasa:1000000},
-{id:'pref-gsd-242',desc:'Test & Commissioning',category:'OTHERS',spec:'Pengujian & commissioning sistem proteksi kebakaran',satuan:'lot',hargaMaterial:0,hargaJasa:5000000},
-{id:'pref-gsd-243',desc:'Silinder Gas 80L',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Silinder gas inert IG-541, kapasitas ±80L, tekanan 300 bar, dilengkapi valve assembly & protective cap',satuan:'Cylinder',hargaMaterial:28000000,hargaJasa:2794000},
-{id:'pref-gsd-244',desc:'Pressure Regulator',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Regulator untuk menurunkan tekanan dari 300 bar menjadi ±60 bar, koneksi inlet/outlet W21,8',satuan:'ea',hargaMaterial:10500000,hargaJasa:2500000},
-{id:'pref-gsd-245',desc:'Pressure Gauge',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Pressure gauge 0–6100 psi, dilengkapi pressure switch NO/NC, radial, untuk silinder 300 bar',satuan:'ea',hargaMaterial:3000000,hargaJasa:300000},
-{id:'pref-gsd-246',desc:'Pneumatic Release Device',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Device aktuasi pneumatik, single piston, tekanan kerja ±21 bar',satuan:'ea',hargaMaterial:1567000,hargaJasa:300000},
-{id:'pref-gsd-247',desc:'Manual Pneumatic Release Device',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Manual actuator pneumatik, single piston, tekanan ±21 bar',satuan:'ea',hargaMaterial:3300000,hargaJasa:300000},
-{id:'pref-gsd-248',desc:'Electromagnetic Release Device',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Solenoid actuator 24 VDC, dengan diode proteksi, desain kompak',satuan:'ea',hargaMaterial:13843000,hargaJasa:300000},
-{id:'pref-gsd-249',desc:'Monitoring Switch',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Switch monitoring untuk electro-magnetic actuator',satuan:'ea',hargaMaterial:3704000,hargaJasa:300000},
-{id:'pref-gsd-250',desc:'Reset Tool',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Alat reset untuk electromagnetic actuator, dengan pelindung ulir & cap',satuan:'ea',hargaMaterial:1232000,hargaJasa:0},
-{id:'pref-gsd-251',desc:'Bleed Valve',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Valve pembuangan untuk pneumatic actuator, koneksi G 1/8"',satuan:'ea',hargaMaterial:1760000,hargaJasa:238000},
-{id:'pref-gsd-252',desc:'Pilot Hose 400 mm',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Selang pilot fleksibel 400 mm, koneksi M12 x 1,5, diameter internal 1/8" DN6',satuan:'ea',hargaMaterial:700000,hargaJasa:300000},
-{id:'pref-gsd-253',desc:'Pilot Hose 700 mm',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Selang pilot fleksibel 700 mm, koneksi M12 x 1,5, diameter internal 1/8" DN6',satuan:'ea',hargaMaterial:805000,hargaJasa:300000},
-{id:'pref-gsd-254',desc:'Adapter Pilot Hose',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Adapter hose M12 x 1,5 / G 1/8", dilengkapi O-ring',satuan:'ea',hargaMaterial:126000,hargaJasa:238000},
-{id:'pref-gsd-255',desc:'Discharge Hose',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Selang discharge DN12, panjang ±400 mm, WP 380 bar, koneksi G 3/4"',satuan:'ea',hargaMaterial:1576000,hargaJasa:300000},
-{id:'pref-gsd-256',desc:'Check Valve',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Check valve untuk inert gas/CO2, DN12, WP 360 bar, inlet G 3/4", outlet R 1"',satuan:'ea',hargaMaterial:5003000,hargaJasa:300000},
-{id:'pref-gsd-257',desc:'Pressure Relief Device',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Relief valve untuk manifold, 66 bar, koneksi 1" NPT / 3/4" NPT',satuan:'ea',hargaMaterial:5095000,hargaJasa:1322000},
-{id:'pref-gsd-258',desc:'Pressure & Flow Detector',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Switch tekanan & aliran, 2 bar, koneksi BSPP G 1/2"',satuan:'ea',hargaMaterial:7601000,hargaJasa:1000000},
-{id:'pref-gsd-259',desc:'Nozzle',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Discharge nozzle inert gas/CO2, koneksi BSP, sesuai flow calculation',satuan:'ea',hargaMaterial:6500000,hargaJasa:1000000},
-{id:'pref-gsd-260',desc:'Silent Nozzle 1/2"',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Silent discharge nozzle, koneksi R 1/2"',satuan:'ea',hargaMaterial:10844000,hargaJasa:1500000},
-{id:'pref-gsd-261',desc:'Silent Nozzle 1"',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Silent discharge nozzle, koneksi R 1"',satuan:'ea',hargaMaterial:14520000,hargaJasa:1500000},
-{id:'pref-gsd-262',desc:'Silinder Gas 650 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Stainless steel cylinder kapasitas ±650 lb, dilengkapi SS valve 3", plug adapter, pressure gauge dengan cover',satuan:'SET',hargaMaterial:130000000,hargaJasa:1300000},
-{id:'pref-gsd-263',desc:'Silinder Gas 375 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Stainless steel cylinder kapasitas ±375 lb, dilengkapi SS valve 2 1/2", plug adapter, pressure gauge dengan cover',satuan:'SET',hargaMaterial:75000000,hargaJasa:1300000},
-{id:'pref-gsd-264',desc:'Silinder Gas 250 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Stainless steel cylinder kapasitas ±250 lb, dilengkapi SS valve 1 1/2", plug adapter, pressure gauge dengan cover',satuan:'SET',hargaMaterial:65000000,hargaJasa:1100000},
-{id:'pref-gsd-265',desc:'Silinder Gas 100 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Stainless steel cylinder kapasitas ±100 lb, dilengkapi SS valve 1", plug adapter, pressure gauge dengan cover',satuan:'SET',hargaMaterial:57510000,hargaJasa:1100000},
-{id:'pref-gsd-266',desc:'Clean Agent FK-5-1-12',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Media clean agent FK-5-1-12, sesuai NFPA 2001, EPA SNAP, ramah lingkungan (ODP=0, GWP rendah)',satuan:'KG',hargaMaterial:1100000,hargaJasa:90000},
-{id:'pref-gsd-267',desc:'Solenoid Release Device',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Supervised latching solenoid untuk aktuasi silinder',satuan:'EA',hargaMaterial:10000000,hargaJasa:51000},
-{id:'pref-gsd-268',desc:'Manual Control',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Local manual control untuk aktivasi sistem',satuan:'EA',hargaMaterial:3000000,hargaJasa:45600},
-{id:'pref-gsd-269',desc:'Cylinder Strap 560/650 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strap/bracket pengikat silinder kapasitas 560–650 lb (1 set = 2 pcs)',satuan:'EA',hargaMaterial:600000,hargaJasa:90000},
-{id:'pref-gsd-270',desc:'Cylinder Strap 375 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strap/bracket pengikat silinder kapasitas 375 lb (1 set = 2 pcs)',satuan:'EA',hargaMaterial:500000,hargaJasa:50000},
-{id:'pref-gsd-271',desc:'Cylinder Strap 250 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strap/bracket pengikat silinder kapasitas 250 lb',satuan:'EA',hargaMaterial:300000,hargaJasa:30000},
-{id:'pref-gsd-272',desc:'Cylinder Strap 100/150 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strap/bracket pengikat silinder kapasitas 100–150 lb',satuan:'EA',hargaMaterial:300000,hargaJasa:30000},
-{id:'pref-gsd-273',desc:'Pressure Supervisory Switch',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Switch tekanan N/C, 500 psi, dengan cover',satuan:'EA',hargaMaterial:2750000,hargaJasa:76000},
-{id:'pref-gsd-274',desc:'Flexible Cylinder Hose 1"',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Selang fleksibel silinder 1" NPT',satuan:'EA',hargaMaterial:2000000,hargaJasa:76000},
-{id:'pref-gsd-275',desc:'Flexible Cylinder Hose 1 1/2"',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Selang fleksibel silinder 1 1/2" NPT',satuan:'EA',hargaMaterial:3000000,hargaJasa:76000},
-{id:'pref-gsd-276',desc:'Flexible Cylinder Hose 2 1/2"',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Selang fleksibel silinder metal 2 1/2" NPT',satuan:'EA',hargaMaterial:8500000,hargaJasa:76000},
-{id:'pref-gsd-277',desc:'Discharge Hose 2"',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Selang discharge 2" sesuai flow calculation',satuan:'EA',hargaMaterial:2000000,hargaJasa:266000},
-{id:'pref-gsd-278',desc:'Central Nozzle',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Nozzle 360° threaded, sesuai flow calculation',satuan:'EA',hargaMaterial:2310000,hargaJasa:110000},
-{id:'pref-gsd-279',desc:'Liquid Level Indicator (besar)',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Indikator level cairan untuk silinder 375/560/650 lb',satuan:'UNIT',hargaMaterial:10000000,hargaJasa:900000},
-{id:'pref-gsd-280',desc:'Liquid Level Indicator (kecil)',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Indikator level cairan untuk silinder 150/250 lb',satuan:'UNIT',hargaMaterial:10102000,hargaJasa:68000},
-{id:'pref-gsd-281',desc:'Piston Actuator Slave',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Device actuator piston untuk silinder slave',satuan:'EA',hargaMaterial:4500000,hargaJasa:500000},
-{id:'pref-gsd-282',desc:'Flexible Hose 1/4"',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Selang fleksibel metal 1/4" x 36"',satuan:'EA',hargaMaterial:700000,hargaJasa:75000},
-{id:'pref-gsd-283',desc:'Elbow Fitting',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Fitting elbow flare 1/8" NPT & 7/16–20 UNF',satuan:'EA',hargaMaterial:308000,hargaJasa:60000},
-{id:'pref-gsd-284',desc:'Cylinder Containment Box 250–650 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Box containment silinder dengan lock & break glass',satuan:'EA',hargaMaterial:12500000,hargaJasa:2000000},
-{id:'pref-gsd-285',desc:'Cylinder Containment Box 100 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Box containment silinder dengan lock & break glass',satuan:'EA',hargaMaterial:8240000,hargaJasa:2725000},
-{id:'pref-gsd-286',desc:'Cylinder Containment Box 20–100 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Box containment silinder dengan lock & break glass',satuan:'EA',hargaMaterial:8240000,hargaJasa:500000},
-{id:'pref-gsd-287',desc:'Releasing Fire Control Panel',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Releasing fire control panel, UL Listed, dengan backup battery',satuan:'UNIT',hargaMaterial:23900000,hargaJasa:2300000},
-{id:'pref-gsd-288',desc:'Smoke Detector',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Photoelectric smoke detector',satuan:'EA',hargaMaterial:900000,hargaJasa:100000},
-{id:'pref-gsd-289',desc:'Notification Appliance',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Wall mount horn/strobe 12/24 VDC, warna merah, 6 candela',satuan:'EA',hargaMaterial:2500000,hargaJasa:150000},
-{id:'pref-gsd-290',desc:'Abort Switch',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Abort switch dengan back box',satuan:'EA',hargaMaterial:1000000,hargaJasa:150000},
-{id:'pref-gsd-291',desc:'Manual Pull Station',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Dual action manual pull station, key reset, lift & pull type',satuan:'EA',hargaMaterial:3000000,hargaJasa:150000},
-{id:'pref-gsd-292',desc:'Alarm Bell',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Alarm bell 24 VDC, 6" merah',satuan:'EA',hargaMaterial:750000,hargaJasa:150000},
-{id:'pref-gsd-293',desc:'Indicator Light',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'LED red fire light',satuan:'EA',hargaMaterial:350000,hargaJasa:150000},
-{id:'pref-gsd-294',desc:'Evacuation Strobe',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strobe light box untuk evakuasi',satuan:'EA',hargaMaterial:1956000,hargaJasa:150000},
-{id:'pref-gsd-295',desc:'Gas Discharge Strobe',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strobe light box untuk indikasi discharge gas',satuan:'EA',hargaMaterial:1956000,hargaJasa:150000},
-{id:'pref-gsd-296',desc:'Disable Switch',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Releasing circuit disable switch 24 VDC dengan back box',satuan:'EA',hargaMaterial:850000,hargaJasa:150000},
-{id:'pref-gsd-297',desc:'Cylinder Containment Box 375–650 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Box containment silinder kapasitas 375–650 lb dengan lock & break glass',satuan:'EA',hargaMaterial:13039000,hargaJasa:2400000},
-{id:'pref-gsd-298',desc:'Motorized Damper',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Motorized damper untuk ruang baterai, integrasi exhaust',satuan:'EA',hargaMaterial:3400000,hargaJasa:190000},
-{id:'pref-gsd-299',desc:'Conventional Releasing Panel',category:'DETECTION Equipment Electrical',spec:'Panel releasing konvensional warna merah, termasuk backup battery',satuan:'Unit',hargaMaterial:40000000,hargaJasa:1200000},
-{id:'pref-gsd-300',desc:'Addressable Fire Alarm Control Panel',category:'DETECTION Equipment Electrical',spec:'FACP addressable termasuk backup battery',satuan:'Unit',hargaMaterial:75500000,hargaJasa:5800000},
-{id:'pref-gsd-301',desc:'Photoelectric Smoke Detector',category:'DETECTION Equipment Electrical',spec:'Detektor asap photoelectric lengkap dengan base',satuan:'ea',hargaMaterial:1360000,hargaJasa:166000},
-{id:'pref-gsd-302',desc:'Wall Mount Horn/Strobe 24 VDC',category:'DETECTION Equipment Electrical',spec:'Perangkat notifikasi horn/strobe, 24 VDC, warna merah, termasuk back box',satuan:'ea',hargaMaterial:2500000,hargaJasa:150000},
-{id:'pref-gsd-303',desc:'Extinguishing Abort Switch',category:'DETECTION Equipment Electrical',spec:'Abort switch, surface mount, warna merah, termasuk back box',satuan:'ea',hargaMaterial:1000000,hargaJasa:150000},
-{id:'pref-gsd-304',desc:'Manual Pull Station (Dual Action)',category:'DETECTION Equipment Electrical',spec:'Manual pull station dual action, key reset, lift & pull, warna merah',satuan:'ea',hargaMaterial:2400000,hargaJasa:120000},
-{id:'pref-gsd-305',desc:'Fire Alarm Bell 24 VDC',category:'DETECTION Equipment Electrical',spec:'Alarm bell 24 VDC, termasuk back box',satuan:'ea',hargaMaterial:750000,hargaJasa:150000},
-{id:'pref-gsd-306',desc:'Indication Lamp',category:'DETECTION Equipment Electrical',spec:'Lampu indikator LED, termasuk back box',satuan:'ea',hargaMaterial:394240,hargaJasa:150000},
-{id:'pref-gsd-307',desc:'Supervised Disconnect Switch',category:'DETECTION Equipment Electrical',spec:'Switch pemutusan terawasi (supervised)',satuan:'ea',hargaMaterial:850000,hargaJasa:150000},
-{id:'pref-gsd-308',desc:'Evacuation Strobe Light',category:'DETECTION Equipment Electrical',spec:'Strobe light box untuk evakuasi',satuan:'ea',hargaMaterial:1250000,hargaJasa:100000},
-{id:'pref-gsd-309',desc:'Gas Discharge Strobe Light',category:'DETECTION Equipment Electrical',spec:'Strobe light box untuk indikasi discharge gas',satuan:'ea',hargaMaterial:1250000,hargaJasa:100000},
-{id:'pref-gsd-310',desc:'Junction Box',category:'DETECTION Equipment Electrical',spec:'Junction box untuk interkoneksi sistem',satuan:'Unit',hargaMaterial:2738000,hargaJasa:896000},
-{id:'pref-gsd-311',desc:'Indication Lamp (Cadangan)',category:'DETECTION Equipment Electrical',spec:'Lampu indikator LED, termasuk back box',satuan:'ea',hargaMaterial:350000,hargaJasa:150000},
-{id:'pref-gsd-312',desc:'Disconnect Switch HCVR-3 (Setara)',category:'DETECTION Equipment Electrical',spec:'Disconnect switch tipe HCVR-3 atau setara, warna merah, termasuk back box',satuan:'ea',hargaMaterial:850000,hargaJasa:150000},
-{id:'pref-gsd-313',desc:'Suppression Abort Station',category:'DETECTION Equipment Electrical',spec:'Abort station untuk sistem suppression, lengkap cover',satuan:'Unit',hargaMaterial:1000000,hargaJasa:150000},
-{id:'pref-gsd-314',desc:'Addressable Input Module (AIM)',category:'DETECTION Equipment Electrical',spec:'Modul input addressable',satuan:'Unit',hargaMaterial:1797000,hargaJasa:250000},
-{id:'pref-gsd-315',desc:'Addressable Signal Module (ASM)',category:'DETECTION Equipment Electrical',spec:'Modul signal/notification addressable',satuan:'Unit',hargaMaterial:1700000,hargaJasa:250000},
-{id:'pref-gsd-316',desc:'Addressable Output Module (AOM)',category:'DETECTION Equipment Electrical',spec:'Modul output addressable',satuan:'Unit',hargaMaterial:1797000,hargaJasa:250000},
-{id:'pref-gsd-317',desc:'Terminal Box Module',category:'DETECTION Equipment Electrical',spec:'Terminal box modul untuk terminasi/ekspansi',satuan:'Unit',hargaMaterial:3000000,hargaJasa:900000},
-{id:'pref-gsd-318',desc:'Addressable Releasing Module (ARM)',category:'DETECTION Equipment Electrical',spec:'Modul releasing addressable',satuan:'Unit',hargaMaterial:6000000,hargaJasa:750000},
-{id:'pref-gsd-319',desc:'PIPE FITTING C/O:',category:'MATERIAL INSTALLATION',spec:'',satuan:'Ruangan',hargaMaterial:4000000,hargaJasa:670000},
-{id:'pref-gsd-320',desc:'SUPPORT & CONSUMMABLE MATERIAL C/O:',category:'Threadolet #3000',spec:'',satuan:'Ruangan',hargaMaterial:2750000,hargaJasa:560000},
-{id:'pref-gsd-321',desc:'ELECTRICAL INSTALLATION',category:'Angle Beam',spec:'',satuan:'Ruangan',hargaMaterial:42567000,hargaJasa:8000000},
-{id:'pref-gsd-322',desc:'CEILING WORK',category:'Conduit Accessories & Fitting',spec:'',satuan:'Ruangan',hargaMaterial:15000000,hargaJasa:1000000},
-{id:'pref-gsd-323',desc:'FIRE STOP',category:'Perbaikan Partisi/Sekat',spec:'',satuan:'Ruangan',hargaMaterial:4750000,hargaJasa:1500000},
-{id:'pref-gsd-324',desc:'Fire Extinguisher CO2 5kg (Ruang Trafo)',category:'FIRE EXTINGUISHER',spec:'APAR (Alat Pemadam Api Ringan) jenis CO2 kapasitas 5kg, untuk ruang trafo',satuan:'Ea',hargaMaterial:2000000,hargaJasa:0},
-{id:'pref-gsd-325',desc:'Fire Extinguisher CO2 5kg (Ruang Transmisi 1)',category:'FIRE EXTINGUISHER',spec:'APAR (Alat Pemadam Api Ringan) jenis CO2 kapasitas 5kg, untuk ruang transmisi 1',satuan:'Ea',hargaMaterial:2000000,hargaJasa:0},
-{id:'pref-gsd-326',desc:'Fire Extinguisher CO2 5kg (Ruang Transmisi 2)',category:'FIRE EXTINGUISHER',spec:'APAR (Alat Pemadam Api Ringan) jenis CO2 kapasitas 5kg, untuk ruang transmisi 2',satuan:'Ea',hargaMaterial:2000000,hargaJasa:0},
-{id:'pref-gsd-327',desc:'Motorized Damper',category:'OTHERS',spec:'Damper bermotor untuk sistem ventilasi & proteksi kebakaran',satuan:'EA',hargaMaterial:8000000,hargaJasa:2500000},
-{id:'pref-gsd-328',desc:'Exhaust Fan Industrial 18 Inch',category:'OTHERS',spec:'Exhaust fan industri diameter 18 inci, merek setara Panasonic type industrial',satuan:'EA',hargaMaterial:8012000,hargaJasa:750000},
-{id:'pref-gsd-329',desc:'Interkoneksi Antar Panel Releasing',category:'OTHERS',spec:'Pekerjaan interkoneksi antar panel releasing',satuan:'Ruangan',hargaMaterial:0,hargaJasa:0},
-{id:'pref-gsd-330',desc:'Dismantling Fire Protection Existing',category:'OTHERS',spec:'Pekerjaan pembongkaran sistem proteksi kebakaran existing',satuan:'Ruangan',hargaMaterial:0,hargaJasa:0},
-{id:'pref-gsd-331',desc:'Reprogramming Interkoneksi Panel Releasing to MCFA',category:'OTHERS',spec:'Pekerjaan reprogramming interkoneksi panel releasing ke MCFA',satuan:'lot',hargaMaterial:0,hargaJasa:0},
-{id:'pref-gsd-332',desc:'Overpressure Louver',category:'OTHERS',spec:'Overpressure louver untuk pengaturan aliran udara & proteksi tekanan berlebih',satuan:'Unit',hargaMaterial:7500000,hargaJasa:2500000},
-{id:'pref-gsd-333',desc:'Cylinder Strap',category:'OTHERS',spec:'Strap silinder untuk pengikat tabung fire suppression',satuan:'Ea',hargaMaterial:1000000,hargaJasa:100000},
+{id:'pref-gsd-000',desc:'Electric motor-driven pump (750 GPM)',category:'FIRE PUMP SYSTEM',spec:'FIRE PUMP (END SUCTION TYPE, UL FM APPROVED)',satuan:'unit',hargaMaterial:1010000000,hargaJasa:101000000,vol:3},
+{id:'pref-gsd-001',desc:'Diesel engine-driven pump (750 GPM)',category:'FIRE PUMP SYSTEM',spec:'FIRE PUMP (END SUCTION TYPE, UL FM APPROVED)',satuan:'unit',hargaMaterial:1900000000,hargaJasa:190000000,vol:3},
+{id:'pref-gsd-002',desc:'Electric motor-driven pump (500 GPM)',category:'FIRE PUMP SYSTEM',spec:'FIRE PUMP (END SUCTION TYPE, UL FM APPROVED)',satuan:'unit',hargaMaterial:433450000,hargaJasa:43000000,vol:14},
+{id:'pref-gsd-003',desc:'Diesel engine-driven pump (500 GPM)',category:'FIRE PUMP SYSTEM',spec:'FIRE PUMP (END SUCTION TYPE, UL FM APPROVED)',satuan:'unit',hargaMaterial:1100000000,hargaJasa:110000000,vol:14},
+{id:'pref-gsd-004',desc:'Jockey Pump (25 GPM)',category:'FIRE PUMP SYSTEM',spec:'FIRE PUMP (END SUCTION TYPE, UL FM APPROVED)',satuan:'unit',hargaMaterial:58000000,hargaJasa:5000000,vol:17},
+{id:'pref-gsd-005',desc:'Ball Valve 1/2"',category:'VALVE & ACCESSORIES',spec:'Ball valve 1/2", brass/bronze material, WOG non-shock 400 psi (27,6 bar), threaded connection',satuan:'ea.',hargaMaterial:175000,hargaJasa:25000,vol:167},
+{id:'pref-gsd-006',desc:'Ball Valve 1/2"',category:'VALVE & ACCESSORIES',spec:'Ball valve 1/2" brass/bronze type 400, threaded',satuan:'ea.',hargaMaterial:175000,hargaJasa:25000,vol:6},
+{id:'pref-gsd-007',desc:'Ball Valve 1/2"',category:'VALVE & ACCESSORIES',spec:'Ball valve 1/2" threaded',satuan:'ea.',hargaMaterial:175000,hargaJasa:25000,vol:1},
+{id:'pref-gsd-008',desc:'Ball Valve 3/4"',category:'VALVE & ACCESSORIES',spec:'Ball valve  3/4", brass material, WOG non-shock 400 psi (27,6 bar), threaded connection',satuan:'ea.',hargaMaterial:220000,hargaJasa:31000,vol:106},
+{id:'pref-gsd-009',desc:'Ball Valve 1"',category:'VALVE & ACCESSORIES',spec:'Ball valve 1", brass material, WOG non-shock 400 psi (27,6 bar), threaded connection',satuan:'ea.',hargaMaterial:310000,hargaJasa:43000,vol:101},
+{id:'pref-gsd-010',desc:'Ball Valve 1"',category:'VALVE & ACCESSORIES',spec:'Ball valve threaded',satuan:'ea.',hargaMaterial:310000,hargaJasa:43000,vol:4},
+{id:'pref-gsd-011',desc:'Pressure Gauge 3.5"',category:'VALVE & ACCESSORIES',spec:'Pressure gauge diameter 3,5" (89 mm), 300 psi (21 bar)',satuan:'ea.',hargaMaterial:483000,hargaJasa:38700,vol:114},
+{id:'pref-gsd-012',desc:'Water Pressure Gauge 1/2" NPT',category:'VALVE & ACCESSORIES',spec:'Pressure gauge 1/2" NPT, 300 psi',satuan:'ea.',hargaMaterial:483000,hargaJasa:38700,vol:1},
+{id:'pref-gsd-013',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y diameter 6", ductile iron ASTM A536, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:10142100,hargaJasa:204300,vol:191},
+{id:'pref-gsd-014',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 6" ANSI UL/FM 300psi/21bar untuk suction & discharge electric & diesel pump',satuan:'ea.',hargaMaterial:13000000,hargaJasa:204300,vol:4},
+{id:'pref-gsd-015',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 6" ANSI UL/FM 300psi/21bar untuk flowmeter',satuan:'ea.',hargaMaterial:13000000,hargaJasa:204300,vol:2},
+{id:'pref-gsd-016',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 6" ANSI UL/FM 300psi/21bar untuk pressure reducing valve',satuan:'ea.',hargaMaterial:13000000,hargaJasa:204300,vol:12},
+{id:'pref-gsd-017',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 6" ANSI UL/FM 300psi/21bar untuk water tank',satuan:'ea.',hargaMaterial:13000000,hargaJasa:204300,vol:2},
+{id:'pref-gsd-018',desc:'Gate Valve OS&Y 6"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 6" ANSI UL/FM 300psi/21bar',satuan:'ea.',hargaMaterial:13000000,hargaJasa:204300,vol:3},
+{id:'pref-gsd-019',desc:'Gate Valve OS&Y 4"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y diameter 4", ductile iron ASTM A536, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:6278500,hargaJasa:90800,vol:168},
+{id:'pref-gsd-020',desc:'Gate Valve OS&Y 4"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 4" ANSI UL/FM 300psi/21bar',satuan:'ea.',hargaMaterial:6943000,hargaJasa:90800,vol:5},
+{id:'pref-gsd-021',desc:'Gate Valve OS&Y 3"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y diameter 3", ductile iron ASTM A536, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:5162800,hargaJasa:90800,vol:13},
+{id:'pref-gsd-022',desc:'Gate Valve OS&Y 2"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y diameter 2", ductile iron ASTM A536, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:4185700,hargaJasa:90800,vol:54},
+{id:'pref-gsd-023',desc:'Gate Valve OS&Y 2"',category:'VALVE & ACCESSORIES',spec:'Gate valve OS&Y 2" ANSI UL/FM 300psi/21bar untuk suction & discharge jockey pump',satuan:'ea.',hargaMaterial:4185700,hargaJasa:90800,vol:4},
+{id:'pref-gsd-024',desc:'Strainer Y-type 6"',category:'VALVE & ACCESSORIES',spec:'Strainer Y-type diameter 6", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:6230900,hargaJasa:289800,vol:26},
+{id:'pref-gsd-025',desc:'Y Strainer 6"',category:'VALVE & ACCESSORIES',spec:'Y Strainer diameter 6" flanged untuk suction electric & diesel pump',satuan:'ea.',hargaMaterial:6230900,hargaJasa:289800,vol:2},
+{id:'pref-gsd-026',desc:'Strainer Y-type 4"',category:'VALVE & ACCESSORIES',spec:'Strainer Y-type diameter 4", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:1317400,hargaJasa:75300,vol:18},
+{id:'pref-gsd-027',desc:'Strainer Y-type 2"',category:'VALVE & ACCESSORIES',spec:'Strainer Y-type diameter 2", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:1317400,hargaJasa:75300,vol:13},
+{id:'pref-gsd-028',desc:'Y Strainer 2"',category:'VALVE & ACCESSORIES',spec:'Y Strainer diameter 2" flanged untuk suction jockey pump',satuan:'ea.',hargaMaterial:1317400,hargaJasa:75300,vol:1},
+{id:'pref-gsd-029',desc:'Flexible Expansion Joint 6"',category:'VALVE & ACCESSORIES',spec:'Flexible expansion joint diameter 6", material metal, flanged connection',satuan:'ea.',hargaMaterial:4069200,hargaJasa:245500,vol:64},
+{id:'pref-gsd-030',desc:'Flexible Expansion Joint 2"',category:'VALVE & ACCESSORIES',spec:'Flexible expansion joint diameter 2", material metal, flanged connection',satuan:'ea.',hargaMaterial:1560000,hargaJasa:109000,vol:32},
+{id:'pref-gsd-031',desc:'Expansion Joint Flange 2"',category:'VALVE & ACCESSORIES',spec:'Expansion joint flange diameter 2" untuk suction & discharge jockey pump',satuan:'ea.',hargaMaterial:1560000,hargaJasa:109000,vol:2},
+{id:'pref-gsd-032',desc:'Expansion Joint Flange 6"',category:'VALVE & ACCESSORIES',spec:'Expansion joint flange diameter 6" untuk suction & discharge electric & diesel pump',satuan:'ea.',hargaMaterial:4069200,hargaJasa:245500,vol:4},
+{id:'pref-gsd-033',desc:'Swing Check Valve 6"',category:'VALVE & ACCESSORIES',spec:'Swing check valve diameter 6", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:9047400,hargaJasa:204300,vol:32},
+{id:'pref-gsd-034',desc:'Swing Check Valve 6"',category:'VALVE & ACCESSORIES',spec:'Swing check valve 6" ANSI/PN UL/FM 300psi/21bar untuk discharge electric & diesel pump',satuan:'ea.',hargaMaterial:9047400,hargaJasa:204300,vol:2},
+{id:'pref-gsd-035',desc:'Swing Check Valve 4"',category:'VALVE & ACCESSORIES',spec:'Swing check valve diameter 4", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:6000000,hargaJasa:204300,vol:19},
+{id:'pref-gsd-036',desc:'Swing Check Valve 4"',category:'VALVE & ACCESSORIES',spec:'Swing check valve 4" ANSI UL/FM 300psi/21bar',satuan:'ea.',hargaMaterial:6000000,hargaJasa:204300,vol:1},
+{id:'pref-gsd-037',desc:'Swing Check Valve 2"',category:'VALVE & ACCESSORIES',spec:'Swing check valve diameter 2", ductile iron, 300 psi (21 bar), flanged connection',satuan:'ea.',hargaMaterial:2253800,hargaJasa:75300,vol:16},
+{id:'pref-gsd-038',desc:'Swing Check Valve 2"',category:'VALVE & ACCESSORIES',spec:'Swing check valve 2" ANSI UL/FM 300psi/21bar untuk discharge jockey pump',satuan:'ea.',hargaMaterial:2492400,hargaJasa:75300,vol:1},
+{id:'pref-gsd-039',desc:'Swing Check Valve 1/2"',category:'VALVE & ACCESSORIES',spec:'Swing check valve diameter 1/2", bronze material, 200 psi (13,8 bar), threaded connection',satuan:'ea.',hargaMaterial:102000,hargaJasa:15500,vol:96},
+{id:'pref-gsd-040',desc:'Swing Check Valve with Orifice Hole',category:'VALVE & ACCESSORIES',spec:'Swing check valve dengan orifice hole 2-3 m 1/2 in',satuan:'ea.',hargaMaterial:102000,hargaJasa:15500,vol:6},
+{id:'pref-gsd-041',desc:'Pressure Relief Valve 1"',category:'VALVE & ACCESSORIES',spec:'Pressure relief valve diameter 1"',satuan:'ea.',hargaMaterial:1090000,hargaJasa:43000,vol:14},
+{id:'pref-gsd-042',desc:'Pressure Relief Valve 6"',category:'VALVE & ACCESSORIES',spec:'Pressure relief valve diameter 6"',satuan:'ea.',hargaMaterial:41000000,hargaJasa:6150000,vol:1},
+{id:'pref-gsd-043',desc:'Automatic Air Vent 3/4"',category:'VALVE & ACCESSORIES',spec:'Automatic air vent diameter 3/4", threaded connection',satuan:'ea.',hargaMaterial:1186900,hargaJasa:29400,vol:77},
+{id:'pref-gsd-044',desc:'Automatic Air Vent 1"',category:'VALVE & ACCESSORIES',spec:'Automatic air vent diameter 1", threaded connection',satuan:'ea.',hargaMaterial:1931900,hargaJasa:113700,vol:1},
+{id:'pref-gsd-045',desc:'Air Release Valve 1"',category:'VALVE & ACCESSORIES',spec:'Air release valve diameter 1", red paint',satuan:'ea.',hargaMaterial:1310000,hargaJasa:99000,vol:4},
+{id:'pref-gsd-046',desc:'Pressure Reducing Valve 6"',category:'VALVE & ACCESSORIES',spec:'Pressure reducing valve flanged ANSI 6", dilengkapi 2 pressure gauge in & out',satuan:'ea.',hargaMaterial:65000000,hargaJasa:13150000,vol:4},
+{id:'pref-gsd-047',desc:'Branch Control Valve 3"',category:'VALVE & ACCESSORIES',spec:'Branch control valve diameter 3" lengkap dengan butterfly valve (supervisory), flow switch, test & drain valve 1", pressure gauge',satuan:'ea.',hargaMaterial:9450000,hargaJasa:1200000,vol:2},
+{id:'pref-gsd-048',desc:'Branch Control Valve 4"',category:'VALVE & ACCESSORIES',spec:'Branch control valve diameter 4" lengkap dengan butterfly valve (supervisory), flow switch, test & drain valve 1", pressure gauge',satuan:'ea.',hargaMaterial:10100000,hargaJasa:1350000,vol:15},
+{id:'pref-gsd-049',desc:'Branch Control Valve 4"',category:'VALVE & ACCESSORIES',spec:'Branch control valve 4", lengkap',satuan:'ea.',hargaMaterial:10100000,hargaJasa:1350000,vol:34},
+{id:'pref-gsd-050',desc:'Pipe Galvanized 1/2"',category:'PIPE',spec:'Pipa ASTM A53 Grade A ERW, Sch. 40, galvanized PE, diameter 1/2"',satuan:'btg',hargaMaterial:345685,hargaJasa:40000,vol:84},
+{id:'pref-gsd-051',desc:'Pipe Black Steel 1/2" (Gauge)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 1/2" untuk gauge',satuan:'btg',hargaMaterial:280000,hargaJasa:40000,vol:1},
+{id:'pref-gsd-052',desc:'Pipe Black Steel 1/2" (Fuel Out)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 1/2" untuk fuel out',satuan:'btg',hargaMaterial:280000,hargaJasa:40000,vol:2},
+{id:'pref-gsd-053',desc:'Pipe Black Steel 3/4"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 3/4"',satuan:'btg',hargaMaterial:324500,hargaJasa:40000,vol:13},
+{id:'pref-gsd-054',desc:'Pipe Black Steel 3/4" (Air Vent & Relief)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 3/4" untuk air vent & relief',satuan:'btg',hargaMaterial:324500,hargaJasa:40000,vol:2},
+{id:'pref-gsd-055',desc:'Pipe Black Steel 3/4" (Fuel In)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 3/4" untuk fuel in',satuan:'btg',hargaMaterial:324500,hargaJasa:40000,vol:2},
+{id:'pref-gsd-056',desc:'Pipe Black Steel 2"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 2"',satuan:'btg',hargaMaterial:753800,hargaJasa:92000,vol:62},
+{id:'pref-gsd-057',desc:'Pipe Black Steel 2" (Jockey Suction & Discharge)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 2" untuk jockey suction & discharge',satuan:'btg',hargaMaterial:853800,hargaJasa:168400,vol:1},
+{id:'pref-gsd-058',desc:'Pipe Black Steel 3"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 3"',satuan:'btg',hargaMaterial:753800,hargaJasa:268400,vol:17},
+{id:'pref-gsd-059',desc:'Pipe Black Steel 4"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 4"',satuan:'btg',hargaMaterial:856000,hargaJasa:268400,vol:2},
+{id:'pref-gsd-060',desc:'Pipe Black Steel 4" (Relief In)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 4" untuk relief in',satuan:'btg',hargaMaterial:941900,hargaJasa:268400,vol:1},
+{id:'pref-gsd-061',desc:'Pipe Black Steel 6"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 6"',satuan:'btg',hargaMaterial:3896500,hargaJasa:320000,vol:86},
+{id:'pref-gsd-062',desc:'Pipe Black Steel 6" (Relief Out)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 6" untuk relief out',satuan:'btg',hargaMaterial:4396500,hargaJasa:885800,vol:17},
+{id:'pref-gsd-063',desc:'Pipe Galvanized 6" (Suction)',category:'PIPE',spec:'Pipa ERW galvanis ASTM A53 Grade A Sch. 40, diameter 6" untuk suction',satuan:'btg',hargaMaterial:3896500,hargaJasa:320000,vol:21},
+{id:'pref-gsd-064',desc:'Pipe Black Steel 6" (Discharge Header)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 6" untuk discharge header',satuan:'btg',hargaMaterial:4396500,hargaJasa:885800,vol:1},
+{id:'pref-gsd-065',desc:'Pipe Black Steel 6" (Flowmeter)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 6" untuk flowmeter',satuan:'btg',hargaMaterial:4396500,hargaJasa:885800,vol:17},
+{id:'pref-gsd-066',desc:'Pipe Black Steel 8"',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 8"',satuan:'btg',hargaMaterial:5948800,hargaJasa:436000,vol:16},
+{id:'pref-gsd-067',desc:'Pipe Black Steel 8" (Header)',category:'PIPE',spec:'Pipa ERW baja hitam ASTM A53 Grade A Sch. 40, diameter 8" untuk header',satuan:'btg',hargaMaterial:6948800,hargaJasa:1116100,vol:1},
+{id:'pref-gsd-068',desc:'Pipe Galvanized 1" (Drain)',category:'PIPE',spec:'Pipa ERW galvanis ASTM A53 Grade B Sch. 40, diameter 1" untuk drain',satuan:'btg',hargaMaterial:640845,hargaJasa:100000,vol:3},
+{id:'pref-gsd-069',desc:'Elbow 90° 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° long-turn, ASTM A234 WPB-S BW, Sch. 40, dia. 6"',satuan:'ea.',hargaMaterial:467400,hargaJasa:126100,vol:215},
+{id:'pref-gsd-070',desc:'Elbow 90° 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° ASTM A234 BW, Sch. 40, dia. 6"',satuan:'ea.',hargaMaterial:467400,hargaJasa:126100,vol:29},
+{id:'pref-gsd-071',desc:'Elbow 90° 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° ASTM A234 BW, Sch. 40, dia. 2"',satuan:'ea.',hargaMaterial:80800,hargaJasa:16600,vol:9},
+{id:'pref-gsd-072',desc:'Elbow 90° 3"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° long-turn, ASTM A234 WPB-S BW, Sch. 40, dia. 3"',satuan:'ea.',hargaMaterial:136900,hargaJasa:34500,vol:16},
+{id:'pref-gsd-073',desc:'Elbow 90° 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° short-turn, ASTM A234 WPB-S BW, Sch. 40, dia. 2"',satuan:'ea.',hargaMaterial:80800,hargaJasa:16600,vol:61},
+{id:'pref-gsd-074',desc:'Elbow 90° 3/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Elbow 90° short-turn, ASTM A197 class 150, dia. 3/4"',satuan:'ea.',hargaMaterial:25100,hargaJasa:8500,vol:66},
+{id:'pref-gsd-075',desc:'Tee Reducer 6"x3"',category:'FITTING, GASKET & STUDBOLT',spec:'Tee reducer, ASTM A234 WPB-S BW, Sch. 40, dia. 6"x3"',satuan:'ea.',hargaMaterial:414200,hargaJasa:126100,vol:14},
+{id:'pref-gsd-076',desc:'Eccentric Reducer 6"x4"',category:'FITTING, GASKET & STUDBOLT',spec:'Eccentric reducer, ASTM A234 WPB-S BW, Sch. 40, dia. 6"x4"',satuan:'ea.',hargaMaterial:118775,hargaJasa:85725,vol:23},
+{id:'pref-gsd-077',desc:'Eccentric Reducer DN150x125',category:'FITTING, GASKET & STUDBOLT',spec:'Eccentric reducer ASTM WPB-S BW Sch. 40 DN 150x125',satuan:'ea.',hargaMaterial:78400,hargaJasa:85725,vol:2},
+{id:'pref-gsd-078',desc:'Eccentric Reducer 2"x1-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Eccentric reducer, ASTM A234 WPB-S BW, Sch. 40, dia. 2"x1-1/4"',satuan:'ea.',hargaMaterial:69400,hargaJasa:10000,vol:15},
+{id:'pref-gsd-079',desc:'Concentric Reducer 6"x4"',category:'FITTING, GASKET & STUDBOLT',spec:'Concentric reducer ASTM A234 BW Sch. 40, dia. 6"x4"',satuan:'ea.',hargaMaterial:78400,hargaJasa:85725,vol:2},
+{id:'pref-gsd-080',desc:'Concentric Reducer 6"x3"',category:'FITTING, GASKET & STUDBOLT',spec:'Concentric reducer ASTM A234 WPB-S BW Sch. 40, dia. 6"x3"',satuan:'ea.',hargaMaterial:114500,hargaJasa:90000,vol:23},
+{id:'pref-gsd-081',desc:'Concentric Reducer 2"x1-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Concentric reducer ASTM A234 WPB-S BW Sch. 40, dia. 2"x1-1/4"',satuan:'ea.',hargaMaterial:61200,hargaJasa:9000,vol:15},
+{id:'pref-gsd-082',desc:'Weldolet 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Weldolet dia. 6"',satuan:'ea.',hargaMaterial:241600,hargaJasa:126100,vol:44},
+{id:'pref-gsd-083',desc:'Weldolet 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Weldolet dia. 2"',satuan:'ea.',hargaMaterial:277700,hargaJasa:90000,vol:13},
+{id:'pref-gsd-084',desc:'Flange Slip-on 8"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 8"',satuan:'ea.',hargaMaterial:848300,hargaJasa:150000,vol:32},
+{id:'pref-gsd-085',desc:'Flange Slip-on 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 6"',satuan:'ea.',hargaMaterial:499200,hargaJasa:90000,vol:604},
+{id:'pref-gsd-086',desc:'Flange Slip-on 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange Slip On FF ANSI #150 dia. 6"',satuan:'ea.',hargaMaterial:463100,hargaJasa:86700,vol:51},
+{id:'pref-gsd-087',desc:'Flange Slip-on 4"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 4"',satuan:'ea.',hargaMaterial:450000,hargaJasa:60000,vol:36},
+{id:'pref-gsd-088',desc:'Flange Slip-on 4"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange Slip On FF ANSI #150 dia. 4"',satuan:'ea.',hargaMaterial:450000,hargaJasa:60000,vol:1},
+{id:'pref-gsd-089',desc:'Flange Slip-on 3"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 3"',satuan:'ea.',hargaMaterial:202700,hargaJasa:40000,vol:32},
+{id:'pref-gsd-090',desc:'Flange Slip-on 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 2"',satuan:'ea.',hargaMaterial:184800,hargaJasa:30000,vol:250},
+{id:'pref-gsd-091',desc:'Flange Slip-on 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange Slip On FF ANSI #150 dia. 2"',satuan:'ea.',hargaMaterial:124300,hargaJasa:29500,vol:20},
+{id:'pref-gsd-092',desc:'Flange Slip-on 1-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Flange slip-on, ASTM A105 class 150, dia. 1-1/4"',satuan:'ea.',hargaMaterial:100000,hargaJasa:16000,vol:22},
+{id:'pref-gsd-093',desc:'Blind Flange 8"',category:'FITTING, GASKET & STUDBOLT',spec:'Blind flange, ASTM A105 class 150, dia. 8"',satuan:'ea.',hargaMaterial:871100,hargaJasa:171800,vol:32},
+{id:'pref-gsd-094',desc:'Gasket Rubber 8"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 8"',satuan:'ea.',hargaMaterial:33400,hargaJasa:6000,vol:32},
+{id:'pref-gsd-095',desc:'Gasket Rubber 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 6"',satuan:'ea.',hargaMaterial:26800,hargaJasa:4000,vol:422},
+{id:'pref-gsd-096',desc:'Gasket Rubber 6"',category:'FITTING, GASKET & STUDBOLT',spec:'Rubber gasket ANSI for FF#150 dia. 6"',satuan:'ea.',hargaMaterial:26800,hargaJasa:4000,vol:51},
+{id:'pref-gsd-097',desc:'Gasket Rubber 4"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 4"',satuan:'ea.',hargaMaterial:20700,hargaJasa:3000,vol:270},
+{id:'pref-gsd-098',desc:'Gasket Rubber 4"',category:'FITTING, GASKET & STUDBOLT',spec:'Rubber gasket ANSI for FF#150 dia. 4"',satuan:'ea.',hargaMaterial:20700,hargaJasa:3000,vol:1},
+{id:'pref-gsd-099',desc:'Gasket Rubber 3"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 3"',satuan:'ea.',hargaMaterial:15700,hargaJasa:1000,vol:38},
+{id:'pref-gsd-100',desc:'Gasket Rubber 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 2"',satuan:'ea.',hargaMaterial:10000,hargaJasa:1000,vol:244},
+{id:'pref-gsd-101',desc:'Gasket Rubber 2"',category:'FITTING, GASKET & STUDBOLT',spec:'Rubber gasket ANSI for FF#150 dia. 2"',satuan:'ea.',hargaMaterial:10000,hargaJasa:1000,vol:20},
+{id:'pref-gsd-102',desc:'Gasket Rubber 1-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Gasket rubber material, class 150, dia. 1-1/4"',satuan:'ea.',hargaMaterial:8000,hargaJasa:1000,vol:22},
+{id:'pref-gsd-103',desc:'Stud Bolt 3/4"x4-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Grade B7 galvanized, complete with 2 nuts, dia. 3/4"x4-1/4" (110 mm)',satuan:'ea.',hargaMaterial:41500,hargaJasa:2800,vol:256},
+{id:'pref-gsd-104',desc:'Stud Bolt 3/4"x4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Grade B7 galvanized, complete with 2 nuts, dia. 3/4"x4" (100 mm)',satuan:'ea.',hargaMaterial:41500,hargaJasa:2800,vol:4736},
+{id:'pref-gsd-105',desc:'Stud Bolt 3/4"x4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Gr B7 + 2 Nut A194 2H, ukuran 3/4"x4" (untuk flange 6")',satuan:'ea.',hargaMaterial:25000,hargaJasa:2800,vol:408},
+{id:'pref-gsd-106',desc:'Stud Bolt 5/8"x3-1/2"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Grade B7 galvanized, complete with 2 nuts, dia. 5/8"x3-1/2" (90 mm)',satuan:'ea.',hargaMaterial:27700,hargaJasa:2800,vol:344},
+{id:'pref-gsd-107',desc:'Stud Bolt 5/8"x3-1/2"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Gr B7 + 2 Nut A194 2H, ukuran 5/8"x3-1/2" (untuk flange 4")',satuan:'ea.',hargaMaterial:27700,hargaJasa:2800,vol:8},
+{id:'pref-gsd-108',desc:'Stud Bolt 5/8"x3-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Grade B7 galvanized, complete with 2 nuts, dia. 5/8"x3-1/4" (85 mm)',satuan:'ea.',hargaMaterial:27700,hargaJasa:2800,vol:1040},
+{id:'pref-gsd-109',desc:'Stud Bolt 5/8"x3-1/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Gr B7 + 2 Nut A194 2H, ukuran 5/8"x3-1/4" (untuk flange 2")',satuan:'ea.',hargaMaterial:27700,hargaJasa:2800,vol:104},
+{id:'pref-gsd-110',desc:'Stud Bolt 1/2"x2-3/4"',category:'FITTING, GASKET & STUDBOLT',spec:'Stud bolt ASTM A193 Grade B7 galvanized, complete with 2 nuts, dia. 1/2"x2-3/4" (70 mm)',satuan:'ea.',hargaMaterial:20800,hargaJasa:2800,vol:96},
+{id:'pref-gsd-111',desc:'Pump Distribution Power Panel',category:'ELECTRICAL INSTALLATION WORKS',spec:'Panel distribusi daya untuk pompa',satuan:'Set',hargaMaterial:18000000,hargaJasa:1850000,vol:16},
+{id:'pref-gsd-112',desc:'Distribution Power Panel Fire Pump Room',category:'ELECTRICAL INSTALLATION WORKS',spec:'Panel distribusi daya ruang pompa kebakaran',satuan:'Set',hargaMaterial:18000000,hargaJasa:1850000,vol:1},
+{id:'pref-gsd-113',desc:'Cable FRC 4C x 70 mm² + NYA 1C x 25 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 70 mm² + kabel NYA 1 inti 25 mm², dari panel MDP ke panel SDP ruang pompa',satuan:'m',hargaMaterial:831000,hargaJasa:122742,vol:1405},
+{id:'pref-gsd-114',desc:'Cable FRC 4C x 95 mm² + NYA 1C x 25 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 95 mm² + kabel NYA 1 inti 25 mm², dari panel MDP ke panel SDP ruang pompa',satuan:'m',hargaMaterial:1150000,hargaJasa:150000,vol:63},
+{id:'pref-gsd-115',desc:'Cable FRC 4C x 4 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 4 mm², panel distribusi ke panel kontrol jockey pump',satuan:'m',hargaMaterial:88400,hargaJasa:13000,vol:231},
+{id:'pref-gsd-116',desc:'Cable FRC 4C x 50 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 50 mm², panel distribusi ke panel kontrol electric pump',satuan:'m',hargaMaterial:620000,hargaJasa:56000,vol:230},
+{id:'pref-gsd-117',desc:'Cable FRC 4C x 95 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 95 mm², panel distribusi ke panel kontrol electric pump',satuan:'m',hargaMaterial:1150000,hargaJasa:160000,vol:11},
+{id:'pref-gsd-118',desc:'Cable FRC 3C x 4 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 3 inti 4 mm², panel distribusi ke panel kontrol diesel pump',satuan:'m',hargaMaterial:38826,hargaJasa:10000,vol:201},
+{id:'pref-gsd-119',desc:'Cable FRC 4C x 4 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 4 mm², panel kontrol jockey pump ke motor jockey pump',satuan:'m',hargaMaterial:89400,hargaJasa:2800,vol:418},
+{id:'pref-gsd-120',desc:'Cable FRC 7C x 35 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 7 inti 35 mm², panel kontrol electric pump ke motor electric pump',satuan:'m',hargaMaterial:786400,hargaJasa:2800,vol:330},
+{id:'pref-gsd-121',desc:'Cable FRC (4C x 2.5 mm²) x 3',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 2.5 mm² x 3, panel kontrol diesel pump ke panel kontrol engine pump',satuan:'m',hargaMaterial:48000,hargaJasa:7000,vol:300},
+{id:'pref-gsd-122',desc:'Cable FRC 4C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 2.5 mm², untuk battery charger DFP',satuan:'m',hargaMaterial:48000,hargaJasa:7000,vol:28},
+{id:'pref-gsd-123',desc:'Cable NYM 3C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel NYM 3 inti 2.5 mm², panel distribusi ke panel kontrol WLC',satuan:'m',hargaMaterial:20000,hargaJasa:2800,vol:160},
+{id:'pref-gsd-124',desc:'Cable NYY 3C x 2.5 mm² + NYA 1C x 1.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel NYY 3 inti 2.5 mm² + kabel NYA 1 inti 1.5 mm², panel kontrol WLC ke motor sump pump',satuan:'m',hargaMaterial:33000,hargaJasa:2800,vol:660},
+{id:'pref-gsd-125',desc:'Cable NYY 3C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel NYY 3 inti 2.5 mm², panel kontrol WLC ke motor sump pump',satuan:'m',hargaMaterial:33000,hargaJasa:2800,vol:50},
+{id:'pref-gsd-126',desc:'Cable NYM 3C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel NYM 3 inti 2.5 mm², untuk power TL lamp, emergency lamp, exhaust fan',satuan:'m',hargaMaterial:20000,hargaJasa:2800,vol:780},
+{id:'pref-gsd-127',desc:'Straight Tray U Type 200x100 mm',category:'ELECTRICAL INSTALLATION WORKS',spec:'Straight tray tipe U ukuran 200x100 mm lengkap dengan cover (panel MDP ke panel SDP ruang pompa)',satuan:'m',hargaMaterial:442100,hargaJasa:100000,vol:1605},
+{id:'pref-gsd-128',desc:'Straight Tray U Type 200x100 mm',category:'ELECTRICAL INSTALLATION WORKS',spec:'Straight tray tipe U ukuran 200x100 mm lengkap dengan cover',satuan:'m',hargaMaterial:442100,hargaJasa:100000,vol:15},
+{id:'pref-gsd-129',desc:'Straight Tray U Type 200x100 mm',category:'ELECTRICAL INSTALLATION WORKS',spec:'Straight tray tipe U ukuran 200x100 mm lengkap dengan cover (panel SDP ruang pompa ke panel kontrol & motor/engine pump)',satuan:'m',hargaMaterial:442100,hargaJasa:100000,vol:388},
+{id:'pref-gsd-130',desc:'Cable FRC 4C x 90 mm² + NYA 1C x 25 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 90 mm² + kabel NYA 1 inti 25 mm², dari panel MDP ke panel SDP ruang pompa',satuan:'m',hargaMaterial:1191000,hargaJasa:178500,vol:200},
+{id:'pref-gsd-131',desc:'Cable FRC 4C x 70 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 70 mm², panel distribusi ke panel kontrol electric pump',satuan:'m',hargaMaterial:892000,hargaJasa:133000,vol:20},
+{id:'pref-gsd-132',desc:'Cable FRC 7C x 50 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 7 inti 50 mm², panel kontrol electric pump ke motor electric pump',satuan:'m',hargaMaterial:628500,hargaJasa:94000,vol:66},
+{id:'pref-gsd-133',desc:'Cable FRC 1C x 2.5 mm² x 2',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 1 inti 2.5 mm² x 2, untuk over speed protection DFP',satuan:'m',hargaMaterial:15525.000000000002,hargaJasa:3500,vol:28},
+{id:'pref-gsd-134',desc:'Cable FRC 4C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 2.5 mm², untuk overspeed & low oil protection',satuan:'m',hargaMaterial:48000,hargaJasa:7000,vol:28},
+{id:'pref-gsd-135',desc:'Cable FRC 2C x 2.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 2 inti 2.5 mm², untuk high temperature DFP',satuan:'m',hargaMaterial:26000,hargaJasa:3500,vol:28},
+{id:'pref-gsd-136',desc:'Cable FRC 4C x 1.5 mm²',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti 1.5 mm², untuk starter 1 & starter 2 (crank)',satuan:'m',hargaMaterial:34000,hargaJasa:5000,vol:28},
+{id:'pref-gsd-137',desc:'Cable FRC 4C (1C-4 mm²)',category:'ELECTRICAL INSTALLATION WORKS',spec:'Kabel FRC 4 inti (1C-4 mm²), untuk baterai',satuan:'m',hargaMaterial:90000,hargaJasa:12700,vol:10},
+{id:'pref-gsd-138',desc:'Fitting & Accessories',category:'ELECTRICAL INSTALLATION WORKS',spec:'Perlengkapan pendukung instalasi kabel',satuan:'lot',hargaMaterial:800000,hargaJasa:300000,vol:16},
+{id:'pref-gsd-139',desc:'Fitting Cable Tray & Accessories',category:'ELECTRICAL INSTALLATION WORKS',spec:'Aksesoris kabel tray (cable skun, cable gland, flexible conduit, dll)',satuan:'Lot',hargaMaterial:800000,hargaJasa:300000,vol:1},
+{id:'pref-gsd-140',desc:'Support',category:'ELECTRICAL INSTALLATION WORKS',spec:'Sistem support untuk kabel & tray',satuan:'Lot',hargaMaterial:6650549,hargaJasa:1500000,vol:1},
+{id:'pref-gsd-141',desc:'Terminal Box Interkoneksi',category:'ELECTRICAL INSTALLATION WORKS',spec:'Terminal box interkoneksi panel pompa ke fire alarm',satuan:'unit',hargaMaterial:400000,hargaJasa:60000,vol:2},
+{id:'pref-gsd-142',desc:'Hydrant Pillar Two-Way',category:'HYDRANT EQUIPMENT',spec:'Pillar hydrant dua arah, warna merah glossy, ukuran 4" x 2-1/2" x 2-1/2", lengkap dengan machino coupling & cap',satuan:'set',hargaMaterial:6500000,hargaJasa:652000,vol:75},
+{id:'pref-gsd-143',desc:'Hydrant Pillar Two-Way JIS 20K',category:'HYDRANT EQUIPMENT',spec:'Pillar hydrant dua arah dengan machino coupling JIS 20K',satuan:'Pcs',hargaMaterial:6500000,hargaJasa:652000,vol:5},
+{id:'pref-gsd-144',desc:'Outdoor Hydrant Box Type C',category:'HYDRANT EQUIPMENT',spec:'Box hydrant outdoor tipe C, dilengkapi dengan: 1 selang 2-1/2" panjang 30 m, 1 hose rack aluminium, 1 jet spray nozzle 2-1/2" aluminium, pedestal',satuan:'set',hargaMaterial:3550000,hargaJasa:500000,vol:78},
+{id:'pref-gsd-145',desc:'Outdoor Hydrant Box Type C (Powder Coating)',category:'HYDRANT EQUIPMENT',spec:'Box hydrant outdoor tipe C (tebal 1,2 mm), powder coating warna merah, ukuran 950 x 660 x 200 mm',satuan:'Set',hargaMaterial:3550000,hargaJasa:500000,vol:5},
+{id:'pref-gsd-146',desc:'Indoor Hydrant Box Class 3',category:'HYDRANT EQUIPMENT',spec:'Box hydrant indoor Class 3, dilengkapi dengan: 1 landing valve 2-1/2", 1 landing valve 1-1/2", 1 selang 1-1/2" panjang 30 m, 1 hose rack aluminium, 1 jet spray nozzle 1-1/2" aluminium',satuan:'set',hargaMaterial:5800000,hargaJasa:850000,vol:50},
+{id:'pref-gsd-147',desc:'Indoor Hydrant Box Type B (Powder Coating)',category:'HYDRANT EQUIPMENT',spec:'Box hydrant indoor tipe B (tebal 1,2 mm), powder coating warna merah, ukuran 1250 x 750 x 180 mm',satuan:'Set',hargaMaterial:5800000,hargaJasa:850000,vol:41},
+{id:'pref-gsd-148',desc:'Siamese Connection',category:'HYDRANT EQUIPMENT',spec:'Siamese connection ukuran 4" x 2-1/2" x 2-1/2", material kuningan dengan chrome plated, lengkap dengan machino coupling & cap',satuan:'set',hargaMaterial:4800000,hargaJasa:450000,vol:21},
+{id:'pref-gsd-149',desc:'Wet Sprinkler System 4"',category:'SPRINKLER SYSTEM',spec:'Sistem sprinkler basah diameter 4", koneksi flanged ANSI, lengkap dengan alarm check valve, vertical trim piping galvanized, retard chamber, water motor alarm gong, pressure switch, dan temper switch',satuan:'set',hargaMaterial:27368900,hargaJasa:938600,vol:43},
+{id:'pref-gsd-150',desc:'Wet Sprinkler System 6"',category:'SPRINKLER SYSTEM',spec:'Sistem sprinkler basah diameter 6", koneksi flanged ANSI, lengkap dengan alarm check valve, vertical trim piping galvanized, retard chamber, water motor alarm gong, pressure switch, dan temper switch',satuan:'set',hargaMaterial:27368900,hargaJasa:938600,vol:3},
+{id:'pref-gsd-151',desc:'Sprinkler Head Pendent 200°F (93°C)',category:'SPRINKLER SYSTEM',spec:'Sprinkler head standard response, tipe pendent, chrome finish, suhu kerja 200°F/93°C, K-5,6 (80,6), koneksi NPT 1/2"',satuan:'ea',hargaMaterial:103500,hargaJasa:19400,vol:22},
+{id:'pref-gsd-152',desc:'Sprinkler Head Pendent 175°F (79°C)',category:'SPRINKLER SYSTEM',spec:'Sprinkler head standard response, tipe pendent, chrome finish, suhu kerja 175°F/79°C, K-5,6 (80,6), koneksi NPT 1/2"',satuan:'ea',hargaMaterial:103500,hargaJasa:19400,vol:1062},
+{id:'pref-gsd-153',desc:'Sprinkler Head Upright 175°F (79°C)',category:'SPRINKLER SYSTEM',spec:'Sprinkler head standard response, tipe upright, K-8.0, suhu kerja 175°F/79°C, koneksi NPT 3/4", chrome finish, deflektor SS',satuan:'ea',hargaMaterial:93500,hargaJasa:29400,vol:135},
+{id:'pref-gsd-154',desc:'Sprinkler Head Pendent 155°F (68°C)',category:'SPRINKLER SYSTEM',spec:'Sprinkler head standard response, tipe pendent, chrome finish, suhu kerja 155°F/68°C, K-5,6 (80,6), koneksi NPT 1/2"',satuan:'ea',hargaMaterial:104900,hargaJasa:18000,vol:359},
+{id:'pref-gsd-155',desc:'Sprinkler Head Pendent 155°F (68°C)',category:'SPRINKLER SYSTEM',spec:'Sprinkler head standard response, tipe pendent, chrome finish, suhu kerja 155°F/68°C, K-8.0 (80,6), koneksi NPT 1/2"',satuan:'ea',hargaMaterial:104900,hargaJasa:18000,vol:1728},
+{id:'pref-gsd-156',desc:'Test & Drain Valve',category:'SPRINKLER SYSTEM',spec:'Valve test & drain, diameter 1", material bronze, tekanan kerja 300 psi (21 bar), koneksi threaded',satuan:'ea',hargaMaterial:1900000,hargaJasa:45000,vol:39},
+{id:'pref-gsd-157',desc:'Deluge Valve System 4"',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Deluge valve electric actuation diameter 4", termasuk trim set galvanis, electric release trim, solenoid valve, water motor alarm gong, pressure switch, dan temper switch',satuan:'set',hargaMaterial:40000000,hargaJasa:1350000,vol:18},
+{id:'pref-gsd-158',desc:'Spray Nozzle Medium Velocity',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Nozzle semprotan medium velocity, material brass, sudut semprotan 180°, K-4.1 (59), koneksi NPT 1/2"',satuan:'ea.',hargaMaterial:750000,hargaJasa:45000,vol:124},
+{id:'pref-gsd-159',desc:'Main Control Panel Water Spray Releasing',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Panel kontrol utama sistem water spray releasing, termasuk backup battery',satuan:'ea',hargaMaterial:32000000,hargaJasa:1800000,vol:17},
+{id:'pref-gsd-160',desc:'Heat Detector Explosion Proof',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Detektor panas tipe stick, explosion proof',satuan:'ea',hargaMaterial:3000000,hargaJasa:168000,vol:114},
+{id:'pref-gsd-161',desc:'Horn Strobe Outdoor',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Horn strobe untuk area luar/tingkat perlindungan weather proof',satuan:'ea',hargaMaterial:2800000,hargaJasa:200000,vol:18},
+{id:'pref-gsd-162',desc:'Fire Alarm Bell',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Alarm bell dilengkapi back box',satuan:'ea',hargaMaterial:1223000,hargaJasa:100000,vol:13},
+{id:'pref-gsd-163',desc:'Manual Pull Station Outdoor',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Manual pull station tipe outdoor, weather proof',satuan:'ea',hargaMaterial:1484400,hargaJasa:122800,vol:18},
+{id:'pref-gsd-164',desc:'Power Cable',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'Kabel daya FRC 3 x 2.5 mm² dengan conduit PVC 20 mm² untuk MCFA',satuan:'m',hargaMaterial:38000,hargaJasa:5000,vol:753},
+{id:'pref-gsd-165',desc:'FRC Cable Control',category:'WATER SPRAY SYSTEM FOR FUEL TANK',spec:'FRC cable 2Cx1.5 mm² dengan metal conduit E19 accessories',satuan:'titik',hargaMaterial:19000,hargaJasa:2000,vol:146},
+{id:'pref-gsd-166',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, termasuk fitting, support, pengecatan & material habis pakai, instalasi bawah tanah lengkap dengan wrapping, backfilling & pelindung beton',satuan:'m',hargaMaterial:2950000,hargaJasa:900000,vol:799},
+{id:'pref-gsd-167',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, crossing ring utama tanpa aspal',satuan:'m',hargaMaterial:2950000,hargaJasa:900000,vol:39},
+{id:'pref-gsd-168',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, crossing ring utama dengan aspal',satuan:'m',hargaMaterial:2950000,hargaJasa:900000,vol:71},
+{id:'pref-gsd-169',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, dari pump room ke main ring',satuan:'m',hargaMaterial:2950000,hargaJasa:900000,vol:4827},
+{id:'pref-gsd-170',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, untuk hydrant main ring',satuan:'m',hargaMaterial:2950000,hargaJasa:900000,vol:72},
+{id:'pref-gsd-171',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 6"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 6 inci, untuk riser sprinkler',satuan:'m',hargaMaterial:2950000,hargaJasa:900000,vol:176},
+{id:'pref-gsd-172',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 4 inci, termasuk fitting, support, pengecatan & material habis pakai, instalasi bawah tanah lengkap dengan wrapping, backfilling & pelindung beton',satuan:'m',hargaMaterial:1580000,hargaJasa:500000,vol:190},
+{id:'pref-gsd-173',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 4 inci, crossing ke siamese connection dengan aspal',satuan:'m',hargaMaterial:3200000,hargaJasa:500000,vol:293},
+{id:'pref-gsd-174',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 4 inci, dari pump room ke siamese',satuan:'m',hargaMaterial:1580000,hargaJasa:500000,vol:15},
+{id:'pref-gsd-175',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 4 inci, untuk hydrant pillar',satuan:'m',hargaMaterial:856200,hargaJasa:390000,vol:1796},
+{id:'pref-gsd-176',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 4 inci, untuk hydrant riser',satuan:'m',hargaMaterial:856200,hargaJasa:390000,vol:111},
+{id:'pref-gsd-177',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 3"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 3 inci, termasuk fitting, support, pengecatan & material habis pakai, instalasi bawah tanah lengkap dengan wrapping, backfilling & pelindung beton',satuan:'m',hargaMaterial:856200,hargaJasa:390000,vol:30},
+{id:'pref-gsd-178',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 3"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 3 inci, umum',satuan:'m',hargaMaterial:946200,hargaJasa:300000,vol:144},
+{id:'pref-gsd-179',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 2-1/2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 2-1/2 inci, untuk IHB Valve',satuan:'m',hargaMaterial:457000,hargaJasa:223000,vol:12},
+{id:'pref-gsd-180',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 2 inci',satuan:'m',hargaMaterial:432000,hargaJasa:170000,vol:635},
+{id:'pref-gsd-181',desc:'Pipe ERW Galvanized ASTM A53 Grade A Sch.40, dia. 2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja galvanis ERW ASTM A53 Grade A Schedule 40, diameter 2 inci, untuk drain sprinkler',satuan:'m',hargaMaterial:432000,hargaJasa:170000,vol:844},
+{id:'pref-gsd-182',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1-1/2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1-1/2 inci, umum',satuan:'m',hargaMaterial:363000,hargaJasa:100000,vol:41},
+{id:'pref-gsd-183',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1-1/4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1-1/4 inci',satuan:'m',hargaMaterial:280000,hargaJasa:100000,vol:1333},
+{id:'pref-gsd-184',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1 inci',satuan:'m',hargaMaterial:340000,hargaJasa:40000,vol:279},
+{id:'pref-gsd-185',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 3/4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 3/4 inci',satuan:'m',hargaMaterial:223000,hargaJasa:40000,vol:1115},
+{id:'pref-gsd-186',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1/2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1/2 inci',satuan:'m',hargaMaterial:223000,hargaJasa:40000,vol:41},
+{id:'pref-gsd-187',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1-1/4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1-1/4 inci, termasuk fitting, support, pengecatan & material habis pakai',satuan:'m',hargaMaterial:268000,hargaJasa:100000,vol:1157},
+{id:'pref-gsd-188',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1 inci, termasuk fitting, support, pengecatan & material habis pakai',satuan:'m',hargaMaterial:224600,hargaJasa:40000,vol:5018},
+{id:'pref-gsd-189',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1" (Relocation)',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1 inci, untuk pekerjaan relokasi, termasuk fitting, support, pengecatan & material habis pakai',satuan:'m',hargaMaterial:224600,hargaJasa:40000,vol:260},
+{id:'pref-gsd-190',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 3/4"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 3/4 inci, termasuk fitting, support, pengecatan & material habis pakai',satuan:'m',hargaMaterial:223000,hargaJasa:40000,vol:1},
+{id:'pref-gsd-191',desc:'Pipe ERW Black Steel ASTM A53 Grade A Sch.40, dia. 1/2"',category:'PIPING INSTALLATION WORKS',spec:'Pipa baja hitam ERW ASTM A53 Grade A Schedule 40, diameter 1/2 inci, termasuk fitting, support, pengecatan & material habis pakai',satuan:'m',hargaMaterial:223000,hargaJasa:40000,vol:1},
+{id:'pref-gsd-192',desc:'Fitting Pipe',category:'OTHERS',spec:'Fitting pipa, material ASTM A53 Grade A Schedule 40',satuan:'lot',hargaMaterial:325800,hargaJasa:65200,vol:17},
+{id:'pref-gsd-193',desc:'Supporting Materials',category:'OTHERS',spec:'Material pendukung instalasi',satuan:'lot',hargaMaterial:2430000,hargaJasa:900000,vol:15},
+{id:'pref-gsd-194',desc:'Pipe Support Material',category:'OTHERS',spec:'Material penyangga pipa',satuan:'ea.',hargaMaterial:7000000,hargaJasa:2000000,vol:1},
+{id:'pref-gsd-195',desc:'Painting with Primer & Red Glossy Finish',category:'OTHERS',spec:'Pengecatan dengan primer coating & finishing merah glossy',satuan:'lot',hargaMaterial:1850000,hargaJasa:1000000,vol:15},
+{id:'pref-gsd-196',desc:'Painting (Primer & Topcoat - Signal Red)',category:'OTHERS',spec:'Pengecatan dengan primer & topcoat warna merah (Signal Red)',satuan:'ea.',hargaMaterial:1850000,hargaJasa:1000000,vol:1},
+{id:'pref-gsd-197',desc:'Drain Piping',category:'OTHERS',spec:'Pemasangan pipa drainase',satuan:'lot',hargaMaterial:2700000,hargaJasa:500000,vol:13},
+{id:'pref-gsd-198',desc:'Consumable Materials & Miscellaneous',category:'OTHERS',spec:'Material habis pakai & item tambahan',satuan:'lot',hargaMaterial:2800000,hargaJasa:1000000,vol:17},
+{id:'pref-gsd-199',desc:'Anti-vortex Assembly 6"',category:'OTHERS',spec:'Anti-vortex assembly ukuran min. 340 x 340 mm, plat besi galvanil tebal 3 mm, untuk pipa diameter 6 inci',satuan:'ea.',hargaMaterial:2500000,hargaJasa:1000000,vol:14},
+{id:'pref-gsd-200',desc:'Anti-vortex Assembly 2"',category:'OTHERS',spec:'Anti-vortex assembly ukuran min. 64 x 64 mm, plat besi galvanil tebal 3 mm, untuk pipa diameter 2 inci',satuan:'ea.',hargaMaterial:1500000,hargaJasa:500000,vol:7},
+{id:'pref-gsd-201',desc:'Vortex Inhibitor 6"',category:'OTHERS',spec:'Vortex inhibitor diameter 6 inci',satuan:'ea.',hargaMaterial:2500000,hargaJasa:245000,vol:2},
+{id:'pref-gsd-202',desc:'Vortex Inhibitor 2"',category:'OTHERS',spec:'Vortex inhibitor diameter 2 inci',satuan:'ea.',hargaMaterial:1500000,hargaJasa:75000,vol:1},
+{id:'pref-gsd-203',desc:'Water Stop Plate 6"',category:'OTHERS',spec:'Pelat penahan air diameter 6 inci',satuan:'ea.',hargaMaterial:1000000,hargaJasa:99000,vol:1},
+{id:'pref-gsd-204',desc:'Water Stop Plate 2"',category:'OTHERS',spec:'Pelat penahan air diameter 2 inci',satuan:'ea.',hargaMaterial:300000,hargaJasa:50000,vol:1},
+{id:'pref-gsd-205',desc:'Water Level Sensor',category:'OTHERS',spec:'Sensor ketinggian air',satuan:'set',hargaMaterial:562800,hargaJasa:100000,vol:17},
+{id:'pref-gsd-206',desc:'Water Level Control (Floatless Switch)',category:'OTHERS',spec:'Kontrol level air floatless switch 220 VAC',satuan:'set',hargaMaterial:485000,hargaJasa:80000,vol:1},
+{id:'pref-gsd-207',desc:'TL Lamp LED 18W',category:'OTHERS',spec:'Lampu TL LED 18 watt',satuan:'ea.',hargaMaterial:80000,hargaJasa:13000,vol:36},
+{id:'pref-gsd-208',desc:'Emergency Lamp 18W',category:'OTHERS',spec:'Lampu darurat 18 watt',satuan:'ea.',hargaMaterial:500000,hargaJasa:65000,vol:36},
+{id:'pref-gsd-209',desc:'Exhaust Fan 33.5 m³/min',category:'OTHERS',spec:'Exhaust fan kapasitas 33,5 m³/menit',satuan:'ea.',hargaMaterial:1000000,hargaJasa:133500,vol:36},
+{id:'pref-gsd-210',desc:'Box APD',category:'OTHERS',spec:'Box perlengkapan alat pelindung diri (APD)',satuan:'lot',hargaMaterial:2600000,hargaJasa:300000,vol:18},
+{id:'pref-gsd-211',desc:'Transfer Pump to Water Tank',category:'OTHERS',spec:'Pompa transfer air bersih ke tangki air',satuan:'Unit',hargaMaterial:16900000,hargaJasa:2500000,vol:18},
+{id:'pref-gsd-212',desc:'Installation of Transfer Pump',category:'OTHERS',spec:'Instalasi pompa transfer air ke tangki',satuan:'Unit',hargaMaterial:3000000,hargaJasa:650000,vol:18},
+{id:'pref-gsd-213',desc:'Water Tank 100 m³ Above Ground',category:'OTHERS',spec:'Tangki air kapasitas 100 m³, di atas tanah, material FRP',satuan:'m3',hargaMaterial:3150000,hargaJasa:405000,vol:1600},
+{id:'pref-gsd-214',desc:'Water Tank 192 m³ Above Ground',category:'OTHERS',spec:'Tangki air kapasitas 192 m³, di atas tanah, material FRP',satuan:'m3',hargaMaterial:3150000,hargaJasa:405000,vol:192},
+{id:'pref-gsd-215',desc:'Hydrostatic Test',category:'OTHERS',spec:'Pengujian hydrostatic untuk instalasi pipa & tangki',satuan:'lot',hargaMaterial:0,hargaJasa:2300000,vol:15},
+{id:'pref-gsd-216',desc:'Test & Commissioning',category:'OTHERS',spec:'Pengujian & commissioning sistem proteksi kebakaran (Hydrant System)',satuan:'lot',hargaMaterial:0,hargaJasa:2000000,vol:14},
+{id:'pref-gsd-217',desc:'Demolition of Existing Installation',category:'OTHERS',spec:'Pekerjaan pembongkaran (demolish) instalasi existing',satuan:'ea.',hargaMaterial:0,hargaJasa:2400000,vol:3},
+{id:'pref-gsd-218',desc:'Ceiling Repair',category:'OTHERS',spec:'Perbaikan plafon setelah pekerjaan instalasi',satuan:'Titik',hargaMaterial:270000,hargaJasa:75000,vol:173},
+{id:'pref-gsd-219',desc:'Certification (Disnaker)',category:'OTHERS',spec:'Sertifikasi Disnaker untuk instalasi hydrant, fire alarm, dan fire suppression',satuan:'Lot',hargaMaterial:0,hargaJasa:20000000,vol:17},
+{id:'pref-gsd-220',desc:'Main Control Fire Alarm Panel Addressable',category:'FIRE ALARM SYSTEM',spec:'Panel kontrol utama fire alarm tipe addressable, kapasitas minimal 2 loop, minimum 127 address per loop, dilengkapi network interface & battery backup',satuan:'Unit',hargaMaterial:61500000,hargaJasa:2750000,vol:19},
+{id:'pref-gsd-221',desc:'Auxiliary Power Supply 10A 24VDC',category:'FIRE ALARM SYSTEM',spec:'Power supply tambahan 10A 24VDC, warna merah',satuan:'Unit',hargaMaterial:1825000,hargaJasa:70000,vol:18},
+{id:'pref-gsd-222',desc:'Isolator Module',category:'FIRE ALARM SYSTEM',spec:'Modul isolator untuk sistem fire alarm addressable',satuan:'Ea',hargaMaterial:1200000,hargaJasa:150000,vol:70},
+{id:'pref-gsd-223',desc:'Network Annunciator',category:'FIRE ALARM SYSTEM',spec:'Perangkat annunciator jaringan untuk monitoring fire alarm',satuan:'Unit',hargaMaterial:11100000,hargaJasa:1100000,vol:18},
+{id:'pref-gsd-224',desc:'Photoelectric Beam Detector',category:'FIRE ALARM SYSTEM',spec:'Detektor beam photoelectric',satuan:'Ea',hargaMaterial:14000000,hargaJasa:1400000,vol:3},
+{id:'pref-gsd-225',desc:'Photoelectric Smoke Detector Addressable',category:'FIRE ALARM SYSTEM',spec:'Detektor asap photoelectric tipe addressable lengkap dengan base',satuan:'Ea',hargaMaterial:1255000,hargaJasa:190000,vol:1246},
+{id:'pref-gsd-226',desc:'Temperature Heat Detector Addressable',category:'FIRE ALARM SYSTEM',spec:'Detektor panas tipe addressable lengkap dengan base',satuan:'Ea',hargaMaterial:1000000,hargaJasa:100000,vol:145},
+{id:'pref-gsd-227',desc:'Manual Pull Station Addressable',category:'FIRE ALARM SYSTEM',spec:'Tombol manual pull station tipe addressable lengkap dengan backbox',satuan:'Ea',hargaMaterial:1550000,hargaJasa:95000,vol:126},
+{id:'pref-gsd-228',desc:'Strobe with Horn',category:'FIRE ALARM SYSTEM',spec:'Strobe light dengan horn lengkap dengan backbox',satuan:'Ea',hargaMaterial:1550000,hargaJasa:190000,vol:128},
+{id:'pref-gsd-229',desc:'ETS 1000VA SM2 Wallmount',category:'Module',spec:'UPS 1000VA tipe wallmount, single phase',satuan:'Unit',hargaMaterial:5500000,hargaJasa:1000000,vol:19},
+{id:'pref-gsd-230',desc:'Main Distribution Frame for Module',category:'Module',spec:'Main distribution frame untuk modul fire alarm',satuan:'Unit',hargaMaterial:1150000,hargaJasa:110000,vol:19},
+{id:'pref-gsd-231',desc:'Fire Alarm Terminal Box',category:'Module',spec:'Terminal box untuk instalasi fire alarm',satuan:'Unit',hargaMaterial:2900000,hargaJasa:400000,vol:61},
+{id:'pref-gsd-232',desc:'Power Cable FRC 3 x 2.5 mm²',category:'INSTALLATION MATERIAL',spec:'Kabel daya FRC 3 x 2.5 mm² lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk MCFA & auxiliary supply',satuan:'m',hargaMaterial:37000,hargaJasa:5000,vol:1225},
+{id:'pref-gsd-233',desc:'Data Cable AWG 18 1P',category:'INSTALLATION MATERIAL',spec:'Kabel data AWG 18 1P lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk input equipment',satuan:'Titik',hargaMaterial:700000,hargaJasa:100000,vol:1581},
+{id:'pref-gsd-234',desc:'Bell or Horn Strobe Cable',category:'INSTALLATION MATERIAL',spec:'Kabel FRC 2 x 1.5 mm² lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk bell atau horn strobe',satuan:'Titik',hargaMaterial:850000,hargaJasa:100000,vol:160},
+{id:'pref-gsd-235',desc:'Data Cable AWG 18 1P',category:'INSTALLATION MATERIAL',spec:'Kabel data AWG 18 1P lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk monitor module & control module',satuan:'Titik',hargaMaterial:700000,hargaJasa:100000,vol:493},
+{id:'pref-gsd-236',desc:'Data Cable AWG 18 1P + FRC 2 x 1.5 mm²',category:'INSTALLATION MATERIAL',spec:'Kabel data AWG 18 1P ditambah kabel FRC 2 x 1.5 mm² lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk annunciator',satuan:'Titik',hargaMaterial:102000,hargaJasa:46500,vol:21},
+{id:'pref-gsd-237',desc:'Data Cable 2 x AWG 18 1P',category:'INSTALLATION MATERIAL',spec:'Kabel data (2 x AWG 18 1P) lengkap dengan PVC conduit 20 mm² dan aksesoris, untuk integrasi panel ke panel',satuan:'Titik',hargaMaterial:700000,hargaJasa:100000,vol:4},
+{id:'pref-gsd-238',desc:'Power Cable Feeder FRC 2 x 1.5 mm²',category:'KABEL FEEDER PANEL TO TB LOOPING',spec:'Kabel feeder daya FRC 2 x 1.5 mm² lengkap dengan PVC conduit 20 mm² dan aksesoris',satuan:'Titik',hargaMaterial:850000,hargaJasa:100000,vol:72},
+{id:'pref-gsd-239',desc:'Data Cable Feeder FRC AWG 2 x 1.5 mm²',category:'KABEL FEEDER PANEL TO TB LOOPING',spec:'Kabel feeder data FRC AWG 2 x 1.5 mm² lengkap dengan PVC conduit 20 mm² dan aksesoris',satuan:'Titik',hargaMaterial:850000,hargaJasa:100000,vol:73},
+{id:'pref-gsd-240',desc:'Perapihan Jalur Pipa & Plafon',category:'OTHERS',spec:'Pekerjaan perapihan jalur pipa conduit (kabel) dan perapihan plafon',satuan:'lot',hargaMaterial:4000000,hargaJasa:2000000,vol:19},
+{id:'pref-gsd-241',desc:'Dismantle Detector & Existing',category:'OTHERS',spec:'Pekerjaan pembongkaran (dismantle) detektor dan instalasi existing',satuan:'lot',hargaMaterial:450000,hargaJasa:1000000,vol:18},
+{id:'pref-gsd-242',desc:'Test & Commissioning',category:'OTHERS',spec:'Pengujian & commissioning sistem proteksi kebakaran',satuan:'lot',hargaMaterial:0,hargaJasa:5000000,vol:1},
+{id:'pref-gsd-243',desc:'Silinder Gas 80L',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Silinder gas inert IG-541, kapasitas ±80L, tekanan 300 bar, dilengkapi valve assembly & protective cap',satuan:'Cylinder',hargaMaterial:28000000,hargaJasa:2794000,vol:156},
+{id:'pref-gsd-244',desc:'Pressure Regulator',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Regulator untuk menurunkan tekanan dari 300 bar menjadi ±60 bar, koneksi inlet/outlet W21,8',satuan:'ea',hargaMaterial:10500000,hargaJasa:2500000,vol:156},
+{id:'pref-gsd-245',desc:'Pressure Gauge',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Pressure gauge 0–6100 psi, dilengkapi pressure switch NO/NC, radial, untuk silinder 300 bar',satuan:'ea',hargaMaterial:3000000,hargaJasa:300000,vol:156},
+{id:'pref-gsd-246',desc:'Pneumatic Release Device',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Device aktuasi pneumatik, single piston, tekanan kerja ±21 bar',satuan:'ea',hargaMaterial:1567000,hargaJasa:300000,vol:183},
+{id:'pref-gsd-247',desc:'Manual Pneumatic Release Device',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Manual actuator pneumatik, single piston, tekanan ±21 bar',satuan:'ea',hargaMaterial:3300000,hargaJasa:300000,vol:49},
+{id:'pref-gsd-248',desc:'Electromagnetic Release Device',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Solenoid actuator 24 VDC, dengan diode proteksi, desain kompak',satuan:'ea',hargaMaterial:13843000,hargaJasa:300000,vol:49},
+{id:'pref-gsd-249',desc:'Monitoring Switch',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Switch monitoring untuk electro-magnetic actuator',satuan:'ea',hargaMaterial:3704000,hargaJasa:300000,vol:49},
+{id:'pref-gsd-250',desc:'Reset Tool',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Alat reset untuk electromagnetic actuator, dengan pelindung ulir & cap',satuan:'ea',hargaMaterial:1232000,hargaJasa:0,vol:27},
+{id:'pref-gsd-251',desc:'Bleed Valve',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Valve pembuangan untuk pneumatic actuator, koneksi G 1/8"',satuan:'ea',hargaMaterial:1760000,hargaJasa:238000,vol:49},
+{id:'pref-gsd-252',desc:'Pilot Hose 400 mm',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Selang pilot fleksibel 400 mm, koneksi M12 x 1,5, diameter internal 1/8" DN6',satuan:'ea',hargaMaterial:700000,hargaJasa:300000,vol:127},
+{id:'pref-gsd-253',desc:'Pilot Hose 700 mm',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Selang pilot fleksibel 700 mm, koneksi M12 x 1,5, diameter internal 1/8" DN6',satuan:'ea',hargaMaterial:805000,hargaJasa:300000,vol:58},
+{id:'pref-gsd-254',desc:'Adapter Pilot Hose',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Adapter hose M12 x 1,5 / G 1/8", dilengkapi O-ring',satuan:'ea',hargaMaterial:126000,hargaJasa:238000,vol:381},
+{id:'pref-gsd-255',desc:'Discharge Hose',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Selang discharge DN12, panjang ±400 mm, WP 380 bar, koneksi G 3/4"',satuan:'ea',hargaMaterial:1576000,hargaJasa:300000,vol:156},
+{id:'pref-gsd-256',desc:'Check Valve',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Check valve untuk inert gas/CO2, DN12, WP 360 bar, inlet G 3/4", outlet R 1"',satuan:'ea',hargaMaterial:5003000,hargaJasa:300000,vol:156},
+{id:'pref-gsd-257',desc:'Pressure Relief Device',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Relief valve untuk manifold, 66 bar, koneksi 1" NPT / 3/4" NPT',satuan:'ea',hargaMaterial:5095000,hargaJasa:1322000,vol:49},
+{id:'pref-gsd-258',desc:'Pressure & Flow Detector',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Switch tekanan & aliran, 2 bar, koneksi BSPP G 1/2"',satuan:'ea',hargaMaterial:7601000,hargaJasa:1000000,vol:49},
+{id:'pref-gsd-259',desc:'Nozzle',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Discharge nozzle inert gas/CO2, koneksi BSP, sesuai flow calculation',satuan:'ea',hargaMaterial:6500000,hargaJasa:1000000,vol:18},
+{id:'pref-gsd-260',desc:'Silent Nozzle 1/2"',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Silent discharge nozzle, koneksi R 1/2"',satuan:'ea',hargaMaterial:10844000,hargaJasa:1500000,vol:34},
+{id:'pref-gsd-261',desc:'Silent Nozzle 1"',category:'MAIN EQUIPMENT HIGH PRESSURE',spec:'Silent discharge nozzle, koneksi R 1"',satuan:'ea',hargaMaterial:14520000,hargaJasa:1500000,vol:49},
+{id:'pref-gsd-262',desc:'Silinder Gas 650 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Stainless steel cylinder kapasitas ±650 lb, dilengkapi SS valve 3", plug adapter, pressure gauge dengan cover',satuan:'SET',hargaMaterial:130000000,hargaJasa:1300000,vol:5},
+{id:'pref-gsd-263',desc:'Silinder Gas 375 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Stainless steel cylinder kapasitas ±375 lb, dilengkapi SS valve 2 1/2", plug adapter, pressure gauge dengan cover',satuan:'SET',hargaMaterial:75000000,hargaJasa:1300000,vol:11},
+{id:'pref-gsd-264',desc:'Silinder Gas 250 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Stainless steel cylinder kapasitas ±250 lb, dilengkapi SS valve 1 1/2", plug adapter, pressure gauge dengan cover',satuan:'SET',hargaMaterial:65000000,hargaJasa:1100000,vol:2},
+{id:'pref-gsd-265',desc:'Silinder Gas 100 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Stainless steel cylinder kapasitas ±100 lb, dilengkapi SS valve 1", plug adapter, pressure gauge dengan cover',satuan:'SET',hargaMaterial:57510000,hargaJasa:1100000,vol:1},
+{id:'pref-gsd-266',desc:'Clean Agent FK-5-1-12',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Media clean agent FK-5-1-12, sesuai NFPA 2001, EPA SNAP, ramah lingkungan (ODP=0, GWP rendah)',satuan:'KG',hargaMaterial:1100000,hargaJasa:90000,vol:2133},
+{id:'pref-gsd-267',desc:'Solenoid Release Device',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Supervised latching solenoid untuk aktuasi silinder',satuan:'EA',hargaMaterial:10000000,hargaJasa:51000,vol:14},
+{id:'pref-gsd-268',desc:'Manual Control',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Local manual control untuk aktivasi sistem',satuan:'EA',hargaMaterial:3000000,hargaJasa:45600,vol:14},
+{id:'pref-gsd-269',desc:'Cylinder Strap 560/650 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strap/bracket pengikat silinder kapasitas 560–650 lb (1 set = 2 pcs)',satuan:'EA',hargaMaterial:600000,hargaJasa:90000,vol:6},
+{id:'pref-gsd-270',desc:'Cylinder Strap 375 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strap/bracket pengikat silinder kapasitas 375 lb (1 set = 2 pcs)',satuan:'EA',hargaMaterial:500000,hargaJasa:50000,vol:16},
+{id:'pref-gsd-271',desc:'Cylinder Strap 250 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strap/bracket pengikat silinder kapasitas 250 lb',satuan:'EA',hargaMaterial:300000,hargaJasa:30000,vol:2},
+{id:'pref-gsd-272',desc:'Cylinder Strap 100/150 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strap/bracket pengikat silinder kapasitas 100–150 lb',satuan:'EA',hargaMaterial:300000,hargaJasa:30000,vol:1},
+{id:'pref-gsd-273',desc:'Pressure Supervisory Switch',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Switch tekanan N/C, 500 psi, dengan cover',satuan:'EA',hargaMaterial:2750000,hargaJasa:76000,vol:16},
+{id:'pref-gsd-274',desc:'Flexible Cylinder Hose 1"',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Selang fleksibel silinder 1" NPT',satuan:'EA',hargaMaterial:2000000,hargaJasa:76000,vol:1},
+{id:'pref-gsd-275',desc:'Flexible Cylinder Hose 1 1/2"',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Selang fleksibel silinder 1 1/2" NPT',satuan:'EA',hargaMaterial:3000000,hargaJasa:76000,vol:2},
+{id:'pref-gsd-276',desc:'Flexible Cylinder Hose 2 1/2"',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Selang fleksibel silinder metal 2 1/2" NPT',satuan:'EA',hargaMaterial:8500000,hargaJasa:76000,vol:11},
+{id:'pref-gsd-277',desc:'Discharge Hose 2"',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Selang discharge 2" sesuai flow calculation',satuan:'EA',hargaMaterial:2000000,hargaJasa:266000,vol:2},
+{id:'pref-gsd-278',desc:'Central Nozzle',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Nozzle 360° threaded, sesuai flow calculation',satuan:'EA',hargaMaterial:2310000,hargaJasa:110000,vol:45},
+{id:'pref-gsd-279',desc:'Liquid Level Indicator (besar)',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Indikator level cairan untuk silinder 375/560/650 lb',satuan:'UNIT',hargaMaterial:10000000,hargaJasa:900000,vol:14},
+{id:'pref-gsd-280',desc:'Liquid Level Indicator (kecil)',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Indikator level cairan untuk silinder 150/250 lb',satuan:'UNIT',hargaMaterial:10102000,hargaJasa:68000,vol:1},
+{id:'pref-gsd-281',desc:'Piston Actuator Slave',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Device actuator piston untuk silinder slave',satuan:'EA',hargaMaterial:4500000,hargaJasa:500000,vol:2},
+{id:'pref-gsd-282',desc:'Flexible Hose 1/4"',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Selang fleksibel metal 1/4" x 36"',satuan:'EA',hargaMaterial:700000,hargaJasa:75000,vol:2},
+{id:'pref-gsd-283',desc:'Elbow Fitting',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Fitting elbow flare 1/8" NPT & 7/16–20 UNF',satuan:'EA',hargaMaterial:308000,hargaJasa:60000,vol:1},
+{id:'pref-gsd-284',desc:'Cylinder Containment Box 250–650 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Box containment silinder dengan lock & break glass',satuan:'EA',hargaMaterial:12500000,hargaJasa:2000000,vol:11},
+{id:'pref-gsd-285',desc:'Cylinder Containment Box 100 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Box containment silinder dengan lock & break glass',satuan:'EA',hargaMaterial:8240000,hargaJasa:2725000,vol:1},
+{id:'pref-gsd-286',desc:'Cylinder Containment Box 20–100 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Box containment silinder dengan lock & break glass',satuan:'EA',hargaMaterial:8240000,hargaJasa:500000,vol:1},
+{id:'pref-gsd-287',desc:'Releasing Fire Control Panel',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Releasing fire control panel, UL Listed, dengan backup battery',satuan:'UNIT',hargaMaterial:23900000,hargaJasa:2300000,vol:3},
+{id:'pref-gsd-288',desc:'Smoke Detector',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Photoelectric smoke detector',satuan:'EA',hargaMaterial:900000,hargaJasa:100000,vol:12},
+{id:'pref-gsd-289',desc:'Notification Appliance',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Wall mount horn/strobe 12/24 VDC, warna merah, 6 candela',satuan:'EA',hargaMaterial:2500000,hargaJasa:150000,vol:3},
+{id:'pref-gsd-290',desc:'Abort Switch',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Abort switch dengan back box',satuan:'EA',hargaMaterial:1000000,hargaJasa:150000,vol:3},
+{id:'pref-gsd-291',desc:'Manual Pull Station',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Dual action manual pull station, key reset, lift & pull type',satuan:'EA',hargaMaterial:3000000,hargaJasa:150000,vol:3},
+{id:'pref-gsd-292',desc:'Alarm Bell',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Alarm bell 24 VDC, 6" merah',satuan:'EA',hargaMaterial:750000,hargaJasa:150000,vol:3},
+{id:'pref-gsd-293',desc:'Indicator Light',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'LED red fire light',satuan:'EA',hargaMaterial:350000,hargaJasa:150000,vol:3},
+{id:'pref-gsd-294',desc:'Evacuation Strobe',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strobe light box untuk evakuasi',satuan:'EA',hargaMaterial:1956000,hargaJasa:150000,vol:3},
+{id:'pref-gsd-295',desc:'Gas Discharge Strobe',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Strobe light box untuk indikasi discharge gas',satuan:'EA',hargaMaterial:1956000,hargaJasa:150000,vol:3},
+{id:'pref-gsd-296',desc:'Disable Switch',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Releasing circuit disable switch 24 VDC dengan back box',satuan:'EA',hargaMaterial:850000,hargaJasa:150000,vol:3},
+{id:'pref-gsd-297',desc:'Cylinder Containment Box 375–650 lb',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Box containment silinder kapasitas 375–650 lb dengan lock & break glass',satuan:'EA',hargaMaterial:13039000,hargaJasa:2400000,vol:3},
+{id:'pref-gsd-298',desc:'Motorized Damper',category:'MAIN EQUIPMENT LOW PRESSURE',spec:'Motorized damper untuk ruang baterai, integrasi exhaust',satuan:'EA',hargaMaterial:3400000,hargaJasa:190000,vol:6},
+{id:'pref-gsd-299',desc:'Conventional Releasing Panel',category:'DETECTION Equipment Electrical',spec:'Panel releasing konvensional warna merah, termasuk backup battery',satuan:'Unit',hargaMaterial:40000000,hargaJasa:1200000,vol:11},
+{id:'pref-gsd-300',desc:'Addressable Fire Alarm Control Panel',category:'DETECTION Equipment Electrical',spec:'FACP addressable termasuk backup battery',satuan:'Unit',hargaMaterial:75500000,hargaJasa:5800000,vol:59},
+{id:'pref-gsd-301',desc:'Photoelectric Smoke Detector',category:'DETECTION Equipment Electrical',spec:'Detektor asap photoelectric lengkap dengan base',satuan:'ea',hargaMaterial:1360000,hargaJasa:166000,vol:283},
+{id:'pref-gsd-302',desc:'Wall Mount Horn/Strobe 24 VDC',category:'DETECTION Equipment Electrical',spec:'Perangkat notifikasi horn/strobe, 24 VDC, warna merah, termasuk back box',satuan:'ea',hargaMaterial:2500000,hargaJasa:150000,vol:57},
+{id:'pref-gsd-303',desc:'Extinguishing Abort Switch',category:'DETECTION Equipment Electrical',spec:'Abort switch, surface mount, warna merah, termasuk back box',satuan:'ea',hargaMaterial:1000000,hargaJasa:150000,vol:11},
+{id:'pref-gsd-304',desc:'Manual Pull Station (Dual Action)',category:'DETECTION Equipment Electrical',spec:'Manual pull station dual action, key reset, lift & pull, warna merah',satuan:'ea',hargaMaterial:2400000,hargaJasa:120000,vol:56},
+{id:'pref-gsd-305',desc:'Fire Alarm Bell 24 VDC',category:'DETECTION Equipment Electrical',spec:'Alarm bell 24 VDC, termasuk back box',satuan:'ea',hargaMaterial:750000,hargaJasa:150000,vol:57},
+{id:'pref-gsd-306',desc:'Indication Lamp',category:'DETECTION Equipment Electrical',spec:'Lampu indikator LED, termasuk back box',satuan:'ea',hargaMaterial:394240,hargaJasa:150000,vol:1},
+{id:'pref-gsd-307',desc:'Supervised Disconnect Switch',category:'DETECTION Equipment Electrical',spec:'Switch pemutusan terawasi (supervised)',satuan:'ea',hargaMaterial:850000,hargaJasa:150000,vol:106},
+{id:'pref-gsd-308',desc:'Evacuation Strobe Light',category:'DETECTION Equipment Electrical',spec:'Strobe light box untuk evakuasi',satuan:'ea',hargaMaterial:1250000,hargaJasa:100000,vol:56},
+{id:'pref-gsd-309',desc:'Gas Discharge Strobe Light',category:'DETECTION Equipment Electrical',spec:'Strobe light box untuk indikasi discharge gas',satuan:'ea',hargaMaterial:1250000,hargaJasa:100000,vol:58},
+{id:'pref-gsd-310',desc:'Junction Box',category:'DETECTION Equipment Electrical',spec:'Junction box untuk interkoneksi sistem',satuan:'Unit',hargaMaterial:2738000,hargaJasa:896000,vol:11},
+{id:'pref-gsd-311',desc:'Indication Lamp (Cadangan)',category:'DETECTION Equipment Electrical',spec:'Lampu indikator LED, termasuk back box',satuan:'ea',hargaMaterial:350000,hargaJasa:150000,vol:1},
+{id:'pref-gsd-312',desc:'Disconnect Switch HCVR-3 (Setara)',category:'DETECTION Equipment Electrical',spec:'Disconnect switch tipe HCVR-3 atau setara, warna merah, termasuk back box',satuan:'ea',hargaMaterial:850000,hargaJasa:150000,vol:1},
+{id:'pref-gsd-313',desc:'Suppression Abort Station',category:'DETECTION Equipment Electrical',spec:'Abort station untuk sistem suppression, lengkap cover',satuan:'Unit',hargaMaterial:1000000,hargaJasa:150000,vol:44},
+{id:'pref-gsd-314',desc:'Addressable Input Module (AIM)',category:'DETECTION Equipment Electrical',spec:'Modul input addressable',satuan:'Unit',hargaMaterial:1797000,hargaJasa:250000,vol:209},
+{id:'pref-gsd-315',desc:'Addressable Signal Module (ASM)',category:'DETECTION Equipment Electrical',spec:'Modul signal/notification addressable',satuan:'Unit',hargaMaterial:1700000,hargaJasa:250000,vol:156},
+{id:'pref-gsd-316',desc:'Addressable Output Module (AOM)',category:'DETECTION Equipment Electrical',spec:'Modul output addressable',satuan:'Unit',hargaMaterial:1797000,hargaJasa:250000,vol:113},
+{id:'pref-gsd-317',desc:'Terminal Box Module',category:'DETECTION Equipment Electrical',spec:'Terminal box modul untuk terminasi/ekspansi',satuan:'Unit',hargaMaterial:3000000,hargaJasa:900000,vol:45},
+{id:'pref-gsd-318',desc:'Addressable Releasing Module (ARM)',category:'DETECTION Equipment Electrical',spec:'Modul releasing addressable',satuan:'Unit',hargaMaterial:6000000,hargaJasa:750000,vol:19},
+{id:'pref-gsd-319',desc:'PIPE FITTING C/O:',category:'MATERIAL INSTALLATION',spec:'',satuan:'Ruangan',hargaMaterial:4000000,hargaJasa:670000,vol:85},
+{id:'pref-gsd-320',desc:'SUPPORT & CONSUMMABLE MATERIAL C/O:',category:'Threadolet #3000',spec:'',satuan:'Ruangan',hargaMaterial:2750000,hargaJasa:560000,vol:88},
+{id:'pref-gsd-321',desc:'ELECTRICAL INSTALLATION',category:'Angle Beam',spec:'',satuan:'Ruangan',hargaMaterial:42567000,hargaJasa:8000000,vol:84},
+{id:'pref-gsd-322',desc:'CEILING WORK',category:'Conduit Accessories & Fitting',spec:'',satuan:'Ruangan',hargaMaterial:15000000,hargaJasa:1000000,vol:85},
+{id:'pref-gsd-323',desc:'FIRE STOP',category:'Perbaikan Partisi/Sekat',spec:'',satuan:'Ruangan',hargaMaterial:4750000,hargaJasa:1500000,vol:81},
+{id:'pref-gsd-324',desc:'Fire Extinguisher CO2 5kg (Ruang Trafo)',category:'FIRE EXTINGUISHER',spec:'APAR (Alat Pemadam Api Ringan) jenis CO2 kapasitas 5kg, untuk ruang trafo',satuan:'Ea',hargaMaterial:2000000,hargaJasa:0,vol:2},
+{id:'pref-gsd-325',desc:'Fire Extinguisher CO2 5kg (Ruang Transmisi 1)',category:'FIRE EXTINGUISHER',spec:'APAR (Alat Pemadam Api Ringan) jenis CO2 kapasitas 5kg, untuk ruang transmisi 1',satuan:'Ea',hargaMaterial:2000000,hargaJasa:0,vol:2},
+{id:'pref-gsd-326',desc:'Fire Extinguisher CO2 5kg (Ruang Transmisi 2)',category:'FIRE EXTINGUISHER',spec:'APAR (Alat Pemadam Api Ringan) jenis CO2 kapasitas 5kg, untuk ruang transmisi 2',satuan:'Ea',hargaMaterial:2000000,hargaJasa:0,vol:2},
+{id:'pref-gsd-327',desc:'Motorized Damper',category:'OTHERS',spec:'Damper bermotor untuk sistem ventilasi & proteksi kebakaran',satuan:'EA',hargaMaterial:8000000,hargaJasa:2500000,vol:10},
+{id:'pref-gsd-328',desc:'Exhaust Fan Industrial 18 Inch',category:'OTHERS',spec:'Exhaust fan industri diameter 18 inci, merek setara Panasonic type industrial',satuan:'EA',hargaMaterial:8012000,hargaJasa:750000,vol:1},
+{id:'pref-gsd-329',desc:'Interkoneksi Antar Panel Releasing',category:'OTHERS',spec:'Pekerjaan interkoneksi antar panel releasing',satuan:'Ruangan',hargaMaterial:0,hargaJasa:0,vol:22},
+{id:'pref-gsd-330',desc:'Dismantling Fire Protection Existing',category:'OTHERS',spec:'Pekerjaan pembongkaran sistem proteksi kebakaran existing',satuan:'Ruangan',hargaMaterial:0,hargaJasa:0,vol:74},
+{id:'pref-gsd-331',desc:'Reprogramming Interkoneksi Panel Releasing to MCFA',category:'OTHERS',spec:'Pekerjaan reprogramming interkoneksi panel releasing ke MCFA',satuan:'lot',hargaMaterial:0,hargaJasa:0,vol:24},
+{id:'pref-gsd-332',desc:'Overpressure Louver',category:'OTHERS',spec:'Overpressure louver untuk pengaturan aliran udara & proteksi tekanan berlebih',satuan:'Unit',hargaMaterial:7500000,hargaJasa:2500000,vol:56},
+{id:'pref-gsd-333',desc:'Cylinder Strap',category:'OTHERS',spec:'Strap silinder untuk pengikat tabung fire suppression',satuan:'Ea',hargaMaterial:1000000,hargaJasa:100000,vol:246},
+{id:'pref-gsd-334',desc:'Zone Module for Beam Detector',category:'FIRE ALARM SYSTEM',spec:'Modul zona untuk detektor beam photoelectric',satuan:'Ea',hargaMaterial:1800000,hargaJasa:39700,vol:3},
+{id:'pref-gsd-335',desc:'Control Module for Horn/Strobe',category:'FIRE ALARM SYSTEM',spec:'Modul kontrol untuk horn/strobe',satuan:'Ea',hargaMaterial:1200000,hargaJasa:39700,vol:105},
+{id:'pref-gsd-336',desc:'Monitor Module for Alarm Check Valve at Pump Room',category:'FIRE ALARM SYSTEM',spec:'Modul monitor untuk alarm check valve di ruang pompa (pressure switch & tamper switch)',satuan:'Ea',hargaMaterial:1000000,hargaJasa:39700,vol:42},
+{id:'pref-gsd-337',desc:'Monitor Module for Alarm Check Valve at Building',category:'FIRE ALARM SYSTEM',spec:'Modul monitor untuk alarm check valve di gedung (pressure switch & tamper switch)',satuan:'Ea',hargaMaterial:1000000,hargaJasa:39700,vol:20},
+{id:'pref-gsd-338',desc:'Monitor Module for Alarm Check Valve at Genset Room',category:'FIRE ALARM SYSTEM',spec:'Modul monitor untuk alarm check valve di ruang genset (pressure switch & tamper switch)',satuan:'Ea',hargaMaterial:1000000,hargaJasa:39700,vol:50},
+{id:'pref-gsd-339',desc:'Monitor Module for Branch Control Valve',category:'FIRE ALARM SYSTEM',spec:'Modul monitor untuk branch control valve di gedung (flow switch & tamper switch)',satuan:'Ea',hargaMaterial:1000000,hargaJasa:39700,vol:3},
+{id:'pref-gsd-340',desc:'Monitor Module for Fire Pump (Supervision)',category:'FIRE ALARM SYSTEM',spec:'Modul monitor untuk fire pump (supervisi)',satuan:'Ea',hargaMaterial:1000000,hargaJasa:39700,vol:78},
+{id:'pref-gsd-341',desc:'Monitor Module for FSS Panel',category:'FIRE ALARM SYSTEM',spec:'Modul monitor untuk panel FSS (trouble, alarm, discharge)',satuan:'Ea',hargaMaterial:1000000,hargaJasa:39700,vol:344},
+{id:'pref-gsd-342',desc:'Monitor Module for Water Spray Status',category:'FIRE ALARM SYSTEM',spec:'Modul monitor untuk status water spray (trouble, alarm, discharge)',satuan:'Ea',hargaMaterial:1000000,hargaJasa:39700,vol:31},
 ];
 
 // SKK_VEA_BOQ_SEED: 91 item BOQ dari SKK (partner AMS) untuk proyek Fire Fighting System PT. Vision Ease Asia.
@@ -11820,7 +11834,8 @@ function renderSphs(c){
           ${canInvoice?`<button onclick="openInvoiceFromSph('${s.id}')" title="Buat Invoice" style="background:none;border:1px solid #bbf7d0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#16a34a;margin-right:3px">📄 Invoice</button>`:''}
           ${linked?`<button onclick="viewSph('${s.id}')" title="Invoice Terhubung" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🔗</button>`:''}
           <button onclick="viewSph('${s.id}')" title="Detail" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">👁️</button>
-          <button onclick="printSph('${s.id}')" title="Cetak" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🖨️</button>
+          <button onclick="printSph('${s.id}')" title="Cetak untuk Customer/Vendor" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🖨️</button>
+          <button onclick="printSphInternal('${s.id}')" title="Cetak Internal (HPP & Pembanding Referensi)" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#b91c1c;margin-right:3px">📋</button>
           <button onclick="openAddSph('${s.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button>
           <button onclick="delSph('${s.id}')" title="Hapus" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button>
         </td>
@@ -11833,9 +11848,14 @@ function renderSphs(c){
 // ==================== MODUL: REFERENSI HARGA ====================
 // Master harga acuan dari proyek lain (mis. file GSD yang sudah di-approve pembeli),
 // dipakai sebagai pembanding saat menentukan markup harga jual di SPH.
-// Struktur 1 baris DB.priceRefs: {id, source, category, desc, spec, brand, satuan, hargaMaterial, hargaJasa, tanggal, created_at}
+// Struktur 1 baris DB.priceRefs: {id, source, category, desc, spec, brand, satuan, hargaMaterial, hargaJasa, vol, tanggal, created_at}
+// "vol" = volume/qty acuan dari proyek sumbernya (opsional, default dianggap 1 kalau kosong) — dipakai
+// buat menghitung TOTAL keseluruhan referensi biar bisa dicocokkan ke grand total di file Excel aslinya.
 
 function priceRefTotal(r){ return (parseFloat(r.hargaMaterial)||0)+(parseFloat(r.hargaJasa)||0); }
+// Total per baris x volume (vol) — dipakai buat cocokin grand total ke file Excel sumbernya.
+// Kalau vol belum diisi (data lama/manual), dianggap 1 supaya tetap tampil (bukan 0).
+function priceRefLineTotal(r){ const vol=(r.vol===undefined||r.vol===null||r.vol==='')?1:(parseFloat(r.vol)||1); return priceRefTotal(r)*vol; }
 
 // Muat data awal Referensi Harga dari GSD_PRICE_REF_SEED (sekali saja, kalau belum ada isinya / belum pernah di-seed)
 function seedPriceRefDemo(){
@@ -11848,6 +11868,56 @@ function seedPriceRefDemo(){
   DB.priceRefDemoSeeded=true;
   saveDB();
   return true;
+}
+
+// Ringkasan per Kategori & Total Keseluruhan — buat ngecek total referensi (yang sedang difilter,
+// misal difilter per Sumber Proyek) sudah sama belum dengan grand total di file Excel aslinya.
+function renderPriceRefSummaryPanel(list){
+  if(!list.length)return '';
+  const catMap={};
+  list.forEach(r=>{
+    const cat=r.category||'Tanpa Kategori';
+    if(!catMap[cat])catMap[cat]={material:0,jasa:0,total:0,count:0};
+    const vol=(r.vol===undefined||r.vol===null||r.vol==='')?1:(parseFloat(r.vol)||1);
+    catMap[cat].material+=(parseFloat(r.hargaMaterial)||0)*vol;
+    catMap[cat].jasa+=(parseFloat(r.hargaJasa)||0)*vol;
+    catMap[cat].total+=priceRefLineTotal(r);
+    catMap[cat].count++;
+  });
+  const cats=Object.keys(catMap);
+  const grandMaterial=cats.reduce((x,k)=>x+catMap[k].material,0);
+  const grandJasa=cats.reduce((x,k)=>x+catMap[k].jasa,0);
+  const grandTotal=cats.reduce((x,k)=>x+catMap[k].total,0);
+  const hasVolData=list.some(r=>r.vol!==undefined&&r.vol!==null&&r.vol!=='');
+  return `<div style="margin:0 24px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;overflow:hidden">
+    <div style="padding:12px 18px;border-bottom:1px solid #bae6fd;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div style="font-size:12.5px;font-weight:700;color:#0369a1">📊 Ringkasan per Kategori (buat cek total vs Excel sumbernya)</div>
+      ${hasVolData?'':'<div style="font-size:10.5px;color:#b45309;background:#fef3c7;padding:3px 9px;border-radius:99px">⚠️ Sebagian data belum ada Volume-nya, dianggap 1 unit</div>'}
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#e0f2fe">
+        <th style="padding:7px 18px;text-align:left;font-size:10.5px;font-weight:700;color:#0369a1">KATEGORI</th>
+        <th style="padding:7px 10px;text-align:right;font-size:10.5px;font-weight:700;color:#0369a1">ITEM</th>
+        <th style="padding:7px 10px;text-align:right;font-size:10.5px;font-weight:700;color:#0369a1">MATERIAL</th>
+        <th style="padding:7px 10px;text-align:right;font-size:10.5px;font-weight:700;color:#0369a1">JASA</th>
+        <th style="padding:7px 18px;text-align:right;font-size:10.5px;font-weight:700;color:#0369a1">TOTAL</th>
+      </tr></thead>
+      <tbody>${cats.map(k=>`<tr style="border-top:1px solid #e0f2fe">
+        <td style="padding:6px 18px;color:#0f172a">${k}</td>
+        <td style="padding:6px 10px;text-align:right;color:#475569">${catMap[k].count}</td>
+        <td style="padding:6px 10px;text-align:right;color:#475569">${rp(catMap[k].material)}</td>
+        <td style="padding:6px 10px;text-align:right;color:#475569">${rp(catMap[k].jasa)}</td>
+        <td style="padding:6px 18px;text-align:right;font-weight:700;color:#0f172a">${rp(catMap[k].total)}</td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr style="background:#e0f2fe;border-top:2px solid #bae6fd">
+        <td style="padding:9px 18px;font-weight:800;color:#0e7490">GRAND TOTAL</td>
+        <td style="padding:9px 10px;text-align:right;font-weight:800;color:#0e7490">${list.length}</td>
+        <td style="padding:9px 10px;text-align:right;font-weight:800;color:#0e7490">${rp(grandMaterial)}</td>
+        <td style="padding:9px 10px;text-align:right;font-weight:800;color:#0e7490">${rp(grandJasa)}</td>
+        <td style="padding:9px 18px;text-align:right;font-weight:900;font-size:13.5px;color:#0e7490">${rp(grandTotal)}</td>
+      </tr></tfoot>
+    </table></div>
+  </div>`;
 }
 
 function renderPriceRefs(c){
@@ -11893,30 +11963,35 @@ function renderPriceRefs(c){
       </div>
     </div>
     <div style="padding:10px 24px;font-size:12px;color:#64748b">Menampilkan <b>${list.length}</b> dari ${DB.priceRefs.length} item referensi</div>
+    ${renderPriceRefSummaryPanel(list)}
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
       <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
         <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b">DESKRIPSI</th>
         <th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SPESIFIKASI / MERK</th>
+        <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#64748b">VOL</th>
         <th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SAT</th>
         <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#64748b">MATERIAL</th>
         <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#64748b">JASA</th>
         <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#64748b">TOTAL/UNIT</th>
+        <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#0e7490">TOTAL (×VOL)</th>
         <th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SUMBER</th>
         <th style="padding:10px 10px;text-align:center;font-size:11px;font-weight:700;color:#64748b">AKSI</th>
       </tr></thead>
       <tbody>${list.length?list.map(r=>`<tr style="border-bottom:1px solid #f1f5f9">
         <td style="padding:9px 14px;font-weight:600;color:#1e293b">${r.desc||'-'}${r.category?`<div style="font-size:10.5px;color:#94a3b8;font-weight:400">${r.category}</div>`:''}</td>
         <td style="padding:9px 10px;color:#64748b;max-width:260px">${[r.spec,r.brand].filter(Boolean).join(' — ')||'-'}</td>
+        <td style="padding:9px 10px;text-align:right;color:#64748b">${(r.vol===undefined||r.vol===null||r.vol==='')?'-':r.vol}</td>
         <td style="padding:9px 10px;color:#64748b">${r.satuan||'-'}</td>
         <td style="padding:9px 10px;text-align:right">${rp(r.hargaMaterial||0)}</td>
         <td style="padding:9px 10px;text-align:right">${rp(r.hargaJasa||0)}</td>
         <td style="padding:9px 10px;text-align:right;font-weight:700;color:#0f172a">${rp(priceRefTotal(r))}</td>
+        <td style="padding:9px 10px;text-align:right;font-weight:700;color:#0e7490">${rp(priceRefLineTotal(r))}</td>
         <td style="padding:9px 10px;color:#64748b">${r.source||'-'}</td>
         <td style="padding:9px 10px;text-align:center;white-space:nowrap">
           <button onclick="openAddPriceRef('${r.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button>
           <button onclick="delPriceRef('${r.id}')" title="Hapus" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button>
         </td>
-      </tr>`).join(''):`<tr><td colspan="8" style="padding:40px;text-align:center;color:#94a3b8;font-size:13px">Belum ada data referensi. Klik "⬆ Impor dari Excel" atau "+ Tambah Manual" untuk mulai.</td></tr>`}
+      </tr>`).join(''):`<tr><td colspan="10" style="padding:40px;text-align:center;color:#94a3b8;font-size:13px">Belum ada data referensi. Klik "⬆ Impor dari Excel" atau "+ Tambah Manual" untuk mulai.</td></tr>`}
       </tbody>
     </table></div>
   </div>`;
@@ -11938,10 +12013,12 @@ function openAddPriceRef(id){
       <div class="fg"><label>Harga Material (per unit)</label><input id="pref-material" type="number" min="0" value="${r?r.hargaMaterial||0:0}"></div>
       <div class="fg"><label>Harga Jasa (per unit)</label><input id="pref-jasa" type="number" min="0" value="${r?r.hargaJasa||0:0}"></div>
     </div>
-    <div class="fr2">
+    <div class="fr3">
+      <div class="fg"><label>Volume / Qty Acuan (opsional)</label><input id="pref-vol" type="number" min="0" step="0.01" value="${r&&r.vol!==undefined&&r.vol!==null?r.vol:''}" placeholder="Kosongkan kalau tidak tahu (dianggap 1)"></div>
       <div class="fg"><label>Sumber Proyek</label><input id="pref-source" value="${r?escAttr(r.source):''}" placeholder="Contoh: GSD - K-TEL-002-2026"></div>
       <div class="fg"><label>Tanggal</label><input id="pref-tgl" type="date" value="${r&&r.tanggal?r.tanggal:today()}"></div>
     </div>
+    <p style="font-size:10.5px;color:#94a3b8;margin:6px 0 0">Volume dipakai buat menghitung Total keseluruhan di halaman ringkasan (buat dicocokkan ke grand total Excel sumbernya). Kalau kosong, dianggap 1 unit.</p>
     <div style="text-align:right;margin-top:14px">
       <button class="btn btn-pri" onclick="savePriceRef('${id||''}')">💾 Simpan</button>
     </div>
@@ -11958,6 +12035,7 @@ function savePriceRef(id){
     satuan:document.getElementById('pref-satuan').value.trim()||'unit',
     hargaMaterial:parseFloat(document.getElementById('pref-material').value)||0,
     hargaJasa:parseFloat(document.getElementById('pref-jasa').value)||0,
+    vol:document.getElementById('pref-vol').value===''?null:(parseFloat(document.getElementById('pref-vol').value)||0),
     source:document.getElementById('pref-source').value.trim(),
     tanggal:document.getElementById('pref-tgl').value||today()
   };
@@ -12027,7 +12105,14 @@ async function handlePriceRefImport(input){
       const noVal=colNo>-1?r[colNo]:'';
       const matVal=colMaterial>-1?parseFloat(r[colMaterial]):NaN;
       const jasaVal=colJasa>-1?parseFloat(r[colJasa]):NaN;
-      const isItemRow=(typeof noVal==='number'||(!isNaN(parseFloat(noVal))&&noVal!==''))&&(!isNaN(matVal)||!isNaN(jasaVal));
+      const volVal=colVol>-1?r[colVol]:'';
+      const hasNo=(typeof noVal==='number')||(noVal!==''&&!isNaN(parseFloat(noVal)));
+      // Punya harga Material/Jasa beneran (bukan 0/kosong) → tetap dianggap item walau kolom No-nya kosong.
+      // (Ditemukan di file GSD: beberapa baris sub-item — mis. modul-modul di bawah "FIRE ALARM SYSTEM" —
+      // punya harga & volume lengkap tapi No-nya sengaja dikosongkan karena nempel ke item nomor di atasnya.
+      // Kalau cuma disyaratkan "ada No", baris-baris valid ini bakal ke-skip diam-diam.)
+      const hasPrice=(!isNaN(matVal)&&matVal!==0)||(!isNaN(jasaVal)&&jasaVal!==0);
+      const isItemRow=hasNo||hasPrice;
       if(isItemRow){
         imported.push({
           desc:descVal,
@@ -12036,12 +12121,12 @@ async function handlePriceRefImport(input){
           satuan:colSat>-1?String(r[colSat]||'').trim():'unit',
           hargaMaterial:isNaN(matVal)?0:matVal,
           hargaJasa:isNaN(jasaVal)?0:jasaVal,
+          vol:(volVal!==''&&!isNaN(parseFloat(volVal)))?parseFloat(volVal):null,
           source:sourceName,
           tanggal:today()
         });
       } else {
-        // Baris tanpa No & tanpa harga → dianggap judul kategori
-        const volVal=colVol>-1?r[colVol]:'';
+        // Baris tanpa No, tanpa harga, tanpa volume → dianggap judul kategori
         if(!volVal && isNaN(matVal) && isNaN(jasaVal)) lastCategory=descVal;
       }
     }
@@ -12441,7 +12526,8 @@ function viewSph(id){
     </div>
     <div style="padding:16px 28px;background:#f8fafc;border-top:1px solid #f1f5f9;display:flex;justify-content:flex-end;gap:10px">
       <button onclick="document.getElementById('sph-view-modal').remove();openAddSph('${s.id}')" style="padding:9px 20px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;color:#475569">✏️ Edit</button>
-      <button onclick="printSph('${s.id}')" style="padding:9px 20px;border:none;border-radius:8px;font-size:13px;cursor:pointer;background:#f0f9ff;color:#0891b2;font-weight:700;border:1px solid #bae6fd">🖨️ Cetak</button>
+      <button onclick="printSph('${s.id}')" style="padding:9px 20px;border:none;border-radius:8px;font-size:13px;cursor:pointer;background:#f0f9ff;color:#0891b2;font-weight:700;border:1px solid #bae6fd">🖨️ Cetak Customer</button>
+      <button onclick="printSphInternal('${s.id}')" style="padding:9px 20px;border:none;border-radius:8px;font-size:13px;cursor:pointer;background:#fef2f2;color:#b91c1c;font-weight:700;border:1px solid #fecaca">📋 Internal (HPP)</button>
       <button onclick="document.getElementById('sph-view-modal').remove()" style="padding:9px 24px;border:none;border-radius:8px;font-size:13px;cursor:pointer;background:#0891b2;color:#fff;font-weight:700">Tutup</button>
     </div>
   </div>`;
@@ -12600,6 +12686,165 @@ function printSph(id){
         </div>
       </div>
       <div style="margin-top:18px;font-size:10px;color:#94a3b8;text-align:center;font-style:italic">Dokumen ini diterbitkan secara elektronik dan tetap sah / valid meskipun tanpa tanda tangan basah atau digital.</div>
+    </div>
+    <div class="no-print">
+      <button class="btn-c" onclick="window.close()">&#x2715; Tutup</button>
+      <button class="btn-p" onclick="window.print()">&#128438; Cetak / PDF</button>
+    </div>
+  </div>
+  <\/body><\/html>`);
+  w.document.close();w.focus();
+}
+
+// Cari data referensi (kalau ada) yang di-link ke 1 baris item SPH.
+function sphItemRefInfo(it){
+  if(!it.refId)return null;
+  return (DB.priceRefs||[]).find(x=>x.id===it.refId)||null;
+}
+
+// Kelompokkan item SPH berdasarkan Kategori dari referensi yang di-link (mis. "FIRE PUMP SYSTEM",
+// "VALVE & ACCESSORIES", persis kategori yang ada di data Referensi Harga / file Excel sumbernya).
+// Item yang belum di-link ke referensi manapun masuk ke grup "Tanpa Kategori / Belum Ada Referensi".
+function sphGroupItemsByCategory(items){
+  const order=[];const map={};
+  items.forEach((it,idx)=>{
+    const r=sphItemRefInfo(it);
+    const cat=(r&&r.category)?r.category:'Tanpa Kategori / Belum Ada Referensi';
+    if(!map[cat]){map[cat]={name:cat,rows:[]};order.push(cat);}
+    map[cat].rows.push({...it,_idx:idx,_ref:r});
+  });
+  return order.map(k=>map[k]);
+}
+
+// Dokumen INTERNAL (bukan untuk customer/vendor) — beda dari printSph():
+// - Nampilin rincian Material, Jasa, Total Beli (HPP), Markup %, dan Harga Jual per item
+// - Item dikelompokkan per Kategori (sama kayak pengelompokan di Referensi Harga / Excel sumbernya)
+// - Pembanding harga referensi (🔗 Ref ...) dibakar langsung dari data item saat cetak, jadi PASTI muncul
+//   di hasil cetak/simpan — beda dengan badge di form Edit yang cuma tampil live di layar & hilang kalau ditutup.
+// - Ada subtotal per kategori + grand total (Material, Jasa, HPP, Harga Jual, Margin) buat dilaporkan ke atasan
+//   dan dicocokkan ke total di file Excel/referensi.
+function printSphInternal(id){
+  const s=(DB.sphs||[]).find(x=>x.id===id);if(!s)return;
+  const co=DB.company||{};
+  const items=s.items||[];
+  const groups=sphGroupItemsByCategory(items);
+  let no=0;
+  let grandMaterial=0,grandJasa=0,grandHpp=0,grandJual=0;
+
+  const groupBlocks=groups.map(g=>{
+    let gMaterial=0,gJasa=0,gHpp=0,gJual=0;
+    const rows=g.rows.map(it=>{
+      no++;
+      const qty=parseFloat(it.qty)||0;
+      const mat=parseFloat(it.hargaBeliMaterial)||0;
+      const jasa=parseFloat(it.hargaBeliJasa)||0;
+      const hpp=mat+jasa;
+      const jual=parseFloat(it.harga)||0;
+      const subHpp=hpp*qty;
+      const subJual=jual*qty;
+      gMaterial+=mat*qty;gJasa+=jasa*qty;gHpp+=subHpp;gJual+=subJual;
+      const r=it._ref;
+      let refLine='';
+      if(r){
+        const refMat=parseFloat(r.hargaMaterial)||0,refJasa=parseFloat(r.hargaJasa)||0,refTotal=refMat+refJasa;
+        let diff='';
+        if(refTotal>0&&hpp>0){
+          const pct=((hpp-refTotal)/refTotal*100);
+          const naik=pct>0;
+          diff=` • <span style="color:${naik?'#dc2626':'#16a34a'};font-weight:700">${naik?'▲':'▼'} ${Math.abs(pct).toFixed(1)}% ${naik?'lebih mahal':'lebih murah'} dari ref</span>`;
+        }
+        refLine=`<div style="font-size:9.5px;color:#64748b;margin-top:3px;line-height:1.4">🔗 Ref (${r.source||'-'}): Material ${rp(refMat)} + Jasa ${rp(refJasa)} = ${rp(refTotal)}${diff}</div>`;
+      }
+      const markupLabel=(it.markup!==''&&it.markup!==undefined&&it.markup!==null)?parseFloat(it.markup)+'%':'-';
+      return `<tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:7px 8px;text-align:center;color:#64748b">${no}</td>
+        <td style="padding:7px 8px">${it.desc||'-'}${refLine}</td>
+        <td style="padding:7px 6px;text-align:center">${qty}</td>
+        <td style="padding:7px 6px;text-align:center">${it.satuan||'unit'}</td>
+        <td style="padding:7px 6px;text-align:right">${rp(mat)}</td>
+        <td style="padding:7px 6px;text-align:right">${rp(jasa)}</td>
+        <td style="padding:7px 6px;text-align:right;font-weight:700">${rp(hpp)}</td>
+        <td style="padding:7px 6px;text-align:center">${markupLabel}</td>
+        <td style="padding:7px 6px;text-align:right;font-weight:700;color:#0e7490">${rp(jual)}</td>
+        <td style="padding:7px 6px;text-align:right;font-weight:700">${rp(subJual)}</td>
+      </tr>`;
+    }).join('');
+    grandMaterial+=gMaterial;grandJasa+=gJasa;grandHpp+=gHpp;grandJual+=gJual;
+    const margin=gJual-gHpp;
+    const marginPct=gHpp>0?(margin/gHpp*100):0;
+    return `<tr class="cat-row"><td colspan="10">${g.name}</td></tr>
+      ${rows}
+      <tr class="subtotal-row">
+        <td colspan="4" style="padding:7px 8px;text-align:right;color:#0369a1">Subtotal ${g.name}</td>
+        <td style="padding:7px 6px;text-align:right">${rp(gMaterial)}</td>
+        <td style="padding:7px 6px;text-align:right">${rp(gJasa)}</td>
+        <td style="padding:7px 6px;text-align:right;font-weight:800">${rp(gHpp)}</td>
+        <td style="padding:7px 6px;text-align:center;font-size:10.5px;color:#0369a1">${marginPct.toFixed(1)}%</td>
+        <td style="padding:7px 6px"></td>
+        <td style="padding:7px 6px;text-align:right;font-weight:800;color:#0e7490">${rp(gJual)}</td>
+      </tr>`;
+  }).join('');
+
+  const grandMargin=grandJual-grandHpp;
+  const grandMarginPct=grandHpp>0?(grandMargin/grandHpp*100):0;
+  const kota=co.kota||'';
+  const tglSph=fDate(s.tanggal||'');
+  const w=window.open('','_blank','width=1000,height=780,scrollbars=yes');
+  if(!w)return alert('Pop-up diblokir browser. Izinkan pop-up untuk mencetak.');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>INTERNAL - ${s.noSph}<\/title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f1f5f9;padding:26px;color:#1e293b;}
+    .wrap{max-width:1000px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1.5px solid #b91c1c;box-shadow:0 4px 20px rgba(0,0,0,.1);}
+    .watermark{background:#fee2e2;color:#991b1b;text-align:center;font-weight:800;font-size:12.5px;letter-spacing:1px;padding:9px;border-bottom:2px solid #fecaca;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .kop{border-bottom:2px solid #0891b2;padding:16px 24px 12px;display:flex;justify-content:space-between;align-items:flex-start;}
+    .co-name{font-size:15px;font-weight:700;color:#0e7490;}
+    .co-detail{font-size:10px;color:#475569;margin-top:3px;line-height:1.6;}
+    .kop-right{text-align:right;font-size:11px;color:#64748b;}
+    .kop-title{font-size:16px;font-weight:900;color:#b91c1c;}
+    .body{padding:18px 24px;}
+    .tbl{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:14px;}
+    .tbl thead tr{background:#0f172a;color:#fff;}
+    .tbl thead th{padding:8px 8px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.3px;}
+    .tbl thead th.r{text-align:right;} .tbl thead th.c{text-align:center;}
+    .cat-row td{background:#0891b2;color:#fff;font-weight:700;font-size:11px;padding:6px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .subtotal-row td{background:#f0f9ff;border-top:1px solid #bae6fd;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .grand{background:#fef2f2;border:1.5px solid #fecaca;border-radius:8px;padding:14px 18px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .grand-row{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;color:#475569;}
+    .grand-row b{color:#0f172a;}
+    .grand-total{display:flex;justify-content:space-between;font-size:16px;font-weight:900;padding-top:8px;margin-top:6px;border-top:1.5px solid #fecaca;color:#b91c1c;}
+    .no-print{text-align:center;padding:14px;background:#f8fafc;border-top:1px solid #e2e8f0;}
+    .no-print button{padding:7px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;margin:0 4px;}
+    .btn-p{background:#0891b2;color:#fff;border:none;} .btn-c{background:#fff;color:#475569;border:1px solid #e2e8f0;}
+    @media print{ body{background:#fff;padding:0;} .wrap{box-shadow:none;max-width:100%;border-radius:0;} .no-print{display:none;} }
+  <\/style><\/head><body>
+  <div class="wrap">
+    <div class="watermark">🔒 DOKUMEN INTERNAL — RAHASIA, UNTUK KEPERLUAN INTERNAL SAJA, JANGAN DIBERIKAN KE CUSTOMER/VENDOR</div>
+    <div class="kop">
+      <div><div class="co-name">${co.name||''}</div><div class="co-detail">Rincian HPP (Harga Pokok) &amp; Markup — ${s.tujuan==='vendor'?'Permintaan Harga':'Penawaran'} kepada ${s.pihak||'-'}</div></div>
+      <div class="kop-right"><div class="kop-title">${s.noSph}</div><div>${tglSph}${kota?' • '+kota:''}</div></div>
+    </div>
+    <div class="body">
+      <table class="tbl">
+        <thead><tr>
+          <th style="width:28px">NO</th><th>DESKRIPSI</th>
+          <th class="c" style="width:44px">QTY</th><th class="c" style="width:50px">SAT</th>
+          <th class="r" style="width:100px">MATERIAL</th><th class="r" style="width:100px">JASA</th>
+          <th class="r" style="width:110px">TOTAL BELI (HPP)</th><th class="c" style="width:60px">MARKUP</th>
+          <th class="r" style="width:110px">HARGA JUAL</th><th class="r" style="width:110px">SUBTOTAL JUAL</th>
+        </tr></thead>
+        <tbody>${groupBlocks}</tbody>
+      </table>
+      <div class="grand">
+        <div style="font-size:11px;font-weight:800;color:#b91c1c;letter-spacing:.5px;margin-bottom:6px">RINGKASAN TOTAL KESELURUHAN</div>
+        <div class="grand-row"><span>Total Material</span><b>${rp(grandMaterial)}</b></div>
+        <div class="grand-row"><span>Total Jasa</span><b>${rp(grandJasa)}</b></div>
+        <div class="grand-row"><span>Total Beli / HPP (Material + Jasa)</span><b>${rp(grandHpp)}</b></div>
+        <div class="grand-row"><span>Total Harga Jual (ke ${s.tujuan==='vendor'?'Vendor':'Customer'})</span><b style="color:#0e7490">${rp(grandJual)}</b></div>
+        <div class="grand-row"><span>Margin / Keuntungan</span><b>${rp(grandMargin)} (${grandMarginPct.toFixed(1)}%)</b></div>
+        <div class="grand-total"><span>TOTAL HARGA JUAL</span><span>${rp(grandJual)}</span></div>
+      </div>
     </div>
     <div class="no-print">
       <button class="btn-c" onclick="window.close()">&#x2715; Tutup</button>
