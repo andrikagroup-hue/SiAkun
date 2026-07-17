@@ -11733,8 +11733,12 @@ const SPH_REFID_FIXES=[
 ];
 function repairSphRefIdMismatch(){
   if(!DB.sphs)DB.sphs=[];
-  if(DB.sphRefIdMismatchRepaired)return false;
-  DB.sphRefIdMismatchRepaired=true;
+  // Sengaja TANPA penanda "sekali-jalan" (beda dari pola repair lain) — fungsi ini aman diulang
+  // tiap buka app, karena begitu 1 baris udah kebetulin (refId-nya udah bukan wrongRefId lagi),
+  // baris itu otomatis nggak kena cek lagi. Kalau dikasih penanda, nambah entry baru ke
+  // SPH_REFID_FIXES nanti nggak akan pernah ke-apply ke data lama (persis kejadian 17 Jul 2026:
+  // fix "Pipe Fitting" sempat nggak nyampe ke data Omoni gara-gara penanda ini kepasang sejak
+  // fix "Swing Check Valve" sebelumnya).
   let changed=false;
   DB.sphs.forEach(s=>{
     if(!Array.isArray(s.items))return;
