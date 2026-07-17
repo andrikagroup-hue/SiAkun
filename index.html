@@ -3940,6 +3940,8 @@ function nav(page){
     if(!DB.quicktx)DB.quicktx=[];
     if(!DB.priceRefs)DB.priceRefs=[];
     repairSphVeaSplit();
+    repairSphRefIdMismatch();
+    repairPriceRefGsdSync();
   }
   // Auto-close sidebar di mobile setelah pilih menu
   if(window.innerWidth<=768)closeSidebar();
@@ -9599,7 +9601,7 @@ const SKK_VEA_BOQ_SEED=[
 {desc:'Gate Valve OS&Y ANSI 150, Size DN 150/ 6"',category:'FIRE PUMP EQUIPMENT',brand:'Weflo or Eq.',qty:2,satuan:'Ea',material:12530000,labour:500000,refId:null},
 {desc:'Gate Valve OS&Y ANSI 150, Size DN 50/ 2"',category:'FIRE PUMP EQUIPMENT',brand:'Weflo or Eq.',qty:1,satuan:'Ea',material:5450000,labour:250000,refId:null},
 {desc:'Swing Check Valve ANSI 150, Size DN 200/ 8"',category:'FIRE PUMP EQUIPMENT',brand:'Weflo or Eq.',qty:2,satuan:'Ea',material:21270000,labour:500000,refId:null},
-{desc:'Swing Check Valve ANSI 150, Size DN 50/ 2"',category:'FIRE PUMP EQUIPMENT',brand:'Weflo or Eq.',qty:1,satuan:'Ea',material:3070000,labour:250000,refId:'pref-gsd-040'},
+{desc:'Swing Check Valve ANSI 150, Size DN 50/ 2"',category:'FIRE PUMP EQUIPMENT',brand:'Weflo or Eq.',qty:1,satuan:'Ea',material:3070000,labour:250000,refId:'pref-gsd-037'},
 {desc:'Flexible Joint, Size DN 200/ 8"',category:'FIRE PUMP EQUIPMENT',brand:'Tozen or Eq.',qty:2,satuan:'Ea',material:14290000,labour:670000,refId:null},
 {desc:'Flexible Joint, Size DN 50/ 2"',category:'FIRE PUMP EQUIPMENT',brand:'Tozen or Eq.',qty:1,satuan:'Ea',material:2860000,labour:250000,refId:null},
 {desc:'Main Relief Valve, Size DN 200/ 8"',category:'FIRE PUMP EQUIPMENT',brand:'Weflo or Eq.',qty:1,satuan:'Ea',material:91360000,labour:670000,refId:null},
@@ -9607,7 +9609,7 @@ const SKK_VEA_BOQ_SEED=[
 {desc:'Anti Vortex, Size DN 200/ 8"',category:'FIRE PUMP EQUIPMENT',brand:'Local',qty:2,satuan:'Ea',material:78580000,labour:670000,refId:null},
 {desc:'Anti Vortex, Size DN 50/ 2"',category:'FIRE PUMP EQUIPMENT',brand:'Local',qty:1,satuan:'Ea',material:14290000,labour:250000,refId:null},
 {desc:'Pipe Black Steel Spiral SAW, Medium SNI 0039:2013 , Size DN 350/14"',category:'FIRE PUMP EQUIPMENT',brand:'Spindo',qty:12,satuan:'M',material:1310000,labour:750000,refId:null},
-{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 200/8"',category:'FIRE PUMP EQUIPMENT',brand:'Spindo',qty:24,satuan:'M',material:960000,labour:400000,refId:'pref-gsd-056'},
+{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 200/8"',category:'FIRE PUMP EQUIPMENT',brand:'Spindo',qty:24,satuan:'M',material:960000,labour:400000,refId:'pref-gsd-066'},
 {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 150/6"',category:'FIRE PUMP EQUIPMENT',brand:'Spindo',qty:12,satuan:'M',material:630000,labour:250000,refId:'pref-gsd-061'},
 {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 50/2"',category:'FIRE PUMP EQUIPMENT',brand:'Spindo',qty:12,satuan:'M',material:130000,labour:100000,refId:'pref-gsd-056'},
 {desc:'Pipe Fitting : ASTM A234 WPB SCH40',category:'FIRE PUMP EQUIPMENT',brand:'Local',qty:1,satuan:'Lot',material:20000000,labour:7000000,refId:'pref-gsd-192'},
@@ -9624,7 +9626,7 @@ const SKK_VEA_BOQ_SEED=[
 {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 150/6"',category:'HYDRANT SYSTEM',brand:'Spindo',qty:54,satuan:'M',material:630000,labour:250000,refId:'pref-gsd-061'},
 {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 100/4"',category:'HYDRANT SYSTEM',brand:'Spindo',qty:72,satuan:'M',material:360000,labour:170000,refId:'pref-gsd-059'},
 {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 80/3"',category:'HYDRANT SYSTEM',brand:'Spindo',qty:12,satuan:'M',material:260000,labour:140000,refId:'pref-gsd-058'},
-{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 65/2-1/2"',category:'HYDRANT SYSTEM',brand:'Spindo',qty:138,satuan:'M',material:200000,labour:90000,refId:'pref-gsd-056'},
+{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 65/2-1/2"',category:'HYDRANT SYSTEM',brand:'Spindo',qty:138,satuan:'M',material:200000,labour:90000,refId:null},
 {desc:'Pipe Fitting : ASTM A234 WPB SCH40',category:'HYDRANT SYSTEM',brand:'Local',qty:1,satuan:'Lot',material:36000000,labour:13000000,refId:'pref-gsd-192'},
 {desc:'Painting 2 Layer',category:'HYDRANT SYSTEM',brand:'Local',qty:1,satuan:'Lot',material:23000000,labour:8000000,refId:null},
 {desc:'Pipe Support',category:'HYDRANT SYSTEM',brand:'Local',qty:1,satuan:'Lot',material:53000000,labour:19000000,refId:null},
@@ -9637,11 +9639,11 @@ const SKK_VEA_BOQ_SEED=[
 {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 150/6"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:18,satuan:'M',material:630000,labour:250000,refId:'pref-gsd-061'},
 {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 100/4"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:108,satuan:'M',material:360000,labour:170000,refId:'pref-gsd-059'},
 {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 80/3"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:54,satuan:'M',material:260000,labour:140000,refId:'pref-gsd-058'},
-{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 65/2-1/2"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:24,satuan:'M',material:200000,labour:90000,refId:'pref-gsd-056'},
+{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 65/2-1/2"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:24,satuan:'M',material:200000,labour:90000,refId:null},
 {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 50/2"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:36,satuan:'M',material:130000,labour:80000,refId:'pref-gsd-056'},
-{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 40/1-1/2"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:48,satuan:'M',material:100000,labour:70000,refId:'pref-gsd-056'},
-{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 32/1-1/4"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:144,satuan:'M',material:80000,labour:70000,refId:'pref-gsd-053'},
-{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 25/1"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:288,satuan:'M',material:60000,labour:40000,refId:'pref-gsd-056'},
+{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 40/1-1/2"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:48,satuan:'M',material:100000,labour:70000,refId:null},
+{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 32/1-1/4"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:144,satuan:'M',material:80000,labour:70000,refId:null},
+{desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 25/1"',category:'SPRINKLER SYSTEM',brand:'Spindo',qty:288,satuan:'M',material:60000,labour:40000,refId:null},
 {desc:'Pipe Fitting : ASTM A234 WPB SCH40',category:'SPRINKLER SYSTEM',brand:'Local',qty:1,satuan:'Lot',material:47000000,labour:17000000,refId:'pref-gsd-192'},
 {desc:'Painting 2 Layer',category:'SPRINKLER SYSTEM',brand:'Local',qty:1,satuan:'Lot',material:32000000,labour:11000000,refId:null},
 {desc:'Pipe Support',category:'SPRINKLER SYSTEM',brand:'Local',qty:1,satuan:'Lot',material:86000000,labour:30000000,refId:null},
@@ -11709,6 +11711,37 @@ function genSphId(){
 // Perbaikan sekali-jalan buat draft SPH VEA yang sempat kebentuk sebelum perbaikan ini:
 // 1) pisah field "hargaBeli" lama jadi Material & Jasa (ambil dari data asli SKK_VEA_BOQ_SEED)
 // 2) hapus catatan internal yang sempat kebawa ke Perihal (harusnya ga boleh kecetak ke klien)
+// Perbaikan sekali-jalan (17 Jul 2026): beberapa baris SKK_VEA_BOQ_SEED ternyata di-link (refId) ke item
+// Referensi Harga yang UKURANNYA BEDA (mis. "Swing Check Valve DN 50/2 inch" malah ke-link ke referensi
+// "Swing Check Valve 1/2 inch" yang harganya jauh lebih murah — bikin badge pembanding nampilin "2725% lebih
+// mahal dari ref" padahal sebenarnya bukan dibandingkan ke barang yang sama). Ditemukan oleh Omoni 17 Jul 2026.
+// Karena SPH yang sudah kepasang refId salah itu tersimpan permanen di data (bukan dihitung ulang tiap buka),
+// perbaikan source SKK_VEA_BOQ_SEED aja nggak cukup — data yang SUDAH ADA di DB.sphs juga harus dibetulkan manual.
+const SPH_REFID_FIXES=[
+  {desc:'Swing Check Valve ANSI 150, Size DN 50/ 2"',wrongRefId:'pref-gsd-040',fixRefId:'pref-gsd-037'},
+  {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 200/8"',wrongRefId:'pref-gsd-056',fixRefId:'pref-gsd-066'},
+  {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 65/2-1/2"',wrongRefId:'pref-gsd-056',fixRefId:null},
+  {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 40/1-1/2"',wrongRefId:'pref-gsd-056',fixRefId:null},
+  {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 32/1-1/4"',wrongRefId:'pref-gsd-053',fixRefId:null},
+  {desc:'Pipe Black Steel ERW ASTM A53 Gr.A Sch 40, Size DN 25/1"',wrongRefId:'pref-gsd-056',fixRefId:null},
+];
+function repairSphRefIdMismatch(){
+  if(!DB.sphs)DB.sphs=[];
+  if(DB.sphRefIdMismatchRepaired)return false;
+  DB.sphRefIdMismatchRepaired=true;
+  let changed=false;
+  DB.sphs.forEach(s=>{
+    if(!Array.isArray(s.items))return;
+    s.items.forEach(it=>{
+      const baseDesc=(it.desc||'').split(' — ')[0];
+      const fix=SPH_REFID_FIXES.find(f=>f.desc===baseDesc&&f.wrongRefId===it.refId);
+      if(fix){ it.refId=fix.fixRefId; changed=true; }
+    });
+  });
+  if(changed)saveDB();
+  return changed;
+}
+
 function repairSphVeaSplit(){
   if(!DB.sphs)DB.sphs=[];
   if(DB.sphVeaSplitRepaired)return false;
@@ -11858,6 +11891,33 @@ function priceRefTotal(r){ return (parseFloat(r.hargaMaterial)||0)+(parseFloat(r
 function priceRefLineTotal(r){ const vol=(r.vol===undefined||r.vol===null||r.vol==='')?1:(parseFloat(r.vol)||1); return priceRefTotal(r)*vol; }
 
 // Muat data awal Referensi Harga dari GSD_PRICE_REF_SEED (sekali saja, kalau belum ada isinya / belum pernah di-seed)
+// Perbaikan sekali-jalan (17 Jul 2026): field "vol" & 9 item FIRE ALARM SYSTEM yang ditambahkan ke
+// GSD_PRICE_REF_SEED nggak otomatis nyampe ke browser yang Referensi Harga-nya SUDAH keisi duluan —
+// soalnya seedPriceRefDemo() cuma jalan kalau DB.priceRefs masih kosong sama sekali. Fungsi ini
+// nyamain ulang: isi vol yang masih kosong per-id, dan nambahin item baru dari seed yang belum ada.
+function repairPriceRefGsdSync(){
+  if(!DB.priceRefs)DB.priceRefs=[];
+  if(DB.priceRefGsdResynced)return false;
+  DB.priceRefGsdResynced=true;
+  let changed=false;
+  const src='GSD - K-TEL-002-2026';
+  const byId={};
+  DB.priceRefs.forEach(r=>{ if(r.id)byId[r.id]=r; });
+  GSD_PRICE_REF_SEED.forEach(s=>{
+    const existing=byId[s.id];
+    if(existing){
+      if((existing.vol===undefined||existing.vol===null||existing.vol==='')&&s.vol!==undefined&&s.vol!==null){
+        existing.vol=s.vol;changed=true;
+      }
+    } else {
+      DB.priceRefs.push({...s,source:src,tanggal:today(),created_at:Date.now()});
+      changed=true;
+    }
+  });
+  if(changed)saveDB();
+  return changed;
+}
+
 function seedPriceRefDemo(){
   if(!DB.priceRefs)DB.priceRefs=[];
   if(DB.priceRefs.length>0||DB.priceRefDemoSeeded)return false;
