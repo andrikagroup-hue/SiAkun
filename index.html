@@ -11810,19 +11810,24 @@ function seedSphVeaDemo(){
 }
 
 // Inject SPH Pengadaan Pagar BRC 8mm + Accessories untuk PT. Citra Palu Minerals (CPM),
-// data dipindah dari penawaran CRT ke format/kop surat AMS. Sekali jalan saja (flag DB.sphCpmBrcSeeded).
+// data dipindah dari penawaran CRT ke format/kop surat AMS.
+// _seedVer dipakai supaya kalau angkanya diperbaiki lagi di kode, SPH yang SUDAH ada otomatis
+// ke-update angkanya (bukan cuma sekali jalan) — tapi field yang sudah diisi manual (TTD,
+// penandatangan, status, syarat) TIDAK disentuh/ditimpa.
 function seedSphCpmBrcFence(){
   if(!DB.sphs)DB.sphs=[];
-  if(DB.sphCpmBrcSeeded)return false;
-  DB.sphCpmBrcSeeded=true;
+  const SEED_VER=2;
+  const existing=DB.sphs.find(s=>s._seedKey==='sph_cpm_brc_fence'||
+    (s.pihak==='PT. Citra Palu Minerals (CPM) — Attn: Pak Pilar'&&s.perihal==='Pengadaan Pagar BRC 8mm dan Accessories'));
+  if(existing&&(existing._seedVer||1)>=SEED_VER)return false;
   const raw=[
-    {desc:'Pintu pagar BRC double swing ukuran:\n - Pipa frame 2,5"\n - Diameter kawat pagar 8mm\n - Tinggi 190cm\n - Lebar keseluruhan 600cm\n - Roda Pagar',qty:1,satuan:'set',harga:16890000},
-    {desc:'Pintu pagar BRC single swing ukuran:\n - Pipa frame 2,5"\n - Diameter kawat pagar 8mm\n - Tinggi 190cm\n - Lebar keseluruhan 300cm\n - Roda Pagar',qty:1,satuan:'set',harga:7660229},
-    {desc:'Fence Panel BRC, HDG 240x190 cm; thick 8mm',qty:250,satuan:'ea',harga:1056077},
-    {desc:'Post Fence BRC, HDG 2\'x300 cm',qty:265,satuan:'ea',harga:365122},
-    {desc:'Wire Barbed HDG, 100 meter/roll',qty:45,satuan:'roll',harga:235963},
-    {desc:'Clamp Bolt HDG, M8x22mm',qty:1100,satuan:'ea',harga:894},
-    {desc:'Bolt HDG M8x100mm (with Nut and Washer)',qty:2000,satuan:'set',harga:2981},
+    {desc:'Pintu pagar BRC double swing ukuran:\n - Pipa frame 2,5"\n - Diameter kawat pagar 8mm\n - Tinggi 190cm\n - Lebar keseluruhan 600cm\n - Roda Pagar',qty:1,satuan:'set',harga:16890000.000359666},
+    {desc:'Pintu pagar BRC single swing ukuran:\n - Pipa frame 2,5"\n - Diameter kawat pagar 8mm\n - Tinggi 190cm\n - Lebar keseluruhan 300cm\n - Roda Pagar',qty:1,satuan:'set',harga:7660228.650682152},
+    {desc:'Fence Panel BRC, HDG 240x190 cm; thick 8mm',qty:250,satuan:'ea',harga:1056077.2383272716},
+    {desc:'Post Fence BRC, HDG 2\'x300 cm',qty:265,satuan:'ea',harga:365122.05883130454},
+    {desc:'Wire Barbed HDG, 100 meter/roll',qty:45,satuan:'roll',harga:235963.2352991424},
+    {desc:'Clamp Bolt HDG, M8x22mm',qty:1100,satuan:'ea',harga:894.1764706072765},
+    {desc:'Bolt HDG M8x100mm (with Nut and Washer)',qty:2000,satuan:'set',harga:2980.588235357588},
   ];
   const items=raw.map(it=>({desc:it.desc,qty:it.qty,satuan:it.satuan,hargaBeliMaterial:it.harga,hargaBeliJasa:0,markup:0,harga:it.harga,refId:null}));
   const subtotal=items.reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
@@ -11832,13 +11837,22 @@ function seedSphCpmBrcFence(){
   const total=subtotal+ppnAmt;
   const now=Date.now();
   const syarat='Prices are subject to change without prior notice.\nLoco Franco:\n PT Citra Palu Minerals, Palu, Sulawesi Tengah\nFabrication:\n 30 Days; after DP Received and Drawing (Approved)\nDelivery:\n By Customer\nValidity Quotation:\n 7 Days after the Quotation Date\nPayment:\n 50% Down Payments, 50% Cash within 14 Days after Material on Site\nInstallation & Supervise (Not Included)';
-  DB.sphs.push({
-    id:uid(),noSph:genSphId(),tanggal:'2026-07-20',tujuan:'customer',pihak:'PT. Citra Palu Minerals (CPM) — Attn: Pak Pilar',
-    perihal:'Pengadaan Pagar BRC 8mm dan Accessories',
-    berlaku:'2026-07-27',syarat,penandatangan:'',ttd:'',
-    items,status:'draft',subtotal,ppn,ppnRate,ppnAmt,total,
-    link_invoice_id:null,created_at:now,updated_at:now
-  });
+  if(existing){
+    // Update angka2 item & total di record yang SUDAH ada — TTD/penandatangan/status/syarat
+    // yang mungkin sudah diisi manual tidak diubah.
+    existing.items=items;existing.subtotal=subtotal;existing.ppn=ppn;existing.ppnRate=ppnRate;
+    existing.ppnAmt=ppnAmt;existing.total=total;existing._seedKey='sph_cpm_brc_fence';
+    existing._seedVer=SEED_VER;existing.updated_at=now;
+  }else{
+    DB.sphs.push({
+      id:uid(),noSph:genSphId(),tanggal:'2026-07-20',tujuan:'customer',pihak:'PT. Citra Palu Minerals (CPM) — Attn: Pak Pilar',
+      perihal:'Pengadaan Pagar BRC 8mm dan Accessories',
+      berlaku:'2026-07-27',syarat,penandatangan:'',ttd:'',
+      items,status:'draft',subtotal,ppn,ppnRate,ppnAmt,total,
+      link_invoice_id:null,created_at:now,updated_at:now,
+      _seedKey:'sph_cpm_brc_fence',_seedVer:SEED_VER
+    });
+  }
   saveDB();
   return true;
 }
