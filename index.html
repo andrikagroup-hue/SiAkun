@@ -11809,9 +11809,44 @@ function seedSphVeaDemo(){
   return true;
 }
 
+// Inject SPH Pengadaan Pagar BRC 8mm + Accessories untuk PT. Citra Palu Minerals (CPM),
+// data dipindah dari penawaran CRT ke format/kop surat AMS. Sekali jalan saja (flag DB.sphCpmBrcSeeded).
+function seedSphCpmBrcFence(){
+  if(!DB.sphs)DB.sphs=[];
+  if(DB.sphCpmBrcSeeded)return false;
+  DB.sphCpmBrcSeeded=true;
+  const raw=[
+    {desc:'Pintu pagar BRC double swing ukuran:\n - Pipa frame 2,5"\n - Diameter kawat pagar 8mm\n - Tinggi 190cm\n - Lebar keseluruhan 600cm\n - Roda Pagar',qty:1,satuan:'set',harga:16890000},
+    {desc:'Pintu pagar BRC single swing ukuran:\n - Pipa frame 2,5"\n - Diameter kawat pagar 8mm\n - Tinggi 190cm\n - Lebar keseluruhan 300cm\n - Roda Pagar',qty:1,satuan:'set',harga:7660229},
+    {desc:'Fence Panel BRC, HDG 240x190 cm; thick 8mm',qty:250,satuan:'ea',harga:1056077},
+    {desc:'Post Fence BRC, HDG 2\'x300 cm',qty:265,satuan:'ea',harga:365122},
+    {desc:'Wire Barbed HDG, 100 meter/roll',qty:45,satuan:'roll',harga:235963},
+    {desc:'Clamp Bolt HDG, M8x22mm',qty:1100,satuan:'ea',harga:894},
+    {desc:'Bolt HDG M8x100mm (with Nut and Washer)',qty:2000,satuan:'set',harga:2981},
+  ];
+  const items=raw.map(it=>({desc:it.desc,qty:it.qty,satuan:it.satuan,hargaBeliMaterial:it.harga,hargaBeliJasa:0,markup:0,harga:it.harga,refId:null}));
+  const subtotal=items.reduce((x,i)=>x+(parseFloat(i.qty)||0)*(parseFloat(i.harga)||0),0);
+  const ppn=true;
+  const ppnRate=(DB.taxSettings&&DB.taxSettings.ppnRate)||11;
+  const ppnAmt=Math.round(subtotal*ppnRate/100);
+  const total=subtotal+ppnAmt;
+  const now=Date.now();
+  const syarat='Prices are subject to change without prior notice.\nLoco Franco:\n PT Citra Palu Minerals, Palu, Sulawesi Tengah\nFabrication:\n 30 Days; after DP Received and Drawing (Approved)\nDelivery:\n By Customer\nValidity Quotation:\n 7 Days after the Quotation Date\nPayment:\n 50% Down Payments, 50% Cash within 14 Days after Material on Site\nInstallation & Supervise (Not Included)';
+  DB.sphs.push({
+    id:uid(),noSph:genSphId(),tanggal:'2026-07-20',tujuan:'customer',pihak:'PT. Citra Palu Minerals (CPM) — Attn: Pak Pilar',
+    perihal:'Pengadaan Pagar BRC 8mm dan Accessories',
+    berlaku:'2026-07-27',syarat,penandatangan:'',ttd:'',
+    items,status:'draft',subtotal,ppn,ppnRate,ppnAmt,total,
+    link_invoice_id:null,created_at:now,updated_at:now
+  });
+  saveDB();
+  return true;
+}
+
 function renderSphs(c){
   DB.sphs=DB.sphs||[];
   seedSphVeaDemo();
+  seedSphCpmBrcFence();
   const fSearch=(window._sphSearch||'').toLowerCase();
   const fStatus=window._sphStatus||'';
   const fTujuan=window._sphTujuan||'';
@@ -11940,32 +11975,29 @@ function seedPriceRefDemo(){
   return true;
 }
 
-// Ringkasan per Kategori & Total Keseluruhan — buat ngecek total referensi (yang sedang difilter,
-// misal difilter per Sumber Proyek) sudah sama belum dengan grand total di file Excel aslinya.
+// Ringkasan per Kategori — total Material/Jasa per kategori (harga per-unit referensi,
+// BUKAN dikali Volume — Volume cuma dipakai kalau suatu saat mau ngecek total proyek vs Excel,
+// tapi untuk kebutuhan sehari-hari sebagai "kumpulan harga acuan", yang relevan cuma harga per-unit).
 function renderPriceRefSummaryPanel(list){
   if(!list.length)return '';
   const catMap={};
   list.forEach(r=>{
     const cat=r.category||'Tanpa Kategori';
     if(!catMap[cat])catMap[cat]={material:0,jasa:0,total:0,count:0};
-    const vol=(r.vol===undefined||r.vol===null||r.vol==='')?1:(parseFloat(r.vol)||1);
-    catMap[cat].material+=(parseFloat(r.hargaMaterial)||0)*vol;
-    catMap[cat].jasa+=(parseFloat(r.hargaJasa)||0)*vol;
-    catMap[cat].total+=priceRefLineTotal(r);
+    catMap[cat].material+=(parseFloat(r.hargaMaterial)||0);
+    catMap[cat].jasa+=(parseFloat(r.hargaJasa)||0);
+    catMap[cat].total+=priceRefTotal(r);
     catMap[cat].count++;
   });
   const cats=Object.keys(catMap);
   const grandMaterial=cats.reduce((x,k)=>x+catMap[k].material,0);
   const grandJasa=cats.reduce((x,k)=>x+catMap[k].jasa,0);
   const grandTotal=cats.reduce((x,k)=>x+catMap[k].total,0);
-  const hasVolData=list.some(r=>r.vol!==undefined&&r.vol!==null&&r.vol!=='');
+  const activeCat=window._prefCat||'';
   return `<div style="margin:0 24px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;overflow:hidden">
     <div style="padding:12px 18px;border-bottom:1px solid #bae6fd;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <div style="font-size:12.5px;font-weight:700;color:#0369a1">📊 Ringkasan per Kategori (buat cek total vs Excel sumbernya)</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        ${hasVolData?'':'<div style="font-size:10.5px;color:#b45309;background:#fef3c7;padding:3px 9px;border-radius:99px">⚠️ Sebagian data belum ada Volume-nya, dianggap 1 unit</div>'}
-        <button onclick="printPriceRefSummary()" style="background:#fff;border:1px solid #7dd3fc;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;color:#0369a1;cursor:pointer">🖨️ Cetak Ringkasan</button>
-      </div>
+      <div style="font-size:12.5px;font-weight:700;color:#0369a1">📊 Ringkasan per Kategori <span style="font-weight:400;color:#64748b;font-size:11px">— klik baris buat lihat rincian itemnya</span></div>
+      ${activeCat?`<button onclick="window._prefCat='';renderPriceRefs(document.getElementById('content'))" style="background:#fff;border:1px solid #fca5a5;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;color:#dc2626;cursor:pointer">✕ Batal Filter "${activeCat}"</button>`:''}
     </div>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead><tr style="background:#e0f2fe">
@@ -11975,8 +12007,8 @@ function renderPriceRefSummaryPanel(list){
         <th style="padding:7px 10px;text-align:right;font-size:10.5px;font-weight:700;color:#0369a1">JASA</th>
         <th style="padding:7px 18px;text-align:right;font-size:10.5px;font-weight:700;color:#0369a1">TOTAL</th>
       </tr></thead>
-      <tbody>${cats.map(k=>`<tr style="border-top:1px solid #e0f2fe">
-        <td style="padding:6px 18px;color:#0f172a">${k}</td>
+      <tbody>${cats.map(k=>`<tr onclick="window._prefCat='${k.replace(/'/g,"\\'")}';renderPriceRefs(document.getElementById('content'));setTimeout(()=>{const t=document.getElementById('pref-item-table');if(t)t.scrollIntoView({behavior:'smooth'});},50)" style="border-top:1px solid #e0f2fe;cursor:pointer;${k===activeCat?'background:#dbeafe':''}" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='${k===activeCat?'#dbeafe':'transparent'}'">
+        <td style="padding:6px 18px;color:#0f172a">${k===activeCat?'👉 ':''}${k}</td>
         <td style="padding:6px 10px;text-align:right;color:#475569">${catMap[k].count}</td>
         <td style="padding:6px 10px;text-align:right;color:#475569">${rp(catMap[k].material)}</td>
         <td style="padding:6px 10px;text-align:right;color:#475569">${rp(catMap[k].jasa)}</td>
@@ -11994,7 +12026,7 @@ function renderPriceRefSummaryPanel(list){
 }
 
 // Cetak Ringkasan per Kategori (yang lagi tampil di layar, ikut filter Search/Sumber/Kategori
-// yang lagi aktif) — buat dilaporkan ke atasan atau dicocokkan ke total file Excel sumbernya.
+// yang lagi aktif) — buat dilaporkan ke atasan. Total = jumlah harga per-unit (bukan dikali Volume).
 function printPriceRefSummary(){
   DB.priceRefs=DB.priceRefs||[];
   const fSearch=(window._prefSearch||'').toLowerCase();
@@ -12010,10 +12042,9 @@ function printPriceRefSummary(){
   list.forEach(r=>{
     const cat=r.category||'Tanpa Kategori';
     if(!catMap[cat])catMap[cat]={material:0,jasa:0,total:0,count:0};
-    const vol=(r.vol===undefined||r.vol===null||r.vol==='')?1:(parseFloat(r.vol)||1);
-    catMap[cat].material+=(parseFloat(r.hargaMaterial)||0)*vol;
-    catMap[cat].jasa+=(parseFloat(r.hargaJasa)||0)*vol;
-    catMap[cat].total+=priceRefLineTotal(r);
+    catMap[cat].material+=(parseFloat(r.hargaMaterial)||0);
+    catMap[cat].jasa+=(parseFloat(r.hargaJasa)||0);
+    catMap[cat].total+=priceRefTotal(r);
     catMap[cat].count++;
   });
   const cats=Object.keys(catMap);
@@ -12072,6 +12103,80 @@ function printPriceRefSummary(){
   w.document.close();
 }
 
+// Cetak Daftar Item lengkap (semua kolom, ikut filter Search/Sumber/Kategori yang lagi aktif) —
+// beda dari printPriceRefSummary() yang cuma nampilin ringkasan per kategori.
+function printPriceRefList(){
+  DB.priceRefs=DB.priceRefs||[];
+  const fSearch=(window._prefSearch||'').toLowerCase();
+  const fSource=window._prefSource||'';
+  const fCat=window._prefCat||'';
+  let list=[...DB.priceRefs];
+  if(fSearch)list=list.filter(r=>(r.desc||'').toLowerCase().includes(fSearch)||(r.spec||'').toLowerCase().includes(fSearch)||(r.brand||'').toLowerCase().includes(fSearch));
+  if(fSource)list=list.filter(r=>r.source===fSource);
+  if(fCat)list=list.filter(r=>r.category===fCat);
+  if(!list.length)return alert('Tidak ada data referensi untuk dicetak (cek filter yang aktif).');
+
+  const co=DB.company||{};
+  const filterLabel=[fSource?`Sumber: ${fSource}`:'',fCat?`Kategori: ${fCat}`:'',fSearch?`Cari: "${fSearch}"`:''].filter(Boolean).join(' • ')||'Semua data';
+  const grandMaterial=list.reduce((x,r)=>x+(parseFloat(r.hargaMaterial)||0),0);
+  const grandJasa=list.reduce((x,r)=>x+(parseFloat(r.hargaJasa)||0),0);
+  const grandTotal=list.reduce((x,r)=>x+priceRefTotal(r),0);
+
+  const rows=list.map(r=>`<tr>
+    <td>${r.desc||'-'}${r.category?`<div class="sub2">${r.category}</div>`:''}</td>
+    <td>${[r.spec,r.brand].filter(Boolean).join(' — ')||'-'}</td>
+    <td>${r.satuan||'-'}</td>
+    <td style="text-align:right">${rp(r.hargaMaterial||0)}</td>
+    <td style="text-align:right">${rp(r.hargaJasa||0)}</td>
+    <td style="text-align:right">${rp(priceRefTotal(r))}</td>
+    <td>${r.source||'-'}</td>
+  </tr>`).join('');
+
+  const w=window.open('','_blank','width=1000,height=760,scrollbars=yes');
+  if(!w)return alert('Pop-up diblokir browser. Izinkan pop-up untuk mencetak.');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Daftar Referensi Harga<\/title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f1f5f9;padding:30px;color:#1e293b;}
+    .wrap{max-width:1000px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1.5px solid #0891b2;box-shadow:0 4px 20px rgba(0,0,0,.1);}
+    .kop{border-bottom:2px solid #0891b2;padding:18px 28px 14px;}
+    .co-name{font-size:16px;font-weight:700;color:#0e7490;}
+    .title{font-size:18px;font-weight:900;color:#0e7490;margin-top:6px;}
+    .sub{font-size:11.5px;color:#64748b;margin-top:4px;}
+    .sub2{font-size:10px;color:#94a3b8;font-weight:400;}
+    table{width:100%;border-collapse:collapse;font-size:11px;margin:18px 0;}
+    thead{display:table-header-group;}
+    th{background:#f0f9ff;padding:7px 10px;text-align:left;font-size:9.5px;font-weight:700;color:#0369a1;border-bottom:1.5px solid #bae6fd;}
+    th:nth-child(4),th:nth-child(5),th:nth-child(6),td:nth-child(4),td:nth-child(5),td:nth-child(6){text-align:right;}
+    td{padding:6px 10px;border-bottom:1px solid #f1f5f9;vertical-align:top;}
+    tr{break-inside:avoid;}
+    tfoot td{background:#e0f2fe;font-weight:900;color:#0e7490;padding:9px 10px;font-size:12px;border-top:2px solid #bae6fd;}
+    .actions{text-align:center;margin-top:20px;}
+    .btn-p{background:#0891b2;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;}
+    @media print{.actions{display:none;} body{background:#fff;padding:0;} .wrap{box-shadow:none;border:none;}}
+  </style></head>
+  <body>
+    <div class="wrap">
+      <div class="kop">
+        <div class="co-name">${co.name||'PT. Andrika Mitra Solusi'}</div>
+        <div class="title">📋 Daftar Referensi Harga</div>
+        <div class="sub">Filter: ${filterLabel} • ${list.length} item • Dicetak: ${fDate(today())}</div>
+      </div>
+      <div style="padding:0 28px 24px">
+        <table>
+          <thead><tr><th>Deskripsi</th><th>Spek/Merk</th><th>Sat</th><th>Material</th><th>Jasa</th><th>Total</th><th>Sumber</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr><td colspan="3">GRAND TOTAL</td><td>${rp(grandMaterial)}</td><td>${rp(grandJasa)}</td><td>${rp(grandTotal)}</td><td></td></tr></tfoot>
+        </table>
+        <div class="actions"><button class="btn-p" onclick="window.print()">🖨️ Cetak / Save PDF</button></div>
+      </div>
+    </div>
+    <script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
 function renderPriceRefs(c){
   DB.priceRefs=DB.priceRefs||[];
   seedPriceRefDemo();
@@ -12097,7 +12202,7 @@ function renderPriceRefs(c){
     <div style="padding:16px 24px;background:#f8fafc;border-bottom:1px solid #f1f5f9;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
       <div style="flex:1;min-width:200px">
         <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px;margin-bottom:5px">CARI</div>
-        <input placeholder="Nama barang / spesifikasi / merk..." value="${fSearch}" oninput="window._prefSearch=this.value;renderPriceRefs(document.getElementById('content'))" style="width:100%;padding:7px 11px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;box-sizing:border-box">
+        <input id="prefSearchInput" placeholder="Nama barang / spesifikasi / merk..." value="${fSearch}" oninput="window._prefSearch=this.value;const _cp=this.selectionStart;renderPriceRefs(document.getElementById('content'));const _si=document.getElementById('prefSearchInput');if(_si){_si.focus();_si.setSelectionRange(_cp,_cp);}" style="width:100%;padding:7px 11px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;box-sizing:border-box">
       </div>
       <div style="min-width:180px">
         <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:.5px;margin-bottom:5px">SUMBER PROYEK</div>
@@ -12114,36 +12219,41 @@ function renderPriceRefs(c){
         </select>
       </div>
     </div>
-    <div style="padding:10px 24px;font-size:12px;color:#64748b">Menampilkan <b>${list.length}</b> dari ${DB.priceRefs.length} item referensi</div>
+    <div style="padding:10px 24px;font-size:12px;color:#64748b;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span>Menampilkan <b>${list.length}</b> dari ${DB.priceRefs.length} item referensi</span>
+      <div style="position:relative;display:inline-block" onmouseenter="document.getElementById('pref-print-menu').style.display='block'" onmouseleave="document.getElementById('pref-print-menu').style.display='none'">
+        <button title="Cetak" style="background:#fff;border:1px solid #cbd5e1;border-radius:6px;width:30px;height:30px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">🖨️</button>
+        <div id="pref-print-menu" style="display:none;position:absolute;right:0;top:100%;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:210px;z-index:20;overflow:hidden">
+          <div onclick="printPriceRefSummary()" style="padding:9px 14px;font-size:12px;color:#334155;cursor:pointer;white-space:nowrap" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">Cetak Ringkasan per Kategori</div>
+          <div onclick="printPriceRefList()" style="padding:9px 14px;font-size:12px;color:#334155;cursor:pointer;white-space:nowrap;border-top:1px solid #f1f5f9" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">Cetak Daftar Item</div>
+        </div>
+      </div>
+    </div>
     ${renderPriceRefSummaryPanel(list)}
-    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <div id="pref-item-table" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
       <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
         <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b">DESKRIPSI</th>
         <th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SPESIFIKASI / MERK</th>
-        <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#64748b">VOL</th>
         <th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SAT</th>
         <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#64748b">MATERIAL</th>
         <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#64748b">JASA</th>
-        <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#64748b">TOTAL/UNIT</th>
-        <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#0e7490">TOTAL (×VOL)</th>
+        <th style="padding:10px 10px;text-align:right;font-size:11px;font-weight:700;color:#0e7490">TOTAL</th>
         <th style="padding:10px 10px;text-align:left;font-size:11px;font-weight:700;color:#64748b">SUMBER</th>
         <th style="padding:10px 10px;text-align:center;font-size:11px;font-weight:700;color:#64748b">AKSI</th>
       </tr></thead>
       <tbody>${list.length?list.map(r=>`<tr style="border-bottom:1px solid #f1f5f9">
         <td style="padding:9px 14px;font-weight:600;color:#1e293b">${r.desc||'-'}${r.category?`<div style="font-size:10.5px;color:#94a3b8;font-weight:400">${r.category}</div>`:''}</td>
         <td style="padding:9px 10px;color:#64748b;max-width:260px">${[r.spec,r.brand].filter(Boolean).join(' — ')||'-'}</td>
-        <td style="padding:9px 10px;text-align:right;color:#64748b">${(r.vol===undefined||r.vol===null||r.vol==='')?'-':r.vol}</td>
         <td style="padding:9px 10px;color:#64748b">${r.satuan||'-'}</td>
         <td style="padding:9px 10px;text-align:right">${rp(r.hargaMaterial||0)}</td>
         <td style="padding:9px 10px;text-align:right">${rp(r.hargaJasa||0)}</td>
-        <td style="padding:9px 10px;text-align:right;font-weight:700;color:#0f172a">${rp(priceRefTotal(r))}</td>
-        <td style="padding:9px 10px;text-align:right;font-weight:700;color:#0e7490">${rp(priceRefLineTotal(r))}</td>
+        <td style="padding:9px 10px;text-align:right;font-weight:700;color:#0e7490">${rp(priceRefTotal(r))}</td>
         <td style="padding:9px 10px;color:#64748b">${r.source||'-'}</td>
         <td style="padding:9px 10px;text-align:center;white-space:nowrap">
           <button onclick="openAddPriceRef('${r.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button>
           <button onclick="delPriceRef('${r.id}')" title="Hapus" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button>
         </td>
-      </tr>`).join(''):`<tr><td colspan="10" style="padding:40px;text-align:center;color:#94a3b8;font-size:13px">Belum ada data referensi. Klik "⬆ Impor dari Excel" atau "+ Tambah Manual" untuk mulai.</td></tr>`}
+      </tr>`).join(''):`<tr><td colspan="8" style="padding:40px;text-align:center;color:#94a3b8;font-size:13px">Belum ada data referensi. Klik "⬆ Impor dari Excel" atau "+ Tambah Manual" untuk mulai.</td></tr>`}
       </tbody>
     </table></div>
   </div>`;
@@ -12319,14 +12429,23 @@ function openPriceRefPicker(rowIdx){
 function renderPriceRefPickResults(){
   const q=(document.getElementById('pref-pick-search')?.value||'').toLowerCase().trim();
   let list=[...(DB.priceRefs||[])];
-  if(q)list=list.filter(r=>(r.desc||'').toLowerCase().includes(q)||(r.spec||'').toLowerCase().includes(q)||(r.brand||'').toLowerCase().includes(q));
-  list=list.slice(0,40);
+  if(q)list=list.filter(r=>(r.desc||'').toLowerCase().includes(q)||(r.spec||'').toLowerCase().includes(q)||(r.brand||'').toLowerCase().includes(q)||(r.category||'').toLowerCase().includes(q));
+  // Urutkan: yang namanya DIAWALI kata kunci muncul duluan, baru yang cuma "mengandung" kata kunci di tengah.
+  if(q)list.sort((a,b)=>{
+    const aStarts=(a.desc||'').toLowerCase().startsWith(q)?0:1;
+    const bStarts=(b.desc||'').toLowerCase().startsWith(q)?0:1;
+    return aStarts-bStarts;
+  });
+  const totalMatch=list.length;
+  const SHOWN_LIMIT=150;
+  list=list.slice(0,SHOWN_LIMIT);
   const box=document.getElementById('pref-pick-results');
   if(!box)return;
-  if(!list.length){box.innerHTML=`<div style="text-align:center;padding:24px;color:#94a3b8;font-size:12.5px">${DB.priceRefs.length?'Tidak ada hasil. Coba kata kunci lain.':'Belum ada data referensi. Isi dulu di menu "Referensi Harga".'}</div>`;return;}
-  box.innerHTML=list.map(r=>`<div onclick="pickPriceRefForRow('${r.id}')" style="padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;cursor:pointer" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='#fff'">
+  if(!totalMatch){box.innerHTML=`<div style="text-align:center;padding:24px;color:#94a3b8;font-size:12.5px">${DB.priceRefs.length?'Tidak ada hasil. Coba kata kunci lain.':'Belum ada data referensi. Isi dulu di menu "Referensi Harga".'}</div>`;return;}
+  const countLabel=`<div style="font-size:10.5px;color:#94a3b8;margin-bottom:6px">Menampilkan ${list.length} dari ${totalMatch} hasil${totalMatch>SHOWN_LIMIT?' — ketik kata kunci lebih spesifik kalau belum ketemu':''}</div>`;
+  box.innerHTML=countLabel+list.map(r=>`<div onclick="pickPriceRefForRow('${r.id}')" style="padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;cursor:pointer" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='#fff'">
     <div style="font-weight:600;font-size:12.5px;color:#0f172a">${r.desc}</div>
-    <div style="font-size:11px;color:#94a3b8;margin-top:2px">${[r.spec,r.source].filter(Boolean).join(' • ')||'-'}</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:2px">${[r.category,r.spec,r.source].filter(Boolean).join(' • ')||'-'}</div>
     <div style="font-size:12px;margin-top:4px;color:#0e7490;font-weight:700">Rp ${rp(priceRefTotal(r)).replace('Rp','').trim()} / ${r.satuan||'unit'} <span style="font-weight:400;color:#64748b">(Material ${rp(r.hargaMaterial||0)} + Jasa ${rp(r.hargaJasa||0)})</span></div>
   </div>`).join('');
 }
@@ -12501,10 +12620,10 @@ function removeSphTtd(){
 }
 
 // Baris badge kecil pembanding harga referensi (GSD dkk) vs harga beli SKK/partner — dipecah Material & Jasa
-function sphRefBadgeHtml(it){
-  if(!it.refId)return '';
+function sphRefBadgeHtml(it,i){
+  if(!it.refId)return `<div id="sph-badge-${i}"></div>`;
   const r=(DB.priceRefs||[]).find(x=>x.id===it.refId);
-  if(!r)return '';
+  if(!r)return `<div id="sph-badge-${i}"></div>`;
   const refMat=parseFloat(r.hargaMaterial)||0;
   const refJasa=parseFloat(r.hargaJasa)||0;
   const refTotal=refMat+refJasa;
@@ -12517,7 +12636,15 @@ function sphRefBadgeHtml(it){
     const naik=diffPct>0;
     diffHtml=` • <span style="color:${naik?'#dc2626':'#16a34a'};font-weight:700">${naik?'▲':'▼'} ${Math.abs(diffPct).toFixed(1)}% ${naik?'lebih mahal':'lebih murah'} dari ref</span>`;
   }
-  return `<div style="font-size:10px;color:#64748b;margin-top:3px;line-height:1.5;grid-column:1/-1">🔗 Ref (${r.source||'-'}): Material ${rp(refMat)} + Jasa ${rp(refJasa)} = ${rp(refTotal)}${diffHtml}</div>`;
+  return `<div id="sph-badge-${i}" style="font-size:10px;color:#64748b;margin-top:3px;line-height:1.5;grid-column:1/-1">🔗 Ref (${r.source||'-'}): Material ${rp(refMat)} + Jasa ${rp(refJasa)} = ${rp(refTotal)}${diffHtml}</div>`;
+}
+
+// Update badge referensi 1 baris saja (dipakai saat ngetik Material/Jasa/Markup) — TANPA render ulang tabel,
+// supaya kursor/fokus di kotak yang lagi diketik nggak hilang.
+function sphUpdateBadgeOnly(i){
+  const it=window._sphItems[i];
+  const el=document.getElementById('sph-badge-'+i);
+  if(el)el.outerHTML=sphRefBadgeHtml(it,i);
 }
 
 function sphRenderRows(){
@@ -12526,17 +12653,19 @@ function sphRenderRows(){
     <td style="padding:6px 8px"><input value="${it.desc||''}" oninput="window._sphItems[${i}].desc=this.value" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
     <td style="padding:6px 4px"><input type="number" value="${it.qty||1}" min="0" oninput="window._sphItems[${i}].qty=parseFloat(this.value)||0;sphRecalc()" style="width:56px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
     <td style="padding:6px 4px"><input value="${it.satuan||'unit'}" oninput="window._sphItems[${i}].satuan=this.value" style="width:56px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
-    <td style="padding:6px 4px"><input type="number" value="${it.hargaBeliMaterial||0}" min="0" oninput="sphOnHargaBeliInput(${i},'Material',this.value)" style="width:100px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
-    <td style="padding:6px 4px"><input type="number" value="${it.hargaBeliJasa||0}" min="0" oninput="sphOnHargaBeliInput(${i},'Jasa',this.value)" style="width:100px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
+    <td style="padding:6px 4px"><input id="sph-mat-${i}" type="number" value="${it.hargaBeliMaterial||0}" min="0" oninput="sphOnHargaBeliInput(${i},'Material',this.value)" style="width:100px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
+    <td style="padding:6px 4px"><input id="sph-jasa-${i}" type="number" value="${it.hargaBeliJasa||0}" min="0" oninput="sphOnHargaBeliInput(${i},'Jasa',this.value)" style="width:100px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
     <td style="padding:6px 4px;text-align:center"><button onclick="openPriceRefPicker(${i})" title="Cek harga referensi" style="background:none;border:1px solid #e2e8f0;border-radius:5px;padding:4px 7px;font-size:12px;cursor:pointer">🔍</button></td>
-    <td style="padding:6px 4px"><input type="number" value="${it.markup===''||it.markup===undefined||it.markup===null?'':it.markup}" step="0.1" placeholder="0" oninput="sphOnMarkupInput(${i},this.value)" style="width:60px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
-    <td style="padding:6px 4px"><input type="number" value="${it.harga||0}" min="0" oninput="window._sphItems[${i}].harga=parseFloat(this.value)||0;sphRecalc()" style="width:110px;padding:5px 6px;border:1px solid #0891b2;border-radius:5px;font-size:12px;text-align:right;font-weight:600;color:#0e7490"></td>
+    <td style="padding:6px 4px"><input id="sph-markup-${i}" type="number" value="${it.markup===''||it.markup===undefined||it.markup===null?'':it.markup}" step="0.1" placeholder="0" oninput="sphOnMarkupInput(${i},this.value)" style="width:60px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
+    <td style="padding:6px 4px"><input id="sph-harga-${i}" type="number" value="${it.harga||0}" min="0" oninput="window._sphItems[${i}].harga=parseFloat(this.value)||0;sphRecalc()" style="width:110px;padding:5px 6px;border:1px solid #0891b2;border-radius:5px;font-size:12px;text-align:right;font-weight:600;color:#0e7490"></td>
     <td style="padding:6px 4px;text-align:right;font-weight:600;font-size:12px;color:#0f172a" id="sph-sub-${i}">${rp((it.qty||0)*(it.harga||0))}</td>
     <td style="padding:6px 4px;text-align:center"><button onclick="sphDelRow(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px">✕</button></td>
-  </tr>${it.refId?`<tr><td></td><td colspan="9" style="padding:0 4px 8px">${sphRefBadgeHtml(it)}</td></tr>`:''}`).join('');
+  </tr><tr><td></td><td colspan="9" style="padding:0 4px 8px">${sphRefBadgeHtml(it,i)}</td></tr>`).join('');
 }
 
 // Material / Jasa berubah → hitung ulang Harga Jual kalau markup sudah diisi
+// PENTING: jangan render ulang seluruh tabel (innerHTML) di sini — itu bikin kursor/fokus
+// di kotak yang lagi diketik hilang tiap 1 huruf/angka. Cukup update kotak Harga Jual & badge referensinya saja.
 function sphOnHargaBeliInput(i,field,val){
   const it=window._sphItems[i];
   if(field==='Material')it.hargaBeliMaterial=parseFloat(val)||0;
@@ -12544,8 +12673,10 @@ function sphOnHargaBeliInput(i,field,val){
   if(it.markup!==''&&it.markup!==null&&it.markup!==undefined){
     const total=(parseFloat(it.hargaBeliMaterial)||0)+(parseFloat(it.hargaBeliJasa)||0);
     it.harga=Math.round(total*(1+(parseFloat(it.markup)||0)/100));
+    const hargaEl=document.getElementById('sph-harga-'+i);
+    if(hargaEl)hargaEl.value=it.harga;
   }
-  document.getElementById('sph-items').innerHTML=sphRenderRows();
+  sphUpdateBadgeOnly(i);
   sphRecalc();
 }
 
@@ -12556,8 +12687,10 @@ function sphOnMarkupInput(i,val){
   const total=(parseFloat(it.hargaBeliMaterial)||0)+(parseFloat(it.hargaBeliJasa)||0);
   if(val!==''&&total>0){
     it.harga=Math.round(total*(1+(parseFloat(val)||0)/100));
+    const hargaEl=document.getElementById('sph-harga-'+i);
+    if(hargaEl)hargaEl.value=it.harga;
   }
-  document.getElementById('sph-items').innerHTML=sphRenderRows();
+  sphUpdateBadgeOnly(i);
   sphRecalc();
 }
 
