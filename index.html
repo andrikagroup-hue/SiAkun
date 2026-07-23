@@ -11939,8 +11939,7 @@ function renderSphs(c){
           ${canInvoice?`<button onclick="openInvoiceFromSph('${s.id}')" title="Buat Invoice" style="background:none;border:1px solid #bbf7d0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#16a34a;margin-right:3px">📄 Invoice</button>`:''}
           ${linked?`<button onclick="viewSph('${s.id}')" title="Invoice Terhubung" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🔗</button>`:''}
           <button onclick="viewSph('${s.id}')" title="Detail" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">👁️</button>
-          <button onclick="printSph('${s.id}')" title="Cetak untuk Customer/Vendor (Bahasa Indonesia)" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🖨️</button>
-          <button onclick="printSphEnglish('${s.id}')" title="Cetak untuk Customer (English)" style="background:none;border:1px solid #bbf7d0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#15803d;margin-right:3px">🌐</button>
+          <button onclick="printSphEnglish('${s.id}')" title="Cetak untuk Customer/Vendor" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🖨️</button>
           <button onclick="printSphInternal('${s.id}')" title="Cetak Internal (HPP & Pembanding Referensi)" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#b91c1c;margin-right:3px">📋</button>
           <button onclick="openAddSph('${s.id}')" title="Edit" style="background:none;border:1px solid #e2e8f0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#475569;margin-right:3px">✏️</button>
           <button onclick="delSph('${s.id}')" title="Hapus" style="background:none;border:1px solid #fecaca;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#ef4444">🗑️</button>
@@ -12534,20 +12533,16 @@ function openAddSph(id){
         </select>
       </div>
       <div>
-        <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">NAMA PIHAK</label>
-        <input id="sph-pihak" value="${s?s.pihak:''}" placeholder="Nama perusahaan / kontak" style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
+        <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">PIHAK / PERUSAHAAN</label>
+        <input id="sph-pihak" value="${s?s.pihak:''}" placeholder="Contoh: PT. Citra Palu Minerals (CPM)" style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
       </div>
       <div>
-        <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">ATTN (untuk Cetak Customer EN)</label>
+        <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">ATTN (Nama Kontak)</label>
         <input id="sph-attn-en" value="${s&&s.attnEn?s.attnEn:''}" placeholder="Contoh: Mr. Pilar" style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
       </div>
       <div style="grid-column:1/-1">
-        <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">PERIHAL / KETERANGAN</label>
-        <input id="sph-perihal" value="${s?s.perihal:''}" placeholder="Contoh: Penawaran Jasa IT Support Bulan Juni 2026" style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
-      </div>
-      <div style="grid-column:1/-1">
-        <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">SUBJECT (untuk Cetak Customer EN, opsional — kalau kosong pakai Perihal di atas)</label>
-        <input id="sph-perihal-en" value="${s&&s.perihalEn?s.perihalEn:''}" placeholder="Contoh: Procurement of BRC Fence 8mm and Accessories" style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
+        <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">SUBJECT</label>
+        <input id="sph-perihal" value="${s?s.perihal:''}" placeholder="Contoh: Procurement of BRC Fence 8mm and Accessories" style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
       </div>
       <div>
         <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">BERLAKU HINGGA</label>
@@ -12625,15 +12620,10 @@ function openAddSph(id){
         </div>
       </div>
     </div>
-    <div style="padding:0 28px 20px">
-      <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">SYARAT & KETENTUAN</label>
-      <textarea id="sph-syarat" rows="7" placeholder="Tulis 1 poin per baris. Kasih SPASI di depan baris untuk menjadikannya sub-baris (tanpa bullet) di bawah poin sebelumnya, contoh:&#10;Harga di atas belum termasuk PPN 11%.&#10;Pembayaran melalui Bank Mandiri, Cabang Cideng, Jakarta&#10;  Atas Nama: Andri Ajis&#10;  Nomor Rekening: 1210004693135&#10;Penawaran berlaku 14 hari sejak tanggal quotation." style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical">${s?s.syarat:''}</textarea>
-      <p style="font-size:10.5px;color:#94a3b8;margin:4px 0 0">Tips: baris yang diberi spasi/indent di depan akan tampil sebagai sub-baris tanpa bullet, menempel di bawah poin di atasnya.</p>
-    </div>
     <div style="padding:0 28px 24px">
       <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px 16px">
-        <div style="font-size:12px;font-weight:700;color:#0369a1;margin-bottom:2px">SYARAT & KETENTUAN — Versi Cetak Customer (English)</div>
-        <p style="font-size:10.5px;color:#64748b;margin:0 0 10px">Dipakai khusus untuk tombol "🌐 Cetak Customer (EN)". Isi 8 kolom di bawah ini per kategori — kosongkan kalau tidak perlu ditampilkan.</p>
+        <div style="font-size:12px;font-weight:700;color:#0369a1;margin-bottom:2px">TERMS &amp; CONDITIONS</div>
+        <p style="font-size:10.5px;color:#64748b;margin:0 0 10px">Isi 8 kolom di bawah ini per kategori — kosongkan kalau tidak perlu ditampilkan di dokumen cetak.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div>
             <label style="font-size:10.5px;font-weight:700;color:#0369a1">Price</label>
@@ -12829,11 +12819,9 @@ function saveSph(asDraft){
   const pihak=document.getElementById('sph-pihak').value.trim();
   const perihal=document.getElementById('sph-perihal').value.trim();
   const berlaku=document.getElementById('sph-berlaku').value;
-  const syarat=document.getElementById('sph-syarat').value.trim();
   const penandatangan=document.getElementById('sph-penandatangan').value.trim();
   const penandatanganTelp=document.getElementById('sph-penandatangan-telp').value.trim();
   const attnEn=document.getElementById('sph-attn-en').value.trim();
-  const perihalEn=document.getElementById('sph-perihal-en').value.trim();
   const tncEn={
     price:document.getElementById('sph-tnc-price').value.trim(),
     fabrication:document.getElementById('sph-tnc-fabrication').value.trim(),
@@ -12858,9 +12846,9 @@ function saveSph(asDraft){
   const now=Date.now();
   if(window._sphEditId){
     const idx=DB.sphs.findIndex(x=>x.id===window._sphEditId);
-    if(idx>-1){DB.sphs[idx]={...DB.sphs[idx],noSph,tanggal:tgl,tujuan,pihak,perihal,perihalEn,attnEn,berlaku,syarat,penandatangan,penandatanganTelp,tncEn,ttd,items,status,subtotal,ppn,ppnRate,ppnAmt,total,updated_at:now};}
+    if(idx>-1){DB.sphs[idx]={...DB.sphs[idx],noSph,tanggal:tgl,tujuan,pihak,perihal,attnEn,berlaku,penandatangan,penandatanganTelp,tncEn,ttd,items,status,subtotal,ppn,ppnRate,ppnAmt,total,updated_at:now};}
   } else {
-    DB.sphs.push({id:uid(),noSph,tanggal:tgl,tujuan,pihak,perihal,perihalEn,attnEn,berlaku,syarat,penandatangan,penandatanganTelp,tncEn,ttd,items,status,subtotal,ppn,ppnRate,ppnAmt,total,link_invoice_id:null,created_at:now,updated_at:now});
+    DB.sphs.push({id:uid(),noSph,tanggal:tgl,tujuan,pihak,perihal,attnEn,berlaku,penandatangan,penandatanganTelp,tncEn,ttd,items,status,subtotal,ppn,ppnRate,ppnAmt,total,link_invoice_id:null,created_at:now,updated_at:now});
   }
   saveDB();
   document.getElementById('sph-modal').remove();
@@ -13094,10 +13082,10 @@ function printSphEnglish(id){
   const logo=`<div style="display:flex;align-items:center;flex-shrink:0"><img src="${logoSrc}" style="width:100px;height:100%;min-height:90px;object-fit:contain;border-radius:10px;background:#fff;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.1);"></div>`;
   const addr=(co.address||'').replace(/,\s*(Kota\s)/g,',<br>$1');
   const bankLine=(co.bank||co.norek)?`<span style="color:#0e7490;font-weight:700">${co.bank||''}</span>${co.norek?` &nbsp;|&nbsp; Acc. No.: <b style="color:#0e7490">${co.norek}</b>`:''}${co.atasnama?` &nbsp;|&nbsp; a.n. ${co.atasnama}`:''}`:'';
-  // "PT. Citra Palu Minerals (CPM) — Attn: Pak Pilar" -> ambil nama perusahaan sebelum " — Attn" saja untuk kolom TO.
-  const pihakOnly=(s.pihak||'').split(/\s*[—-]\s*Attn/i)[0].trim();
+  // Nama Pihak sekarang sudah field bersih (tanpa embel-embel "— Attn"), tinggal dipakai langsung.
+  const pihakOnly=(s.pihak||'').trim();
   const attn=s.attnEn||'';
-  const subject=s.perihalEn||s.perihal||'';
+  const subject=s.perihal||'';
   const itemRows=(s.items||[]).map((it,i)=>`
     <tr style="border-bottom:1px solid #e2e8f0">
       <td style="padding:9px 12px;vertical-align:top">${i+1}</td>
