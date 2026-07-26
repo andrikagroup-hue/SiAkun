@@ -3117,6 +3117,81 @@ function doLogout(){
 const SK='siaccounts_v3';
 let DB={},editId=null,charts={},_saveTimer=null,_recalcInProgress=false;
 
+// ── Legacy card-photo cleanup ────────────────────────────────────
+// Foto kartu nama versi lama pernah disimpan sebagai data:image/... (base64)
+// di dalam DB. Bentuk ini sangat besar dan dapat memenuhi localStorage.
+// HANYA foto base64 lama yang dibuang; URL foto Supabase tetap dipertahankan.
+let _legacyPhotoCleanupPending=false;
+let _legacyPhotoCleanupInfo={count:0,bytes:0,names:[]};
+let _legacyStoredCleanupDone=false;
+
+function isLegacyContactPhoto(value){
+  return typeof value==='string' && /^data:image\//i.test(value.trim());
+}
+
+function formatStorageBytes(bytes){
+  const n=Number(bytes)||0;
+  if(n>=1024*1024)return(n/1024/1024).toFixed(2)+' MB';
+  if(n>=1024)return(n/1024).toFixed(1)+' KB';
+  return n+' byte';
+}
+
+function purgeLegacyContactPhotos(db,source){
+  const info={count:0,bytes:0,names:[],source:source||'memory'};
+  if(!db||!Array.isArray(db.contacts))return info;
+  db.contacts.forEach((ct,idx)=>{
+    if(isLegacyContactPhoto(ct&&ct.fotoKartuNama)){
+      info.count++;
+      info.bytes+=(ct.fotoKartuNama.length*2); // perkiraan UTF-16 localStorage
+      info.names.push((ct.name||ct.nama||('Kontak '+(idx+1))).toString());
+      ct.fotoKartuNama='';
+      ct.fotoKartuNamaLegacyDihapusAt=new Date().toISOString();
+    }
+  });
+  if(info.count){
+    db._legacyContactPhotosRemovedAt=new Date().toISOString();
+    db._legacyContactPhotosRemovedCount=(Number(db._legacyContactPhotosRemovedCount)||0)+info.count;
+    _legacyPhotoCleanupPending=true;
+    _legacyPhotoCleanupInfo.count+=info.count;
+    _legacyPhotoCleanupInfo.bytes+=info.bytes;
+    _legacyPhotoCleanupInfo.names.push(...info.names);
+    console.warn(`[SiAkun] ${info.count} foto kartu nama base64 lama dihapus dari ${info.source}; ruang dibebaskan sekitar ${formatStorageBytes(info.bytes)}.`);
+  }
+  return info;
+}
+
+// Bersihkan salinan database lama di browser SEBELUM proses load cloud/local.
+// Menulis ulang key yang sama dengan data lebih kecil tetap dapat membebaskan ruang
+// walaupun localStorage sebelumnya sudah mendekati batas maksimum.
+function cleanupLegacyContactPhotosInStoredDatabases(){
+  if(_legacyStoredCleanupDone)return _legacyPhotoCleanupInfo;
+  _legacyStoredCleanupDone=true;
+  [SK,'siaccounts_pt_v2'].forEach(key=>{
+    try{
+      const raw=localStorage.getItem(key);
+      if(!raw||!raw.includes('data:image/'))return;
+      const parsed=JSON.parse(raw);
+      const info=purgeLegacyContactPhotos(parsed,'localStorage:'+key);
+      if(info.count)localStorage.setItem(key,JSON.stringify(parsed));
+    }catch(e){
+      console.warn('[SiAkun] Pembersihan foto lama pada '+key+' gagal:',e);
+    }
+  });
+  return _legacyPhotoCleanupInfo;
+}
+
+function showLegacyPhotoCleanupNotice(){
+  if(!_legacyPhotoCleanupInfo.count)return;
+  const count=_legacyPhotoCleanupInfo.count;
+  const freed=formatStorageBytes(_legacyPhotoCleanupInfo.bytes);
+  const notice=document.createElement('div');
+  notice.id='legacy-photo-cleanup-notice';
+  notice.style.cssText='position:fixed;right:20px;bottom:20px;z-index:10050;max-width:390px;background:#0f766e;color:#fff;padding:14px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.22);font-size:12.5px;line-height:1.5;';
+  notice.innerHTML=`<div style="font-weight:800;margin-bottom:4px">✅ Penyimpanan dibersihkan</div><div>${count} foto kartu nama lama dihapus. Perkiraan ruang yang dibebaskan: <strong>${freed}</strong>.</div><div style="opacity:.82;margin-top:4px">Data kontak tetap ada. Foto yang sudah tersimpan di cloud tidak dihapus.</div>`;
+  document.body.appendChild(notice);
+  setTimeout(()=>notice.remove(),9000);
+}
+
 // ── Fetch data dari Supabase ──
 // ── Connectivity ping — fast 3s timeout ──────────────────────────
 async function pingSupabase(){
@@ -3141,14 +3216,18 @@ async function sbGet(){
       signal:ctrl.signal
     });
     clearTimeout(t);
+    if(!r.ok)throw new Error('Supabase membaca data gagal: HTTP '+r.status+' '+await r.text());
     const rows=await r.json();
     return rows&&rows[0]?rows[0].data:null;
-  }catch(e){return null;}
+  }catch(e){
+    console.warn('[SiAkun] sbGet gagal:',e);
+    return null;
+  }
 }
 
 // ── Simpan data ke Supabase (upsert) ──
 async function sbSave(data){
-  await fetch(`${SUPA_URL}/rest/v1/siakun_data`,{
+  const r=await fetch(`${SUPA_URL}/rest/v1/siakun_data`,{
     method:'POST',
     headers:{
       'apikey':SUPA_KEY,
@@ -3158,6 +3237,8 @@ async function sbSave(data){
     },
     body:JSON.stringify({id:'main',data,updated_at:new Date().toISOString()})
   });
+  if(!r.ok)throw new Error('Supabase menyimpan data gagal: HTTP '+r.status+' '+await r.text());
+  return true;
 }
 
 // ================================================================
@@ -3231,12 +3312,18 @@ function ensureKledoCOA(db){
 
 // ── Load: offline-first — check koneksi, load dari sumber terbaik ──
 async function loadDB(){
+  // Prioritas pertama: kosongkan foto kartu nama base64 lama dari cache browser.
+  cleanupLegacyContactPhotosInStoredDatabases();
+
   _isOnline=await pingSupabase();
   if(_isOnline){
     const remote=await sbGet();
     if(remote&&remote.company&&remote.users&&remote.users.length){
       ensureKledoCOA(remote);
-      localStorage.setItem(SK,JSON.stringify(remote));
+      // Foto lama yang masih berada di cloud juga dibuang agar tidak kembali lagi.
+      purgeLegacyContactPhotos(remote,'Supabase');
+      try{localStorage.setItem(SK,JSON.stringify(remote));}
+      catch(e){console.warn('[SiAkun] Cache cloud belum dapat ditulis ke localStorage:',e);}
       _offlinePending=false;
       return remote;
     }
@@ -3244,6 +3331,7 @@ async function loadDB(){
   // Offline or Supabase error — pakai localStorage
   try{const s=localStorage.getItem(SK);if(s){
     const _cached=JSON.parse(s);
+    purgeLegacyContactPhotos(_cached,'cache lokal');
     // [FIXED] Sync accounts: prefer siakun_coa_v2 if it has more/newer data
     try {
       const coaStored = JSON.parse(localStorage.getItem('siakun_coa_v2') || '[]');
@@ -3254,15 +3342,30 @@ async function loadDB(){
       }
     } catch(e){}
     ensureKledoCOA(_cached);
+    try{localStorage.setItem(SK,JSON.stringify(_cached));}catch(e){}
     console.info('[SiAkun] Cache lokal dimuat -',_cached.accounts?.length,'akun');
     return _cached;
   }}catch(e){}
-  try{const s=localStorage.getItem('siaccounts_pt_v2');if(s)return migrateV2(JSON.parse(s));}catch(e){}
+  try{
+    const s=localStorage.getItem('siaccounts_pt_v2');
+    if(s){
+      const old=JSON.parse(s);
+      purgeLegacyContactPhotos(old,'cache v2');
+      return migrateV2(old);
+    }
+  }catch(e){}
   return defaultDB();
 }
 
 // ── Save: localStorage instant + cloud jika online ──
-function saveDB(){
+// Return true = data utama berhasil diamankan di browser.
+// Return false = penyimpanan browser gagal; pemanggil TIDAK boleh menutup form.
+function saveDB(options){
+  options=options||{};
+
+  // Perlindungan otomatis: foto base64 lama tidak boleh masuk lagi ke database.
+  purgeLegacyContactPhotos(DB,'DB aktif');
+
   const now=Date.now();
   DB._localTimestamp=now;
 
@@ -3274,24 +3377,33 @@ function saveDB(){
     _recalcInProgress = false;
   }
 
-  // [FIXED] Always sync siakun_coa_v2 as authoritative COA source
-  if(DB.accounts && DB.accounts.length > 0){
-    try{ localStorage.setItem('siakun_coa_v2', JSON.stringify(DB.accounts)); }catch(e){ console.warn('COA save gagal:',e); }
-  }
+  let serialized;
   try{
-    localStorage.setItem(SK,JSON.stringify(DB));
+    serialized=JSON.stringify(DB);
+    localStorage.setItem(SK,serialized);
   }catch(e){
-    console.error('localStorage GAGAL (kemungkinan penuh):',e);
-    alert('❌ Gagal menyimpan! Penyimpanan browser penuh (biasanya karena terlalu banyak foto kartu nama).\n\nSolusi:\n1. Hapus beberapa foto kartu nama lama di kontak (Edit → Hapus foto), ATAU\n2. Backup data dulu, lalu hubungi developer untuk pindah ke penyimpanan cloud penuh.');
-    setSyncStatus('offline');
-    return;
+    console.error('localStorage GAGAL:',e);
+    setSyncStatus('error');
+    if(!options.silentFailure){
+      alert('❌ Data belum berhasil disimpan karena penyimpanan browser penuh.\n\nForm tetap dibuka agar isian tidak hilang. Foto kartu nama lama akan dibersihkan otomatis; bila pesan ini masih muncul, buka Pengaturan → Kapasitas Data SiAkun untuk melihat penggunaan ruang.');
+    }
+    return false;
+  }
+
+  // Simpan CoA terpisah sebagai cache, termasuk saat array kosong.
+  // Gagal menulis cache ini tidak membatalkan keberhasilan DB utama karena accounts
+  // juga sudah berada di siaccounts_v3.
+  try{
+    localStorage.setItem('siakun_coa_v2',JSON.stringify(Array.isArray(DB.accounts)?DB.accounts:[]));
+  }catch(e){
+    console.warn('Cache COA gagal disimpan, tetapi DB utama sudah aman:',e);
   }
 
   if(!_isOnline){
-    // Tandai ada pending changes
     _offlinePending=true;
+    try{localStorage.setItem(OFFLINE_QUEUE_KEY,String(now));}catch(e){}
     setSyncStatus('offline');
-    return;
+    return true;
   }
 
   setSyncStatus('saving');
@@ -3300,13 +3412,17 @@ function saveDB(){
     try{
       await sbSave(DB);
       _offlinePending=false;
+      _legacyPhotoCleanupPending=false;
+      try{localStorage.removeItem(OFFLINE_QUEUE_KEY);}catch(e){}
       setSyncStatus('synced');
     }catch(e){
       _offlinePending=true;
-      setSyncStatus('offline');
+      try{localStorage.setItem(OFFLINE_QUEUE_KEY,String(Date.now()));}catch(err){}
+      setSyncStatus('error');
       console.warn('Supabase save gagal, data tersimpan lokal:',e);
     }
   },800);
+  return true;
 }
 
 // ── Sync pending local changes ke Supabase ──
@@ -13868,7 +13984,7 @@ function renderSettings(c){
     <div class="cfg-group-hd" onclick="toggleCfg(this)">
       <div style="display:flex;align-items:center;">
         <span class="cfg-group-icon">💾</span>
-        <div><div class="cfg-group-title">Penyimpanan Browser</div><div class="cfg-group-desc">Cek seberapa penuh data yang tersimpan</div></div>
+        <div><div class="cfg-group-title">Kapasitas Data SiAkun</div><div class="cfg-group-desc">Lihat apakah ruang penyimpanan data masih aman</div></div>
       </div>
       <span class="cfg-group-arrow">▼</span>
     </div>
@@ -14442,25 +14558,70 @@ async function simpanHasilScan(){
   setTimeout(()=>alert('✅ Kontak ditambahkan! Klik Edit untuk cek & lengkapi data.'),200);
 }
 
-function renderStorageUsage(){
+function getStorageUsageDetails(){
   let totalBytes=0;
+  const keys=[];
   try{
-    for(let key in localStorage){
-      if(localStorage.hasOwnProperty(key)) totalBytes+=(localStorage[key].length+key.length)*2;
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      const val=localStorage.getItem(key)||'';
+      const bytes=(val.length+key.length)*2;
+      totalBytes+=bytes;
+      keys.push({key,bytes});
     }
   }catch(e){}
-  const totalMB=(totalBytes/1024/1024).toFixed(2);
-  const LIMIT_MB=5; // limit umum browser
-  const pct=Math.min(100,Math.round(totalBytes/1024/1024/LIMIT_MB*100));
+  keys.sort((a,b)=>b.bytes-a.bytes);
+  let legacyCount=0,legacyBytes=0;
+  (DB.contacts||[]).forEach(c=>{
+    if(isLegacyContactPhoto(c.fotoKartuNama)){
+      legacyCount++;
+      legacyBytes+=c.fotoKartuNama.length*2;
+    }
+  });
+  return{totalBytes,keys,legacyCount,legacyBytes};
+}
+
+function hapusFotoKartuNamaLama(){
+  const before=getStorageUsageDetails();
+  if(!before.legacyCount){
+    cleanupLegacyContactPhotosInStoredDatabases();
+    renderStorageUsage();
+    return alert('✅ Tidak ada foto kartu nama lama berbentuk base64. Foto cloud tidak dihapus.');
+  }
+  if(!confirm(`Hapus ${before.legacyCount} foto kartu nama lama untuk membebaskan sekitar ${formatStorageBytes(before.legacyBytes)}?
+
+Data kontak tetap ada. Foto yang berupa URL cloud tidak akan dihapus.`))return;
+  purgeLegacyContactPhotos(DB,'pembersihan manual');
+  cleanupLegacyContactPhotosInStoredDatabases();
+  const ok=saveDB();
+  renderStorageUsage();
+  if(ok)alert(`✅ ${before.legacyCount} foto lama berhasil dihapus. Data kontak tetap tersimpan.`);
+}
+
+function renderStorageUsage(){
+  const info=getStorageUsageDetails();
+  const totalMB=(info.totalBytes/1024/1024).toFixed(2);
+  const LIMIT_MB=5; // perkiraan umum; tiap browser dapat berbeda
+  const pct=Math.min(100,Math.round(info.totalBytes/1024/1024/LIMIT_MB*100));
   const color=pct>85?'#ef4444':pct>60?'#f59e0b':'#16a34a';
-  const fotoCount=(DB.contacts||[]).filter(c=>c.fotoKartuNama).length;
-  document.getElementById('storage-usage-display').innerHTML=`
-    <div style="margin-bottom:8px;font-size:13px;color:#475569">Terpakai: <strong>${totalMB} MB</strong> dari ~${LIMIT_MB} MB (perkiraan limit browser)</div>
-    <div style="width:100%;height:10px;background:#f1f5f9;border-radius:6px;overflow:hidden;margin-bottom:8px">
+  const cloudPhotoCount=(DB.contacts||[]).filter(c=>c.fotoKartuNama&&!isLegacyContactPhoto(c.fotoKartuNama)).length;
+  const friendlyStorageName=(key)=>({siaccounts_v3:'Data utama SiAkun',siakun_coa_v2:'Daftar akun akuntansi',siaccounts_pt_v2:'Data versi lama',siakun_offline_q:'Data yang belum terkirim ke cloud',_siakun_apikey:'Pengaturan pemindai kartu nama'})[key]||'Data pengaturan lain';
+  const topKeys=info.keys.slice(0,5).map(x=>`<tr><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9">${friendlyStorageName(x.key)}<div style="font-size:9px;color:#94a3b8">${x.key}</div></td><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700">${formatStorageBytes(x.bytes)}</td></tr>`).join('');
+  const el=document.getElementById('storage-usage-display');
+  if(!el)return;
+  el.innerHTML=`
+    <div style="margin-bottom:8px;font-size:13px;color:#475569">Data SiAkun yang tersimpan: <strong>${totalMB} MB</strong> dari perkiraan batas ${LIMIT_MB} MB</div>
+    <div style="width:100%;height:10px;background:#f1f5f9;border-radius:6px;overflow:hidden;margin-bottom:10px">
       <div style="width:${pct}%;height:100%;background:${color}"></div>
     </div>
-    <p style="font-size:12px;color:#64748b;margin:0">📷 ${fotoCount} kontak punya foto kartu nama (paling banyak makan tempat).</p>
-    ${pct>70?'<p style="font-size:12px;color:#ef4444;font-weight:600;margin:6px 0 0">⚠️ Penyimpanan hampir penuh! Hapus beberapa foto kartu nama lama di kontak, atau backup & hubungi developer untuk solusi cloud storage.</p>':''}
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px">
+      <div style="padding:9px 11px;border-radius:8px;background:${info.legacyCount?'#fef2f2':'#ecfdf5'};font-size:12px"><strong>${info.legacyCount}</strong> foto lama/base64<br><span style="color:#64748b">${formatStorageBytes(info.legacyBytes)}</span></div>
+      <div style="padding:9px 11px;border-radius:8px;background:#eff6ff;font-size:12px"><strong>${cloudPhotoCount}</strong> foto cloud<br><span style="color:#64748b">URL saja, ukurannya kecil</span></div>
+    </div>
+    ${info.legacyCount?`<button class="btn btn-bad btn-sm" onclick="hapusFotoKartuNamaLama()">🧹 Hapus ${info.legacyCount} Foto Lama</button>`:`<div class="alert a-ok" style="margin-bottom:10px">✅ Tidak ada foto kartu nama base64 lama. Foto cloud tetap aman.</div>`}
+    <div style="font-size:11px;font-weight:700;color:#64748b;margin:12px 0 5px">BAGIAN DATA YANG PALING BANYAK MEMAKAI RUANG</div>
+    <div class="tbl-wrap"><table style="font-size:11px"><tbody>${topKeys||'<tr><td>Belum ada data</td></tr>'}</tbody></table></div>
+    ${pct>85?'<p style="font-size:12px;color:#ef4444;font-weight:600;margin:10px 0 0">⚠️ Kapasitas data masih hampir penuh. Buat backup sebelum menghapus data lain.</p>':''}
   `;
 }
 
@@ -15985,6 +16146,15 @@ async function init(){
   if(!DB.auditLog)DB.auditLog=[];
   if(!DB.basts)DB.basts=[];
   if(!DB.roles||!DB.roles.length)DB.roles=['Admin','Direktur','Manager','Finance','HRD','Staff'];
+
+  // Hapus foto kartu nama base64 lama dari DB aktif dan kirim hasil bersih ke cloud.
+  // Ini berjalan otomatis satu kali saat aplikasi dibuka; foto URL Supabase tidak disentuh.
+  purgeLegacyContactPhotos(DB,'inisialisasi aplikasi');
+  if(_legacyPhotoCleanupPending){
+    const cleanupSaved=saveDB({silentFailure:true});
+    if(!cleanupSaved)console.warn('[SiAkun] Data sudah dibersihkan di memori, tetapi localStorage masih penuh.');
+  }
+
   setSyncStatus(_isOnline?'synced':'offline');
   if(isAdmin()){
     const nu=document.getElementById('nav-users');if(nu)nu.style.display='flex';
@@ -15997,6 +16167,7 @@ async function init(){
   // Jalankan auto backup harian
   autoBackup();
   nav('dashboard');
+  setTimeout(showLegacyPhotoCleanupNotice,700);
 
   // ── Offline-first: background connectivity monitor ──
   // Ping setiap 15 detik. Kalau kembali online → auto-sync pending changes
@@ -16173,8 +16344,10 @@ function genBastId(){
 
 // Debounce timer untuk auto-draft (800ms setelah input terakhir)
 let _bastDraftTimer=null;
+let _bastLastSaveFailed=false;
 function bastScheduleDraft(){
   clearTimeout(_bastDraftTimer);
+  _bastLastSaveFailed=false; // user mengubah data → boleh coba autosave lagi
   _bastDraftTimer=setTimeout(()=>saveBastDraft(true),800);
 }
 
@@ -16540,10 +16713,16 @@ function bastCollect(){
 // ——— SAVE DRAFT (auto=true → silent, auto=false → tutup modal) ———
 
 function saveBastDraft(auto){
-  if(!document.getElementById('bf-id')) return; // modal sudah tertutup
+  if(!document.getElementById('bf-id')) return false; // modal sudah tertutup
+  if(auto&&_bastLastSaveFailed)return false; // cegah popup/percobaan berulang tanpa perubahan baru
+  clearTimeout(_bastDraftTimer);
+
   const data={...bastCollect(), status:'draft', updated_at:Date.now()};
   DB.basts=DB.basts||[];
+  const before=JSON.parse(JSON.stringify(DB.basts));
+  const previousEditId=window._bastEditId;
   const isEdit=window._bastEditId;
+
   if(isEdit){
     const idx=DB.basts.findIndex(x=>x.id===isEdit);
     if(idx>=0){
@@ -16553,36 +16732,53 @@ function saveBastDraft(auto){
       DB.basts.push({...data,created_at:Date.now(),created_by:''});
     }
   } else {
-    // Cek apakah ID sudah ada (autosave ke-2 dst)
     const exists=DB.basts.findIndex(x=>x.id===data.id);
     if(exists>=0){
       DB.basts[exists]={...DB.basts[exists],...data};
     } else {
       DB.basts.push({...data,created_at:Date.now(),created_by:''});
     }
-    window._bastEditId=data.id; // switch ke mode edit setelah save pertama
+    window._bastEditId=data.id;
   }
-  saveDB();
-  if(auto){
-    // Update status indicator kecil di form
-    const el=document.getElementById('bf-draft-status');
-    if(el) el.textContent='💾 Draft tersimpan '+new Date().toLocaleTimeString('id-ID');
-  } else {
+
+  const ok=saveDB({silentFailure:auto});
+  const el=document.getElementById('bf-draft-status');
+  if(!ok){
+    DB.basts=before;
+    window._bastEditId=previousEditId;
+    _bastLastSaveFailed=true;
+    if(el){
+      el.textContent='⚠️ Draft belum tersimpan — penyimpanan browser penuh';
+      el.style.color='#dc2626';
+      el.style.fontWeight='700';
+    }
+    return false;
+  }
+
+  _bastLastSaveFailed=false;
+  if(el){
+    el.textContent='💾 Draft tersimpan '+new Date().toLocaleTimeString('id-ID');
+    el.style.color='#059669';
+    el.style.fontWeight='600';
+  }
+  if(!auto){
     closeModal();
     renderBasts(document.getElementById('content'));
   }
+  return true;
 }
 
 // ——— SAVE SIGNED ———
 
 function saveBastSigned(){
-  if(!document.getElementById('bf-id')) return;
+  if(!document.getElementById('bf-id')) return false;
+  clearTimeout(_bastDraftTimer);
   const data=bastCollect();
   // Validasi minimal
-  if(!data.tanggal){alert('⚠️ Tanggal wajib diisi!');return;}
-  if(!data.pihak2.nama){alert('⚠️ Nama Pihak 2 wajib diisi!');return;}
-  if(!(data.items||[]).some(i=>i.deskripsi)){alert('⚠️ Minimal 1 item dengan deskripsi!');return;}
-  if(!confirm('Tandatangani BAST '+data.id+'?\n\nStatus akan berubah ke SIGNED.')) return;
+  if(!data.tanggal){alert('⚠️ Tanggal wajib diisi!');return false;}
+  if(!data.pihak2.nama){alert('⚠️ Nama Pihak 2 wajib diisi!');return false;}
+  if(!(data.items||[]).some(i=>i.deskripsi)){alert('⚠️ Minimal 1 item dengan deskripsi!');return false;}
+  if(!confirm('Tandatangani BAST '+data.id+'?\n\nStatus akan berubah ke SIGNED.')) return false;
 
   const finalData={
     ...data,
@@ -16592,6 +16788,8 @@ function saveBastSigned(){
   };
 
   DB.basts=DB.basts||[];
+  const before=JSON.parse(JSON.stringify(DB.basts));
+  const previousEditId=window._bastEditId;
   const isEdit=window._bastEditId;
   if(isEdit){
     const idx=DB.basts.findIndex(x=>x.id===isEdit);
@@ -16609,9 +16807,23 @@ function saveBastSigned(){
       DB.basts.push({...finalData,created_at:Date.now(),created_by:''});
     }
   }
-  saveDB();
+
+  const ok=saveDB();
+  if(!ok){
+    DB.basts=before;
+    window._bastEditId=previousEditId;
+    const el=document.getElementById('bf-draft-status');
+    if(el){
+      el.textContent='⚠️ BAST belum ditandatangani — data gagal disimpan';
+      el.style.color='#dc2626';
+      el.style.fontWeight='700';
+    }
+    return false;
+  }
+
   closeModal();
   renderBasts(document.getElementById('content'));
+  return true;
 }
 
 // ——— DELETE & DUMMY (tidak berubah) ———
