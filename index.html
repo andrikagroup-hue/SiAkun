@@ -726,7 +726,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   </div>
 
   <div class="nav-sec">
-    <div class="nav-i" data-tip="Penjualan" onmouseenter="showFlyout('sales',this)" onclick="nav('invoices')"><span class="ic">🧾</span><span>Penjualan</span></div>
+    <div class="nav-i" data-tip="Sales" onmouseenter="showFlyout('sales',this)" onclick="nav('invoices')"><span class="ic">🧾</span><span>Sales</span></div>
   </div>
 
   <div class="nav-sec">
@@ -812,8 +812,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 <div class="main">
   <!-- Quick Nav Bar — Kledo-style -->
   <div id="quick-nav" style="display:flex;gap:6px;padding:8px 16px;background:#fff;border-bottom:1px solid #e2e8f0;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:100;">
-    <button class="qnav-btn" onclick="openQuickForm('jual')" title="Tambah Tagihan Penjualan">
-      <span class="qnav-ic">🧾</span><span>Jual</span>
+    <button class="qnav-btn" onclick="openAddInvoice()" title="Create Invoice">
+      <span class="qnav-ic">🧾</span><span>Invoice</span>
     </button>
     <button class="qnav-btn" onclick="openQuickForm('beli')" title="Tambah Tagihan Pembelian">
       <span class="qnav-ic">🛒</span><span>Beli</span>
@@ -877,13 +877,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 const FLYOUT_MAP={
 
 sales:{
-title:'PENJUALAN',
+title:'SALES',
 items:[
-['➕','Tambah Faktur',"openQuickForm('jual')"],
-['📋','Daftar Faktur',"nav('invoices')"],
-['📥','Piutang AR',"nav('ar')"],
-['👥','Pelanggan',"nav('contacts')"],
-['🖨️','Receipt',"nav('receipts')"]
+['➕','Create Invoice',"openAddInvoice()"],
+['📋','Invoice List',"nav('invoices')"],
+['📥','Accounts Receivable',"nav('ar')"],
+['👥','Customers',"nav('contacts')"],
+['🖨️','Receipts',"nav('receipts')"]
 ]},
 
 purchase:{
@@ -1007,8 +1007,8 @@ const TR={
     nav_inventory:'Inventori',nav_accounting:'Akuntansi',
     nav_operational:'Operasional',nav_hr:'SDM & Pajak',nav_system:'Sistem',
     // Nav items
-    nav_dashboard:'Home',nav_invoices:'Invoice & Penjualan',
-    nav_ar:'Piutang (AR)',nav_purchases:'Order Pembelian',
+    nav_dashboard:'Home',nav_invoices:'Invoices & Sales',
+    nav_ar:'Accounts Receivable',nav_purchases:'Order Pembelian',
     nav_ap:'Hutang (AP)',nav_products:'Stok & Produk',
     nav_contacts:'Kontak',nav_accounts:'Bagan Akun (CoA)',
     nav_journal:'Jurnal Umum',nav_ledger:'Buku Besar',
@@ -1018,8 +1018,8 @@ const TR={
     nav_receipts:'Kwitansi',nav_settings:'Pengaturan & Ekspor',nav_rekon:'Rekonsiliasi Bank',nav_faq:'FAQ & Panduan',
     nav_users:'Manajemen Pengguna',nav_audit:'Jejak Audit',
     // Page titles
-    page_dashboard:'Home',page_invoices:'Invoice & Penjualan',
-    page_ar:'Piutang Usaha (AR)',page_purchases:'Order Pembelian',
+    page_dashboard:'Home',page_invoices:'Invoices & Sales',
+    page_ar:'Accounts Receivable',page_purchases:'Order Pembelian',
     page_ap:'Hutang Usaha (AP)',page_products:'Stok & Produk',
     page_contacts:'Kontak',page_accounts:'Bagan Akun (CoA)',
     page_journal:'Jurnal Umum',page_ledger:'Buku Besar',
@@ -1056,13 +1056,13 @@ const TR={
     db_recentInv:'Invoice Terkini',db_invStatus:'Status Invoice',
     db_plSummary:'Ringkasan Laba Rugi',
     // Invoice
-    inv_title:'Invoice & Penjualan',inv_create:'+ Buat Invoice',
-    inv_no:'No. Invoice',inv_confirm:'Konfirmasi',
+    inv_title:'Invoices & Sales',inv_create:'+ Create Invoice',
+    inv_no:'Invoice No.',inv_confirm:'Issue Invoice',
     inv_print:'🖨 Cetak',inv_preview:'👁 Lihat',
-    inv_all:'Semua',inv_unpaid:'Belum Dibayar',inv_overdue:'Terlambat',
-    inv_paid:'Lunas',inv_draft:'Draft',
-    inv_total_inv:'Total Invoice',inv_outstanding:'Piutang',
-    inv_this_month:'Bulan Ini',
+    inv_all:'All',inv_unpaid:'Unpaid',inv_overdue:'Overdue',
+    inv_paid:'Paid',inv_draft:'Draft',
+    inv_total_inv:'Total Invoices',inv_outstanding:'Outstanding AR',
+    inv_this_month:'This Month',
     // Transactions
     tx_income:'+ Pemasukan',tx_expense:'+ Pengeluaran',
     tx_totalIn:'Total Pemasukan',tx_totalOut:'Total Pengeluaran',
@@ -5124,192 +5124,313 @@ function exportProducts(){
 }
 
 // ================================================================
-//  INVOICES — Flexible Pricing, Multi-Tax, Auto Summary
+//  INVOICES — AMS Standard, Full English, DPA-Inspired Print Layout
 // ================================================================
+
+const AMS_INVOICE_CODE='AMS';
+const AMS_INVOICE_START=1001;
+
+function invoiceEscapeHtml(value){
+  return String(value??'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+function invoiceEscapeAttr(value){return invoiceEscapeHtml(value).replace(/`/g,'&#096;');}
+function invoiceDateLong(dateStr){
+  if(!dateStr)return'-';
+  const d=new Date(dateStr+'T00:00:00');
+  if(Number.isNaN(d.getTime()))return dateStr;
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+}
+function invoiceCustomerDisplay(ct){return ct?(ct.perusahaan||ct.name||'Customer'):'Customer';}
+function invoiceStatusLabel(status){
+  return({draft:'Draft',confirmed:'Issued',unpaid:'Unpaid',partial:'Partially Paid',paid:'Paid',overdue:'Overdue'})[status]||status||'-';
+}
+function invoiceStatusBadge(status){
+  const cls={draft:'b-gray',confirmed:'b-info',unpaid:'b-warn',partial:'b-purple',paid:'b-ok',overdue:'b-bad'};
+  return`<span class="badge ${cls[status]||'b-gray'}">${invoiceStatusLabel(status)}</span>`;
+}
+function numberToEnglishWords(value){
+  const n=Math.floor(Math.abs(Number(value)||0));
+  if(n===0)return'Zero';
+  const ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function belowThousand(num){
+    let out='';
+    if(num>=100){out+=ones[Math.floor(num/100)]+' Hundred';num%=100;if(num)out+=' ';}
+    if(num>=20){out+=tens[Math.floor(num/10)];num%=10;if(num)out+=' '+ones[num];}
+    else if(num>0)out+=ones[num];
+    return out;
+  }
+  const groups=[
+    [1000000000000,'Trillion'],
+    [1000000000,'Billion'],
+    [1000000,'Million'],
+    [1000,'Thousand']
+  ];
+  let remaining=n,out=[];
+  groups.forEach(([size,label])=>{
+    if(remaining>=size){
+      const chunk=Math.floor(remaining/size);
+      out.push(belowThousand(chunk)+' '+label);
+      remaining%=size;
+    }
+  });
+  if(remaining)out.push(belowThousand(remaining));
+  return out.join(' ');
+}
+function amountInWordsIDR(amount){return numberToEnglishWords(amount)+' Rupiah Only';}
+function invoiceNumberMeta(dateStr){
+  const d=new Date((dateStr||today())+'T00:00:00');
+  const valid=Number.isNaN(d.getTime())?new Date():d;
+  return{
+    year:valid.getFullYear(),
+    yy:String(valid.getFullYear()).slice(-2),
+    mm:String(valid.getMonth()+1).padStart(2,'0')
+  };
+}
+function generateInvoiceNumber(dateStr,excludeId){
+  const meta=invoiceNumberMeta(dateStr);
+  let max=AMS_INVOICE_START-1;
+  (DB.invoices||[]).forEach(inv=>{
+    if(excludeId&&inv.id===excludeId)return;
+    const m=String(inv.no||'').match(/^AMS(\d{2})(\d{2})-INV(\d+)$/i);
+    if(!m||m[1]!==meta.yy)return;
+    const seq=parseInt(m[3],10);
+    if(Number.isFinite(seq)&&seq>max)max=seq;
+  });
+  return`${AMS_INVOICE_CODE}${meta.yy}${meta.mm}-INV${Math.max(AMS_INVOICE_START,max+1)}`;
+}
+function isAmsInvoiceNumberValid(no,dateStr){
+  const meta=invoiceNumberMeta(dateStr);
+  const m=String(no||'').match(/^AMS(\d{2})(\d{2})-INV(\d+)$/i);
+  return!!(m&&m[1]===meta.yy&&m[2]===meta.mm&&parseInt(m[3],10)>=AMS_INVOICE_START);
+}
+function refreshInvoiceNumber(excludeId){
+  const dateEl=document.getElementById('inv-date');
+  const noEl=document.getElementById('inv-no');
+  if(!dateEl||!noEl)return;
+  noEl.value=generateInvoiceNumber(dateEl.value,excludeId||null);
+}
+function invoiceNumberExists(no,excludeId){
+  return(DB.invoices||[]).some(inv=>inv.no===no&&inv.id!==excludeId);
+}
 
 function renderInvoices(c){
   const ta=document.getElementById('topbar-actions');
   ta.innerHTML=`
-    <button class="btn btn-pri" onclick="openAddInvoice()">+ Buat Invoice</button>
-    <button class="btn btn-out" onclick="exportInvoices()">⬇ Excel</button>`;
-  const sorted=[...DB.invoices].sort((a,b)=>new Date(b.date)-new Date(a.date));
-
+    <button class="btn btn-pri" onclick="openAddInvoice()">+ Create Invoice</button>
+    <button class="btn btn-out" onclick="exportInvoices()">⬇ Export Excel</button>`;
+  const sorted=[...(DB.invoices||[])].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const statusCards=[
+    ['unpaid','Unpaid','r'],['partial','Partially Paid','y'],['paid','Paid','g'],['overdue','Overdue','r']
+  ];
   c.innerHTML=`
+  <div class="alert a-info" style="margin-bottom:12px">
+    <b>AMS invoice numbering:</b> AMSYYMM-INV1001. The sequence continues during the year and resets to 1001 in January.
+  </div>
   <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
-    ${['unpaid','partial','paid','overdue'].map(s=>{
-      const total=DB.invoices.filter(i=>invStatus(i)===s).reduce((x,i)=>x+i.total,0);
-      const cls={unpaid:'r',partial:'warn',paid:'g',overdue:'r'};
-      const lbl={unpaid:'Belum Bayar',partial:'Sebagian',paid:'Lunas',overdue:'Jatuh Tempo'};
-      return`<div class="stat ${cls[s]}"><div class="stat-lbl">${lbl[s]}</div><div class="stat-val">${rp(total)}</div><div class="stat-sub">${DB.invoices.filter(i=>invStatus(i)===s).length} invoice</div></div>`;
+    ${statusCards.map(([status,label,cls])=>{
+      const list=(DB.invoices||[]).filter(i=>invStatus(i)===status);
+      return`<div class="stat ${cls}"><div class="stat-lbl">${label}</div><div class="stat-val">${rp(list.reduce((sum,i)=>sum+(Number(i.total)||0),0))}</div><div class="stat-sub">${list.length} invoice${list.length===1?'':'s'}</div></div>`;
     }).join('')}
   </div>
   <div class="card"><div class="tbl-wrap"><table style="font-size:11.5px">
     <thead><tr>
-      <th>No. Invoice</th><th>Tgl</th><th>Jatuh Tempo</th><th>Customer</th>
-      <th style="text-align:right">DPP</th><th style="text-align:right">Pajak</th>
-      <th style="text-align:right">Total</th><th>Status</th><th>Aksi</th>
+      <th>Invoice No.</th><th>Invoice Date</th><th>Due Date</th><th>Customer</th>
+      <th style="text-align:right">Taxable Base</th><th style="text-align:right">Net Tax</th>
+      <th style="text-align:right">Total</th><th>Status</th><th>Actions</th>
     </tr></thead>
     <tbody>
       ${sorted.length?sorted.map(inv=>{
         const ct=DB.contacts.find(x=>x.id===inv.contactId);
         const st=invStatus(inv);
-        const stCls={unpaid:'b-warn',confirmed:'b-info',partial:'b-purple',paid:'b-ok',overdue:'b-bad',draft:'b-gray'};
-        const stLbl={unpaid:'Belum Bayar',confirmed:'Diterbitkan',partial:'Sebagian',paid:'Lunas',overdue:'Jatuh Tempo',draft:'Draft'};
-        const taxTotal=(inv.ppnAmt||0)-(inv.pph23Amt||0)-(inv.pph4Amt||0);
+        const taxTotal=(Number(inv.ppnAmt)||0)-(Number(inv.pph23Amt)||0)-(Number(inv.pph4Amt)||0);
         return`<tr>
-          <td class="fw7"><a onclick="printInvoice('${inv.id}')" style="cursor:pointer;color:var(--acc)">${inv.no}</a></td>
-          <td>${fDate(inv.date)}</td>
-          <td style="color:${st==='overdue'?'#dc2626':'inherit'}">${fDate(inv.dueDate)}</td>
-          <td>${ct?ct.name:'<span class="muted">—</span>'}</td>
-          <td style="text-align:right">${rp(inv.dpp||inv.subtotal)}</td>
+          <td class="fw7"><a onclick="printInvoice('${inv.id}')" style="cursor:pointer;color:var(--acc)">${invoiceEscapeHtml(inv.no)}</a></td>
+          <td>${invoiceDateLong(inv.date)}</td>
+          <td style="color:${st==='overdue'?'#dc2626':'inherit'}">${invoiceDateLong(inv.dueDate)}</td>
+          <td>${ct?invoiceEscapeHtml(invoiceCustomerDisplay(ct)):'<span class="muted">—</span>'}</td>
+          <td style="text-align:right">${rp(inv.dpp??inv.subtotal??0)}</td>
           <td style="text-align:right;color:${taxTotal>=0?'#d97706':'#dc2626'}">${taxTotal>=0?'+':''}${rp(taxTotal)}</td>
-          <td style="text-align:right;font-weight:700">${rp(inv.total)}</td>
-          <td><span class="badge ${stCls[st]||'b-gray'}">${stLbl[st]||st}</span></td>
+          <td style="text-align:right;font-weight:700">${rp(inv.total||0)}</td>
+          <td>${invoiceStatusBadge(st)}</td>
           <td class="gap8">
-            <button class="btn btn-out btn-xs" onclick="printInvoice('${inv.id}')">👁</button>
-            ${inv.status==='draft'?`<button class="btn btn-acc btn-xs" onclick="confirmInvoice('${inv.id}')">✅</button>`:''}
-            ${['confirmed','unpaid','partial','overdue'].includes(inv.status)?`<button class="btn btn-ok btn-xs" onclick="openPayInvoice('${inv.id}')">💰</button>`:''}
-            ${inv.status==='draft'?`<button class="btn btn-acc btn-xs" onclick="openEditInvoice('${inv.id}')">✏️</button>`:''}
-            <button class="btn btn-bad btn-xs" onclick="delInvoice('${inv.id}')">✕</button>
+            <button class="btn btn-out btn-xs" onclick="printInvoice('${inv.id}')" title="Preview / Print">👁</button>
+            ${inv.status==='draft'?`<button class="btn btn-acc btn-xs" onclick="confirmInvoice('${inv.id}')" title="Issue Invoice">✅</button>`:''}
+            ${['confirmed','unpaid','partial','overdue'].includes(inv.status)?`<button class="btn btn-ok btn-xs" onclick="openPayInvoice('${inv.id}')" title="Record Payment">💰</button>`:''}
+            ${inv.status==='draft'?`<button class="btn btn-acc btn-xs" onclick="openEditInvoice('${inv.id}')" title="Edit Draft">✏️</button>`:''}
+            <button class="btn btn-bad btn-xs" onclick="delInvoice('${inv.id}')" title="Delete">✕</button>
           </td>
         </tr>`;
-      }).join(''):`<tr><td colspan="9" class="tbl-empty">Belum ada invoice.</td></tr>`}
+      }).join(''):`<tr><td colspan="9" class="tbl-empty">No invoices have been created.</td></tr>`}
     </tbody>
   </table></div></div>`;
 }
 
 let invItemCount=0;
 
-function openAddInvoice(prefill=null){
-  invItemCount=1;
-  window._bastSourceId=prefill?.bastId||null;
-  const tx=DB.taxSettings||{ppnRate:11,pph23Rate:2,pph4Rate:2};
-  const no='INV-'+today().replace(/-/g,'')+'-'+(DB.invoices.length+1).toString().padStart(3,'0');
-  openModal('Buat Invoice Baru',`
-  <div class="fr3">
-    <div class="fg"><label>No. Invoice</label><input id="inv-no" value="${no}"></div>
-    <div class="fg"><label>Tanggal Invoice</label><input type="date" id="inv-date" value="${today()}"></div>
-    <div class="fg"><label>Jatuh Tempo</label><input type="date" id="inv-due" value="${addDays(today(),30)}"></div>
-  </div>
-  <div class="fr2">
-    <div class="fg"><label>Customer</label>
-      <select id="inv-contact"><option value="">— Pilih Customer —</option>${contactOptions('customer')}</select>
-    </div>
-    <div class="fg"><label>Akun Penerimaan</label><select id="inv-bank">${acctOptions(['aktiva'])}</select></div>
-  </div>
-  <div style="margin:12px 0 4px;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Detail Item / Barang & Jasa</div>
-  <div style="display:grid;grid-template-columns:2fr 55px 105px 90px 75px 90px 26px;gap:4px;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;padding:0 2px">
-    <div>Produk / Deskripsi</div><div style="text-align:center">Qty</div><div style="text-align:right">Harga Jual</div>
-    <div style="text-align:center;color:#059669">Diskon Rp</div><div style="text-align:center;color:#059669">Disc %</div>
-    <div style="text-align:right">Subtotal</div><div></div>
-  </div>
-  <div id="inv-items">${invItemRow(0)}</div>
-  <button class="btn btn-out btn-sm" style="margin-top:8px" onclick="addInvRow()">+ Tambah Baris</button>
-  <div class="fr2" style="margin-top:14px;gap:14px;align-items:flex-start">
-    <div>
-      <div class="fg" style="margin-bottom:10px"><label>Catatan / Notes</label>
-        <textarea id="inv-note" rows="3" style="resize:none;width:100%;font-size:11px;padding:6px;border:1px solid var(--bdr);border-radius:6px;font-family:var(--font)"></textarea>
-      </div>
-      <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:.5px">Pajak / Tax</div>
-      ${[
-        ['inv-ppn','inv-ppn-rate',tx.ppnRate,'PPN','b-warn','inv-ppn-amt','#d97706'],
-        ['inv-pph23','inv-pph23-rate',tx.pph23Rate,'PPh 23 (dipotong customer)','b-bad','inv-pph23-amt','#dc2626'],
-        ['inv-pph4','inv-pph4-rate',tx.pph4Rate,'PPh 4(2)','b-bad','inv-pph4-amt','#dc2626'],
-      ].map(([cid,rid,rate,lbl,badge,amtId,col])=>`
-      <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;cursor:pointer;padding:5px 0;border-bottom:1px solid #f1f5f9">
-        <input type="checkbox" id="${cid}" onchange="calcInvTotals()">
-        <span>${lbl}</span>
-        <input type="number" id="${rid}" value="${rate}" min="0" max="100" step="0.1"
-          style="width:48px;padding:2px 6px;border:1px solid var(--bdr);border-radius:4px;font-size:11px;text-align:center"
-          oninput="calcInvTotals()">%
-        <span id="${amtId}" style="margin-left:auto;color:${col};font-weight:600;font-size:11px">Rp 0</span>
-      </label>`).join('')}
-    </div>
-    <div style="min-width:272px;background:#f8fafc;border-radius:10px;border:1px solid var(--bdr);padding:14px;font-size:12px">
-      <div style="font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px;letter-spacing:.5px">Ringkasan / Summary</div>
-      ${[
-        ['inv-s-sub','Subtotal',''],
-        ['inv-s-disc','Total Diskon','color:#059669'],
-        ['inv-s-dpp','DPP','font-weight:700;border-bottom:1px solid var(--bdr);padding-bottom:6px'],
-        ['inv-s-ppn','PPN','color:#d97706'],
-        ['inv-s-p23','PPh 23 (kurang penerimaan)','color:#dc2626'],
-        ['inv-s-p4','PPh 4(2)','color:#dc2626'],
-      ].map(([id,lbl,style])=>`
-      <div style="display:flex;justify-content:space-between;padding:4px 0;${style}">
-        <span style="color:#475569">${lbl}</span><span id="${id}" style="font-weight:600">Rp 0</span>
-      </div>`).join('')}
-      <div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:2px solid #0f172a;margin-top:6px;font-size:14px;font-weight:800">
-        <span>TOTAL TAGIHAN</span><span id="inv-s-total" style="color:#E8510A">Rp 0</span>
-      </div>
-    </div>
-  </div>
-  <div class="modal-ft">
-    <button class="btn btn-out" onclick="closeModal()">Batal</button>
-    <button class="btn btn-out" onclick="saveInvoice('draft')">💾 Draft</button>
-    <button class="btn btn-pri" onclick="saveInvoice('confirm')">✅ Terbitkan</button>
-  </div>`,'modal-wide');
-  calcInvTotals();
-  if(prefill){
-    setTimeout(()=>{
-      if(prefill.contactId){const sel=document.getElementById('inv-contact');if(sel)sel.value=prefill.contactId;}
-      if(prefill.note){const nt=document.getElementById('inv-note');if(nt)nt.value=prefill.note;}
-      if(prefill.items&&prefill.items.length){
-        const wrap=document.getElementById('inv-items');
-        if(wrap){
-          wrap.innerHTML='';invItemCount=0;
-          prefill.items.forEach(it=>{
-            wrap.insertAdjacentHTML('beforeend',invItemRow(invItemCount++));
-            const row=document.getElementById('invr-'+(invItemCount-1));
-            if(!row)return;
-            const descInp=row.querySelector('.inv-desc');
-            const nums=row.querySelectorAll('input[type=number]');
-            if(descInp)descInp.value=it.deskripsi||'';
-            if(nums[0])nums[0].value=Number(it.qty)||1;
-            if(nums[1])nums[1].value=Number(it.nilai)||0;
-          });
-          calcInvTotals();
-        }
-      }
-    },50);
-  }
+function invoiceTaxRows(tx,inv){
+  const rows=[
+    ['inv-ppn','inv-ppn-rate',inv?.ppnRate??tx.ppnRate,'VAT (PPN)',!!inv?.ppn,'inv-ppn-amt','#d97706'],
+    ['inv-pph23','inv-pph23-rate',inv?.pph23Rate??tx.pph23Rate,'Withholding Tax Article 23 (PPh 23)',!!inv?.pph23,'inv-pph23-amt','#dc2626'],
+    ['inv-pph4','inv-pph4-rate',inv?.pph4Rate??tx.pph4Rate,'Final Income Tax Article 4(2) (PPh 4(2))',!!inv?.pph4,'inv-pph4-amt','#dc2626']
+  ];
+  return rows.map(([cid,rid,rate,label,checked,amountId,color])=>`
+    <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer;padding:5px 0;border-bottom:1px solid #f1f5f9;text-transform:none;letter-spacing:0">
+      <input type="checkbox" id="${cid}" onchange="calcInvTotals()"${checked?' checked':''}>
+      <span>${label}</span>
+      <input type="number" id="${rid}" value="${rate}" min="0" max="100" step="0.1"
+        style="width:52px;padding:2px 6px;border:1px solid var(--bdr);border-radius:4px;font-size:11px;text-align:center"
+        oninput="calcInvTotals()">%
+      <span id="${amountId}" style="margin-left:auto;color:${color};font-weight:600;font-size:11px">Rp 0</span>
+    </label>`).join('');
 }
 
-function invItemRow(i){
-  return`<div class="inv-row" id="invr-${i}" style="display:grid;grid-template-columns:2fr 55px 105px 90px 75px 90px 26px;gap:4px;margin-bottom:4px;align-items:center">
-    <div style="display:flex;flex-direction:column;gap:3px">
-      <select style="font-size:11px;padding:3px 6px;border:1px solid var(--bdr);border-radius:5px" onchange="fillInvProduct(${i},this)">
-        <option value="">— Produk / manual —</option>${productOptions()}
-      </select>
-      <input type="text" class="inv-desc" placeholder="Deskripsi manual (opsional)" style="font-size:10px;padding:2px 5px;border:1px solid var(--bdr);border-radius:5px;color:#64748b;width:100%;box-sizing:border-box">
+function openAddInvoice(prefill=null){
+  window._bastSourceId=prefill?.bastId||null;
+  const items=(prefill?.items||[]).map(it=>({
+    productId:it.productId||null,
+    desc:it.desc||it.deskripsi||'',
+    qty:Number(it.qty)||1,
+    unit:it.unit||it.satuan||'',
+    price:Number(it.price??it.nilai??it.harga)||0,
+    discRp:Number(it.discRp)||0,
+    discPct:Number(it.discPct??it.discount)||0
+  }));
+  openInvoiceForm(null,{...prefill,items:items.length?items:[{}]});
+}
+
+function openEditInvoice(id){
+  const inv=(DB.invoices||[]).find(x=>x.id===id);
+  if(!inv||inv.status!=='draft')return alert('Only Draft invoices can be edited.');
+  openInvoiceForm(inv,null);
+}
+
+function openInvoiceForm(inv,prefill){
+  const isEdit=!!inv;
+  const tx=DB.taxSettings||{ppnRate:11,pph23Rate:2,pph4Rate:2};
+  const date=inv?.date||today();
+  const dueDate=inv?.dueDate||addDays(date,30);
+  const initialNo=isEdit&&isAmsInvoiceNumberValid(inv.no,date)?inv.no:generateInvoiceNumber(date,inv?.id);
+  const items=isEdit?(inv.items||[]):(prefill?.items||[{}]);
+  invItemCount=Math.max(1,items.length);
+  const itemHtml=(items.length?items:[{}]).map((item,i)=>invItemRow(i,item)).join('');
+  const contactId=inv?.contactId||prefill?.contactId||'';
+  const bankAcc=inv?.bankAcc||'';
+  const note=inv?.note||prefill?.note||'';
+  const modalTitle=isEdit?`Edit Draft Invoice — ${invoiceEscapeHtml(initialNo)}`:'Create New Invoice';
+  openModal(modalTitle,`
+    <div class="alert a-info" style="font-size:11.5px">
+      The invoice number is generated automatically using the AMS standard: <b>AMSYYMM-INV1001</b>.
     </div>
-    <input type="number" value="1" min="0.01" step="any" oninput="calcInvTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
-    <input type="number" value="0" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px" placeholder="Harga">
-    <input type="number" value="0" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;color:#059669" placeholder="Disc Rp" title="Diskon nominal">
-    <input type="number" value="0" min="0" max="100" step="0.1" oninput="calcInvTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;color:#059669" placeholder="%" title="Diskon %">
-    <input type="number" value="0" readonly style="text-align:right;padding:3px 5px;border:1px solid #e2e8f0;border-radius:5px;background:#f8fafc;font-weight:600">
-    <button class="btn btn-bad btn-xs" onclick="removeInvRow(${i})">✕</button>
+    <div class="fr3">
+      <div class="fg"><label>Invoice Number</label><input id="inv-no" value="${invoiceEscapeAttr(initialNo)}" readonly style="background:#f8fafc;font-weight:700"></div>
+      <div class="fg"><label>Invoice Date</label><input type="date" id="inv-date" value="${date}" onchange="refreshInvoiceNumber('${inv?.id||''}')"></div>
+      <div class="fg"><label>Due Date</label><input type="date" id="inv-due" value="${dueDate}"></div>
+    </div>
+    <div class="fr2">
+      <div class="fg"><label>Customer</label>
+        <select id="inv-contact"><option value="">— Select Customer —</option>${contactOptions('customer',contactId)}</select>
+      </div>
+      <div class="fg"><label>Receiving Account</label><select id="inv-bank">${acctOptions(['aktiva'],bankAcc)}</select></div>
+    </div>
+    <div style="margin:12px 0 5px;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Invoice Items / Scope of Work</div>
+    <div style="display:grid;grid-template-columns:2fr 60px 70px 105px 86px 70px 96px 26px;gap:4px;font-size:8.7px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;padding:0 2px;min-width:810px">
+      <div>Description</div><div style="text-align:center">Qty / Vol.</div><div style="text-align:center">Unit</div><div style="text-align:right">Unit Price</div>
+      <div style="text-align:right;color:#059669">Discount</div><div style="text-align:center;color:#059669">Disc. %</div>
+      <div style="text-align:right">Amount</div><div></div>
+    </div>
+    <div id="inv-items" style="overflow-x:auto">${itemHtml}</div>
+    <button class="btn btn-out btn-sm" style="margin-top:8px" onclick="addInvRow()">+ Add Line</button>
+    <div class="fr2" style="margin-top:14px;gap:14px;align-items:flex-start">
+      <div>
+        <div class="fg" style="margin-bottom:10px"><label>Notes</label>
+          <textarea id="inv-note" rows="4" style="resize:vertical;width:100%;font-size:11px;padding:7px;border:1px solid var(--bdr);border-radius:6px;font-family:var(--font)" placeholder="Payment terms, project reference, or additional information">${invoiceEscapeHtml(note)}</textarea>
+        </div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:.5px">Taxes</div>
+        ${invoiceTaxRows(tx,inv)}
+      </div>
+      <div style="min-width:280px;background:#f8fafc;border-radius:10px;border:1px solid var(--bdr);padding:14px;font-size:12px">
+        <div style="font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px;letter-spacing:.5px">Invoice Summary</div>
+        ${[
+          ['inv-s-sub','Gross Subtotal',''],
+          ['inv-s-disc','Total Discount','color:#059669'],
+          ['inv-s-dpp','Taxable Base','font-weight:700;border-bottom:1px solid var(--bdr);padding-bottom:6px'],
+          ['inv-s-ppn','VAT (PPN)','color:#d97706'],
+          ['inv-s-p23','PPh 23 Deduction','color:#dc2626'],
+          ['inv-s-p4','PPh 4(2) Deduction','color:#dc2626']
+        ].map(([id,label,style])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;${style}"><span style="color:#475569">${label}</span><span id="${id}" style="font-weight:600">Rp 0</span></div>`).join('')}
+        <div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:2px solid #0f172a;margin-top:6px;font-size:14px;font-weight:800">
+          <span>TOTAL DUE</span><span id="inv-s-total" style="color:#E8510A">Rp 0</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-out" onclick="closeModal()">Cancel</button>
+      ${isEdit
+        ?`<button class="btn btn-pri" onclick="saveEditInvoice('${inv.id}')">💾 Save Changes</button>`
+        :`<button class="btn btn-out" onclick="saveInvoice('draft')">💾 Save Draft</button><button class="btn btn-pri" onclick="saveInvoice('confirm')">✅ Issue Invoice</button>`}
+    </div>`,'modal-wide');
+  calcInvTotals();
+}
+
+function invItemRow(i,item={}){
+  const qty=Number(item.qty)||1;
+  const price=Number(item.price)||0;
+  const discRp=Number(item.discRp)||0;
+  const discPct=Number(item.discPct??item.discount)||0;
+  const product=DB.products.find(p=>p.id===item.productId);
+  const unit=item.unit||product?.unit||'';
+  const desc=item.desc||item.name||'';
+  return`<div class="inv-row" id="invr-${i}" style="display:grid;grid-template-columns:2fr 60px 70px 105px 86px 70px 96px 26px;gap:4px;margin-bottom:4px;align-items:center;min-width:810px">
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <select class="inv-product" style="font-size:11px;padding:3px 6px;border:1px solid var(--bdr);border-radius:5px" onchange="fillInvProduct(${i},this)">
+        <option value="">— Product / Manual Entry —</option>${productOptions(item.productId)}
+      </select>
+      <input type="text" class="inv-desc" value="${invoiceEscapeAttr(desc)}" placeholder="Description or scope of work" style="font-size:10px;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;color:#475569;width:100%;box-sizing:border-box">
+    </div>
+    <input type="number" class="inv-qty" value="${qty}" min="0.01" step="any" oninput="calcInvTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
+    <input type="text" class="inv-unit" value="${invoiceEscapeAttr(unit)}" placeholder="Unit" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;font-size:10.5px">
+    <input type="number" class="inv-price" value="${price}" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px" placeholder="0">
+    <input type="number" class="inv-disc-rp" value="${discRp}" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;color:#059669" placeholder="0" title="Discount amount">
+    <input type="number" class="inv-disc-pct" value="${discPct}" min="0" max="100" step="0.1" oninput="calcInvTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px;color:#059669" placeholder="%" title="Discount percentage">
+    <input type="number" class="inv-line-total" value="${Number(item.subtotal)||0}" readonly style="text-align:right;padding:3px 5px;border:1px solid #e2e8f0;border-radius:5px;background:#f8fafc;font-weight:600">
+    <button class="btn btn-bad btn-xs" onclick="removeInvRow(${i})" title="Remove line">✕</button>
   </div>`;
 }
-function addInvRow(){document.getElementById('inv-items').insertAdjacentHTML('beforeend',invItemRow(invItemCount++));}
+function addInvRow(){
+  const wrap=document.getElementById('inv-items');
+  if(wrap)wrap.insertAdjacentHTML('beforeend',invItemRow(invItemCount++));
+}
 function removeInvRow(i){const el=document.getElementById('invr-'+i);if(el)el.remove();calcInvTotals();}
-function fillInvProduct(i,sel){
-  const p=DB.products.find(x=>x.id===sel.value);if(!p)return;
+function fillInvProduct(i,select){
+  const p=DB.products.find(x=>x.id===select.value);if(!p)return;
   const row=document.getElementById('invr-'+i);if(!row)return;
-  const ins=row.querySelectorAll('input[type=number]');
-  ins[1].value=p.sellPrice||0;ins[2].value=0;ins[3].value=0;
+  const price=row.querySelector('.inv-price');
+  const unit=row.querySelector('.inv-unit');
+  const desc=row.querySelector('.inv-desc');
+  const discRp=row.querySelector('.inv-disc-rp');
+  const discPct=row.querySelector('.inv-disc-pct');
+  if(price)price.value=p.sellPrice||0;
+  if(unit)unit.value=p.unit||'';
+  if(desc&&!desc.value)desc.value=p.name||'';
+  if(discRp)discRp.value=0;
+  if(discPct)discPct.value=0;
   calcInvTotals();
 }
 function calcInvTotals(){
   let subtotal=0,totalDisc=0;
   document.querySelectorAll('#inv-items .inv-row').forEach(row=>{
-    const ins=row.querySelectorAll('input[type=number]');
-    const qty=parseFloat(ins[0].value)||0,price=parseFloat(ins[1].value)||0;
-    const discRp=parseFloat(ins[2].value)||0,discPct=parseFloat(ins[3].value)||0;
-    const line=qty*price;
-    const disc=Math.min(line,discRp+Math.round((line-discRp)*discPct/100));
-    const net=Math.max(0,line-disc);
-    ins[4].value=Math.round(net);
-    subtotal+=line;totalDisc+=disc;
+    const qty=parseFloat(row.querySelector('.inv-qty')?.value)||0;
+    const price=parseFloat(row.querySelector('.inv-price')?.value)||0;
+    const discRp=Math.max(0,parseFloat(row.querySelector('.inv-disc-rp')?.value)||0);
+    const discPct=Math.min(100,Math.max(0,parseFloat(row.querySelector('.inv-disc-pct')?.value)||0));
+    const gross=qty*price;
+    const discount=Math.min(gross,discRp+Math.round(Math.max(0,gross-discRp)*discPct/100));
+    const net=Math.max(0,Math.round(gross-discount));
+    const totalEl=row.querySelector('.inv-line-total');if(totalEl)totalEl.value=net;
+    subtotal+=gross;totalDisc+=discount;
   });
   const dpp=Math.max(0,subtotal-totalDisc);
   const ppnRate=parseFloat(document.getElementById('inv-ppn-rate')?.value)||11;
@@ -5319,324 +5440,406 @@ function calcInvTotals(){
   const pph23=document.getElementById('inv-pph23')?.checked?Math.round(dpp*pph23Rate/100):0;
   const pph4=document.getElementById('inv-pph4')?.checked?Math.round(dpp*pph4Rate/100):0;
   const total=dpp+ppn-pph23-pph4;
-  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v<0?`-${rp(-v)}`:rp(v);};
+  const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value<0?`-${rp(-value)}`:rp(value);};
   set('inv-s-sub',subtotal);set('inv-s-disc',-totalDisc);set('inv-s-dpp',dpp);
   set('inv-s-ppn',ppn);set('inv-s-p23',-pph23);set('inv-s-p4',-pph4);set('inv-s-total',total);
-  if(document.getElementById('inv-ppn-amt'))document.getElementById('inv-ppn-amt').textContent=rp(ppn);
-  if(document.getElementById('inv-pph23-amt'))document.getElementById('inv-pph23-amt').textContent=rp(pph23);
-  if(document.getElementById('inv-pph4-amt'))document.getElementById('inv-pph4-amt').textContent=rp(pph4);
+  const taxAmountMap={'inv-ppn-amt':ppn,'inv-pph23-amt':pph23,'inv-pph4-amt':pph4};
+  Object.entries(taxAmountMap).forEach(([id,value])=>{const el=document.getElementById(id);if(el)el.textContent=rp(value);});
 }
-function saveInvoice(action){
+function collectInvoiceForm(excludeId){
   const no=v('inv-no'),date=v('inv-date'),dueDate=v('inv-due'),contactId=v('inv-contact'),bankAcc=v('inv-bank');
-  if(!no||!date)return alert('No. Invoice dan tanggal wajib!');
-  if(action==='confirm'&&!checkLock(date))return;
+  if(!no||!date)return{error:'Invoice number and invoice date are required.'};
+  if(!isAmsInvoiceNumberValid(no,date))return{error:'The invoice number does not match the AMS format for the selected invoice date.'};
+  if(invoiceNumberExists(no,excludeId))return{error:`Invoice number ${no} already exists.`};
+  if(!contactId)return{error:'Select a customer.'};
+  if(!dueDate)return{error:'Due date is required.'};
   const items=[];let subtotal=0,totalDisc=0;
   document.querySelectorAll('#inv-items .inv-row').forEach(row=>{
-    const sel=row.querySelector('select');
-    const ins=row.querySelectorAll('input[type=number]');
-    const qty=parseFloat(ins[0].value)||0,price=parseFloat(ins[1].value)||0;
-    const discRp=parseFloat(ins[2].value)||0,discPct=parseFloat(ins[3].value)||0;
-    if(qty&&price>0){
-      const line=qty*price;
-      const disc=Math.min(line,discRp+Math.round((line-discRp)*discPct/100));
-      const net=Math.max(0,Math.round(line-disc));
-      const desc=row.querySelector('.inv-desc')?.value||'';
-      items.push({productId:sel.value||null,desc,qty,price,discRp,discPct,discount:discPct,subtotal:net});
-      subtotal+=line;totalDisc+=disc;
+    const productId=row.querySelector('.inv-product')?.value||null;
+    const desc=(row.querySelector('.inv-desc')?.value||'').trim();
+    const unit=(row.querySelector('.inv-unit')?.value||'').trim();
+    const qty=parseFloat(row.querySelector('.inv-qty')?.value)||0;
+    const price=parseFloat(row.querySelector('.inv-price')?.value)||0;
+    const discRp=Math.max(0,parseFloat(row.querySelector('.inv-disc-rp')?.value)||0);
+    const discPct=Math.min(100,Math.max(0,parseFloat(row.querySelector('.inv-disc-pct')?.value)||0));
+    if(qty>0&&price>0){
+      const gross=qty*price;
+      const discount=Math.min(gross,discRp+Math.round(Math.max(0,gross-discRp)*discPct/100));
+      const net=Math.max(0,Math.round(gross-discount));
+      items.push({productId,desc,unit,qty,price,discRp,discPct,discount:discPct,subtotal:net});
+      subtotal+=gross;totalDisc+=discount;
     }
   });
-  if(!items.length)return alert('Tambah minimal 1 item!');
+  if(!items.length)return{error:'Add at least one invoice item with a quantity and unit price above zero.'};
   const dpp=Math.max(0,subtotal-totalDisc);
   const ppnRate=parseFloat(v('inv-ppn-rate'))||11;
   const pph23Rate=parseFloat(v('inv-pph23-rate'))||2;
   const pph4Rate=parseFloat(v('inv-pph4-rate'))||2;
-  const hasPPN=document.getElementById('inv-ppn').checked;
-  const hasPPh23=document.getElementById('inv-pph23').checked;
-  const hasPPh4=document.getElementById('inv-pph4').checked;
-  const ppnAmt=hasPPN?Math.round(dpp*ppnRate/100):0;
-  const pph23Amt=hasPPh23?Math.round(dpp*pph23Rate/100):0;
-  const pph4Amt=hasPPh4?Math.round(dpp*pph4Rate/100):0;
-  const total=dpp+ppnAmt-pph23Amt-pph4Amt;
-  const inv={id:uid(),no,date,dueDate,contactId,bankAcc,items,
+  const ppn=!!document.getElementById('inv-ppn')?.checked;
+  const pph23=!!document.getElementById('inv-pph23')?.checked;
+  const pph4=!!document.getElementById('inv-pph4')?.checked;
+  const ppnAmt=ppn?Math.round(dpp*ppnRate/100):0;
+  const pph23Amt=pph23?Math.round(dpp*pph23Rate/100):0;
+  const pph4Amt=pph4?Math.round(dpp*pph4Rate/100):0;
+  return{data:{
+    no,date,dueDate,contactId,bankAcc,items,
     subtotal:Math.round(subtotal),discTotal:Math.round(totalDisc),dpp:Math.round(dpp),
-    ppn:hasPPN,ppnRate,ppnAmt,pph23:hasPPh23,pph23Rate,pph23Amt,
-    pph4:hasPPh4,pph4Rate,pph4Amt,total:Math.round(total),
-    note:v('inv-note'),status:'draft',payments:[]};
-  DB.invoices.push(inv);
-  if(window._sphSourceId){
-    const srcSph=(DB.sphs||[]).find(x=>x.id===window._sphSourceId);
-    if(srcSph){
-      srcSph.link_invoice_id=inv.id;
-      srcSph.updated_at=Date.now();
-    }
-    window._sphSourceId=null;
-  }
-  if(window._bastSourceId){
-    const srcBast=(DB.basts||[]).find(x=>x.id===window._bastSourceId);
-    if(srcBast){srcBast.link_invoice_id=inv.id;srcBast.updated_at=Date.now();}
-    window._bastSourceId=null;
-  }
-  if(action==='confirm'){_confirmInvoice(inv);logAudit('Buat Invoice',`${inv.no} — Total: ${rp(inv.total)}`);}
-  saveDB();closeModal();nav('invoices');
+    ppn,ppnRate,ppnAmt,pph23,pph23Rate,pph23Amt,pph4,pph4Rate,pph4Amt,
+    total:Math.round(dpp+ppnAmt-pph23Amt-pph4Amt),note:v('inv-note')
+  }};
 }
-// ── Sesi 6F: Buat Invoice dari BAST ──
+function saveInvoice(action){
+  const collected=collectInvoiceForm(null);
+  if(collected.error)return alert(collected.error);
+  const data=collected.data;
+  if(action==='confirm'&&!checkLock(data.date))return;
+  const inv={id:uid(),...data,status:'draft',payments:[]};
+  const sphSource=window._sphSourceId?(DB.sphs||[]).find(x=>x.id===window._sphSourceId):null;
+  const bastSource=window._bastSourceId?(DB.basts||[]).find(x=>x.id===window._bastSourceId):null;
+  const prevSphLink=sphSource?.link_invoice_id??null;
+  const prevBastLink=bastSource?.link_invoice_id??null;
+  DB.invoices.push(inv);
+  if(sphSource){sphSource.link_invoice_id=inv.id;sphSource.updated_at=Date.now();}
+  if(bastSource){bastSource.link_invoice_id=inv.id;bastSource.updated_at=Date.now();}
+  let confirmation=null;
+  if(action==='confirm')confirmation=_confirmInvoice(inv);
+  if(!saveDB()){
+    DB.invoices=DB.invoices.filter(x=>x.id!==inv.id);
+    rollbackInvoiceConfirmation(inv,confirmation);
+    if(sphSource)sphSource.link_invoice_id=prevSphLink;
+    if(bastSource)bastSource.link_invoice_id=prevBastLink;
+    return;
+  }
+  window._sphSourceId=null;window._bastSourceId=null;
+  logAudit(action==='confirm'?'Create and Issue Invoice':'Create Invoice Draft',`${inv.no} — Total: ${rp(inv.total)}`);
+  closeModal();nav('invoices');
+}
+function saveEditInvoice(id){
+  const index=(DB.invoices||[]).findIndex(x=>x.id===id);if(index<0)return;
+  const inv=DB.invoices[index];
+  if(inv.status!=='draft')return alert('Only Draft invoices can be edited.');
+  const collected=collectInvoiceForm(id);
+  if(collected.error)return alert(collected.error);
+  const previous=JSON.parse(JSON.stringify(inv));
+  Object.assign(inv,collected.data);
+  if(!saveDB()){
+    DB.invoices[index]=previous;
+    return;
+  }
+  logAudit('Edit Invoice',inv.no);closeModal();nav('invoices');
+}
+
+// ── Create Invoice from BAST ──
 function openInvoiceFromBast(bastId){
   const b=(DB.basts||[]).find(x=>x.id===bastId);
-  if(!b)return alert('BAST tidak ditemukan.');
+  if(!b)return alert('BAST record was not found.');
   if(b.link_invoice_id){
     const existing=DB.invoices.find(x=>x.id===b.link_invoice_id);
     const invNo=existing?existing.no:b.link_invoice_id;
-    if(!confirm('BAST ini sudah terhubung ke Invoice '+invNo+'.\nTetap buat invoice baru?'))return;
+    if(!confirm(`This BAST is already linked to invoice ${invNo}.\nCreate another invoice anyway?`))return;
   }
-  const note='Berdasarkan '+b.id+(b.pihak2?.perusahaan?' — '+b.pihak2.perusahaan:'')
+  const note='Based on '+b.id+(b.pihak2?.perusahaan?' — '+b.pihak2.perusahaan:'')
     +'\n\nItems:\n'+(b.items||[]).map((it,i)=>`${i+1}. ${it.deskripsi||'-'} (${it.qty||1} ${it.satuan||'unit'})`).join('\n');
   openAddInvoice({bastId,contactId:b.pihak2?.contact_id||'',note,items:b.items||[]});
 }
 
-function openEditInvoice(id){
-  const inv=DB.invoices.find(x=>x.id===id);
-  if(!inv||inv.status!=='draft')return alert('Hanya invoice Draft yang bisa diedit.');
-  const tx=DB.taxSettings||{ppnRate:11,pph23Rate:2,pph4Rate:2};
-  openModal('✏️ Edit Invoice — '+inv.no,`
-  <div class="fr3">
-    <div class="fg"><label>No. Invoice</label><input id="inv-no" value="${inv.no}"></div>
-    <div class="fg"><label>Tanggal</label><input type="date" id="inv-date" value="${inv.date}"></div>
-    <div class="fg"><label>Jatuh Tempo</label><input type="date" id="inv-due" value="${inv.dueDate}"></div>
-  </div>
-  <div class="fr2">
-    <div class="fg"><label>Customer</label><select id="inv-contact"><option value="">— Pilih —</option>${contactOptions('customer',inv.contactId)}</select></div>
-    <div class="fg"><label>Akun Penerimaan</label><select id="inv-bank">${acctOptions(['aktiva'],inv.bankAcc)}</select></div>
-  </div>
-  <div id="inv-items">${inv.items.map((item,i)=>`<div class="inv-row" id="invr-${i}" style="display:grid;grid-template-columns:2fr 55px 105px 90px 26px;gap:4px;margin-bottom:4px;align-items:center">
-    <select style="font-size:11px;padding:3px 6px;border:1px solid var(--bdr);border-radius:5px" onchange="fillInvProduct(${i},this)"><option value="">— Produk / manual —</option>${productOptions(item.productId)}</select>
-    <input type="number" value="${item.qty}" min="0.01" step="any" oninput="calcInvTotals()" style="text-align:center;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
-    <input type="number" value="${item.price}" min="0" oninput="calcInvTotals()" style="text-align:right;padding:3px 5px;border:1px solid var(--bdr);border-radius:5px">
-    <input type="number" value="${item.subtotal}" readonly style="text-align:right;padding:3px 5px;border:1px solid #e2e8f0;border-radius:5px;background:#f8fafc;font-weight:600">
-    <button class="btn btn-bad btn-xs" onclick="removeInvRow(${i})">✕</button>
-  </div>`).join('')}</div>
-  <button class="btn btn-out btn-sm" style="margin-top:8px" onclick="addInvRow()">+ Baris</button>
-  <div class="fr2" style="margin-top:14px">
-    <div>
-      ${[['inv-ppn','inv-ppn-rate',inv.ppnRate||tx.ppnRate,'PPN',inv.ppn],
-         ['inv-pph23','inv-pph23-rate',inv.pph23Rate||tx.pph23Rate,'PPh 23',inv.pph23],
-         ['inv-pph4','inv-pph4-rate',inv.pph4Rate||tx.pph4Rate,'PPh 4(2)',inv.pph4],
-        ].map(([cid,rid,rate,lbl,checked])=>`<label style="display:flex;align-items:center;gap:8px;font-size:11.5px;padding:5px 0">
-        <input type="checkbox" id="${cid}" onchange="calcInvTotals()"${checked?' checked':''}> ${lbl}
-        <input type="number" id="${rid}" value="${rate}" min="0" max="100" step="0.1" style="width:48px;padding:2px 6px;border:1px solid var(--bdr);border-radius:4px;font-size:11px;text-align:center" oninput="calcInvTotals()">%
-      </label>`).join('')}
-    </div>
-    <div style="min-width:220px;background:#f8fafc;border-radius:10px;border:1px solid var(--bdr);padding:12px;font-size:12px">
-      ${[['inv-s-sub','Subtotal'],['inv-s-dpp','DPP','font-weight:700'],['inv-s-ppn','PPN'],['inv-s-p23','PPh 23'],['inv-s-p4','PPh 4(2)']].map(([id,lbl,s])=>`<div style="display:flex;justify-content:space-between;padding:3px 0;${s||''}"><span>${lbl}</span><span id="${id}">Rp 0</span></div>`).join('')}
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0f172a;margin-top:4px;font-size:14px;font-weight:800"><span>TOTAL</span><span id="inv-s-total" style="color:#E8510A">Rp 0</span></div>
-    </div>
-  </div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Batal</button><button class="btn btn-pri" onclick="saveEditInvoice('${id}')">💾 Simpan</button></div>`,'modal-wide');
-  calcInvTotals();
-}
-function saveEditInvoice(id){
-  const inv=DB.invoices.find(x=>x.id===id);if(!inv)return;
-  const no=v('inv-no'),date=v('inv-date'),dueDate=v('inv-due'),contactId=v('inv-contact'),bankAcc=v('inv-bank');
-  if(!no||!date)return alert('No. Invoice dan tanggal wajib!');
-  const items=[];let subtotal=0;
-  document.querySelectorAll('#inv-items .inv-row').forEach(row=>{
-    const sel=row.querySelector('select');const ins=row.querySelectorAll('input[type=number]');
-    const qty=parseFloat(ins[0].value)||0,price=parseFloat(ins[1].value)||0;
-    if(qty&&price>0){const net=Math.round(qty*price);items.push({productId:sel.value||null,qty,price,subtotal:net});subtotal+=net;}
+function _confirmInvoice(inv){
+  const result={previousStatus:inv.status,stockChanges:[],transactionId:null};
+  (inv.items||[]).forEach(item=>{
+    if(!item.productId)return;
+    const p=DB.products.find(x=>x.id===item.productId);if(!p)return;
+    result.stockChanges.push({id:p.id,stock:p.stock});
+    p.stock=Math.max(0,(Number(p.stock)||0)-(Number(item.qty)||0));
   });
-  if(!items.length)return alert('Tambah minimal 1 item!');
-  const hasPPN=document.getElementById('inv-ppn').checked,ppnRate=parseFloat(v('inv-ppn-rate'))||11;
-  const hasPPh23=document.getElementById('inv-pph23').checked,pph23Rate=parseFloat(v('inv-pph23-rate'))||2;
-  const hasPPh4=document.getElementById('inv-pph4').checked,pph4Rate=parseFloat(v('inv-pph4-rate'))||2;
-  const ppnAmt=hasPPN?Math.round(subtotal*ppnRate/100):0;
-  const pph23Amt=hasPPh23?Math.round(subtotal*pph23Rate/100):0;
-  const pph4Amt=hasPPh4?Math.round(subtotal*pph4Rate/100):0;
-  Object.assign(inv,{no,date,dueDate,contactId,bankAcc,items,subtotal,dpp:subtotal,
-    ppn:hasPPN,ppnRate,ppnAmt,pph23:hasPPh23,pph23Rate,pph23Amt,pph4:hasPPh4,pph4Rate,pph4Amt,
-    total:subtotal+ppnAmt-pph23Amt-pph4Amt});
-  logAudit('Edit Invoice',`${inv.no}`);saveDB();closeModal();nav('invoices');
+  const entries=[{acc:'1-10100',deb:inv.total,crd:0},{acc:'4-40000',deb:0,crd:inv.dpp||inv.subtotal}];
+  if(inv.ppn)entries.push({acc:'2-20500',deb:0,crd:inv.ppnAmt});
+  if(inv.pph23)entries.push({acc:'1-10502',deb:0,crd:inv.pph23Amt});
+  if(inv.pph4)entries.push({acc:'2-20505',deb:0,crd:inv.pph4Amt});
+  const tx={id:uid(),date:inv.date,ref:inv.no,desc:`Invoice ${inv.no}`,entries};
+  DB.transactions.push(tx);result.transactionId=tx.id;
+  logBackdateIfNeeded(inv.date,inv.no,`Invoice ${inv.no}`);
+  inv.status='confirmed';
+  return result;
+}
+function recalcInvoiceBalancesAfterRollback(){
+  try{if(typeof recalculateAllBalances==='function')recalculateAllBalances();}catch(e){console.warn('[Invoice] Balance recalculation after rollback failed:',e);}
+}
+function rollbackInvoiceConfirmation(inv,result){
+  if(!result)return;
+  (result.stockChanges||[]).forEach(change=>{const p=DB.products.find(x=>x.id===change.id);if(p)p.stock=change.stock;});
+  if(result.transactionId)DB.transactions=DB.transactions.filter(tx=>tx.id!==result.transactionId);
+  inv.status=result.previousStatus||'draft';
+  recalcInvoiceBalancesAfterRollback();
 }
 function confirmInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);
   if(!inv||inv.status!=='draft')return;
-  _confirmInvoice(inv);saveDB();nav('invoices');
-}
-function _confirmInvoice(inv){
-  inv.items.forEach(item=>{
-    if(item.productId){const p=DB.products.find(x=>x.id===item.productId);if(p)p.stock=Math.max(0,(p.stock||0)-item.qty);}
-  });
-  const entries=[{acc:'1-10100',deb:inv.total,crd:0}];
-  entries.push({acc:'4-40000',deb:0,crd:inv.dpp||inv.subtotal});
-  if(inv.ppn)entries.push({acc:'2-20500',deb:0,crd:inv.ppnAmt});
-  if(inv.pph23)entries.push({acc:'1-10502',deb:0,crd:inv.pph23Amt});
-  if(inv.pph4)entries.push({acc:'2-20505',deb:0,crd:inv.pph4Amt});
-  DB.transactions.push({id:uid(),date:inv.date,ref:inv.no,desc:`Invoice ${inv.no}`,entries});
-  logBackdateIfNeeded(inv.date,inv.no,`Invoice ${inv.no}`);
-  inv.status='confirmed';
+  if(!checkLock(inv.date))return;
+  if(!confirm(`Issue invoice ${inv.no}? After it is issued, the invoice can no longer be edited.`))return;
+  const result=_confirmInvoice(inv);
+  if(!saveDB()){
+    rollbackInvoiceConfirmation(inv,result);
+    return;
+  }
+  logAudit('Issue Invoice',inv.no);nav('invoices');
 }
 function openPayInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);if(!inv)return;
-  const remaining=inv.total-invPaid(inv);
-  openModal(`Record Payment — ${inv.no}`,`
-  <div class="alert a-info">Total: <b>${rp(inv.total)}</b> &nbsp;|&nbsp; Sudah Bayar: <b>${rp(invPaid(inv))}</b> &nbsp;|&nbsp; Sisa: <b style="color:#dc2626">${rp(remaining)}</b></div>
-  <div class="fr2">
-    <div class="fg"><label>Tanggal Bayar</label><input type="date" id="pay-date" value="${today()}"></div>
-    <div class="fg"><label>Jumlah (Rp)</label><input type="number" id="pay-amt" value="${remaining}" min="0"></div>
-  </div>
-  <div class="fg"><label>Via Akun</label><select id="pay-bank">${acctOptions(['aktiva'])}</select></div>
-  <div class="fg"><label>Keterangan</label><input id="pay-note" placeholder="Opsional"></div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Batal</button><button class="btn btn-ok" onclick="saveInvPayment('${id}')">Simpan</button></div>`);
+  const remaining=Math.max(0,(Number(inv.total)||0)-invPaid(inv));
+  openModal(`Record Payment — ${invoiceEscapeHtml(inv.no)}`,`
+    <div class="alert a-info">Invoice Total: <b>${rp(inv.total)}</b> &nbsp;|&nbsp; Paid: <b>${rp(invPaid(inv))}</b> &nbsp;|&nbsp; Outstanding: <b style="color:#dc2626">${rp(remaining)}</b></div>
+    <div class="fr2">
+      <div class="fg"><label>Payment Date</label><input type="date" id="pay-date" value="${today()}"></div>
+      <div class="fg"><label>Payment Amount (Rp)</label><input type="number" id="pay-amt" value="${remaining}" min="0.01" max="${remaining}"></div>
+    </div>
+    <div class="fg"><label>Deposit Account</label><select id="pay-bank">${acctOptions(['aktiva'])}</select></div>
+    <div class="fg"><label>Payment Notes</label><input id="pay-note" placeholder="Optional"></div>
+    <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-ok" onclick="saveInvPayment('${id}')">Save Payment</button></div>`);
 }
 function saveInvPayment(id){
   const inv=DB.invoices.find(x=>x.id===id);if(!inv)return;
   const date=v('pay-date'),amount=parseFloat(v('pay-amt'))||0,bankAcc=v('pay-bank');
-  if(!amount)return alert('Jumlah wajib!');
+  if(amount<=0)return alert('Payment amount must be greater than zero.');
+  if(!date)return alert('Payment date is required.');
+  if(!bankAcc)return alert('Select the receiving account.');
   if(!checkLock(date))return;
-  const remaining=inv.total-invPaid(inv);
-  if(amount>remaining+0.01)return alert(`Melebihi sisa: ${rp(remaining)}`);
-  inv.payments.push({id:uid(),date,amount,bankAcc,note:v('pay-note')});
-  DB.transactions.push({id:uid(),date,ref:inv.no,desc:`Pembayaran Invoice ${inv.no}`,entries:[{acc:bankAcc,deb:amount,crd:0},{acc:'1-10100',deb:0,crd:amount}]});
-  logBackdateIfNeeded(date,inv.no,`Pembayaran ${inv.no}`);
-  saveDB();closeModal();nav('invoices');
+  const remaining=(Number(inv.total)||0)-invPaid(inv);
+  if(amount>remaining+0.01)return alert(`Payment exceeds the outstanding balance of ${rp(remaining)}.`);
+  if(!Array.isArray(inv.payments))inv.payments=[];
+  const payment={id:uid(),date,amount,bankAcc,note:v('pay-note')};
+  const tx={id:uid(),date,ref:inv.no,desc:`Invoice Payment ${inv.no}`,entries:[{acc:bankAcc,deb:amount,crd:0},{acc:'1-10100',deb:0,crd:amount}]};
+  inv.payments.push(payment);DB.transactions.push(tx);
+  logBackdateIfNeeded(date,inv.no,`Payment ${inv.no}`);
+  if(!saveDB()){
+    inv.payments=inv.payments.filter(x=>x.id!==payment.id);
+    DB.transactions=DB.transactions.filter(x=>x.id!==tx.id);
+    recalcInvoiceBalancesAfterRollback();
+    return;
+  }
+  logAudit('Record Invoice Payment',`${inv.no} — ${rp(amount)}`);closeModal();nav('invoices');
 }
 function delInvoice(id){
-  if(!confirm('Hapus invoice? Jurnal terkait juga dihapus.'))return;
-  const inv=DB.invoices.find(x=>x.id===id);
-  if(inv&&!checkLock(inv.date))return;
-  if(inv){
-    DB.transactions=DB.transactions.filter(t=>t.ref!==inv.no);
-    if(inv.status!=='draft')inv.items.forEach(item=>{if(item.productId){const p=DB.products.find(x=>x.id===item.productId);if(p)p.stock=(p.stock||0)+item.qty;}});
+  const inv=DB.invoices.find(x=>x.id===id);if(!inv)return;
+  if(!confirm(`Delete invoice ${inv.no}? Related journal entries will also be deleted.`))return;
+  if(!checkLock(inv.date))return;
+  const index=DB.invoices.findIndex(x=>x.id===id);
+  const removedTransactions=DB.transactions.filter(tx=>tx.ref===inv.no);
+  const stockBefore=[];
+  if(inv.status!=='draft'){
+    (inv.items||[]).forEach(item=>{
+      if(!item.productId)return;
+      const p=DB.products.find(x=>x.id===item.productId);if(!p)return;
+      stockBefore.push({id:p.id,stock:p.stock});
+      p.stock=(Number(p.stock)||0)+(Number(item.qty)||0);
+    });
   }
-  DB.invoices=DB.invoices.filter(x=>x.id!==id);
+  const linkedBasts=(DB.basts||[]).filter(b=>b.link_invoice_id===id).map(b=>b.id);
+  const linkedSphs=(DB.sphs||[]).filter(s=>s.link_invoice_id===id).map(s=>s.id);
+  DB.transactions=DB.transactions.filter(tx=>tx.ref!==inv.no);
+  DB.invoices.splice(index,1);
   (DB.basts||[]).forEach(b=>{if(b.link_invoice_id===id){b.link_invoice_id=null;b.updated_at=Date.now();}});
-  saveDB();logAudit('Hapus Invoice',`Invoice ${inv?inv.no:id} dihapus`);nav('invoices');
+  (DB.sphs||[]).forEach(s=>{if(s.link_invoice_id===id){s.link_invoice_id=null;s.updated_at=Date.now();}});
+  if(!saveDB()){
+    DB.invoices.splice(index,0,inv);
+    DB.transactions.push(...removedTransactions);
+    stockBefore.forEach(change=>{const p=DB.products.find(x=>x.id===change.id);if(p)p.stock=change.stock;});
+    linkedBasts.forEach(bid=>{const b=DB.basts.find(x=>x.id===bid);if(b)b.link_invoice_id=id;});
+    linkedSphs.forEach(sid=>{const s=DB.sphs.find(x=>x.id===sid);if(s)s.link_invoice_id=id;});
+    recalcInvoiceBalancesAfterRollback();
+    return;
+  }
+  logAudit('Delete Invoice',inv.no);nav('invoices');
 }
 function buildInvTaxLines(inv){
   return[
-    inv.ppn?`<tr><td style="padding:4px 0;color:#475569">PPN ${inv.ppnRate}%</td><td style="text-align:right;color:#d97706;font-weight:600">+${rp(inv.ppnAmt)}</td></tr>`:'',
-    inv.pph23?`<tr><td style="padding:4px 0;color:#475569">PPh 23 ${inv.pph23Rate}% (dipotong)</td><td style="text-align:right;color:#dc2626;font-weight:600">-${rp(inv.pph23Amt)}</td></tr>`:'',
-    inv.pph4?`<tr><td style="padding:4px 0;color:#475569">PPh 4(2) ${inv.pph4Rate}%</td><td style="text-align:right;color:#dc2626;font-weight:600">-${rp(inv.pph4Amt)}</td></tr>`:'',
+    inv.ppn?`<tr><td>VAT (PPN) ${inv.ppnRate}%</td><td class="money">+${rp(inv.ppnAmt)}</td></tr>`:'',
+    inv.pph23?`<tr><td>Withholding Tax Article 23 (PPh 23) ${inv.pph23Rate}%</td><td class="money deduction">-${rp(inv.pph23Amt)}</td></tr>`:'',
+    inv.pph4?`<tr><td>Final Income Tax Article 4(2) (PPh 4(2)) ${inv.pph4Rate}%</td><td class="money deduction">-${rp(inv.pph4Amt)}</td></tr>`:''
   ].filter(Boolean).join('');
+}
+function splitInvoiceSignatory(value){
+  const parts=String(value||'').split(/\s+-\s+/);
+  return{name:parts[0]||'',position:parts.slice(1).join(' - ')||'Authorized Signatory'};
 }
 function printInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);if(!inv)return;
-  const co=DB.company;const ct=DB.contacts.find(x=>x.id===inv.contactId);
-  const logo=co.logo?`<img src="${co.logo}" style="height:50px;object-fit:contain;border-radius:6px;background:rgba(255,255,255,.12);padding:4px">`:'<span style="font-size:26px">🔥</span>';
-  const paid=invPaid(inv);const rem=inv.total-paid;
-  const taxLines=buildInvTaxLines(inv);
-  const itemRows=inv.items.map((item,i)=>{
+  const co=DB.company||{};
+  const ct=DB.contacts.find(x=>x.id===inv.contactId)||{};
+  const customerCompany=invoiceCustomerDisplay(ct);
+  const customerContact=ct.name&&ct.name!==customerCompany?ct.name:'';
+  const logoUrl=co.logo&&!String(co.logo).startsWith('data:image/')?co.logo:'https://raw.githubusercontent.com/andrikagroup-hue/SiAkun/main/Gambar/IC.png';
+  const paid=invPaid(inv),remaining=Math.max(0,(Number(inv.total)||0)-paid);
+  const signatory=splitInvoiceSignatory(co.signatory||'');
+  const itemRows=(inv.items||[]).map((item,index)=>{
     const p=DB.products.find(x=>x.id===item.productId);
-    const name=p?`[${p.code}] ${p.name}`:(item.desc||'Item');
-    const discAmt=(item.discRp||0)+Math.round((item.qty*item.price-(item.discRp||0))*(item.discPct||item.discount||0)/100);
-    return`<tr style="background:${i%2?'#f9fafb':'#fff'}">
-      <td style="padding:7px 10px;color:#64748b;font-size:11px">${i+1}</td>
-      <td style="padding:7px 10px;font-size:11.5px;font-weight:600">${name}</td>
-      <td style="padding:7px 10px;text-align:center;font-size:11.5px">${item.qty}</td>
-      <td style="padding:7px 10px;text-align:right;font-size:11.5px">${rp(item.price)}</td>
-      <td style="padding:7px 10px;text-align:right;font-size:11px;color:#059669">${discAmt?'-'+rp(discAmt):'—'}</td>
-      <td style="padding:7px 10px;text-align:right;font-size:11.5px;font-weight:700">${rp(item.subtotal)}</td>
-    </tr>`;}).join('');
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>Invoice ${inv.no}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;background:#f8fafc;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .wrap{max-width:800px;margin:16px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)}
-  table{width:100%;border-collapse:collapse}
-  @media print{@page{size:A4;margin:10mm}body{background:#fff}.wrap{margin:0;border-radius:0;box-shadow:none}}</style>
-  </head><body><div class="wrap">
-  <div style="background:linear-gradient(135deg,#E8510A,#0f172a);color:#fff;padding:20px 28px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div style="display:flex;align-items:center;gap:12px">
-        ${logo}
-        <div><div style="font-size:15px;font-weight:800">${co.name}</div>
-        <div style="font-size:9px;opacity:.7;line-height:1.7">${co.address||''}<br>${co.phone||''} | ${co.email||''}</div>
-        ${co.npwp?`<div style="font-size:9px;opacity:.6">NPWP: ${co.npwp}</div>`:''}</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:8px;letter-spacing:2px;opacity:.5;text-transform:uppercase">INVOICE / FAKTUR</div>
-        <div style="font-size:22px;font-weight:900;color:#FBBF24">${inv.no}</div>
-        <div style="font-size:9px;opacity:.7">Tgl: ${fDate(inv.date)} | Tempo: ${fDate(inv.dueDate)}</div>
+    const title=item.desc||(p?p.name:'Invoice Item');
+    const discount=(Number(item.discRp)||0)+Math.round(Math.max(0,(Number(item.qty)||0)*(Number(item.price)||0)-(Number(item.discRp)||0))*(Number(item.discPct??item.discount)||0)/100);
+    return`<tr>
+      <td class="work"><b>${invoiceEscapeHtml(title)}</b>${p?`<div class="muted">${invoiceEscapeHtml(p.code||'')}</div>`:''}${discount>0?`<div class="muted">Line discount: ${rp(discount)}</div>`:''}</td>
+      <td class="money">${rp(item.price||0)}</td>
+      <td class="center">${invoiceEscapeHtml(item.qty||0)}${item.unit?' '+invoiceEscapeHtml(item.unit):''}</td>
+      <td class="money strong">${rp(item.subtotal||0)}</td>
+    </tr>`;
+  }).join('');
+  const fillerHeight=Math.max(18,150-(inv.items||[]).length*34);
+  const taxLines=buildInvTaxLines(inv);
+  const html=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+  <title>Invoice ${invoiceEscapeHtml(inv.no)}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,Helvetica,sans-serif;background:#eef2f7;color:#111827;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .sheet{width:190mm;min-height:274mm;margin:0 auto;background:#fff;border:1.6px solid #111827;position:relative}
+    .letterhead{display:flex;align-items:center;gap:14px;padding:13mm 10mm 8mm;border-bottom:1.6px solid #111827;min-height:42mm}
+    .logo{width:28mm;height:22mm;object-fit:contain}
+    .company h1{font-size:19px;letter-spacing:.2px;margin-bottom:4px}
+    .company p{font-size:10px;line-height:1.45;color:#374151}
+    .title{border-bottom:1.6px solid #111827;text-align:center;font-size:17px;font-weight:800;letter-spacing:5px;padding:7px 10px}
+    .customer-meta{display:grid;grid-template-columns:1.45fr .85fr;border-bottom:1.6px solid #111827;min-height:34mm}
+    .billto{padding:10px 12px;border-right:1.6px solid #111827;font-size:11px;line-height:1.45}
+    .billto .label{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:5px}
+    .billto .name{font-size:12.5px;font-weight:700;margin-bottom:2px}
+    .meta{padding:10px 12px;font-size:11px}
+    .meta-row{display:grid;grid-template-columns:90px 10px 1fr;margin-bottom:6px}
+    table{width:100%;border-collapse:collapse}
+    .items th{border-right:1.2px solid #111827;border-bottom:1.6px solid #111827;padding:6px 7px;font-size:10px;text-align:center}
+    .items th:last-child,.items td:last-child{border-right:none}
+    .items td{border-right:1.2px solid #111827;border-bottom:1px solid #111827;padding:8px 8px;font-size:10.5px;vertical-align:top}
+    .items .work{width:48%}.items .muted{font-size:9px;color:#6b7280;margin-top:3px}.center{text-align:center}.money{text-align:right}.strong{font-weight:700}
+    .filler td{height:${fillerHeight}px}
+    .totals-wrap{display:grid;grid-template-columns:1fr 64mm;border-bottom:1.6px solid #111827}
+    .totals-space{border-right:1.6px solid #111827;min-height:42mm}
+    .totals td{padding:6px 8px;border-bottom:1px solid #111827;font-size:10.5px}.totals tr:last-child td{border-bottom:none}.totals .money{font-weight:700}.totals .deduction{color:#b91c1c}
+    .totals .grand td{font-size:13px;font-weight:800;border-top:1.6px solid #111827;padding-top:8px;padding-bottom:8px}
+    .words{border-bottom:1.6px solid #111827;padding:8px 12px;min-height:21mm;font-size:10.5px}.words b{display:block;font-size:9px;text-transform:uppercase;margin-bottom:5px}.words em{font-size:11.5px;font-weight:700}
+    .bottom{display:grid;grid-template-columns:1.1fr 1fr;min-height:47mm}
+    .payment{padding:10px 12px;border-right:1.6px solid #111827;font-size:10.5px;line-height:1.5}.payment h3{font-size:10px;margin-bottom:5px}.notice{border:1px solid #111827;margin-top:9px;padding:4px 6px;text-align:center;font-size:9px;font-weight:700}
+    .signature{text-align:center;padding:8px 12px;font-size:10px}.signature .company-name{font-weight:700;margin-bottom:20px}.signature .space{height:32px}.signature .sign-name{font-weight:700;text-decoration:underline}.signature .position{font-size:9.5px;margin-top:3px}
+    .status-note{font-size:9px;color:#6b7280;margin-top:5px}
+    .printbar{position:fixed;right:20px;bottom:20px;display:flex;gap:8px}.printbar button{border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer}.print{background:#1d4ed8;color:#fff}.close{background:#fff;color:#374151;border:1px solid #cbd5e1!important}
+    @page{size:A4;margin:8mm}
+    @media print{body{padding:0;background:#fff}.sheet{width:100%;min-height:277mm;margin:0;border:1.6px solid #111827}.printbar{display:none}}
+  </style></head><body>
+  <div class="sheet">
+    <div class="letterhead">
+      <img class="logo" src="${invoiceEscapeAttr(logoUrl)}" alt="AMS Logo">
+      <div class="company">
+        <h1>${invoiceEscapeHtml(co.name||'PT Andrika Mitra Solusi')}</h1>
+        ${co.address?`<p>${invoiceEscapeHtml(co.address)}</p>`:''}
+        <p>${[co.phone,co.email].filter(Boolean).map(invoiceEscapeHtml).join(' | ')}</p>
+        ${co.npwp?`<p>Tax ID (NPWP): ${invoiceEscapeHtml(co.npwp)}</p>`:''}
       </div>
     </div>
-  </div>
-  <div style="padding:12px 28px;background:#f8fafc;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0">
-    <div><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700">Bill To</div>
-    <div style="font-size:14px;font-weight:800">${ct?ct.name:'—'}</div>
-    <div style="font-size:10.5px;color:#475569">${ct?[ct.address,ct.phone,ct.npwp?'NPWP: '+ct.npwp:''].filter(Boolean).join(' | '):''}</div></div>
-    <div style="padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;background:${rem<=0?'#dcfce7':rem<inv.total?'#fef9c3':'#fee2e2'};color:${rem<=0?'#15803d':rem<inv.total?'#92400e':'#b91c1c'}">
-      ${rem<=0?'✅ LUNAS':rem<inv.total?'⚠️ SEBAGIAN':'⏳ BELUM BAYAR'}
+    <div class="title">INVOICE</div>
+    <div class="customer-meta">
+      <div class="billto">
+        <div class="label">Bill To</div>
+        <div class="name">${invoiceEscapeHtml(customerCompany)}</div>
+        ${customerContact?`<div>Attn: ${invoiceEscapeHtml(customerContact)}</div>`:''}
+        ${ct.address?`<div>${invoiceEscapeHtml(ct.address)}</div>`:''}
+        ${ct.telpKantor||ct.phone?`<div>${invoiceEscapeHtml(ct.telpKantor||ct.phone)}</div>`:''}
+        ${ct.npwp?`<div>Tax ID (NPWP): ${invoiceEscapeHtml(ct.npwp)}</div>`:''}
+      </div>
+      <div class="meta">
+        <div class="meta-row"><b>Invoice No.</b><span>:</span><span>${invoiceEscapeHtml(inv.no)}</span></div>
+        <div class="meta-row"><b>Invoice Date</b><span>:</span><span>${invoiceDateLong(inv.date)}</span></div>
+        <div class="meta-row"><b>Due Date</b><span>:</span><span>${invoiceDateLong(inv.dueDate)}</span></div>
+      </div>
     </div>
-  </div>
-  <div style="padding:16px 28px">
-    <table><thead><tr style="background:#0f172a;color:#fff">
-      <th style="padding:8px 10px;text-align:left;font-size:10px">#</th>
-      <th style="padding:8px 10px;text-align:left;font-size:10px">Deskripsi</th>
-      <th style="padding:8px 10px;text-align:center;font-size:10px">Qty</th>
-      <th style="padding:8px 10px;text-align:right;font-size:10px">Harga Satuan</th>
-      <th style="padding:8px 10px;text-align:right;font-size:10px">Diskon</th>
-      <th style="padding:8px 10px;text-align:right;font-size:10px">Subtotal</th>
-    </tr></thead><tbody>${itemRows}</tbody></table>
-  </div>
-  <div style="padding:0 28px 20px;display:flex;justify-content:flex-end">
-    <table style="width:280px;font-size:12px">
-      <tr><td style="padding:4px 0;color:#475569">Subtotal</td><td style="text-align:right">${rp(inv.subtotal)}</td></tr>
-      ${(inv.discTotal||0)>0?`<tr><td style="color:#059669">Diskon</td><td style="text-align:right;color:#059669">-${rp(inv.discTotal)}</td></tr>`:''}
-      <tr><td style="font-weight:700">DPP</td><td style="text-align:right;font-weight:700">${rp(inv.dpp||inv.subtotal)}</td></tr>
-      ${taxLines}
-      <tr><td colspan="2" style="border-top:2px solid #000;padding-top:4px"></td></tr>
-      <tr><td style="font-size:14px;font-weight:900">TOTAL TAGIHAN</td><td style="text-align:right;font-size:14px;font-weight:900;color:#E8510A">${rp(inv.total)}</td></tr>
-      ${paid>0?`<tr><td style="color:#059669">Terbayar</td><td style="text-align:right;color:#059669">-${rp(paid)}</td></tr>
-      <tr><td style="font-weight:700;color:${rem>0?'#dc2626':'#059669'}">Sisa Tagihan</td><td style="text-align:right;font-weight:700;color:${rem>0?'#dc2626':'#059669'}">${rp(rem)}</td></tr>`:''}
+    <table class="items">
+      <thead><tr><th>Description / Scope of Work</th><th>Unit Value</th><th>Volume</th><th>Amount</th></tr></thead>
+      <tbody>${itemRows}<tr class="filler"><td></td><td></td><td></td><td></td></tr></tbody>
     </table>
+    <div class="totals-wrap">
+      <div class="totals-space"></div>
+      <table class="totals">
+        <tr><td>Gross Subtotal</td><td class="money">${rp(inv.subtotal||0)}</td></tr>
+        ${(inv.discTotal||0)>0?`<tr><td>Total Discount</td><td class="money deduction">-${rp(inv.discTotal)}</td></tr>`:''}
+        <tr><td>Taxable Base</td><td class="money">${rp(inv.dpp??inv.subtotal??0)}</td></tr>
+        ${taxLines}
+        <tr class="grand"><td>TOTAL</td><td class="money">${rp(inv.total||0)}</td></tr>
+        ${paid>0?`<tr><td>Paid</td><td class="money">-${rp(paid)}</td></tr><tr><td>Outstanding</td><td class="money">${rp(remaining)}</td></tr>`:''}
+      </table>
+    </div>
+    <div class="words"><b>Amount in Words</b><em>${amountInWordsIDR(inv.total||0)}</em></div>
+    <div class="bottom">
+      <div class="payment">
+        <h3>Payment by bank transfer or cheque/giro to:</h3>
+        <div><b>Account Name:</b> ${invoiceEscapeHtml(co.atasnama||co.name||'PT Andrika Mitra Solusi')}</div>
+        <div><b>Bank:</b> ${invoiceEscapeHtml(co.bank||'-')}</div>
+        <div><b>Account No.:</b> ${invoiceEscapeHtml(co.norek||'-')}</div>
+        ${inv.note?`<div style="margin-top:6px"><b>Notes:</b> ${invoiceEscapeHtml(inv.note).replace(/\n/g,'<br>')}</div>`:''}
+        <div class="notice">This invoice is valid after the payment has been cleared.</div>
+      </div>
+      <div class="signature">
+        <div class="company-name">${invoiceEscapeHtml(co.name||'PT Andrika Mitra Solusi')}</div>
+        <div class="space"></div>
+        <div class="sign-name">${invoiceEscapeHtml(signatory.name||'( Authorized Signature )')}</div>
+        <div class="position">${invoiceEscapeHtml(signatory.position)}</div>
+        <div class="status-note">Document status: ${invoiceStatusLabel(invStatus(inv))}</div>
+      </div>
+    </div>
   </div>
-  ${inv.note?`<div style="padding:10px 28px;background:#fef9c3;font-size:11.5px;border-top:1px solid #fde68a"><b>Catatan:</b> ${inv.note}</div>`:''}
-  <div style="padding:10px 28px 14px;font-size:9px;color:#94a3b8;border-top:1px solid #f1f5f9">
-    Dokumen ini diterbitkan secara elektronik. | ${co.name} — ${co.email||''} | ${co.phone||''}
-  </div>
-  </div><script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script>
-</body></html>`;
-
-  const w=window.open('','_blank');
-  if(w){w.document.write(html);w.document.close();}
-  else alert('Pop-up diblokir browser. Aktifkan pop-up untuk print.');
+  <div class="printbar"><button class="close" onclick="window.close()">Close</button><button class="print" onclick="window.print()">Print / Save PDF</button></div>
+  <script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script>
+  </body></html>`;
+  const w=window.open('','_blank','width=940,height=900,scrollbars=yes');
+  if(!w)return alert('The browser blocked the print window. Allow pop-ups for the SiAkun website.');
+  w.document.write(html);w.document.close();
 }
 function exportInvoices(){
-  const rows=DB.invoices.map(inv=>{const ct=DB.contacts.find(x=>x.id===inv.contactId);return{
-    'No Invoice':inv.no,Tanggal:inv.date,'Jatuh Tempo':inv.dueDate,Customer:ct?ct.name:'',Status:invStatus(inv),
-    Subtotal:inv.subtotal,Diskon:inv.discTotal||0,DPP:inv.dpp||inv.subtotal,
-    PPN:inv.ppnAmt||0,'PPh 23':inv.pph23Amt||0,'PPh 4(2)':inv.pph4Amt||0,
-    Total:inv.total,'Sudah Bayar':invPaid(inv),Sisa:inv.total-invPaid(inv)};});
-  exportXLSX([{name:'Invoices',data:rows}],'invoices');
+  const rows=(DB.invoices||[]).map(inv=>{
+    const ct=DB.contacts.find(x=>x.id===inv.contactId);
+    return{
+      'Invoice Number':inv.no,
+      'Invoice Date':inv.date,
+      'Due Date':inv.dueDate,
+      'Customer':invoiceCustomerDisplay(ct),
+      'Status':invoiceStatusLabel(invStatus(inv)),
+      'Gross Subtotal':inv.subtotal||0,
+      'Discount':inv.discTotal||0,
+      'Taxable Base':inv.dpp??inv.subtotal??0,
+      'VAT (PPN)':inv.ppnAmt||0,
+      'PPh 23 Deduction':inv.pph23Amt||0,
+      'PPh 4(2) Deduction':inv.pph4Amt||0,
+      'Invoice Total':inv.total||0,
+      'Paid':invPaid(inv),
+      'Outstanding':(inv.total||0)-invPaid(inv)
+    };
+  });
+  exportXLSX([{name:'Invoices',data:rows}],`AMS_Invoices_${new Date().getFullYear()}`);
 }
 
 function renderAR(c){
-  const open=DB.invoices.filter(i=>invStatus(i)!=='paid'&&i.status!=='draft');
-  const totalAR=open.reduce((s,i)=>s+i.total-invPaid(i),0);
+  const open=(DB.invoices||[]).filter(i=>invStatus(i)!=='paid'&&i.status!=='draft');
+  const totalAR=open.reduce((sum,i)=>sum+(Number(i.total)||0)-invPaid(i),0);
   const aging={lt30:0,d3060:0,d6090:0,gt90:0};
   open.forEach(i=>{
     const days=(new Date()-new Date(i.date+'T00:00:00'))/(1000*60*60*24);
-    const rem=i.total-invPaid(i);
-    if(days<=30)aging.lt30+=rem;else if(days<=60)aging.d3060+=rem;else if(days<=90)aging.d6090+=rem;else aging.gt90+=rem;
+    const remaining=(Number(i.total)||0)-invPaid(i);
+    if(days<=30)aging.lt30+=remaining;else if(days<=60)aging.d3060+=remaining;else if(days<=90)aging.d6090+=remaining;else aging.gt90+=remaining;
   });
   c.innerHTML=`
   <div class="stats">
-    <div class="stat r"><div class="stat-lbl">Total Piutang</div><div class="stat-val">${rp(totalAR)}</div></div>
-    <div class="stat g"><div class="stat-lbl">0-30 Hari</div><div class="stat-val">${rp(aging.lt30)}</div></div>
-    <div class="stat y"><div class="stat-lbl">31-60 Hari</div><div class="stat-val">${rp(aging.d3060)}</div></div>
-    <div class="stat r"><div class="stat-lbl">&gt;60 Hari</div><div class="stat-val">${rp(aging.d6090+aging.gt90)}</div></div>
+    <div class="stat r"><div class="stat-lbl">Total Accounts Receivable</div><div class="stat-val">${rp(totalAR)}</div></div>
+    <div class="stat g"><div class="stat-lbl">0-30 Days</div><div class="stat-val">${rp(aging.lt30)}</div></div>
+    <div class="stat y"><div class="stat-lbl">31-60 Days</div><div class="stat-val">${rp(aging.d3060)}</div></div>
+    <div class="stat r"><div class="stat-lbl">Over 60 Days</div><div class="stat-val">${rp(aging.d6090+aging.gt90)}</div></div>
   </div>
   <div class="card"><div class="card-hd">Outstanding Receivables</div>
   <div class="tbl-wrap"><table>
-    <thead><tr><th>Invoice No</th><th>Customer</th><th>Tgl Invoice</th><th>Due Date</th><th>Total</th><th>Paid</th><th>Sisa</th><th>Age (Days)</th><th>Status</th><th>Action</th></tr></thead>
+    <thead><tr><th>Invoice No.</th><th>Customer</th><th>Invoice Date</th><th>Due Date</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Age (Days)</th><th>Status</th><th>Action</th></tr></thead>
     <tbody>
-      ${open.length?open.sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate)).map(i=>{
-        const ct=DB.contacts.find(x=>x.id===i.contactId);
-        const paid=invPaid(i);const days=Math.floor((new Date()-new Date(i.date+'T00:00:00'))/(1000*60*60*24));
-        const st=invStatus(i);
-        return`<tr><td class="fw7">${i.no}</td><td>${ct?ct.name:'—'}</td><td>${fDate(i.date)}</td><td class="${isOverdue(i.dueDate)?'bad':''}">${fDate(i.dueDate)}</td><td>${rp(i.total)}</td><td class="ok">${rp(paid)}</td><td class="bad fw7">${rp(i.total-paid)}</td><td class="${days>60?'bad':days>30?'warn':''}">${days}</td><td>${statusBadge(st)}</td><td><button class="btn btn-pri btn-xs" onclick="openPayInvoice('${i.id}')">Bayar</button></td></tr>`;
-      }).join(''):`<tr><td colspan="10" class="tbl-empty">All receivables settled ✅</td></tr>`}
+      ${open.length?open.sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate)).map(inv=>{
+        const ct=DB.contacts.find(x=>x.id===inv.contactId);
+        const paid=invPaid(inv);
+        const days=Math.max(0,Math.floor((new Date()-new Date(inv.date+'T00:00:00'))/(1000*60*60*24)));
+        const status=invStatus(inv);
+        return`<tr><td class="fw7">${invoiceEscapeHtml(inv.no)}</td><td>${invoiceEscapeHtml(invoiceCustomerDisplay(ct))}</td><td>${invoiceDateLong(inv.date)}</td><td class="${isOverdue(inv.dueDate)?'bad':''}">${invoiceDateLong(inv.dueDate)}</td><td>${rp(inv.total||0)}</td><td class="ok">${rp(paid)}</td><td class="bad fw7">${rp((inv.total||0)-paid)}</td><td class="${days>60?'bad':days>30?'warn':''}">${days}</td><td>${invoiceStatusBadge(status)}</td><td><button class="btn btn-pri btn-xs" onclick="openPayInvoice('${inv.id}')">Record Payment</button></td></tr>`;
+      }).join(''):`<tr><td colspan="10" class="tbl-empty">All receivables have been settled.</td></tr>`}
     </tbody>
   </table></div></div>`;
 }
+
 
 // ================================================================
 //  PURCHASES
@@ -17212,6 +17415,8 @@ function addDummyBasts(){
 //  QUICK FORMS — Jual / Beli / Biaya modal forms
 // ================================================================
 function openQuickForm(type){
+  // Sales quick entry now uses the complete AMS invoice workflow.
+  if(type==='jual'){openAddInvoice();return;}
   const contacts = DB.contacts||[];
   const products = DB.products||[];
   const cashAccs = DB.accounts.filter(a=>a.category==='Kas & Bank'||a.type==='aktiva'&&a.sub==='lancar'&&(a.name||'').toLowerCase().match(/kas|bank/));
@@ -18780,7 +18985,7 @@ setTimeout(()=>{
       <span class="bnav-ic">🏠</span><span>Home</span>
     </button>
     <button class="bnav-item" id="bnav-invoices" onclick="bnavGo('invoices')">
-      <span class="bnav-ic">🧾</span><span>Jual</span>
+      <span class="bnav-ic">🧾</span><span>Sales</span>
     </button>
     <button class="bnav-item" id="bnav-purchases" onclick="bnavGo('purchases')">
       <span class="bnav-ic">🛒</span><span>Beli</span>
