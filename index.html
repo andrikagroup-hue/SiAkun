@@ -1186,6 +1186,24 @@ function _matchEnglishCase(source,replacement){
   if(source[0]===source[0].toUpperCase())return replacement.charAt(0).toUpperCase()+replacement.slice(1);
   return replacement;
 }
+
+// Compile translation patterns once. The previous version rebuilt hundreds of
+// regular expressions for every text node and could freeze the browser.
+const _englishPhraseEntries=Object.entries(ENGLISH_PHRASES)
+  .filter(([source,target])=>source&&source!==target)
+  .sort((a,b)=>b[0].length-a[0].length);
+const _englishPhraseMap=new Map(_englishPhraseEntries.map(([source,target])=>[source.toLowerCase(),{source,target}]));
+const _englishPhraseRegex=new RegExp(_englishPhraseEntries.map(([source])=>{
+  let pattern=_escapeEnglishRegex(source);
+  if(/^[A-Za-z0-9]/.test(source))pattern='\\b'+pattern;
+  if(/[A-Za-z0-9]$/.test(source))pattern=pattern+'\\b';
+  return '(?:'+pattern+')';
+}).join('|'),'gi');
+
+const _englishWordEntries=Object.entries(ENGLISH_WORDS).sort((a,b)=>b[0].length-a[0].length);
+const _englishWordMap=new Map(_englishWordEntries.map(([source,target])=>[source.toLowerCase(),target]));
+const _englishWordRegex=new RegExp('\\b(?:'+_englishWordEntries.map(([source])=>_escapeEnglishRegex(source)).join('|')+')\\b','gi');
+
 function translateToEnglish(value,useWordFallback=true){
   if(value===null||value===undefined)return value;
   const original=String(value);
@@ -1195,26 +1213,23 @@ function translateToEnglish(value,useWordFallback=true){
   let text=original;
   const protectedParts=[];
   text=text.replace(/(?:https?:\/\/|mailto:|tel:)[^\s<>"']+/gi,m=>`@@ENPROT${protectedParts.push(m)-1}@@`);
-  // Keep official document abbreviations and the SiAkun brand unchanged.
   text=text.replace(/\bSiAkun\b|\bBAST\b|\bSPH\b|\bNPWP\b/g,m=>`@@ENPROT${protectedParts.push(m)-1}@@`);
+
   const phraseReplacements=[];
-  for(const [source,target] of Object.entries(ENGLISH_PHRASES)){
-    if(!source||source===target)continue;
-    if(!useWordFallback&&/^[A-Za-z0-9]+$/.test(source)&&original.trim().toLowerCase()!==source.toLowerCase())continue;
-    let pattern=_escapeEnglishRegex(source);
-    if(/^[A-Za-z0-9]/.test(source))pattern='\\b'+pattern;
-    if(/[A-Za-z0-9]$/.test(source))pattern=pattern+'\\b';
-    const re=new RegExp(pattern,'gi');
-    text=text.replace(re,m=>`@@ENPH${phraseReplacements.push(_matchEnglishCase(m,target))-1}@@`);
-  }
+  text=text.replace(_englishPhraseRegex,m=>{
+    const entry=_englishPhraseMap.get(m.toLowerCase());
+    if(!entry)return m;
+    if(!useWordFallback&&/^[A-Za-z0-9]+$/.test(entry.source)&&original.trim().toLowerCase()!==entry.source.toLowerCase())return m;
+    return `@@ENPH${phraseReplacements.push(_matchEnglishCase(m,entry.target))-1}@@`;
+  });
+
   if(useWordFallback){
-    const wordKeys=Object.keys(ENGLISH_WORDS).sort((a,b)=>b.length-a.length);
-    for(const source of wordKeys){
-      const target=ENGLISH_WORDS[source];
-      const re=new RegExp('\\b'+_escapeEnglishRegex(source)+'\\b','gi');
-      text=text.replace(re,m=>_matchEnglishCase(m,target));
-    }
+    text=text.replace(_englishWordRegex,m=>{
+      const target=_englishWordMap.get(m.toLowerCase());
+      return target?_matchEnglishCase(m,target):m;
+    });
   }
+
   text=text.replace(/@@ENPH(\d+)@@/g,(_,i)=>phraseReplacements[Number(i)]||'');
   text=text.replace(/@@ENPROT(\d+)@@/g,(_,i)=>protectedParts[Number(i)]||'');
   const cleanup=[
@@ -1282,18 +1297,34 @@ function translateEnglishTree(root){
 }
 function installEnglishOnlyLayer(){
   document.documentElement.lang='en';
-  _lang='en';localStorage.setItem(LANG_KEY,'en');
+  _lang='en';
+  localStorage.setItem(LANG_KEY,'en');
+
+  // Translate the initial screen once. Do not watch text/attribute changes:
+  // doing so caused a translation loop and made Chrome report Page Unresponsive.
   translateEnglishTree(document.body);
+
   let queued=false;
+  const pendingNodes=new Set();
   const observer=new MutationObserver(mutations=>{
-    if(queued)return;queued=true;
-    queueMicrotask(()=>{queued=false;for(const m of mutations){
-      if(m.type==='characterData')translateEnglishTree(m.target);
-      else if(m.type==='attributes')translateEnglishTree(m.target);
-      else m.addedNodes.forEach(translateEnglishTree);
-    }});
+    for(const mutation of mutations){
+      mutation.addedNodes.forEach(node=>pendingNodes.add(node));
+    }
+    if(queued||pendingNodes.size===0)return;
+    queued=true;
+    requestAnimationFrame(()=>{
+      queued=false;
+      const nodes=[...pendingNodes];
+      pendingNodes.clear();
+      nodes.forEach(node=>{
+        try{translateEnglishTree(node);}catch(err){console.warn('[SiAkun English UI]',err);}
+      });
+    });
   });
-  observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label','alt','data-tip','value']});
+
+  // Child additions only. This supports dynamically rendered pages and modals
+  // without observing our own text replacements.
+  observer.observe(document.body,{subtree:true,childList:true});
 }
 // Browser dialogs
 const _nativeAlert=window.alert.bind(window);window.alert=msg=>_nativeAlert(translateToEnglish(msg));
