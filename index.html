@@ -5278,16 +5278,33 @@ function refreshInvoiceNumber(excludeId){
   const dateEl=document.getElementById('inv-date');
   const noEl=document.getElementById('inv-no');
   if(!dateEl||!noEl)return;
+  const existing=excludeId?(DB.invoices||[]).find(inv=>inv.id===excludeId):null;
+  // Preserve legacy/historical numbers exactly as stored.
+  if(existing&&existing.no&&!isAmsInvoiceNumberValid(existing.no,existing.date)){
+    noEl.value=existing.no;
+    return;
+  }
+  if(existing&&existing.no){
+    const match=String(existing.no).match(/^AMS(\d{2})(\d{2})-INV(\d+)$/i);
+    const nextMeta=invoiceNumberMeta(dateEl.value);
+    // Within the same calendar year, only YYMM changes; the yearly sequence stays fixed.
+    if(match&&match[1]===nextMeta.yy){
+      noEl.value=`${AMS_INVOICE_CODE}${nextMeta.yy}${nextMeta.mm}-INV${match[3]}`;
+      return;
+    }
+  }
   noEl.value=generateInvoiceNumber(dateEl.value,excludeId||null);
 }
 function invoiceNumberExists(no,excludeId){
-  return(DB.invoices||[]).some(inv=>inv.no===no&&inv.id!==excludeId);
+  const normalized=String(no||'').trim().toUpperCase();
+  return(DB.invoices||[]).some(inv=>String(inv.no||'').trim().toUpperCase()===normalized&&inv.id!==excludeId);
 }
 
 function renderInvoices(c){
   const ta=document.getElementById('topbar-actions');
   ta.innerHTML=`
     <button class="btn btn-pri" onclick="openAddInvoice()">+ Create Invoice</button>
+    <button class="btn btn-out" onclick="openInvoicePdfImport()">📄 Import PDF</button>
     <button class="btn btn-out" onclick="exportInvoices()">⬇ Export Excel</button>`;
   const sorted=[...(DB.invoices||[])].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const statusCards=[
@@ -5295,7 +5312,8 @@ function renderInvoices(c){
   ];
   c.innerHTML=`
   <div class="alert a-info" style="margin-bottom:12px">
-    <b>AMS invoice numbering:</b> AMSYYMM-INV1001. The sequence continues during the year and resets to 1001 in January.
+    <b>AMS invoice numbering:</b> AMSYYMM-INV1001. The sequence continues during the year and resets to 1001 in January.<br>
+    <span style="font-size:11px">PDF import reads the source document into an editable Draft form. The source invoice number is kept only as a reference and never replaces the AMS invoice number.</span>
   </div>
   <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
     ${statusCards.map(([status,label,cls])=>{
@@ -5331,18 +5349,335 @@ function renderInvoices(c){
             <button class="btn btn-bad btn-xs" onclick="delInvoice('${inv.id}')" title="Delete">✕</button>
           </td>
         </tr>`;
-      }).join(''):`<tr><td colspan="9" class="tbl-empty">No invoicess have been created.</td></tr>`}
+      }).join(''):`<tr><td colspan="9" class="tbl-empty">No invoices have been created.</td></tr>`}
     </tbody>
   </table></div></div>`;
+}
+
+
+
+const INVOICE_PDF_TEMP_CONTACT='__invoice_pdf_import_contact__';
+let _invoicePdfImport=null;
+let _invoiceImportedCustomer=null;
+
+function invoiceNormalizeSearch(value){
+  return String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+}
+function findInvoiceImportContact(customer){
+  if(!customer)return null;
+  const companyKey=invoiceNormalizeSearch(customer.perusahaan||customer.company||'');
+  const nameKey=invoiceNormalizeSearch(customer.name||'');
+  const phoneDigits=String(customer.telpKantor||customer.phone||'').replace(/\D/g,'');
+  return(DB.contacts||[]).find(ct=>{
+    const ctCompany=invoiceNormalizeSearch(ct.perusahaan||'');
+    const ctName=invoiceNormalizeSearch(ct.name||'');
+    const ctPhone=String(ct.telpKantor||ct.phone||ct.hp1||'').replace(/\D/g,'');
+    if(companyKey&&ctCompany&&companyKey===ctCompany)return true;
+    if(nameKey&&ctName&&nameKey===ctName)return true;
+    return phoneDigits.length>=7&&ctPhone.length>=7&&phoneDigits===ctPhone;
+  })||null;
+}
+function invoiceMonthNumber(value){
+  const key=String(value||'').toLowerCase().replace(/[^a-z]/g,'');
+  const months={
+    januari:1,january:1,jan:1,
+    februari:2,february:2,februari:2,feb:2,
+    maret:3,march:3,mar:3,
+    april:4,apr:4,
+    mei:5,may:5,
+    juni:6,june:6,jun:6,
+    juli:7,july:7,jul:7,
+    agustus:8,august:8,agu:8,aug:8,
+    september:9,sep:9,sept:9,
+    oktober:10,october:10,okt:10,oct:10,
+    november:11,nov:11,
+    desember:12,december:12,des:12,dec:12
+  };
+  return months[key]||0;
+}
+function invoiceNormalizeOcrDay(token){
+  const normalized=String(token||'')
+    .replace(/[OQD]/gi,'0').replace(/[Il|]/g,'1').replace(/[Z]/gi,'2')
+    .replace(/[S]/gi,'5').replace(/[G]/gi,'6').replace(/[B]/gi,'8')
+    .replace(/\D/g,'');
+  const candidates=[];
+  if(normalized.length<=2)candidates.push(normalized);
+  else{
+    candidates.push(normalized.slice(0,2),normalized.slice(-2));
+    for(let i=0;i<normalized.length-1;i++)candidates.push(normalized.slice(i,i+2));
+  }
+  const valid=candidates.map(Number).find(n=>n>=1&&n<=31);
+  return valid||0;
+}
+function invoiceParsePdfDate(text){
+  const monthPattern='Januari|January|Jan|Februari|February|Feb|Maret|March|Mar|April|Apr|Mei|May|Juni|June|Jun|Juli|July|Jul|Agustus|August|Agu|Aug|September|Sept|Sep|Oktober|October|Okt|Oct|November|Nov|Desember|December|Des|Dec';
+  const re=new RegExp('([0-9OQDIl|ZSBG]{1,4})\\s+('+monthPattern+')\\s+(20\\d{2})','i');
+  const match=String(text||'').match(re);
+  if(!match)return'';
+  const day=invoiceNormalizeOcrDay(match[1]);
+  const month=invoiceMonthNumber(match[2]);
+  const year=Number(match[3]);
+  if(!day||!month||!year)return'';
+  return`${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+function invoiceParseCurrencyCandidates(text){
+  const cleaned=String(text||'').replace(/\s+/g,' ');
+  const matches=cleaned.match(/\b\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?\b|\b\d{4,9}\b/g)||[];
+  return matches.map(raw=>{
+    let s=raw.trim();
+    const lastDot=s.lastIndexOf('.'),lastComma=s.lastIndexOf(',');
+    const lastSep=Math.max(lastDot,lastComma);
+    if(lastSep>=0&&s.length-lastSep-1===2){
+      const whole=s.slice(0,lastSep).replace(/[.,]/g,'');
+      const decimals=s.slice(lastSep+1).replace(/\D/g,'');
+      return Math.round(Number(`${whole}.${decimals}`));
+    }
+    return Number(s.replace(/[.,]/g,''));
+  }).filter(n=>Number.isFinite(n)&&n>=100&&n<1000000000);
+}
+function invoiceCleanOcrLine(value){
+  return String(value||'').replace(/[|]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function invoiceExtractPdfDescription(fullText){
+  const lines=String(fullText||'').split(/\r?\n/).map(invoiceCleanOcrLine).filter(Boolean);
+  let start=lines.findIndex(line=>/jenis\s+pekerjaan|description|scope\s+of\s+work/i.test(line));
+  const out=[];
+  for(let i=start>=0?start+1:lines.length;i<lines.length&&out.length<5;i++){
+    let line=lines[i];
+    if(/sub\s*total|subtotal|terbilang|amount\s+in\s+words|pembayaran|payment\s+by/i.test(line))break;
+    if(/nilai\s*kontrak|contract\s*value|volume|jumlah|amount/i.test(line)&&line.split(' ').length<8)continue;
+    line=line.replace(/\s+(?:Rp|Ro|R®)\s+.*$/i,'').replace(/\s+100\s*%.*$/i,'').trim();
+    if(!line||line.length<8||(line.match(/[A-Za-z]{2,}/g)||[]).length<2||/^[\d\s.,:%()+\-]+$/.test(line))continue;
+    if(/invoice|tanggal|date|kepada|bill\s*to|no\.?\s*invoice/i.test(line))continue;
+    out.push(line);
+  }
+  if(!out.length){
+    lines.forEach(line=>{
+      if(out.length>=3)return;
+      if(/proyek|project|periode|pekerjaan|service|maintenance|installation|pembangunan/i.test(line)){
+        const cleaned=line.replace(/\s+(?:Rp|Ro|R®)\s+.*$/i,'').replace(/\s+100\s*%.*$/i,'').trim();
+        if(cleaned)out.push(cleaned);
+      }
+    });
+  }
+  return[...new Set(out)].join('\n');
+}
+function invoiceExtractPdfCustomer(fullText){
+  const lines=String(fullText||'').split(/\r?\n/).map(invoiceCleanOcrLine).filter(Boolean);
+  let company='',name='',address='',phone='';
+  let customerIndex=lines.findIndex(line=>/^(kepada|bill\s*to|customer)\b/i.test(line));
+  if(customerIndex>=0){
+    company=lines[customerIndex].replace(/^(kepada|bill\s*to|customer)\s*[:\-]?\s*/i,'')
+      .replace(/\s+no\.?\s+(?:invoice|inwoice|[a-z]{3,12})\b.*$/i,'').trim();
+  }
+  if(!company){
+    customerIndex=lines.findIndex(line=>/\b(PT\.?|CV\.?|Tbk|Ltd\.?|Corp\.?|Inc\.?)\b/i.test(line));
+    if(customerIndex>=0)company=lines[customerIndex].replace(/\s+no\.?\s+(?:invoice|inwoice|[a-z]{3,12})\b.*$/i,'').trim();
+  }
+  if(customerIndex>=0){
+    const addr=[];
+    for(let i=customerIndex+1;i<Math.min(lines.length,customerIndex+6);i++){
+      let line=lines[i];
+      if(/no\.?\s*(invoice|inwoice)|jenis\s+pekerjaan|description|nilai\s+kontrak|volume|jumlah/i.test(line))break;
+      line=line.replace(/\s+(?:tanggal|tanegai|date)\b.*$/i,'').trim();
+      if(!line)break;
+      const phoneMatch=line.match(/(?:\+?62|0)\s*\d[\d\s().\-]{7,}/);
+      if(phoneMatch){phone=phoneMatch[0].trim();break;}
+      if(!/^[\d\s().+\-]+$/.test(line))addr.push(line);
+    }
+    address=addr.join(', ');
+  }
+  if(!phone){
+    const match=String(fullText||'').match(/(?:\+?62|0)\s*\d[\d\s().\-]{7,}/);
+    if(match)phone=match[0].trim();
+  }
+  name=company||'Imported Customer';
+  return{name,perusahaan:company,address,telpKantor:phone,phone,type:'customer'};
+}
+function parseImportedInvoicePdf(fullText,metaText,amountText,fileName){
+  const combined=[metaText,fullText].filter(Boolean).join('\n');
+  const sourceMatch=combined.match(/\b[A-Z]{2,}\s*\/?\s*\d{4}\s*\/\s*\d{2}\s*\/\s*\d{3,}\b/i);
+  const sourceNo=sourceMatch?sourceMatch[0].replace(/\s+/g,'').replace(/^([A-Z]{2,5})[JY](?=\d{4})/i,'$1').replace(/^([A-Z]{2,})(\d{4})/i,'$1/$2'):'';
+  const date=invoiceParsePdfDate(metaText)||invoiceParsePdfDate(fullText)||today();
+  const amounts=invoiceParseCurrencyCandidates(amountText);
+  const fallbackMoneyText=String(fullText||'').split(/\r?\n/).filter(line=>/Rp|Ro|R®|sub\s*total|subtotal|total|jumlah|amount|nilai\s*kontrak/i.test(line)).join(' ');
+  const fallbackAmounts=invoiceParseCurrencyCandidates(fallbackMoneyText);
+  const amount=(amounts.length?Math.max(...amounts):(fallbackAmounts.length?Math.max(...fallbackAmounts):0));
+  const volumeMatch=String(fullText||'').match(/\b\d+(?:[.,]\d+)?\s*%/);
+  const customer=invoiceExtractPdfCustomer(fullText);
+  const description=invoiceExtractPdfDescription(fullText)||'Imported invoice item - review description';
+  const warnings=[];
+  if(!customer.perusahaan)warnings.push('Customer company was not detected.');
+  if(!amount)warnings.push('Invoice amount was not detected.');
+  if(!description)warnings.push('Description was not detected.');
+  if(!invoiceParsePdfDate(metaText)&&!invoiceParsePdfDate(fullText))warnings.push('Invoice date was not detected; today was used.');
+  return{
+    fileName:fileName||'invoice.pdf',sourceNo,date,customer,description,
+    amount,volume:volumeMatch?volumeMatch[0].replace(/\s+/g,''):'100%',warnings,
+    rawText:String(fullText||'').trim()
+  };
+}
+function invoiceCropCanvas(source,xRatio,yRatio,wRatio,hRatio,upscale=1.5,contrast=1.7){
+  const sx=Math.max(0,Math.round(source.width*xRatio));
+  const sy=Math.max(0,Math.round(source.height*yRatio));
+  const sw=Math.max(1,Math.round(source.width*wRatio));
+  const sh=Math.max(1,Math.round(source.height*hRatio));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.round(sw*upscale);canvas.height=Math.round(sh*upscale);
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  ctx.drawImage(source,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
+  const img=ctx.getImageData(0,0,canvas.width,canvas.height),d=img.data;
+  const intercept=128*(1-contrast);
+  for(let i=0;i<d.length;i+=4){
+    const gray=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+    const val=Math.max(0,Math.min(255,gray*contrast+intercept));
+    d[i]=d[i+1]=d[i+2]=val;
+  }
+  ctx.putImageData(img,0,0);
+  return canvas;
+}
+async function invoiceOcrRecognize(canvas,languages,parameters,logger){
+  const options={...(parameters||{})};
+  if(logger)options.logger=logger;
+  try{return await Tesseract.recognize(canvas,languages,options);}
+  catch(err){
+    if(languages!=='eng')return Tesseract.recognize(canvas,'eng',options);
+    throw err;
+  }
+}
+async function extractInvoicePdfData(file,onProgress){
+  if(!file)throw new Error('Select a PDF file.');
+  if(!/\.pdf$/i.test(file.name||''))throw new Error('Only PDF files are supported.');
+  if(file.size>15*1024*1024)throw new Error('The PDF is larger than 15 MB. Compress it before importing.');
+  if(typeof pdfjsLib==='undefined')throw new Error('PDF reader is unavailable. Reload SiAkun and try again.');
+  const buffer=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buffer}).promise;
+  let embeddedText='';
+  for(let p=1;p<=Math.min(pdf.numPages,3);p++){
+    const page=await pdf.getPage(p);
+    const content=await page.getTextContent();
+    embeddedText+=content.items.map(item=>String(item.str||'')+(item.hasEOL?'\n':' ')).join('')+'\n';
+  }
+  const page=await pdf.getPage(1);
+  const viewport=page.getViewport({scale:2.25});
+  const source=document.createElement('canvas');source.width=Math.ceil(viewport.width);source.height=Math.ceil(viewport.height);
+  await page.render({canvasContext:source.getContext('2d'),viewport}).promise;
+  let fullText=embeddedText.trim(),metaText='',amountText='';
+  const needsOcr=fullText.replace(/\s+/g,' ').length<80;
+  if(needsOcr){
+    if(typeof Tesseract==='undefined')throw new Error('OCR is unavailable. Reload SiAkun and try again.');
+    const fullCanvas=invoiceCropCanvas(source,0,0,1,1,1.15);
+    const fullResult=await invoiceOcrRecognize(fullCanvas,'ind+eng',{tessedit_pageseg_mode:6},message=>{
+      if(!onProgress)return;
+      const pct=message.progress?Math.round(message.progress*100):0;
+      onProgress(message.status==='recognizing text'?`Reading the PDF text... ${pct}%`:'Preparing OCR...');
+    });
+    fullText=fullResult.data.text||'';
+    const metaCanvas=invoiceCropCanvas(source,0.60,0.18,0.37,0.15,2.1,2.0);
+    const metaResult=await invoiceOcrRecognize(metaCanvas,'ind+eng',{tessedit_pageseg_mode:11});
+    metaText=metaResult.data.text||'';
+    const amountCanvas=invoiceCropCanvas(source,0.45,0.29,0.20,0.18,3.0,2.5);
+    const amountResult=await invoiceOcrRecognize(amountCanvas,'eng',{tessedit_pageseg_mode:6,tessedit_char_whitelist:'0123456789.,Rp% '});
+    amountText=amountResult.data.text||'';
+  }
+  return parseImportedInvoicePdf(fullText,metaText,amountText,file.name);
+}
+function openInvoicePdfImport(){
+  _invoicePdfImport=null;
+  openModal('Import Invoice PDF',`
+    <div class="alert a-info" style="font-size:11.5px;line-height:1.55">
+      Upload a PDF invoice to read its customer, date, description, volume, and amount. The extracted data opens in an editable <b>Draft</b> invoice form. Nothing is posted to stock or accounting automatically.
+    </div>
+    <div class="fg">
+      <label>Source PDF</label>
+      <input id="inv-pdf-file" type="file" accept="application/pdf,.pdf" onchange="readInvoicePdfFile(this.files&&this.files[0])">
+    </div>
+    <div id="inv-pdf-status" style="padding:14px;border:1px dashed #cbd5e1;border-radius:9px;background:#f8fafc;color:#64748b;font-size:12px;text-align:center">
+      Select the supplied DPA invoice PDF.
+    </div>
+    <div id="inv-pdf-review" style="display:none;margin-top:14px"></div>
+    <div class="modal-ft">
+      <button class="btn btn-out" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-pri" id="inv-pdf-use" onclick="useInvoicePdfImport()" disabled>Open Draft Invoice Form</button>
+    </div>`,'modal-wide');
+}
+async function readInvoicePdfFile(file){
+  const status=document.getElementById('inv-pdf-status');
+  const useBtn=document.getElementById('inv-pdf-use');
+  const review=document.getElementById('inv-pdf-review');
+  if(!file)return;
+  if(useBtn)useBtn.disabled=true;
+  if(review)review.style.display='none';
+  if(status){status.style.color='#475569';status.textContent='Reading the PDF...';}
+  try{
+    const data=await extractInvoicePdfData(file,message=>{if(status)status.textContent=message;});
+    _invoicePdfImport=data;
+    if(status){
+      status.style.color=data.warnings.length?'#92400e':'#166534';
+      status.innerHTML=data.warnings.length
+        ?`PDF read with ${data.warnings.length} warning(s). Review every field below before continuing.`
+        :'PDF data was read. Review every field below before continuing.';
+    }
+    if(review){
+      review.style.display='block';
+      review.innerHTML=`
+        ${data.warnings.length?`<div class="alert a-warn" style="font-size:11px">${data.warnings.map(invoiceEscapeHtml).join('<br>')}</div>`:''}
+        <div class="fr2">
+          <div class="fg"><label>Source Invoice Number (Reference Only)</label><input id="inv-pdf-source-no" value="${invoiceEscapeAttr(data.sourceNo)}" placeholder="Optional reference"></div>
+          <div class="fg"><label>Invoice Date</label><input type="date" id="inv-pdf-date" value="${invoiceEscapeAttr(data.date)}"></div>
+        </div>
+        <div class="fr2">
+          <div class="fg"><label>Customer Company</label><input id="inv-pdf-company" value="${invoiceEscapeAttr(data.customer.perusahaan)}"></div>
+          <div class="fg"><label>Phone</label><input id="inv-pdf-phone" value="${invoiceEscapeAttr(data.customer.telpKantor)}"></div>
+        </div>
+        <div class="fg"><label>Customer Address</label><textarea id="inv-pdf-address" rows="2">${invoiceEscapeHtml(data.customer.address)}</textarea></div>
+        <div class="fg"><label>Description / Scope of Work</label><textarea id="inv-pdf-description" rows="4">${invoiceEscapeHtml(data.description)}</textarea></div>
+        <div class="fr2">
+          <div class="fg"><label>Contract / Invoice Value (Rp)</label><input type="number" min="0" id="inv-pdf-amount" value="${Number(data.amount)||0}"></div>
+          <div class="fg"><label>Volume</label><input id="inv-pdf-volume" value="${invoiceEscapeAttr(data.volume||'100%')}"></div>
+        </div>
+        <div style="font-size:10.5px;color:#64748b;line-height:1.5">The original source number is stored in Notes only. SiAkun will generate the official AMS number from the selected invoice date.</div>`;
+    }
+    if(useBtn)useBtn.disabled=false;
+  }catch(err){
+    _invoicePdfImport=null;
+    if(status){status.style.color='#991b1b';status.textContent='PDF import failed: '+(err.message||err);}
+  }
+}
+function useInvoicePdfImport(){
+  if(!_invoicePdfImport)return alert('Read a PDF first.');
+  const company=v('inv-pdf-company').trim();
+  const phone=v('inv-pdf-phone').trim();
+  const address=v('inv-pdf-address').trim();
+  const description=v('inv-pdf-description').trim();
+  const amount=Math.max(0,Number(v('inv-pdf-amount'))||0);
+  const volume=v('inv-pdf-volume').trim()||'100%';
+  const date=v('inv-pdf-date')||today();
+  const sourceNo=v('inv-pdf-source-no').trim();
+  if(!company)return alert('Customer company is required.');
+  if(!description)return alert('Description is required.');
+  if(amount<=0)return alert('Invoice value must be greater than zero.');
+  const importedCustomer={name:company,perusahaan:company,address,telpKantor:phone,phone,type:'customer'};
+  const existing=findInvoiceImportContact(importedCustomer);
+  const noteLines=['Imported from PDF for review.'];
+  if(sourceNo)noteLines.push(`Source invoice number: ${sourceNo}.`);
+  if(_invoicePdfImport.fileName)noteLines.push(`Source file: ${_invoicePdfImport.fileName}.`);
+  openAddInvoice({
+    date,dueDate:addDays(date,30),contactId:existing?.id||'',
+    importedCustomer:existing?null:importedCustomer,
+    note:noteLines.join('\n'),
+    items:[{desc:description,qty:1,unit:volume,price:amount,discRp:0,discPct:0}]
+  });
 }
 
 let invItemCount=0;
 
 function invoiceTaxRows(tx,inv){
   const rows=[
-    ['inv-ppn','inv-ppn-rate',inv?.ppnRate??tx.ppnRate,'VAT (VAT)',!!inv?.ppn,'inv-ppn-amt','#d97706'],
-    ['inv-pph23','inv-pph23-rate',inv?.pph23Rate??tx.pph23Rate,'Withholding Tax Article 23 (Article 23 Withholding Tax)',!!inv?.pph23,'inv-pph23-amt','#dc2626'],
-    ['inv-pph4','inv-pph4-rate',inv?.pph4Rate??tx.pph4Rate,'Final Income Tax Article 4(2) (Article 4(2) Final Income Tax)',!!inv?.pph4,'inv-pph4-amt','#dc2626']
+    ['inv-ppn','inv-ppn-rate',inv?.ppnRate??tx.ppnRate,'VAT',!!inv?.ppn,'inv-ppn-amt','#d97706'],
+    ['inv-pph23','inv-pph23-rate',inv?.pph23Rate??tx.pph23Rate,'Article 23 Withholding Tax',!!inv?.pph23,'inv-pph23-amt','#dc2626'],
+    ['inv-pph4','inv-pph4-rate',inv?.pph4Rate??tx.pph4Rate,'Article 4(2) Final Income Tax',!!inv?.pph4,'inv-pph4-amt','#dc2626']
   ];
   return rows.map(([cid,rid,rate,label,checked,amountId,color])=>`
     <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer;padding:5px 0;border-bottom:1px solid #f1f5f9;text-transform:none;letter-spacing:0">
@@ -5357,6 +5692,7 @@ function invoiceTaxRows(tx,inv){
 
 function openAddInvoice(prefill=null){
   window._bastSourceId=prefill?.bastId||null;
+  _invoiceImportedCustomer=prefill?.importedCustomer||null;
   const items=(prefill?.items||[]).map(it=>({
     productId:it.productId||null,
     desc:it.desc||it.deskripsi||'',
@@ -5378,14 +5714,15 @@ function openEditInvoice(id){
 function openInvoiceForm(inv,prefill){
   const isEdit=!!inv;
   const tx=DB.taxSettings||{ppnRate:11,pph23Rate:2,pph4Rate:2};
-  const date=inv?.date||today();
-  const dueDate=inv?.dueDate||addDays(date,30);
-  const initialNo=isEdit&&isAmsInvoiceNumberValid(inv.no,date)?inv.no:generateInvoiceNumber(date,inv?.id);
+  const date=inv?.date||prefill?.date||today();
+  const dueDate=inv?.dueDate||prefill?.dueDate||addDays(date,30);
+  const initialNo=isEdit?String(inv.no||generateInvoiceNumber(date,inv?.id)):generateInvoiceNumber(date,null);
   const items=isEdit?(inv.items||[]):(prefill?.items||[{}]);
   invItemCount=Math.max(1,items.length);
   const itemHtml=(items.length?items:[{}]).map((item,i)=>invItemRow(i,item)).join('');
-  const contactId=inv?.contactId||prefill?.contactId||'';
-  const bankAcc=inv?.bankAcc||'';
+  const importedCustomer=!isEdit?(prefill?.importedCustomer||_invoiceImportedCustomer):null;
+  const contactId=inv?.contactId||prefill?.contactId||(importedCustomer?INVOICE_PDF_TEMP_CONTACT:'');
+  const bankAcc=inv?.bankAcc||prefill?.bankAcc||'';
   const note=inv?.note||prefill?.note||'';
   const modalTitle=isEdit?`Edit Draft Invoice — ${invoiceEscapeHtml(initialNo)}`:'Create New Invoice';
   openModal(modalTitle,`
@@ -5399,7 +5736,7 @@ function openInvoiceForm(inv,prefill){
     </div>
     <div class="fr2">
       <div class="fg"><label>Customer</label>
-        <select id="inv-contact"><option value="">— Select Customer —</option>${contactOptions('customer',contactId)}</select>
+        <select id="inv-contact"><option value="">— Select Customer —</option>${importedCustomer?`<option value="${INVOICE_PDF_TEMP_CONTACT}" selected>${invoiceEscapeHtml(importedCustomer.perusahaan||importedCustomer.name)} — Imported from PDF</option>`:''}${contactOptions('customer',contactId)}</select>
       </div>
       <div class="fg"><label>Receiving Account</label><select id="inv-bank">${acctOptions(['aktiva'],bankAcc)}</select></div>
     </div>
@@ -5425,7 +5762,7 @@ function openInvoiceForm(inv,prefill){
           ['inv-s-sub','Gross Subtotal',''],
           ['inv-s-disc','Total Discount','color:#059669'],
           ['inv-s-dpp','Taxable Base','font-weight:700;border-bottom:1px solid var(--bdr);padding-bottom:6px'],
-          ['inv-s-ppn','VAT (VAT)','color:#d97706'],
+          ['inv-s-ppn','VAT','color:#d97706'],
           ['inv-s-p23','Article 23 Withholding Tax Deduction','color:#dc2626'],
           ['inv-s-p4','Article 4(2) Final Income Tax Deduction','color:#dc2626']
         ].map(([id,label,style])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;${style}"><span style="color:#475569">${label}</span><span id="${id}" style="font-weight:600">Rp 0</span></div>`).join('')}
@@ -5517,9 +5854,13 @@ function calcInvTotals(){
 function collectInvoiceForm(excludeId){
   const no=v('inv-no'),date=v('inv-date'),dueDate=v('inv-due'),contactId=v('inv-contact'),bankAcc=v('inv-bank');
   if(!no||!date)return{error:'Invoice number and invoice date are required.'};
-  if(!isAmsInvoiceNumberValid(no,date))return{error:'The invoice number does not match the AMS format for the selected invoice date.'};
+  const existing=excludeId?(DB.invoices||[]).find(inv=>inv.id===excludeId):null;
+  const unchangedLegacyNumber=!!(existing&&String(existing.no||'')===String(no)&&!isAmsInvoiceNumberValid(existing.no,existing.date));
+  if(!isAmsInvoiceNumberValid(no,date)&&!unchangedLegacyNumber)return{error:'The invoice number does not match the AMS format for the selected invoice date.'};
   if(invoiceNumberExists(no,excludeId))return{error:`Invoice number ${no} already exists.`};
   if(!contactId)return{error:'Select a customer.'};
+  const pendingContact=contactId===INVOICE_PDF_TEMP_CONTACT?_invoiceImportedCustomer:null;
+  if(contactId===INVOICE_PDF_TEMP_CONTACT&&!pendingContact)return{error:'The imported customer data is unavailable. Re-import the PDF.'};
   if(!dueDate)return{error:'Due date is required.'};
   const items=[];let subtotal=0,totalDisc=0;
   document.querySelectorAll('#inv-items .inv-row').forEach(row=>{
@@ -5554,13 +5895,25 @@ function collectInvoiceForm(excludeId){
     subtotal:Math.round(subtotal),discTotal:Math.round(totalDisc),dpp:Math.round(dpp),
     ppn,ppnRate,ppnAmt,pph23,pph23Rate,pph23Amt,pph4,pph4Rate,pph4Amt,
     total:Math.round(dpp+ppnAmt-pph23Amt-pph4Amt),note:v('inv-note')
-  }};
+  },pendingContact};
 }
 function saveInvoice(action){
   const collected=collectInvoiceForm(null);
   if(collected.error)return alert(collected.error);
   const data=collected.data;
   if(action==='confirm'&&!checkLock(data.date))return;
+  let createdContact=null;
+  if(collected.pendingContact){
+    const imported=collected.pendingContact;
+    createdContact={
+      id:uid(),name:imported.name||imported.perusahaan||'Imported Customer',type:'customer',
+      perusahaan:imported.perusahaan||'',phone:imported.phone||imported.telpKantor||'',
+      hp1:'',hp2:'',hp3:'',telpKantor:imported.telpKantor||imported.phone||'',telpRumah:'',fax:'',
+      email:'',email2:'',address:imported.address||'',npwp:'',note:'Imported from an invoice PDF.',website:''
+    };
+    DB.contacts.push(createdContact);
+    data.contactId=createdContact.id;
+  }
   const inv={id:uid(),...data,status:'draft',payments:[]};
   const sphSource=window._sphSourceId?(DB.sphs||[]).find(x=>x.id===window._sphSourceId):null;
   const bastSource=window._bastSourceId?(DB.basts||[]).find(x=>x.id===window._bastSourceId):null;
@@ -5573,12 +5926,13 @@ function saveInvoice(action){
   if(action==='confirm')confirmation=_confirmInvoice(inv);
   if(!saveDB()){
     DB.invoices=DB.invoices.filter(x=>x.id!==inv.id);
+    if(createdContact)DB.contacts=DB.contacts.filter(x=>x.id!==createdContact.id);
     rollbackInvoiceConfirmation(inv,confirmation);
     if(sphSource)sphSource.link_invoice_id=prevSphLink;
     if(bastSource)bastSource.link_invoice_id=prevBastLink;
     return;
   }
-  window._sphSourceId=null;window._bastSourceId=null;
+  window._sphSourceId=null;window._bastSourceId=null;_invoiceImportedCustomer=null;_invoicePdfImport=null;
   logAudit(action==='confirm'?'Create and Confirm':'Create Invoice Draft',`${inv.no} — Total: ${rp(inv.total)}`);
   closeModal();nav('invoices');
 }
@@ -5720,10 +6074,10 @@ function delInvoice(id){
 }
 function buildInvTaxLines(inv){
   return[
-    inv.ppn?`<tr><td>VAT (VAT) ${inv.ppnRate}%</td><td class="money">+${rp(inv.ppnAmt)}</td></tr>`:'',
-    inv.pph23?`<tr><td>Withholding Tax Article 23 (Article 23 Withholding Tax) ${inv.pph23Rate}%</td><td class="money deduction">-${rp(inv.pph23Amt)}</td></tr>`:'',
-    inv.pph4?`<tr><td>Final Income Tax Article 4(2) (Article 4(2) Final Income Tax) ${inv.pph4Rate}%</td><td class="money deduction">-${rp(inv.pph4Amt)}</td></tr>`:''
-  ].filter(Boolean).join('');
+    inv.ppn?{label:`VAT ${Number(inv.ppnRate)||0}%`,value:`+${rp(inv.ppnAmt||0)}`,className:'tax-add'}:null,
+    inv.pph23?{label:`Article 23 Withholding Tax ${Number(inv.pph23Rate)||0}%`,value:`-${rp(inv.pph23Amt||0)}`,className:'tax-deduct'}:null,
+    inv.pph4?{label:`Article 4(2) Final Income Tax ${Number(inv.pph4Rate)||0}%`,value:`-${rp(inv.pph4Amt||0)}`,className:'tax-deduct'}:null
+  ].filter(Boolean);
 }
 function splitInvoiceSignatory(value){
   const parts=String(value||'').split(/\s+-\s+/);
@@ -5735,77 +6089,104 @@ function printInvoice(id){
   const ct=DB.contacts.find(x=>x.id===inv.contactId)||{};
   const customerCompany=invoiceCustomerDisplay(ct);
   const customerContact=ct.name&&ct.name!==customerCompany?ct.name:'';
-  const logoUrl=co.logo&&!String(co.logo).startsWith('data:image/')?co.logo:'https://raw.githubusercontent.com/andrikagroup-hue/SiAkun/main/Gambar/IC.png';
+  const defaultLogo='https://raw.githubusercontent.com/andrikagroup-hue/SiAkun/main/Gambar/IC.png';
+  const logoUrl=co.logo&&!String(co.logo).startsWith('data:image/')?co.logo:defaultLogo;
   const paid=invPaid(inv),remaining=Math.max(0,(Number(inv.total)||0)-paid);
   const signatory=splitInvoiceSignatory(co.signatory||'');
-  const itemRows=(inv.items||[]).map((item,index)=>{
+  const itemRows=(inv.items||[]).map(item=>{
     const p=DB.products.find(x=>x.id===item.productId);
-    const title=item.desc||(p?p.name:'Invoice Items');
-    const discount=(Number(item.discRp)||0)+Math.round(Math.max(0,(Number(item.qty)||0)*(Number(item.price)||0)-(Number(item.discRp)||0))*(Number(item.discPct??item.discount)||0)/100);
+    const title=item.desc||(p?p.name:'Invoice Item');
+    const gross=Math.max(0,(Number(item.qty)||0)*(Number(item.price)||0));
+    const discount=Math.max(0,gross-(Number(item.subtotal)||0));
     return`<tr>
-      <td class="work"><b>${invoiceEscapeHtml(title)}</b>${p?`<div class="muted">${invoiceEscapeHtml(p.code||'')}</div>`:''}${discount>0?`<div class="muted">Line discount: ${rp(discount)}</div>`:''}</td>
+      <td class="work"><b>${invoiceEscapeHtml(title)}</b>${p&&p.code?`<div class="muted">${invoiceEscapeHtml(p.code)}</div>`:''}${discount>0?`<div class="muted">Line discount: ${rp(discount)}</div>`:''}</td>
       <td class="money">${rp(item.price||0)}</td>
-      <td class="center">${invoiceEscapeHtml(item.qty||0)}${item.unit?' '+invoiceEscapeHtml(item.unit):''}</td>
+      <td class="center">${Number(item.qty)===1&&/%$/.test(String(item.unit||'').trim())?invoiceEscapeHtml(item.unit):`${invoiceEscapeHtml(item.qty||0)}${item.unit?' '+invoiceEscapeHtml(item.unit):''}`}</td>
       <td class="money strong">${rp(item.subtotal||0)}</td>
     </tr>`;
   }).join('');
-  const fillerHeight=Math.max(18,150-(inv.items||[]).length*34);
-  const taxLines=buildInvTaxLines(inv);
+  const fillerHeight=Math.max(22,165-(inv.items||[]).length*32);
+  const summaryRows=[
+    {label:'Subtotal',value:rp(inv.subtotal||0)},
+    ...((Number(inv.discTotal)||0)>0?[{label:'Discount',value:`-${rp(inv.discTotal||0)}`,className:'tax-deduct'}]:[]),
+    ...(((Number(inv.discTotal)||0)>0||inv.ppn||inv.pph23||inv.pph4)?[{label:'Taxable Base',value:rp(inv.dpp??inv.subtotal??0)}]:[]),
+    ...buildInvTaxLines(inv),
+    {label:'TOTAL',value:rp(inv.total||0),className:'grand'},
+    ...(paid>0?[{label:'Paid',value:`-${rp(paid)}`},{label:'Outstanding',value:rp(remaining),className:'outstanding'}]:[])
+  ];
+  const summaryHtml=summaryRows.map((row,index)=>`<tr class="${row.className||''}">
+    ${index===0?`<td class="totals-blank" rowspan="${summaryRows.length}"></td>`:''}
+    <td class="total-label">${invoiceEscapeHtml(row.label)}</td>
+    <td class="total-value">${invoiceEscapeHtml(row.value)}</td>
+  </tr>`).join('');
+  const contactLine=[co.phone,co.email].filter(Boolean).map(invoiceEscapeHtml).join(' | ');
   const html=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
   <title>Invoice ${invoiceEscapeHtml(inv.no)}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,Helvetica,sans-serif;background:#eef2f7;color:#111827;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .sheet{width:190mm;min-height:274mm;margin:0 auto;background:#fff;border:1.6px solid #111827;position:relative}
-    .letterhead{display:flex;align-items:center;gap:14px;padding:13mm 10mm 8mm;border-bottom:1.6px solid #111827;min-height:42mm}
-    .logo{width:28mm;height:22mm;object-fit:contain}
-    .company h1{font-size:19px;letter-spacing:.2px;margin-bottom:4px}
-    .company p{font-size:10px;line-height:1.45;color:#374151}
-    .title{border-bottom:1.6px solid #111827;text-align:center;font-size:17px;font-weight:800;letter-spacing:5px;padding:7px 10px}
-    .customer-meta{display:grid;grid-template-columns:1.45fr .85fr;border-bottom:1.6px solid #111827;min-height:34mm}
-    .billto{padding:10px 12px;border-right:1.6px solid #111827;font-size:11px;line-height:1.45}
-    .billto .label{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:5px}
-    .billto .name{font-size:12.5px;font-weight:700;margin-bottom:2px}
-    .meta{padding:10px 12px;font-size:11px}
-    .meta-row{display:grid;grid-template-columns:90px 10px 1fr;margin-bottom:6px}
+    html,body{width:100%;min-height:100%;}
+    body{font-family:Arial,Helvetica,sans-serif;background:#eef2f7;color:#111;padding:14px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .sheet{width:190mm;margin:0 auto;background:#fff;border:1.45px solid #111;position:relative}
+    .letterhead{display:grid;grid-template-columns:34mm 1fr;align-items:center;column-gap:6mm;padding:8mm 10mm 7mm;border-bottom:1.45px solid #111;min-height:43mm}
+    .logo-box{height:25mm;display:flex;align-items:center;justify-content:center}
+    .logo{max-width:31mm;max-height:24mm;object-fit:contain}
+    .company h1{font-size:18px;line-height:1.15;letter-spacing:.15px;margin-bottom:4px;text-transform:uppercase}
+    .company p{font-size:9.5px;line-height:1.45;color:#222}
+    .company .identity-line{font-weight:700;color:#111}
+    .title{border-bottom:1.45px solid #111;text-align:center;font-size:16px;font-weight:800;letter-spacing:5px;padding:6px 10px}
+    .customer-meta{display:grid;grid-template-columns:1.48fr .82fr;border-bottom:1.45px solid #111;min-height:34mm}
+    .billto{padding:9px 11px;border-right:1.2px solid #111;font-size:10.5px;line-height:1.45}
+    .billto .label{display:inline-block;width:17mm;font-weight:700}
+    .billto .name{font-size:11.5px;font-weight:700}
+    .billto-row{display:grid;grid-template-columns:18mm 4mm 1fr;margin-bottom:2px}
+    .meta{padding:9px 11px;font-size:10.5px}
+    .meta-row{display:grid;grid-template-columns:26mm 4mm 1fr;margin-bottom:5px}
     table{width:100%;border-collapse:collapse}
-    .items th{border-right:1.2px solid #111827;border-bottom:1.6px solid #111827;padding:6px 7px;font-size:10px;text-align:center}
+    .items{table-layout:fixed}
+    .items th{border-right:1.1px solid #111;border-bottom:1.45px solid #111;padding:5px 6px;font-size:9.5px;text-align:center;font-weight:700}
+    .items th:nth-child(1){width:49%}.items th:nth-child(2){width:17%}.items th:nth-child(3){width:14%}.items th:nth-child(4){width:20%}
     .items th:last-child,.items td:last-child{border-right:none}
-    .items td{border-right:1.2px solid #111827;border-bottom:1px solid #111827;padding:8px 8px;font-size:10.5px;vertical-align:top}
-    .items .work{width:48%}.items .muted{font-size:9px;color:#6b7280;margin-top:3px}.center{text-align:center}.money{text-align:right}.strong{font-weight:700}
-    .filler td{height:${fillerHeight}px}
-    .totals-wrap{display:grid;grid-template-columns:1fr 64mm;border-bottom:1.6px solid #111827}
-    .totals-space{border-right:1.6px solid #111827;min-height:42mm}
-    .totals td{padding:6px 8px;border-bottom:1px solid #111827;font-size:10.5px}.totals tr:last-child td{border-bottom:none}.totals .money{font-weight:700}.totals .deduction{color:#b91c1c}
-    .totals .grand td{font-size:13px;font-weight:800;border-top:1.6px solid #111827;padding-top:8px;padding-bottom:8px}
-    .words{border-bottom:1.6px solid #111827;padding:8px 12px;min-height:21mm;font-size:10.5px}.words b{display:block;font-size:9px;text-transform:uppercase;margin-bottom:5px}.words em{font-size:11.5px;font-weight:700}
-    .bottom{display:grid;grid-template-columns:1.1fr 1fr;min-height:47mm}
-    .payment{padding:10px 12px;border-right:1.6px solid #111827;font-size:10.5px;line-height:1.5}.payment h3{font-size:10px;margin-bottom:5px}.notice{border:1px solid #111827;margin-top:9px;padding:4px 6px;text-align:center;font-size:9px;font-weight:700}
-    .signature{text-align:center;padding:8px 12px;font-size:10px}.signature .company-name{font-weight:700;margin-bottom:20px}.signature .space{height:32px}.signature .sign-name{font-weight:700;text-decoration:underline}.signature .position{font-size:9.5px;margin-top:3px}
-    .status-note{font-size:9px;color:#6b7280;margin-top:5px}
-    .printbar{position:fixed;right:20px;bottom:20px;display:flex;gap:8px}.printbar button{border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer}.print{background:#1d4ed8;color:#fff}.close{background:#fff;color:#374151;border:1px solid #cbd5e1!important}
-    @page{size:A4;margin:8mm}
-    @media print{body{padding:0;background:#fff}.sheet{width:100%;min-height:277mm;margin:0;border:1.6px solid #111827}.printbar{display:none}}
+    .items td{border-right:1.1px solid #111;border-bottom:1px solid #111;padding:7px 8px;font-size:10px;vertical-align:top;line-height:1.35}
+    .items .muted{font-size:8.5px;color:#555;margin-top:2px}.center{text-align:center}.money{text-align:right}.strong{font-weight:700}
+    .filler td{height:${fillerHeight}px;border-bottom:1.45px solid #111}
+    .totals-grid{table-layout:fixed}
+    .totals-grid td{font-size:10px;line-height:1.25}
+    .totals-blank{width:49%;border-right:1.1px solid #111;border-bottom:1.45px solid #111}
+    .total-label{width:31%;padding:6px 8px;text-align:right;border-right:1.1px solid #111;border-bottom:1px solid #111}
+    .total-value{width:20%;padding:6px 8px;text-align:right;font-weight:700;border-bottom:1px solid #111}
+    .totals-grid tr:last-child .total-label,.totals-grid tr:last-child .total-value{border-bottom:1.45px solid #111}
+    .totals-grid .tax-deduct .total-value{color:#8b0000}.totals-grid .tax-add .total-value{color:#111}
+    .totals-grid .grand .total-label,.totals-grid .grand .total-value{font-size:12px;font-weight:800;border-top:1.45px solid #111;padding-top:7px;padding-bottom:7px}
+    .totals-grid .outstanding .total-label,.totals-grid .outstanding .total-value{font-weight:800}
+    .words{border-bottom:1.45px solid #111;padding:7px 11px;min-height:20mm;font-size:10px}
+    .words b{display:block;margin-bottom:5px}.words em{display:block;padding-left:17mm;font-size:10.5px;font-weight:700}
+    .bottom{display:grid;grid-template-columns:1.02fr 1fr;min-height:45mm}
+    .payment{padding:9px 11px;border-right:1.2px solid #111;font-size:10px;line-height:1.45}.payment h3{font-size:9.8px;margin-bottom:5px}
+    .notice{border:1px solid #111;margin-top:8px;padding:4px 5px;text-align:center;font-size:8.5px;font-weight:700}
+    .notes{margin-top:6px;font-size:9px;line-height:1.35}
+    .signature{text-align:center;padding:7px 11px;font-size:9.5px}.signature .company-name{font-weight:700}.signature .space{height:27mm}.signature .sign-name{font-weight:700;text-decoration:underline}.signature .position{font-size:9px;margin-top:3px}
+    .printbar{position:fixed;right:20px;bottom:20px;display:flex;gap:8px}.printbar button{border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer}.print{background:#0f766e;color:#fff;border:none}.close{background:#fff;color:#374151;border:1px solid #cbd5e1}
+    @page{size:A4 portrait;margin:10mm}
+    @media print{body{padding:0;background:#fff}.sheet{width:190mm;margin:0 auto;border:1.45px solid #111}.printbar{display:none}}
   </style></head><body>
   <div class="sheet">
     <div class="letterhead">
-      <img class="logo" src="${invoiceEscapeAttr(logoUrl)}" alt="AMS Logo">
+      <div class="logo-box"><img class="logo" src="${invoiceEscapeAttr(logoUrl)}" alt="AMS Logo" onerror="this.onerror=null;this.src='${invoiceEscapeAttr(defaultLogo)}'"></div>
       <div class="company">
         <h1>${invoiceEscapeHtml(co.name||'PT Andrika Mitra Solusi')}</h1>
         ${co.address?`<p>${invoiceEscapeHtml(co.address)}</p>`:''}
-        <p>${[co.phone,co.email].filter(Boolean).map(invoiceEscapeHtml).join(' | ')}</p>
-        ${co.npwp?`<p>Tax ID (NPWP): ${invoiceEscapeHtml(co.npwp)}</p>`:''}
+        ${contactLine?`<p>${contactLine}</p>`:''}
+        ${co.npwp?`<p class="identity-line">NPWP: ${invoiceEscapeHtml(co.npwp)}</p>`:''}
       </div>
     </div>
     <div class="title">INVOICE</div>
     <div class="customer-meta">
       <div class="billto">
-        <div class="label">Bill To</div>
-        <div class="name">${invoiceEscapeHtml(customerCompany)}</div>
-        ${customerContact?`<div>Attn: ${invoiceEscapeHtml(customerContact)}</div>`:''}
-        ${ct.address?`<div>${invoiceEscapeHtml(ct.address)}</div>`:''}
-        ${ct.telpKantor||ct.phone?`<div>${invoiceEscapeHtml(ct.telpKantor||ct.phone)}</div>`:''}
-        ${ct.npwp?`<div>Tax ID (NPWP): ${invoiceEscapeHtml(ct.npwp)}</div>`:''}
+        <div class="billto-row"><b>Bill To</b><span>:</span><span class="name">${invoiceEscapeHtml(customerCompany)}</span></div>
+        ${customerContact?`<div class="billto-row"><span>Attention</span><span>:</span><span>${invoiceEscapeHtml(customerContact)}</span></div>`:''}
+        ${ct.address?`<div class="billto-row"><span>Address</span><span>:</span><span>${invoiceEscapeHtml(ct.address)}</span></div>`:''}
+        ${ct.telpKantor||ct.phone?`<div class="billto-row"><span>Phone</span><span>:</span><span>${invoiceEscapeHtml(ct.telpKantor||ct.phone)}</span></div>`:''}
+        ${ct.npwp?`<div class="billto-row"><span>NPWP</span><span>:</span><span>${invoiceEscapeHtml(ct.npwp)}</span></div>`:''}
       </div>
       <div class="meta">
         <div class="meta-row"><b>Invoice No.</b><span>:</span><span>${invoiceEscapeHtml(inv.no)}</span></div>
@@ -5814,41 +6195,35 @@ function printInvoice(id){
       </div>
     </div>
     <table class="items">
-      <thead><tr><th>Description / Scope of Work</th><th>Unit Value</th><th>Quantity</th><th>Amount</th></tr></thead>
+      <thead><tr><th>Description / Scope of Work</th><th>Contract / Unit Value</th><th>Volume</th><th>Amount</th></tr></thead>
       <tbody>${itemRows}<tr class="filler"><td></td><td></td><td></td><td></td></tr></tbody>
     </table>
-    <div class="totals-wrap">
-      <div class="totals-space"></div>
-      <table class="totals">
-        <tr><td>Gross Subtotal</td><td class="money">${rp(inv.subtotal||0)}</td></tr>
-        ${(inv.discTotal||0)>0?`<tr><td>Total Discount</td><td class="money deduction">-${rp(inv.discTotal)}</td></tr>`:''}
-        <tr><td>Taxable Base</td><td class="money">${rp(inv.dpp??inv.subtotal??0)}</td></tr>
-        ${taxLines}
-        <tr class="grand"><td>TOTAL</td><td class="money">${rp(inv.total||0)}</td></tr>
-        ${paid>0?`<tr><td>Paid</td><td class="money">-${rp(paid)}</td></tr><tr><td>Outstanding</td><td class="money">${rp(remaining)}</td></tr>`:''}
-      </table>
-    </div>
-    <div class="words"><b>Amount in Words</b><em>${amountInWordsIDR(inv.total||0)}</em></div>
+    <table class="totals-grid"><tbody>${summaryHtml}</tbody></table>
+    <div class="words"><b>Amount in Words:</b><em>${amountInWordsIDR(inv.total||0)}</em></div>
     <div class="bottom">
       <div class="payment">
         <h3>Payment by bank transfer or cheque/giro to:</h3>
         <div><b>Account Name:</b> ${invoiceEscapeHtml(co.atasnama||co.name||'PT Andrika Mitra Solusi')}</div>
         <div><b>Bank:</b> ${invoiceEscapeHtml(co.bank||'-')}</div>
-        <div><b>Account Number.:</b> ${invoiceEscapeHtml(co.norek||'-')}</div>
-        ${inv.note?`<div style="margin-top:6px"><b>Notes:</b> ${invoiceEscapeHtml(inv.note).replace(/\n/g,'<br>')}</div>`:''}
+        <div><b>Account Number:</b> ${invoiceEscapeHtml(co.norek||'-')}</div>
+        ${inv.note?`<div class="notes"><b>Notes:</b><br>${invoiceEscapeHtml(inv.note).replace(/\n/g,'<br>')}</div>`:''}
         <div class="notice">This invoice is valid after the payment has been cleared.</div>
       </div>
       <div class="signature">
         <div class="company-name">${invoiceEscapeHtml(co.name||'PT Andrika Mitra Solusi')}</div>
         <div class="space"></div>
-        <div class="sign-name">${invoiceEscapeHtml(signatory.name||'( Authorized Signature )')}</div>
+        <div class="sign-name">${invoiceEscapeHtml(signatory.name||'Authorized Signature')}</div>
         <div class="position">${invoiceEscapeHtml(signatory.position)}</div>
-        <div class="status-note">Document status: ${invoiceStatusLabel(invStatus(inv))}</div>
       </div>
     </div>
   </div>
   <div class="printbar"><button class="close" onclick="window.close()">Close</button><button class="print" onclick="window.print()">Print / Save PDF</button></div>
-  <script>window.onload=()=>setTimeout(()=>window.print(),500)<\/script>
+  <script>
+    window.addEventListener('load',()=>{
+      const pending=[...document.images].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});}));
+      Promise.race([Promise.all(pending),new Promise(resolve=>setTimeout(resolve,2500))]).then(()=>setTimeout(()=>window.print(),250));
+    });
+  <\/script>
   </body></html>`;
   const w=window.open('','_blank','width=940,height=900,scrollbars=yes');
   if(!w)return alert('The browser blocked the print window. Allow pop-ups for the SiAkun website.');
@@ -5866,7 +6241,7 @@ function exportInvoices(){
       'Gross Subtotal':inv.subtotal||0,
       'Discount':inv.discTotal||0,
       'Taxable Base':inv.dpp??inv.subtotal??0,
-      'VAT (VAT)':inv.ppnAmt||0,
+      'VAT':inv.ppnAmt||0,
       'Article 23 Withholding Tax Deduction':inv.pph23Amt||0,
       'Article 4(2) Final Income Tax Deduction':inv.pph4Amt||0,
       'Invoice Total':inv.total||0,
