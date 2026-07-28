@@ -5210,7 +5210,66 @@ function invoiceDateLong(dateStr){
   if(Number.isNaN(d.getTime()))return dateStr;
   return d.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
 }
-function invoiceCustomerDisplay(ct){return ct?(ct.perusahaan||ct.name||'Customer'):'Customer';}
+function invoiceRawCustomerSnapshot(raw){
+  const source=raw||{};
+  const company=String(source.displayName||source.company||source.perusahaan||'').trim();
+  const rawName=String(source.contactName||source.name||'').trim();
+  const displayName=company||rawName;
+  const contactName=source.contactName!==undefined
+    ?rawName
+    :(company&&rawName&&invoiceNormalizeSearch(company)!==invoiceNormalizeSearch(rawName)?rawName:'');
+  return{
+    displayName,
+    contactName,
+    address:String(source.address||source.alamat||'').trim(),
+    phone:String(source.phone||source.telpKantor||source.mobile||source.hp1||'').trim(),
+    npwp:String(source.npwp||'').trim()
+  };
+}
+function invoiceContactSnapshot(ct){return invoiceRawCustomerSnapshot(ct||{});}
+function resolveInvoiceCustomer(inv){
+  const master=invoiceContactSnapshot((DB.contacts||[]).find(ct=>ct.id===inv?.contactId));
+  const saved=invoiceRawCustomerSnapshot(inv?.customerSnapshot||inv?.customer||{});
+  return{
+    displayName:saved.displayName||master.displayName||'Customer',
+    contactName:saved.contactName||master.contactName||'',
+    address:saved.address||master.address||'',
+    phone:saved.phone||master.phone||'',
+    npwp:saved.npwp||master.npwp||''
+  };
+}
+function invoiceCustomerDisplay(value){
+  if(value&&(value.customerSnapshot||value.customer||value.contactId||value.items))return resolveInvoiceCustomer(value).displayName;
+  return invoiceRawCustomerSnapshot(value||{}).displayName||'Customer';
+}
+function setInvoiceCustomerField(id,value){const el=document.getElementById(id);if(el)el.value=value||'';}
+function fillInvoiceCustomerDetails(contactId){
+  if(!contactId||contactId===INVOICE_PDF_TEMP_CONTACT)return;
+  const ct=(DB.contacts||[]).find(item=>item.id===contactId);if(!ct)return;
+  const customer=invoiceContactSnapshot(ct);
+  setInvoiceCustomerField('inv-customer-name',customer.displayName);
+  setInvoiceCustomerField('inv-customer-attention',customer.contactName);
+  setInvoiceCustomerField('inv-customer-address',customer.address);
+  setInvoiceCustomerField('inv-customer-phone',customer.phone);
+  setInvoiceCustomerField('inv-customer-npwp',customer.npwp);
+}
+function createInvoiceCustomerContact(customer){
+  const data=invoiceRawCustomerSnapshot(customer||{});
+  return{
+    id:uid(),name:data.contactName||data.displayName||'Customer',type:'customer',
+    perusahaan:data.displayName||'',phone:data.phone||'',
+    hp1:'',hp2:'',hp3:'',telpKantor:data.phone||'',telpRumah:'',fax:'',
+    email:'',email2:'',address:data.address||'',npwp:data.npwp||'',
+    note:'Created from the Invoice form.',website:''
+  };
+}
+function invoiceCustomerOptions(selected){
+  return(DB.contacts||[]).filter(ct=>ct.type==='customer'||ct.type==='both').map(ct=>{
+    const customer=invoiceContactSnapshot(ct);
+    const attention=customer.contactName?` — ${customer.contactName}`:'';
+    return`<option value="${invoiceEscapeAttr(ct.id)}"${selected===ct.id?' selected':''}>${invoiceEscapeHtml(customer.displayName+attention)}</option>`;
+  }).join('');
+}
 function invoiceStatusLabel(status){
   return({draft:'Draft',confirmed:'Issued',unpaid:'Unpaid',partial:'Partially Paid',paid:'Paid',overdue:'Overdue'})[status]||status||'-';
 }
@@ -5359,14 +5418,14 @@ function renderInvoices(c){
     </tr></thead>
     <tbody>
       ${sorted.length?sorted.map(inv=>{
-        const ct=DB.contacts.find(x=>x.id===inv.contactId);
+        const customer=resolveInvoiceCustomer(inv);
         const st=invStatus(inv);
         const taxTotal=(Number(inv.ppnAmt)||0)-(Number(inv.pph23Amt)||0)-(Number(inv.pph4Amt)||0);
         return`<tr>
           <td class="fw7"><a onclick="printInvoice('${inv.id}')" style="cursor:pointer;color:var(--acc)">${invoiceEscapeHtml(inv.no)}</a></td>
           <td>${invoiceDateLong(inv.date)}</td>
           <td style="color:${st==='overdue'?'#dc2626':'inherit'}">${invoiceDateLong(inv.dueDate)}</td>
-          <td>${ct?invoiceEscapeHtml(invoiceCustomerDisplay(ct)):'<span class="muted">—</span>'}</td>
+          <td>${customer.displayName?invoiceEscapeHtml(customer.displayName):'<span class="muted">—</span>'}</td>
           <td style="text-align:right">${rp(inv.dpp??inv.subtotal??0)}</td>
           <td style="text-align:right;color:${taxTotal>=0?'#d97706':'#dc2626'}">${taxTotal>=0?'+':''}${rp(taxTotal)}</td>
           <td style="text-align:right;font-weight:700">${rp(inv.total||0)}</td>
@@ -5816,13 +5875,17 @@ function openInvoiceForm(inv,prefill){
   invItemCount=Math.max(1,items.length);
   const itemHtml=(items.length?items:[{}]).map((item,i)=>invItemRow(i,item)).join('');
   const importedCustomer=!isEdit?(prefill?.importedCustomer||_invoiceImportedCustomer):null;
-  const contactId=inv?.contactId||prefill?.contactId||(importedCustomer?INVOICE_PDF_TEMP_CONTACT:'');
+  const contactId=inv?.contactId||prefill?.contactId||'';
+  const selectedContact=(DB.contacts||[]).find(ct=>ct.id===contactId)||null;
+  const customer=isEdit
+    ?resolveInvoiceCustomer(inv)
+    :invoiceRawCustomerSnapshot(importedCustomer||selectedContact||{});
   const paymentBankId=inv?.paymentBankId||prefill?.paymentBankId||getCompanyBankAccounts(DB.company).find(acc=>acc.isDefault)?.id||'';
   const note=inv?.note||prefill?.note||'';
   const modalTitle=isEdit?`Edit Draft Invoice — ${invoiceEscapeHtml(initialNo)}`:'Create New Invoice';
   openModal(modalTitle,`
     <div class="alert a-info" style="font-size:11.5px">
-      The AMS invoice number is automatic. Customer, description, payment account, and optional due date remain editable while the invoice is a Draft.
+      The AMS invoice number is automatic. Customer details can be typed directly or filled from a saved customer while the invoice is a Draft.
     </div>
     <div style="border:1px solid var(--bdr);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#fbfdff">
       <div style="font-size:10.5px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.6px;margin-bottom:9px">1. Document Details</div>
@@ -5838,10 +5901,29 @@ function openInvoiceForm(inv,prefill){
     </div>
     <div style="border:1px solid var(--bdr);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#fbfdff">
       <div style="font-size:10.5px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.6px;margin-bottom:9px">2. Customer and Payment Details</div>
-      <div class="fr2">
-        <div class="fg"><label>Customer</label>
-          <select id="inv-contact"><option value="">— Select Customer —</option>${importedCustomer?`<option value="${INVOICE_PDF_TEMP_CONTACT}" selected>${invoiceEscapeHtml(importedCustomer.perusahaan||importedCustomer.name)} — Imported from PDF</option>`:''}${contactOptions('customer',contactId)}</select>
-          <div style="font-size:10px;color:#64748b;margin-top:3px">The customer name is separate from the source invoice reference.</div>
+      <div class="fr2" style="align-items:start">
+        <div>
+          <div class="fg"><label>Use Saved Customer <span style="font-weight:500;text-transform:none">(Optional)</span></label>
+            <select id="inv-contact" data-no-search onchange="fillInvoiceCustomerDetails(this.value)"><option value="">— Type a new customer below —</option>${invoiceCustomerOptions(contactId)}</select>
+            <div style="font-size:10px;color:#64748b;margin-top:3px">Choose a saved customer to fill the fields below, or leave this blank and type a new customer.</div>
+          </div>
+          <div class="fg"><label>Customer / Company Name <span style="color:#dc2626">*</span></label>
+            <input id="inv-customer-name" value="${invoiceEscapeAttr(customer.displayName)}" placeholder="Example: PT Vektordaya Mekatrika" autocomplete="organization">
+          </div>
+          <div class="fr2">
+            <div class="fg"><label>Attention / Contact Person <span style="font-weight:500;text-transform:none">(Optional)</span></label>
+              <input id="inv-customer-attention" value="${invoiceEscapeAttr(customer.contactName)}" placeholder="Contact person">
+            </div>
+            <div class="fg"><label>Phone <span style="font-weight:500;text-transform:none">(Optional)</span></label>
+              <input id="inv-customer-phone" value="${invoiceEscapeAttr(customer.phone)}" placeholder="Telephone or mobile number">
+            </div>
+          </div>
+          <div class="fg"><label>Address <span style="font-weight:500;text-transform:none">(Optional)</span></label>
+            <textarea id="inv-customer-address" rows="3" style="resize:vertical" placeholder="Customer address shown on the invoice">${invoiceEscapeHtml(customer.address)}</textarea>
+          </div>
+          <div class="fg" style="margin-bottom:0"><label>Customer NPWP <span style="font-weight:500;text-transform:none">(Optional)</span></label>
+            <input id="inv-customer-npwp" value="${invoiceEscapeAttr(customer.npwp)}" placeholder="Customer NPWP">
+          </div>
         </div>
         <div class="fg"><label>Payment Bank Account <span style="font-weight:500;text-transform:none">(shown on invoice)</span></label>
           <select id="inv-payment-bank">${companyBankAccountOptions(paymentBankId)}</select>
@@ -5968,15 +6050,36 @@ function calcInvTotals(){
   Object.entries(taxAmountMap).forEach(([id,value])=>{const el=document.getElementById(id);if(el)el.textContent=rp(value);});
 }
 function collectInvoiceForm(excludeId){
-  const no=v('inv-no'),date=v('inv-date'),dueDate=v('inv-due'),contactId=v('inv-contact'),paymentBankId=v('inv-payment-bank');
+  const no=v('inv-no'),date=v('inv-date'),dueDate=v('inv-due'),paymentBankId=v('inv-payment-bank');
+  let contactId=v('inv-contact');
   if(!no||!date)return{error:'Invoice number and invoice date are required.'};
   const existing=excludeId?(DB.invoices||[]).find(inv=>inv.id===excludeId):null;
   const unchangedLegacyNumber=!!(existing&&String(existing.no||'')===String(no)&&!isAmsInvoiceNumberValid(existing.no,existing.date));
   if(!isAmsInvoiceNumberValid(no,date)&&!unchangedLegacyNumber)return{error:'The invoice number does not match the AMS format for the selected invoice date.'};
   if(invoiceNumberExists(no,excludeId))return{error:`Invoice number ${no} already exists.`};
-  if(!contactId)return{error:'Select a customer.'};
-  const pendingContact=contactId===INVOICE_PDF_TEMP_CONTACT?_invoiceImportedCustomer:null;
-  if(contactId===INVOICE_PDF_TEMP_CONTACT&&!pendingContact)return{error:'The imported customer data is unavailable. Re-import the PDF.'};
+
+  const enteredCustomerName=v('inv-customer-name');
+  if(!enteredCustomerName)return{error:'Enter the customer or company name.'};
+  const customerSnapshot=invoiceRawCustomerSnapshot({
+    displayName:enteredCustomerName,
+    contactName:v('inv-customer-attention'),
+    address:v('inv-customer-address'),
+    phone:v('inv-customer-phone'),
+    npwp:v('inv-customer-npwp')
+  });
+  if(contactId===INVOICE_PDF_TEMP_CONTACT)contactId='';
+  let pendingContact=null;
+  if(!contactId){
+    const matched=findInvoiceImportContact({
+      perusahaan:customerSnapshot.displayName,
+      name:customerSnapshot.contactName||customerSnapshot.displayName,
+      telpKantor:customerSnapshot.phone,
+      address:customerSnapshot.address
+    });
+    if(matched)contactId=matched.id;
+    else pendingContact=customerSnapshot;
+  }
+
   const items=[];let subtotal=0,totalDisc=0;
   document.querySelectorAll('#inv-items .inv-row').forEach(row=>{
     const productId=row.querySelector('.inv-product')?.value||null;
@@ -6006,7 +6109,7 @@ function collectInvoiceForm(excludeId){
   const pph23Amt=pph23?Math.round(dpp*pph23Rate/100):0;
   const pph4Amt=pph4?Math.round(dpp*pph4Rate/100):0;
   return{data:{
-    no,date,dueDate,contactId,paymentBankId,items,
+    no,date,dueDate,contactId,customerSnapshot,paymentBankId,items,
     subtotal:Math.round(subtotal),discTotal:Math.round(totalDisc),dpp:Math.round(dpp),
     ppn,ppnRate,ppnAmt,pph23,pph23Rate,pph23Amt,pph4,pph4Rate,pph4Amt,
     total:Math.round(dpp+ppnAmt-pph23Amt-pph4Amt),note:v('inv-note')
@@ -6019,13 +6122,7 @@ function saveInvoice(action){
   if(action==='confirm'&&!checkLock(data.date))return;
   let createdContact=null;
   if(collected.pendingContact){
-    const imported=collected.pendingContact;
-    createdContact={
-      id:uid(),name:imported.name||imported.perusahaan||'Imported Customer',type:'customer',
-      perusahaan:imported.perusahaan||'',phone:imported.phone||imported.telpKantor||'',
-      hp1:'',hp2:'',hp3:'',telpKantor:imported.telpKantor||imported.phone||'',telpRumah:'',fax:'',
-      email:'',email2:'',address:imported.address||'',npwp:'',note:'Imported from an invoice PDF.',website:''
-    };
+    createdContact=createInvoiceCustomerContact(collected.pendingContact);
     DB.contacts.push(createdContact);
     data.contactId=createdContact.id;
   }
@@ -6058,9 +6155,16 @@ function saveEditInvoice(id){
   const collected=collectInvoiceForm(id);
   if(collected.error)return alert(collected.error);
   const previous=JSON.parse(JSON.stringify(inv));
+  let createdContact=null;
+  if(collected.pendingContact){
+    createdContact=createInvoiceCustomerContact(collected.pendingContact);
+    DB.contacts.push(createdContact);
+    collected.data.contactId=createdContact.id;
+  }
   Object.assign(inv,collected.data);
   if(!saveDB()){
     DB.invoices[index]=previous;
+    if(createdContact)DB.contacts=DB.contacts.filter(x=>x.id!==createdContact.id);
     return;
   }
   logAudit('Edit Invoice',inv.no);closeModal();nav('invoices');
@@ -6201,9 +6305,9 @@ function splitInvoiceSignatory(value){
 function printInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);if(!inv)return;
   const co=DB.company||{};
-  const ct=DB.contacts.find(x=>x.id===inv.contactId)||{};
-  const customerCompany=invoiceCustomerDisplay(ct);
-  const customerContact=ct.name&&ct.name!==customerCompany?ct.name:'';
+  const customer=resolveInvoiceCustomer(inv);
+  const customerCompany=customer.displayName;
+  const customerContact=customer.contactName;
   const defaultLogo='https://raw.githubusercontent.com/andrikagroup-hue/SiAkun/main/Gambar/IC.png';
   const logoUrl=co.logo&&!String(co.logo).startsWith('data:image/')?co.logo:defaultLogo;
   const paid=invPaid(inv),remaining=Math.max(0,(Number(inv.total)||0)-paid);
@@ -6262,14 +6366,14 @@ function printInvoice(id){
     .items th{border-right:1.1px solid #111;border-bottom:1.45px solid #111;padding:5px 6px;font-size:9.5px;text-align:center;font-weight:700}
     .items th:nth-child(1){width:49%}.items th:nth-child(2){width:17%}.items th:nth-child(3){width:14%}.items th:nth-child(4){width:20%}
     .items th:last-child,.items td:last-child{border-right:none}
-    .items td{border-right:1.1px solid #111;border-bottom:1px solid #111;padding:7px 8px;font-size:10px;vertical-align:top;line-height:1.35;overflow-wrap:anywhere}
+    .items td{border-right:1.1px solid #111;border-bottom:none;padding:7px 8px;font-size:10px;vertical-align:top;line-height:1.35;overflow-wrap:anywhere}
     .items .muted{font-size:8.5px;color:#555;margin-top:2px}.center{text-align:center}.money{text-align:right}.strong{font-weight:700}
     .filler td{height:${fillerHeight}px;border-bottom:1.45px solid #111}
     .totals-grid{table-layout:fixed}
     .totals-grid td{font-size:10px;line-height:1.25}
     .totals-blank{width:49%;border-right:1.1px solid #111;border-bottom:1.45px solid #111}
-    .total-label{width:31%;padding:6px 8px;text-align:right;border-right:1.1px solid #111;border-bottom:1px solid #111}
-    .total-value{width:20%;padding:6px 8px;text-align:right;font-weight:700;border-bottom:1px solid #111}
+    .total-label{width:31%;padding:6px 8px;text-align:right;border-right:1.1px solid #111;border-bottom:none}
+    .total-value{width:20%;padding:6px 8px;text-align:right;font-weight:700;border-bottom:none}
     .totals-grid tr:last-child .total-label,.totals-grid tr:last-child .total-value{border-bottom:1.45px solid #111}
     .totals-grid .tax-deduct .total-value{color:#8b0000}.totals-grid .tax-add .total-value{color:#111}
     .totals-grid .grand .total-label,.totals-grid .grand .total-value{font-size:12px;font-weight:800;border-top:1.45px solid #111;padding-top:7px;padding-bottom:7px}
@@ -6300,9 +6404,9 @@ function printInvoice(id){
       <div class="billto">
         <div class="billto-row"><b>Bill To</b><span>:</span><span class="name">${invoiceEscapeHtml(customerCompany)}</span></div>
         ${customerContact?`<div class="billto-row"><span>Attention</span><span>:</span><span>${invoiceEscapeHtml(customerContact)}</span></div>`:''}
-        ${ct.address?`<div class="billto-row"><span>Address</span><span>:</span><span>${invoiceEscapeHtml(ct.address)}</span></div>`:''}
-        ${ct.telpKantor||ct.phone?`<div class="billto-row"><span>Phone</span><span>:</span><span>${invoiceEscapeHtml(ct.telpKantor||ct.phone)}</span></div>`:''}
-        ${ct.npwp?`<div class="billto-row"><span>NPWP</span><span>:</span><span>${invoiceEscapeHtml(ct.npwp)}</span></div>`:''}
+        ${customer.address?`<div class="billto-row"><span>Address</span><span>:</span><span>${invoiceEscapeHtml(customer.address)}</span></div>`:''}
+        ${customer.phone?`<div class="billto-row"><span>Phone</span><span>:</span><span>${invoiceEscapeHtml(customer.phone)}</span></div>`:''}
+        ${customer.npwp?`<div class="billto-row"><span>NPWP</span><span>:</span><span>${invoiceEscapeHtml(customer.npwp)}</span></div>`:''}
       </div>
       <div class="meta">
         <div class="meta-row"><b>Invoice No.</b><span>:</span><span>${invoiceEscapeHtml(inv.no)}</span></div>
@@ -6347,12 +6451,12 @@ function printInvoice(id){
 }
 function exportInvoices(){
   const rows=(DB.invoices||[]).map(inv=>{
-    const ct=DB.contacts.find(x=>x.id===inv.contactId);
+    const customer=resolveInvoiceCustomer(inv);
     return{
       'Invoice Number':inv.no,
       'Invoice Date':inv.date,
       'Due Date':inv.dueDate,
-      'Customer':invoiceCustomerDisplay(ct),
+      'Customer':customer.displayName,
       'Status':invoiceStatusLabel(invStatus(inv)),
       'Gross Subtotal':inv.subtotal||0,
       'Discount':inv.discTotal||0,
@@ -6389,11 +6493,11 @@ function renderAR(c){
     <thead><tr><th>Invoice No.</th><th>Customer</th><th>Invoice Date</th><th>Due Date</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Age (Days)</th><th>Status</th><th>Action</th></tr></thead>
     <tbody>
       ${open.length?open.sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate)).map(inv=>{
-        const ct=DB.contacts.find(x=>x.id===inv.contactId);
+        const customer=resolveInvoiceCustomer(inv);
         const paid=invPaid(inv);
         const days=Math.max(0,Math.floor((new Date()-new Date(inv.date+'T00:00:00'))/(1000*60*60*24)));
         const status=invStatus(inv);
-        return`<tr><td class="fw7">${invoiceEscapeHtml(inv.no)}</td><td>${invoiceEscapeHtml(invoiceCustomerDisplay(ct))}</td><td>${invoiceDateLong(inv.date)}</td><td class="${isOverdue(inv.dueDate)?'bad':''}">${invoiceDateLong(inv.dueDate)}</td><td>${rp(inv.total||0)}</td><td class="ok">${rp(paid)}</td><td class="bad fw7">${rp((inv.total||0)-paid)}</td><td class="${days>60?'bad':days>30?'warn':''}">${days}</td><td>${invoiceStatusBadge(status)}</td><td><button class="btn btn-pri btn-xs" onclick="openPayInvoice('${inv.id}')">Record Payment</button></td></tr>`;
+        return`<tr><td class="fw7">${invoiceEscapeHtml(inv.no)}</td><td>${invoiceEscapeHtml(customer.displayName)}</td><td>${invoiceDateLong(inv.date)}</td><td class="${isOverdue(inv.dueDate)?'bad':''}">${invoiceDateLong(inv.dueDate)}</td><td>${rp(inv.total||0)}</td><td class="ok">${rp(paid)}</td><td class="bad fw7">${rp((inv.total||0)-paid)}</td><td class="${days>60?'bad':days>30?'warn':''}">${days}</td><td>${invoiceStatusBadge(status)}</td><td><button class="btn btn-pri btn-xs" onclick="openPayInvoice('${inv.id}')">Record Payment</button></td></tr>`;
       }).join(''):`<tr><td colspan="10" class="tbl-empty">All receivables have been settled.</td></tr>`}
     </tbody>
   </table></div></div>`;
