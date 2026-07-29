@@ -5489,10 +5489,6 @@ function renderInvoices(c){
     ['unpaid','Unpaid','r'],['partial','Partially Paid','y'],['paid','Paid','g'],['overdue','Overdue','r']
   ];
   c.innerHTML=`
-  <div class="alert a-info" style="margin-bottom:12px">
-    <b>AMS invoice numbering:</b> Every Draft uses the temporary number AMSYYMM-INV100. A unique official number starting from INV101 is assigned only when the Draft is confirmed. The confirmed sequence continues during the calendar year and resets to 101 in January.<br>
-    <span style="font-size:11px">PDF import reads the source document into an editable Draft form. The source invoice number is kept only as a reference and never replaces the official AMS invoice number.</span>
-  </div>
   <div class="stats" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
     ${statusCards.map(([status,label,cls])=>{
       const list=(DB.invoices||[]).filter(i=>invStatus(i)===status);
@@ -5974,6 +5970,9 @@ function openInvoiceForm(inv,prefill){
   const paymentBankId=inv?.paymentBankId||prefill?.paymentBankId||getCompanyBankAccounts(DB.company).find(acc=>acc.isDefault)?.id||'';
   const authorizedName=inv?.authorizedName||prefill?.authorizedName||'';
   const authorizedPosition=inv?.authorizedPosition||prefill?.authorizedPosition||'';
+  window._invoiceSignature=inv?.authorizedSignature||prefill?.authorizedSignature||'';
+  window._invoiceSignatureFile=null;
+  window._invoiceSignatureRemoved=false;
   const note=inv?.note||prefill?.note||'';
   const modalTitle=isEdit?`Edit Draft Invoice — ${invoiceEscapeHtml(initialNo)}`:'Create New Invoice';
   openModal(modalTitle,`
@@ -6036,7 +6035,20 @@ function openInvoiceForm(inv,prefill){
               <input id="inv-authorized-position" value="${invoiceEscapeAttr(authorizedPosition)}" placeholder="Example: Director">
             </div>
           </div>
-          <div style="font-size:10px;color:#64748b">This information belongs to the invoice, not to Company Profile settings.</div>
+          <div class="fg" style="margin-top:9px">
+            <label>Digital Signature <span style="font-weight:500;text-transform:none">(Optional)</span></label>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:5px;flex-wrap:wrap">
+              <div class="logo-upload-area" style="width:180px;padding:10px;flex-shrink:0">
+                <input type="file" accept="image/jpeg,image/png,image/webp" onchange="handleInvoiceSignatureUpload(this)">
+                <div id="inv-signature-preview">${window._invoiceSignature?`<img src="${invoiceEscapeAttr(window._invoiceSignature)}" class="logo-preview" style="max-height:58px">`:`<div style="font-size:18px;margin-bottom:2px">✍️</div><p style="font-size:10.5px;color:var(--muted)">Click to upload signature</p>`}</div>
+              </div>
+              <div>
+                <div id="inv-signature-actions">${window._invoiceSignature?`<button type="button" class="btn btn-bad btn-xs" onclick="removeInvoiceSignature()">✕ Delete Signature</button>`:''}</div>
+                <div style="font-size:10px;color:#64748b;margin-top:5px;max-width:260px;line-height:1.4">PNG with a transparent background gives the cleanest printed result. JPEG, PNG, or WebP; maximum 5 MB.</div>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:#64748b">The name, position, and signature are saved only for this invoice.</div>
         </div>
       </div>
     </div>
@@ -6159,6 +6171,26 @@ function calcInvTotals(){
   const taxAmountMap={'inv-ppn-amt':ppn,'inv-pph23-amt':pph23,'inv-pph4-amt':pph4};
   Object.entries(taxAmountMap).forEach(([id,value])=>{const el=document.getElementById(id);if(el)el.textContent=rp(value);});
 }
+function handleInvoiceSignatureUpload(input){
+  const file=input.files?.[0];if(!file)return;
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type))return alert('Only JPEG, PNG, or WebP signature images are allowed.');
+  if(file.size>5*1024*1024)return alert('The signature image exceeds the 5 MB limit.');
+  window._invoiceSignatureFile=file;window._invoiceSignatureRemoved=false;
+  const preview=URL.createObjectURL(file);
+  const box=document.getElementById('inv-signature-preview');if(box)box.innerHTML=`<img src="${preview}" class="logo-preview" style="max-height:58px">`;
+  const actions=document.getElementById('inv-signature-actions');if(actions)actions.innerHTML=`<button type="button" class="btn btn-bad btn-xs" onclick="removeInvoiceSignature()">✕ Delete Signature</button>`;
+}
+function removeInvoiceSignature(){
+  window._invoiceSignature='';window._invoiceSignatureFile=null;window._invoiceSignatureRemoved=true;
+  const box=document.getElementById('inv-signature-preview');if(box)box.innerHTML=`<div style="font-size:18px;margin-bottom:2px">✍️</div><p style="font-size:10.5px;color:var(--muted)">Click to upload signature</p>`;
+  const actions=document.getElementById('inv-signature-actions');if(actions)actions.innerHTML='';
+}
+async function resolveInvoiceSignatureForSave(entityId){
+  if(window._invoiceSignatureFile)return await uploadSiAkunImage(window._invoiceSignatureFile,'invoice-signatures',entityId||uid());
+  if(window._invoiceSignatureRemoved)return'';
+  return window._invoiceSignature||'';
+}
+
 function collectInvoiceForm(excludeId){
   const date=v('inv-date'),dueDate=v('inv-due');
   const no=generateDraftInvoiceNumber(date);
@@ -6225,24 +6257,30 @@ function collectInvoiceForm(excludeId){
   const pph23Amt=pph23?Math.round(dpp*pph23Rate/100):0;
   const pph4Amt=pph4?Math.round(dpp*pph4Rate/100):0;
   return{data:{
-    no,date,dueDate,contactId,customerSnapshot,paymentMethod,paymentBankId,authorizedName,authorizedPosition,items,
+    no,date,dueDate,contactId,customerSnapshot,paymentMethod,paymentBankId,authorizedName,authorizedPosition,authorizedSignature:window._invoiceSignature||'',items,
     subtotal:Math.round(subtotal),discTotal:Math.round(totalDisc),dpp:Math.round(dpp),
     ppn,ppnRate,ppnAmt,pph23,pph23Rate,pph23Amt,pph4,pph4Rate,pph4Amt,
     total:Math.round(dpp+ppnAmt-pph23Amt-pph4Amt),note:v('inv-note')
   },pendingContact};
 }
-function saveInvoice(){
+async function saveInvoice(){
   const collected=collectInvoiceForm(null);
   if(collected.error)return alert(collected.error);
   const data=collected.data;
   data.no=generateDraftInvoiceNumber(data.date);
+  const newInvoiceId=uid();
+  let uploadedSignature='';
+  try{
+    uploadedSignature=await resolveInvoiceSignatureForSave(newInvoiceId);
+    data.authorizedSignature=uploadedSignature;
+  }catch(e){return alert(e.message||'The digital signature could not be uploaded.');}
   let createdContact=null;
   if(collected.pendingContact){
     createdContact=createInvoiceCustomerContact(collected.pendingContact);
     DB.contacts.push(createdContact);
     data.contactId=createdContact.id;
   }
-  const inv={id:uid(),...data,status:'draft',payments:[]};
+  const inv={id:newInvoiceId,...data,status:'draft',payments:[]};
   const sphSource=window._sphSourceId?(DB.sphs||[]).find(x=>x.id===window._sphSourceId):null;
   const bastSource=window._bastSourceId?(DB.basts||[]).find(x=>x.id===window._bastSourceId):null;
   const prevSphLink=sphSource?.link_invoice_id??null;
@@ -6252,6 +6290,7 @@ function saveInvoice(){
   if(bastSource){bastSource.link_invoice_id=inv.id;bastSource.updated_at=Date.now();}
   if(!saveDB()){
     DB.invoices=DB.invoices.filter(x=>x.id!==inv.id);
+    if(uploadedSignature)hapusFotoKartuNameDariStorage(uploadedSignature);
     if(createdContact)DB.contacts=DB.contacts.filter(x=>x.id!==createdContact.id);
     if(sphSource)sphSource.link_invoice_id=prevSphLink;
     if(bastSource)bastSource.link_invoice_id=prevBastLink;
@@ -6261,13 +6300,19 @@ function saveInvoice(){
   logAudit('Create Invoice Draft',`${inv.no} — Total: ${rp(inv.total)}`);
   closeModal();nav('invoices');
 }
-function saveEditInvoice(id){
+async function saveEditInvoice(id){
   const index=(DB.invoices||[]).findIndex(x=>x.id===id);if(index<0)return;
   const inv=DB.invoices[index];
   if(inv.status!=='draft')return alert('Only Draft invoices can be edited.');
   const collected=collectInvoiceForm(id);
   if(collected.error)return alert(collected.error);
   const previous=JSON.parse(JSON.stringify(inv));
+  const oldSignature=previous.authorizedSignature||'';
+  let uploadedSignature='';
+  try{
+    uploadedSignature=await resolveInvoiceSignatureForSave(id);
+    collected.data.authorizedSignature=uploadedSignature;
+  }catch(e){return alert(e.message||'The digital signature could not be uploaded.');}
   let createdContact=null;
   if(collected.pendingContact){
     createdContact=createInvoiceCustomerContact(collected.pendingContact);
@@ -6278,8 +6323,10 @@ function saveEditInvoice(id){
   if(!saveDB()){
     DB.invoices[index]=previous;
     if(createdContact)DB.contacts=DB.contacts.filter(x=>x.id!==createdContact.id);
+    if(uploadedSignature&&uploadedSignature!==oldSignature)hapusFotoKartuNameDariStorage(uploadedSignature);
     return;
   }
+  if(oldSignature&&oldSignature!==uploadedSignature)hapusFotoKartuNameDariStorage(oldSignature);
   logAudit('Edit Invoice',inv.no);closeModal();nav('invoices');
 }
 
@@ -6435,7 +6482,7 @@ function buildInvTaxLines(inv){
     inv.pph4?{label:`Article 4(2) Final Income Tax ${Number(inv.pph4Rate)||0}%`,value:`-${rp(inv.pph4Amt||0)}`,className:'tax-deduct'}:null
   ].filter(Boolean);
 }
-function printInvoice(id){
+async function printInvoice(id){
   const inv=DB.invoices.find(x=>x.id===id);if(!inv)return;
   const co=DB.company||{};
   const customer=resolveInvoiceCustomer(inv);
@@ -6446,6 +6493,11 @@ function printInvoice(id){
   const paid=invPaid(inv),remaining=Math.max(0,(Number(inv.total)||0)-paid);
   const voidWatermark=inv.status==='void'?'<div class="void-watermark">VOID</div>':'';
   const signatory={name:String(inv.authorizedName||'').trim(),position:String(inv.authorizedPosition||'').trim()};
+  let signatureImage='';
+  if(inv.authorizedSignature){
+    try{signatureImage=siakunStoragePathFromRef(inv.authorizedSignature)?await secureImageObjectUrl(inv.authorizedSignature):inv.authorizedSignature;}
+    catch(e){console.warn('[SiAkun] Invoice signature could not be loaded:',e);}
+  }
   const paymentMethod=normalizeInvoicePaymentMethod(inv.paymentMethod||'bank_transfer_cheque_giro');
   const paymentMethodLabel=invoicePaymentMethodLabel(paymentMethod);
   const paymentUsesBank=invoicePaymentMethodUsesBank(paymentMethod);
@@ -6526,7 +6578,7 @@ function printInvoice(id){
     .payment{padding:9px 11px;border-right:1.2px solid #111;font-size:10px;line-height:1.45}.payment h3{font-size:9.8px;margin-bottom:5px}
     .notice{border:1px solid #111;margin-top:8px;padding:4px 5px;text-align:center;font-size:8.5px;font-weight:700}
     .notes{margin-top:6px;font-size:9px;line-height:1.35}
-    .signature{text-align:center;padding:7px 11px;font-size:9.5px}.signature .company-name{font-weight:700}.signature .space{height:27mm}.signature .sign-name{font-weight:700;text-decoration:underline}.signature .position{font-size:9px;margin-top:3px}
+    .signature{text-align:center;padding:7px 11px;font-size:9.5px}.signature .company-name{font-weight:700}.signature .space{height:27mm;display:flex;align-items:flex-end;justify-content:center}.signature .digital-signature{display:block;max-width:48mm;max-height:24mm;object-fit:contain}.signature .sign-name{font-weight:700;text-decoration:underline}.signature .position{font-size:9px;margin-top:3px}
     .printbar{position:fixed;right:20px;bottom:20px;display:flex;gap:8px}.printbar button{border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer}.print{background:#0f766e;color:#fff;border:none}.close{background:#fff;color:#374151;border:1px solid #cbd5e1}
     .void-watermark{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:120px;font-weight:900;color:rgba(185,28,28,.14);transform:rotate(-28deg);pointer-events:none;z-index:20}
     @page{size:A4 portrait;margin:10mm}
@@ -6577,7 +6629,7 @@ function printInvoice(id){
       </div>
       <div class="signature">
         <div class="company-name">${invoiceEscapeHtml(co.name||'PT Andrika Mitra Solusi')}</div>
-        <div class="space"></div>
+        <div class="space">${signatureImage?`<img class="digital-signature" src="${invoiceEscapeAttr(signatureImage)}" alt="Digital signature">`:''}</div>
         <div class="sign-name">${invoiceEscapeHtml(signatory.name||'________________________')}</div>
         <div class="position">${invoiceEscapeHtml(signatory.position||'Authorized Signatory')}</div>
       </div>
