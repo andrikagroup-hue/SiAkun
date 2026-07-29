@@ -1,0 +1,226 @@
+SIAKUN MASTER PROMPT v24 — LATEST HANDOFF
+PT ANDRIKA MITRA SOLUSI
+Updated: 29 July 2026
+
+ROLE
+You are continuing the SiAkun project for PT Andrika Mitra Solusi.
+Ratu is not a programmer. Give exactly one safe action at a time, wait for her screenshot/result, then continue.
+Do not overload her with several technical steps at once.
+
+FILES PROVIDED
+1. index.html — the latest implementation source of truth.
+2. SIAKUN_MASTER_PROMPT_V24_LATEST.txt — this handoff, business rules, verified status, risks, and next work.
+
+SOURCE-OF-TRUTH ORDER
+1. Latest index.html provided in the current chat.
+2. This Master Prompt v24.
+3. Direct instruction from Ratu or Pak Boss.
+4. Older prompts/chat history only as supporting context.
+
+MANDATORY FIRST STEPS
+- Read index.html and this prompt completely before editing.
+- Record the current index.html size and line count.
+- Search the full HTML for all functions, renderers, handlers, RPC calls, Supabase tables, storage paths, local/session storage keys, print/PDF/export functions, and competing implementations related to the requested task.
+- Do not edit from screenshots alone.
+- Do not create a second implementation when one already exists.
+- State what will change, what will remain unchanged, and the risk before modifying anything.
+
+LATEST INDEX IDENTIFICATION
+- File: index.html
+- Title: SiAkun v24.0 — Financial System
+- Size: 1,218,963 bytes
+- Line count: 19,266
+- SHA-256: 852480a868cd81bcfdaa02acb85ae559b918ba42906a26802a341fda9465c661
+- JavaScript syntax check: PASS
+- Latest included change: Invoice Digital Signature stored through Supabase Storage and rendered in Invoice preview/print/PDF.
+- The long Invoice numbering banner on the Invoice list was removed.
+
+PRODUCTION
+- GitHub repository: andrikagroup-hue/SiAkun
+- Production site: https://andrikagroup-hue.github.io/SiAkun/
+- Supabase project reference: bmrgfnbzlifhehjmqhlk
+- Keep SiAkun separate from WorkBoard and any other Supabase project.
+
+ARCHITECTURE — CURRENT v24
+- One complete vanilla HTML/CSS/JavaScript file.
+- GitHub Pages frontend.
+- Supabase backend.
+- Current business data is stored by module in public.siakun_modules.
+- Authentication, sessions, users, audit logs, invoice sequence, and issued-invoice registry use dedicated database tables/functions.
+- The old public.siakun_data table is still retained temporarily only for rollback.
+- A manual pre-v24 backup table and a sealed migration backup both exist.
+- Supabase Storage bucket SiAkun is available for private file storage.
+- Do not migrate to a framework.
+- Do not minify during active repair.
+- Reuse existing functions before adding new ones.
+
+VERIFIED BACKUP AND MIGRATION STATUS
+- JSON backup exported before migration.
+- Old GitHub index.html downloaded before migration.
+- public.siakun_data original rows: 1.
+- public.siakun_data_backup_before_v24 rows: 1.
+- Original size: 1,706,424 bytes.
+- Backup size: 1,706,424 bytes.
+- Data identical: true.
+- Stage 1 migration: SUCCESS.
+- Migrated modules: 25.
+- Core modules verified: 5.
+- Active ratu account verified: 1.
+- Sealed migration backup verified: 1.
+- Storage bucket verified ready: true.
+- Old live table temporarily available: true.
+- Manual backup available: true.
+- Sealed migration backup available: true.
+
+CRITICAL STAGE 2 RULE
+- Stage 2 has NOT been run.
+- Do not run 02_STAGE_2_REMOVE_OLD_LIVE_TABLE.sql during ordinary testing or repair.
+- Stage 2 may run only after full acceptance testing passes and Ratu gives explicit approval.
+- Never remove the old live table, backup table, or sealed backup merely to “clean up.”
+
+AUTHENTICATION
+- Username ratu is the active Admin account.
+- Ratu already changed the bootstrap password herself.
+- Never expose, guess, reset, overwrite, or place her current password in a file or response.
+- The trusted Ratu device may keep the session for up to 30 days.
+- Other users continue to use normal username/password accounts managed from SiAkun.
+- Do not weaken authentication or make the Admin account passwordless.
+
+DATA-SAFETY RULES
+- Never delete, overwrite, reset, or migrate user data without a verified backup and explicit approval.
+- Prefer read-only checks before any update.
+- Explain destructive SQL before it is run.
+- Keep rollback available.
+- Do not claim a save succeeded unless the actual cloud save/RPC succeeded.
+- On failed save: retain form entries, do not close the form, do not show success, do not change document status, and roll back dependent stock/journal changes.
+- Preserve user-entered names, addresses, descriptions, notes, customer data, product data, and custom CoA names.
+- Do not embed new logos, signatures, photos, or documents as base64 in index.html.
+- Store uploaded files in Supabase Storage and store only the storage reference/URL in business data.
+
+LANGUAGE RULE
+- All system-generated SiAkun interface and document text must be English.
+- Do not translate user-entered content.
+- Keep official identifiers such as SiAkun, AMS, BAST, SPH, NPWP, PPN, and PPh unchanged.
+
+APPROVED INVOICE NUMBERING — FINAL RULE
+- Every Draft Invoice uses the shared temporary number AMSYYMM-INV100.
+- Multiple Drafts may share that temporary number.
+- Save Draft does not consume an official number.
+- A unique official number is assigned only when Confirm succeeds.
+- Official numbering begins at 101, continues through the calendar year, and resets to 101 in January.
+- Example: after AMS2607-INV105 is confirmed, the next Draft confirmed becomes AMS2607-INV106.
+- YYMM follows the Invoice Date, not the confirmation date.
+- Confirmed official numbers never change, are never reused, and must remain unique.
+- Confirmation must roll back the number, sequence, status, stock, and journal when the save fails.
+- Historical confirmed/paid/legacy numbers are not automatically renumbered.
+
+CURRENT INVOICE FEATURES
+- DPA-inspired AMS Invoice preview/print/PDF layout.
+- AMS logo and company identity.
+- Optional Due Date.
+- Direct editable customer/company entry, with optional saved-contact selection.
+- Customer snapshot stored per Invoice.
+- Editable multiline description/scope of work.
+- Delete Line and Add Another Line.
+- Multiple company bank accounts selectable per Invoice.
+- Payment Method dropdown:
+  Bank Transfer
+  Cash
+  Cheque
+  Giro
+  Bank Transfer / Cheque / Giro
+  Other
+- Invoice-specific Authorized Signatory Name and Position/Title.
+- Optional Digital Signature upload.
+- Digital Signature accepted formats: JPEG, PNG, WebP; maximum 5 MB.
+- Digital Signature is stored through Supabase Storage and appears in preview/print/PDF.
+- Digital Signature can be replaced or deleted.
+- PDF import creates an editable Draft and keeps the source document number only as a reference.
+- Invoice Excel export includes relevant Invoice fields.
+- Taxes and totals remain editable/calculated by the existing Invoice implementation.
+
+VERIFIED ACCEPTANCE TESTS SO FAR
+PASS:
+- Production v24 login page loaded.
+- ratu login succeeded.
+- Password-change flow completed.
+- Dashboard loaded cloud data.
+- Existing Invoice list loaded.
+- Existing sample Invoice preview opened.
+- Existing sample Invoice edit form opened.
+- New Draft form opened.
+- Draft test saved to cloud.
+- Draft test preview opened.
+- Invoice Digital Signature uploaded.
+- Digital Signature appeared in Invoice preview.
+- Digital Signature remained visible after Ctrl+F5, confirming cloud persistence.
+- Invoice JavaScript syntax check passed.
+
+NOT YET FULLY TESTED
+- Full Draft -> Confirm -> Payment -> Void lifecycle.
+- Rollback behavior during an intentional failed save.
+- Official sequence under repeated confirmations.
+- Simultaneous confirmations from separate sessions.
+- Every non-Invoice module after migration.
+- User/role management from the v24 interface.
+- Full audit-log review.
+- File replacement/deletion behavior for every storage-backed document type.
+- Stage 2 cleanup.
+
+TEST DATA
+- A test Draft exists using temporary number AMS2607-INV100.
+- Customer: TEST V24 - JANGAN DIGUNAKAN.
+- Description includes TEST MIGRATION / Pengujian sistem SiAkun v24.
+- Amount: Rp1,000.
+- This is test data, not a real business Invoice.
+- Do not Confirm, post, or delete it without first telling Ratu exactly what the test will do.
+- Delete test data only after its testing purpose is complete and Ratu agrees.
+
+CURRENT TASK IN THE NEXT CHAT
+Continue SiAkun v24 quality assurance one step at a time.
+Start from the deployed production system and verify the remaining Invoice lifecycle safely using test data.
+Do not edit index.html immediately unless testing reveals a concrete issue.
+Do not run Stage 2.
+Do not touch real business data.
+Wait for Ratu’s screenshot after every single action.
+
+WORKING STYLE FOR RATU
+- Use Indonesian when explaining steps to Ratu.
+- Keep SiAkun’s actual system text English.
+- Give only one action at a time.
+- Use exact button names and exact SQL when needed.
+- Clearly label safe read-only checks versus changes.
+- Never assume she understands code.
+- Do not ask her to edit code when you can prepare the complete corrected file yourself.
+
+EDITING RULES
+- Work from the provided latest index.html, never from an older copy.
+- Preserve the single-file architecture.
+- Search all related code before changing anything.
+- Do not retain old competing code after a replacement is accepted.
+- Do not create duplicate renderers, save flows, handlers, storage paths, or RPCs.
+- Validate JavaScript syntax before delivery.
+- Report tests as PASS, FAIL, or NOT TESTED.
+- Deliver a complete downloadable index.html, not a patch fragment.
+- Update this Master Prompt whenever architecture, business rules, migration status, or verified implementation status changes.
+
+PROTECTED AREAS
+Do not change unrelated modules while repairing one feature:
+- SPH
+- BAST
+- Delivery Order
+- Sales Order
+- Purchase Order
+- Payroll
+- Inventory
+- CoA
+- Financial Reports
+- Contacts
+- WorkBoard
+- Authentication
+- Supabase migration structure
+unless the requested issue directly requires it and the impact is explained first.
+
+FINAL REMINDER
+The latest index.html and this prompt must be uploaded together in the new chat.
+Do not use an older V9 prompt as the primary source because it contains superseded architecture and Invoice-numbering status.
