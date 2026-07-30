@@ -102,6 +102,18 @@ LANGUAGE RULE
 - Do not translate user-entered content.
 - Keep official identifiers such as SiAkun, AMS, BAST, SPH, NPWP, PPN, and PPh unchanged.
 
+DESKTOP AND MOBILE RULE
+- Every SiAkun change must be implemented and verified on both desktop/laptop and mobile phone.
+- A change is not PASS or complete when it works only on desktop/laptop.
+- Desktop/laptop and mobile must use the same current application version and the same Supabase cloud data.
+- Data created or changed on one device must appear correctly on the other device after synchronization and refresh.
+- After every index.html update, verify on desktop/laptop and mobile that the latest change appears and works.
+- Mobile layout must remain responsive: no clipped or overlapping text, broken forms, unusable tables, excessive horizontal overflow, hidden actions, or raw code displayed on screen.
+- Mobile sidebar, navigation, buttons, forms, modals, Invoice preview, print, PDF, and other affected functions must remain usable.
+- No desktop feature may silently disappear or become unusable on mobile.
+- If a change appears on desktop but not on mobile, check deployment version, browser cache, synchronization, and refresh before changing any business data.
+- Stage 2 may not run until both desktop/laptop and mobile acceptance checks pass.
+
 APPROVED INVOICE NUMBERING — FINAL RULE
 - Every Draft Invoice uses the shared temporary number AMSYYMM-INV100.
 - Multiple Drafts may share that temporary number.
@@ -165,6 +177,8 @@ NOT YET FULLY TESTED
 - User/role management from the v24 interface.
 - Full audit-log review.
 - File replacement/deletion behavior for every storage-backed document type.
+- Full desktop/laptop and mobile consistency check after the latest deployment.
+- Responsive mobile layout and all affected mobile functions.
 - Stage 2 cleanup.
 
 TEST DATA
@@ -201,6 +215,7 @@ EDITING RULES
 - Do not create duplicate renderers, save flows, handlers, storage paths, or RPCs.
 - Validate JavaScript syntax before delivery.
 - Report tests as PASS, FAIL, or NOT TESTED.
+- Report desktop/laptop and mobile results separately; both must pass before a change is complete.
 - Deliver a complete downloadable index.html, not a patch fragment.
 - Update this Master Prompt whenever architecture, business rules, migration status, or verified implementation status changes.
 
