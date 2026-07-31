@@ -1,6 +1,6 @@
 SIAKUN MASTER PROMPT v24 — LATEST HANDOFF
 PT ANDRIKA MITRA SOLUSI
-Updated: 29 July 2026
+Updated: 31 July 2026
 
 ROLE
 You are continuing the SiAkun project for PT Andrika Mitra Solusi.
@@ -10,6 +10,14 @@ Do not overload her with several technical steps at once.
 FILES PROVIDED
 1. index.html — the latest implementation source of truth.
 2. SIAKUN_MASTER_PROMPT_V24_LATEST.txt — this handoff, business rules, verified status, risks, and next work.
+3. SPH QUOTITION 1 DPA.pdf — visual reference for a concise commercial quotation.
+4. SPH QUOTITION DPA.pdf — visual reference for a longer technical and commercial proposal.
+5. 03_SPH_NUMBERING_SAFE_MIGRATION.sql — safe annual SPH numbering, Issue, outcome, and Cancel server functions. This is separate from Stage 2.
+
+REFERENCE USE
+- Use the supplied DPA documents only to study information hierarchy, quotation tables, technical sections, commercial terms, signatures, and multipage behavior.
+- Do not copy DPA's logo, company identity, contact details, wording, or green brand design into AMS documents.
+- Build one original, approved AMS document system that can produce both concise and technical SPH formats.
 
 SOURCE-OF-TRUTH ORDER
 1. Latest index.html provided in the current chat.
@@ -28,12 +36,18 @@ MANDATORY FIRST STEPS
 LATEST INDEX IDENTIFICATION
 - File: index.html
 - Title: SiAkun v24.0 — Financial System
-- Size: 1,218,963 bytes
-- Line count: 19,266
-- SHA-256: 852480a868cd81bcfdaa02acb85ae559b918ba42906a26802a341fda9465c661
+- Size: 1,247,900 bytes
+- Line count: 19,583
+- SHA-256: f3294511fceda35f8b6d313ee6353dc0a6add5c61c80d2816f5a393809548997
 - JavaScript syntax check: PASS
-- Latest included change: Invoice Digital Signature stored through Supabase Storage and rendered in Invoice preview/print/PDF.
-- The long Invoice numbering banner on the Invoice list was removed.
+- Latest included changes:
+  - Invoice Digital Signature stored through Supabase Storage and rendered in Invoice preview/print/PDF.
+  - The long Invoice numbering banner on the Invoice list was removed.
+  - SPH Draft-to-Issue workflow and protected official numbering.
+  - Original AMS SPH letterhead inspired by the information hierarchy of the DPA references.
+  - ADHD-friendly SPH form with simple required fields and optional technical sections.
+  - SPH Preview/PDF, editable Word export, and editable Excel export.
+  - Mobile SPH form and action layout.
 
 PRODUCTION
 - GitHub repository: andrikagroup-hue/SiAkun
@@ -114,6 +128,73 @@ DESKTOP AND MOBILE RULE
 - If a change appears on desktop but not on mobile, check deployment version, browser cache, synchronization, and refresh before changing any business data.
 - Stage 2 may not run until both desktop/laptop and mobile acceptance checks pass.
 
+AMS STANDARD DOCUMENT RULE
+- Every official AMS document must use one approved, reusable AMS letterhead.
+- The same company identity, logo placement, address, phone, WhatsApp, email, website, typography, colors, margins, header, footer, signature block, and page numbering must be used consistently.
+- The visual structure may be inspired by the supplied DPA documents, but the finished design must be an original AMS version and must not copy DPA branding.
+- The standard must be available in:
+  1. SiAkun preview, print, and PDF;
+  2. an editable Microsoft Word template;
+  3. an editable Microsoft Excel template.
+- SiAkun, Word, and Excel outputs must show the same business data, calculations, document number, terms, and company identity.
+- System-generated document text must remain English under the LANGUAGE RULE. User-entered customer names, addresses, descriptions, project names, notes, and other content must remain exactly as entered.
+- The layout must support short commercial quotations and longer technical proposals without forcing users to complete irrelevant sections.
+- Use a simple guided form with clearly grouped sections, safe defaults, plain-language help, automatic calculations, and optional advanced sections.
+- Required fields must be visibly marked. Optional sections must be collapsible or switchable.
+- Users must be able to preview the final document before issuing it.
+- Draft documents may be edited and deleted safely.
+- Issued documents must not be silently deleted or renumbered; use Cancel/Void with a reason while preserving the audit trail.
+- Every document template and export must be checked on desktop/laptop and mobile where applicable.
+
+SPH / QUOTATION STANDARD
+- Official SPH number format:
+  Q-[ANNUAL SEQUENCE]/[COMPANY CODE]/[SALES CODE]/[ROMAN MONTH]/[YEAR]
+- Approved example:
+  Q-102/AMS/RS/VII/2026
+- Q means Quotation.
+- AMS is the fixed company code for PT Andrika Mitra Solusi.
+- RS is the assigned sales code for Ratu Siti Sa'diah Azzahra. Other salespeople must use their own unique Admin-managed sales code.
+- The annual sequence is a unique three-digit official number that continues within one calendar year.
+- The sequence resets for a new calendar year. The starting sequence must be configurable by Admin based on the last verified official SPH; never guess or overwrite an existing sequence.
+- The Roman month and year follow the SPH Date, not the issue-click date.
+- Month mapping is fixed:
+  I=January, II=February, III=March, IV=April, V=May, VI=June,
+  VII=July, VIII=August, IX=September, X=October, XI=November, XII=December.
+- A Draft SPH must not consume an official annual sequence.
+- The official unique number is assigned only when Issue/Confirm succeeds in the cloud.
+- If Issue/Confirm fails, the number, sequence, status, stock, journal, and related records must roll back together.
+- An issued SPH number never changes, is never reused, and remains visible when the SPH is Cancelled/Void.
+- Prevent duplicate official SPH numbers, including simultaneous confirmation from separate devices or sessions.
+- Historical SPH numbers must not be renumbered automatically.
+- The SPH form must include these simple sections:
+  1. Document: SPH Date, Subject, Salesperson, Customer Reference, Project;
+  2. Customer: Company, Address, Attention, Phone, Email;
+  3. Offer Items: optional group/location, description, quantity, unit, unit price, discount, tax, and line total;
+  4. Commercial Terms: delivery point, delivery time, payment terms, validity, warranty, inclusions, exclusions, and notes;
+  5. Optional Technical Proposal: scope, specifications, standards, after-sales service, attachments, and appendices;
+  6. Authorization: prepared by, checked by, approved by, position, and digital signature.
+- Calculations must be automatic and auditable: subtotal, discount, DPP/tax base when applicable, PPN, withholding tax when applicable, and grand total.
+- Add Item, Add Section/Location, Duplicate Item, Move Item, and Delete Item controls must be obvious and safe for nontechnical users.
+- Preview, Print, PDF, Word, and Excel must preserve long multiline descriptions and technical specifications without clipped or overlapping text.
+
+SPH IMPLEMENTATION STATUS - CODE PREPARED, NOT YET DEPLOYED
+- The latest index.html code now contains the redesigned SPH workflow.
+- New Drafts display "DRAFT - number assigned when issued" and cannot manually consume an official number.
+- Only Draft SPHs can be edited or deleted.
+- Issue uses a protected Supabase RPC and assigns the official number in one server transaction.
+- Issued SPHs are read-only.
+- Issued SPHs can be marked Accepted or Rejected without changing their official number.
+- Cancel preserves the official number, cancellation reason, and audit trail.
+- Word and Excel export buttons are available from the SPH list and detail view.
+- Excel formulas calculate each line total and subtotal; the export includes the AMS letterhead and optional technical sections.
+- The SPH form includes customer address, phone, email, reference, project, sales code, commercial terms, and optional technical proposal sections.
+- JavaScript syntax check: PASS.
+- Static SPH function check: PASS.
+- Expected number-format sample: Q-102/AMS/RS/VII/2026.
+- 03_SPH_NUMBERING_SAFE_MIGRATION.sql has been prepared but has NOT been run.
+- Do not use the new Issue, Accept, Reject, or Cancel buttons until that migration succeeds.
+- Stage 2 remains NOT RUN and is unrelated to the SPH numbering migration.
+
 APPROVED INVOICE NUMBERING — FINAL RULE
 - Every Draft Invoice uses the shared temporary number AMSYYMM-INV100.
 - Multiple Drafts may share that temporary number.
@@ -179,6 +260,11 @@ NOT YET FULLY TESTED
 - File replacement/deletion behavior for every storage-backed document type.
 - Full desktop/laptop and mobile consistency check after the latest deployment.
 - Responsive mobile layout and all affected mobile functions.
+- Approved AMS letterhead consistency across SiAkun, Word, and Excel.
+- SPH annual sequence, Roman month, sales code, Draft-to-Issue, duplicate prevention, Cancel/Void, and rollback behavior in the live Supabase environment.
+- Short commercial SPH and long technical proposal rendering.
+- SPH Preview, Print, PDF, Word, and Excel consistency.
+- Standard AMS letterhead migration for non-SPH documents.
 - Stage 2 cleanup.
 
 TEST DATA
@@ -191,9 +277,11 @@ TEST DATA
 - Delete test data only after its testing purpose is complete and Ratu agrees.
 
 CURRENT TASK IN THE NEXT CHAT
-Continue SiAkun v24 quality assurance one step at a time.
-Start from the deployed production system and verify the remaining Invoice lifecycle safely using test data.
-Do not edit index.html immediately unless testing reveals a concrete issue.
+Continue SiAkun v24 one safe action at a time.
+Before uploading the redesigned index.html, run and verify 03_SPH_NUMBERING_SAFE_MIGRATION.sql.
+Then upload the matching latest index.html and test one SPH Draft safely.
+Verify Preview/PDF, Word, Excel, desktop, and mobile before issuing the test SPH.
+After SPH testing, continue the remaining Invoice lifecycle tests.
 Do not run Stage 2.
 Do not touch real business data.
 Wait for Ratu’s screenshot after every single action.
