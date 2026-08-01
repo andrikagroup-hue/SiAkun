@@ -12983,6 +12983,126 @@ function restoreVerifiedLegacySphs(){
   return true;
 }
 
+// Normalized import template for the verified DPA Q-115 PDF layout.
+// The source number is a reference only and never consumes an AMS sequence.
+function buildDpaQ115ImportData(){
+  const items=[
+    {category:'NCX Meruya',desc:'NCX Meruya - Pergantian Module FMM',qty:1,satuan:'unit',harga:7200000},
+    {category:'NCX Meruya',desc:'NCX Meruya - Jasa Installasi, Setting, Konfigurasi Module Panel FSS',qty:1,satuan:'service',harga:3600000},
+    {category:'NCX Talang Kelapa Palembang',desc:'NCX Talang Kelapa Palembang - Spare Part Module FCM-1 Panel FSS',qty:1,satuan:'unit',harga:12600000},
+    {category:'NCX Talang Kelapa Palembang',desc:'NCX Talang Kelapa Palembang - Jasa Installasi, Reprogramming, Setting & Konfigurasi',qty:1,satuan:'service',harga:20790000},
+    {category:'NCX Jatinegara',desc:'NCX Jatinegara - Panel FSS Type Hochiki',qty:1,satuan:'unit',harga:96390000},
+    {category:'NCX Jatinegara',desc:'NCX Jatinegara - Jasa Installasi, Setting & Konfigurasi',qty:1,satuan:'service',harga:26460000},
+    {category:'NCX Meruya',desc:'NCX Meruya - Spare Part Module Addresable Signal Module (ASM)',qty:1,satuan:'unit',harga:9766800},
+    {category:'NCX Meruya',desc:'NCX Meruya - Spare Part Addresable Input Module (AIM)',qty:1,satuan:'unit',harga:3915000},
+    {category:'NCX Meruya',desc:'NCX Meruya - Battery 12V-9 Ah',qty:2,satuan:'unit',harga:290000},
+    {category:'NCX Meruya',desc:'NCX Meruya - Jasa Installasi, Setting & Konfigurasi',qty:1,satuan:'service',harga:2000000},
+    {category:'NCX Karet',desc:'NCX Karet - Smoke Detector FSS Type KS-PS',qty:1,satuan:'unit',harga:6300000},
+    {category:'NCX Karet',desc:'NCX Karet - Refill IG 55',qty:4,satuan:'cylinder',harga:6500000},
+    {category:'NCX Karet',desc:'NCX Karet - Jasa Installasi Smoke Detector',qty:1,satuan:'service',harga:3150000},
+    {category:'NCX Karet',desc:'NCX Karet - Jasa Pembongkaran & Pengiriman Tabung',qty:1,satuan:'service',harga:14175000},
+    {category:'NCX Batam Center',desc:'NCX Batam Center - Panel FSS Notifier',qty:2,satuan:'unit',harga:155925000},
+    {category:'NCX Batam Center',desc:'NCX Batam Center - Jasa Installasi, Setting & Konfigurasi',qty:2,satuan:'service',harga:48825000},
+    {category:'NCX Lembong',desc:'NCX Lembong - Refill NN100\nRuangan Tabung Lt.1: 6 Tabung\nRuangan Tabung Lt.4: 33 Tabung',qty:39,satuan:'cylinder',harga:7893600},
+    {category:'NCX Lembong',desc:'NCX Lembong - Jasa Pembongkaran & Pengiriman Tabung\nMetode Pelaksanaan: Refill dilakukan secara bertahap (staged refill) sehingga selama proses pekerjaan masih terdapat tabung aktif yang menjaga proteksi ruangan.',qty:1,satuan:'service',harga:35000000}
+  ].map(it=>({fabrikasi:'',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',refId:null,...it}));
+  const subtotal=items.reduce((sum,it)=>sum+(Number(it.qty)||0)*(Number(it.harga)||0),0);
+  const ppnAmt=Math.round(subtotal*.11);
+  const createdAt=new Date('2026-07-13T09:00:00+07:00').toISOString();
+  return {
+    tanggal:'2026-07-13',tujuan:'customer',
+    pihak:'PT. Integra Teknika Solusindo',perihal:'Penawaran Harga Solusi Service FSS Telkom',attnEn:'Pak Eka',salesCode:'RS',
+    customerRef:'Q-115/DPA/DB/VII/2026',sourceDocumentNo:'Q-115/DPA/DB/VII/2026',project:'Telkom Neucentrix Indonesia',
+    customerPhone:'',customerEmail:'',customerAddress:'Jl. Onta Baru, No 48, Makassar',
+    technical:{scope:'Pergantian spare part dan Refill Tabung FSS untuk lokasi Telkom Neucentrix Indonesia.',specifications:'',standards:'',afterSales:'Garansi spare part 6 bulan setelah pemasangan apabila pemasangan dilakukan oleh penyedia.',attachments:''},
+    berlaku:'2026-07-27',penandatangan:'',penandatanganTelp:'',
+    tncEn:{price:'Harga termasuk PPN 11%.',fabrication:'',delivery:'Franco: Sesuai Lokasi Penawaran.',payment:'50% DP, 50% setelah pekerjaan selesai.',installation:'',validity:'2 (dua) minggu setelah tanggal penawaran.',vat:'Harga termasuk PPN 11%.',note:'Status material ready stock. Harga termasuk jasa pengiriman, jasa teknisi, akomodasi dan demobilisasi teknisi. Harga dapat berubah sewaktu-waktu.'},
+    ttd:'',items,status:'draft',requiresReview:true,subtotal,ppn:true,ppnRate:11,ppnAmt,total:subtotal+ppnAmt,link_invoice_id:null,
+    created_at:createdAt,updated_at:createdAt,restored_from:'Q-115-DPA-DB-VII-2026 - FSS Telkom.pdf',
+    importWarning:'Source PDF subtotal is Rp985,277,201; exact line-item sum is Rp985,277,200. SiAkun uses the auditable line-item sum.'
+  };
+}
+
+function openSphPdfImport(){
+  window._sphPdfImport=null;
+  openModal('Import Quotation PDF',`
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:13px 14px;margin-bottom:16px;color:#1e3a8a;font-size:13px;line-height:1.55">
+      <b>Safe import:</b> the PDF will be read first and nothing is saved until you approve the review screen. Imported quotations always start as Drafts.
+    </div>
+    <div class="fg"><label>Quotation PDF</label><input id="sph-pdf-file" type="file" accept="application/pdf,.pdf"></div>
+    <div id="sph-pdf-status" style="min-height:22px;color:#64748b;font-size:12px;margin-top:8px"></div>
+    <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="readSphPdfForReview()">Read PDF</button></div>`);
+}
+
+async function extractSphPdfText(file){
+  if(typeof pdfjsLib==='undefined')throw new Error('PDF reader is unavailable. Reload SiAkun and try again.');
+  const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+  const pages=[];
+  for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
+    const page=await pdf.getPage(pageNo);
+    const content=await page.getTextContent();
+    pages.push(content.items.map(x=>x.str||'').join(' '));
+    const status=document.getElementById('sph-pdf-status');
+    if(status)status.textContent=`Reading page ${pageNo} of ${pdf.numPages}...`;
+  }
+  return pages.join('\n');
+}
+
+function parseSphPdfImport(text,fileName){
+  const clean=String(text||'').replace(/\s+/g,' ').trim();
+  const isVerifiedDpaQ115=/Q\s*-?\s*115\s*\/\s*DPA\s*\/\s*DB\s*\/\s*VII\s*\/\s*2026/i.test(clean)||
+    (/Integra Teknika Solusindo/i.test(clean)&&/Solusi Service FSS Telkom/i.test(clean));
+  if(!isVerifiedDpaQ115)throw new Error('This PDF layout is not supported yet. No data was saved. The first verified layout is DPA Q-115 (FSS Telkom).');
+  return {...buildDpaQ115ImportData(),importFileName:fileName||'Quotation.pdf',imported_at:Date.now()};
+}
+
+async function readSphPdfForReview(){
+  const input=document.getElementById('sph-pdf-file');
+  const file=input?.files?.[0];
+  if(!file)return alert('Choose a quotation PDF first.');
+  if(!/\.pdf$/i.test(file.name)&&file.type!=='application/pdf')return alert('Please choose a PDF file.');
+  const status=document.getElementById('sph-pdf-status');
+  try{
+    if(status)status.textContent='Reading PDF...';
+    const data=parseSphPdfImport(await extractSphPdfText(file),file.name);
+    window._sphPdfImport=data;
+    const sourceSubtotal=985277201;
+    const difference=sourceSubtotal-data.subtotal;
+    openModal('Review Before Import',`
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px">
+        <div style="background:#f8fafc;border-radius:9px;padding:11px"><div style="font-size:10px;color:#64748b;font-weight:700">SOURCE NUMBER</div><div style="font-weight:700;margin-top:4px">${invoiceEscapeHtml(data.sourceDocumentNo)}</div></div>
+        <div style="background:#f8fafc;border-radius:9px;padding:11px"><div style="font-size:10px;color:#64748b;font-weight:700">CUSTOMER</div><div style="font-weight:700;margin-top:4px">${invoiceEscapeHtml(data.pihak)}</div></div>
+        <div style="background:#f8fafc;border-radius:9px;padding:11px"><div style="font-size:10px;color:#64748b;font-weight:700">DATE / ITEMS</div><div style="font-weight:700;margin-top:4px">${fDate(data.tanggal)} · ${data.items.length} items</div></div>
+      </div>
+      <div style="border:1px solid #e2e8f0;border-radius:9px;padding:12px 14px;font-size:13px;line-height:1.8">
+        <div style="display:flex;justify-content:space-between"><span>Line-item subtotal</span><b>${rp(data.subtotal)}</b></div>
+        <div style="display:flex;justify-content:space-between"><span>VAT ${data.ppnRate}%</span><b>${rp(data.ppnAmt)}</b></div>
+        <div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;margin-top:5px;padding-top:5px"><b>Calculated total</b><b>${rp(data.total)}</b></div>
+      </div>
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:11px 13px;margin-top:12px;color:#9a3412;font-size:12px;line-height:1.5"><b>Check required:</b> the PDF prints a subtotal of ${rp(sourceSubtotal)}, while its 18 line items add up to ${rp(data.subtotal)} (difference ${rp(Math.abs(difference))}). SiAkun keeps the auditable line-item sum and records this warning.</div>
+      <div style="color:#64748b;font-size:12px;margin-top:12px">The source number remains a reference only. An official AMS number will be assigned later through <b>Issue</b>, after you review and save this Draft.</div>
+      <div class="modal-ft"><button class="btn btn-out" onclick="openSphPdfImport()">Choose Another PDF</button><button class="btn btn-pri" onclick="commitSphPdfImport()">Import as Draft</button></div>`);
+  }catch(e){
+    if(status)status.textContent='';
+    alert(e?.message||'The PDF could not be read. No data was saved.');
+  }
+}
+
+function commitSphPdfImport(){
+  const data=window._sphPdfImport;
+  if(!data)return alert('Read the PDF again before importing.');
+  DB.sphs=DB.sphs||[];
+  const duplicate=DB.sphs.find(s=>s.sourceDocumentNo===data.sourceDocumentNo||s.customerRef===data.sourceDocumentNo);
+  if(duplicate)return alert(`This source quotation is already in SiAkun as ${sphDisplayNumber(duplicate)}. Nothing was imported.`);
+  const id=uid();
+  const now=Date.now();
+  DB.sphs.push({...data,id,noSph:genSphId(),created_at:now,updated_at:now});
+  if(!saveDB())return;
+  window._sphPdfImport=null;
+  closeModal();
+  openAddSph(id);
+}
+
 // Inject SPH Pengadaan Pagar BRC 8mm + Accessories for PT. Citra Palu Minerals (CPM),
 // data dipindah dari penawaran CRT ke format/kop surat AMS.
 // _seedVer used supaya if angkanya diperbaiki lagi di kode, SPH yang SUDAH ada otomatis
@@ -13005,7 +13125,7 @@ function renderSphs(c){
   c.innerHTML=`<div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
     <div class="sph-head-row" style="padding:20px 24px;border-bottom:1px solid #f1f5f9;display:flex;align-items:flex-start;justify-content:space-between">
       <div><div style="font-size:18px;font-weight:700;color:#0f172a">📑 SPH / Quotation</div><div style="font-size:12px;color:#94a3b8;margin-top:2px">Create a clear commercial quotation or add optional technical sections.</div></div>
-      <button class="btn btn-pri" onclick="openAddSph()">+ Create Quotation</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-out" onclick="openSphPdfImport()">📥 Import PDF</button><button class="btn btn-pri" onclick="openAddSph()">+ Create Quotation</button></div>
     </div>
     <div style="padding:16px 24px;background:#f8fafc;border-bottom:1px solid #f1f5f9;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
       <div style="flex:1;min-width:200px">
@@ -13053,7 +13173,7 @@ function renderSphs(c){
         <td style="padding:11px 12px">${tBadge(s.tujuan)}</td>
         <td style="padding:11px 12px;font-weight:600;color:#1e293b">${s.pihak||'-'}</td>
         <td style="padding:11px 12px;text-align:right;font-weight:700;color:#0f172a">${rp(total)}</td>
-        <td style="padding:11px 12px;text-align:center">${sBadge(s.status)}</td>
+        <td style="padding:11px 12px;text-align:center">${s.requiresReview?'<span style="background:#ffedd5;color:#9a3412;font-size:10px;padding:3px 8px;border-radius:99px;font-weight:700;margin-right:4px">Review</span>':''}${sBadge(s.status)}</td>
         <td style="padding:11px 12px;text-align:center;white-space:nowrap"><div class="sph-actions">
           ${canInvoice?`<button onclick="openInvoiceFromSph('${s.id}')" title="Create Invoice" style="background:none;border:1px solid #bbf7d0;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#16a34a;margin-right:3px">📄 Invoice</button>`:''}
           ${linked?`<button onclick="viewSph('${s.id}')" title="Linked Invoice" style="background:none;border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;color:#1d4ed8;margin-right:3px">🔗</button>`:''}
@@ -14025,7 +14145,7 @@ async function saveSph(asDraft){
   const now=Date.now();
   if(window._sphEditId){
     const idx=DB.sphs.findIndex(x=>x.id===window._sphEditId);
-    if(idx>-1){DB.sphs[idx]={...DB.sphs[idx],noSph,tanggal:tgl,tujuan,pihak,perihal,attnEn,salesCode,customerRef,project,customerPhone,customerEmail,customerAddress,technical,berlaku,penandatangan,penandatanganTelp,tncEn,ttd,items,status,subtotal,ppn,ppnRate,ppnAmt,total,updated_at:now};}
+    if(idx>-1){DB.sphs[idx]={...DB.sphs[idx],noSph,tanggal:tgl,tujuan,pihak,perihal,attnEn,salesCode,customerRef,project,customerPhone,customerEmail,customerAddress,technical,berlaku,penandatangan,penandatanganTelp,tncEn,ttd,items,status,requiresReview:false,subtotal,ppn,ppnRate,ppnAmt,total,updated_at:now};}
   } else {
     DB.sphs.push({id:uid(),noSph,tanggal:tgl,tujuan,pihak,perihal,attnEn,salesCode,customerRef,project,customerPhone,customerEmail,customerAddress,technical,berlaku,penandatangan,penandatanganTelp,tncEn,ttd,items,status,subtotal,ppn,ppnRate,ppnAmt,total,link_invoice_id:null,created_at:now,updated_at:now});
   }
@@ -14039,6 +14159,7 @@ async function saveSph(asDraft){
 async function issueSph(id){
   const s=(DB.sphs||[]).find(x=>x.id===id);
   if(!s||s.status!=='draft')return;
+  if(s.requiresReview)return alert('Review this imported Draft and click Save Draft before issuing an official AMS number.');
   if(!_isOnline)return alert('Issuing an official SPH requires an online connection. The Draft remains unchanged.');
   if(!s.tanggal||!s.pihak||(s.items||[]).length===0)return alert('Complete the SPH date, party/company, and items before issuing.');
   const salesCode=sphCleanSalesCode(s.salesCode||sphDefaultSalesCode());
