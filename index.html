@@ -13005,7 +13005,7 @@ function buildDpaQ115ImportData(){
     {category:'NCX Batam Center',desc:'NCX Batam Center - Jasa Installasi, Setting & Konfigurasi',qty:2,satuan:'service',harga:48825000},
     {category:'NCX Lembong',desc:'NCX Lembong - Refill NN100\nRuangan Tabung Lt.1: 6 Tabung\nRuangan Tabung Lt.4: 33 Tabung',qty:39,satuan:'cylinder',harga:7893600},
     {category:'NCX Lembong',desc:'NCX Lembong - Jasa Pembongkaran & Pengiriman Tabung\nMetode Pelaksanaan: Refill dilakukan secara bertahap (staged refill) sehingga selama proses pekerjaan masih terdapat tabung aktif yang menjaga proteksi ruangan.',qty:1,satuan:'service',harga:35000000}
-  ].map(it=>({fabrikasi:'',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',refId:null,...it}));
+  ].map(it=>({fabrikasi:'',hargaBeliMaterial:Number(it.harga)||0,hargaBeliJasa:0,markup:'',refId:null,...it}));
   const subtotal=items.reduce((sum,it)=>sum+(Number(it.qty)||0)*(Number(it.harga)||0),0);
   const ppnAmt=Math.round(subtotal*.11);
   const createdAt=new Date('2026-07-13T09:00:00+07:00').toISOString();
@@ -13020,6 +13020,46 @@ function buildDpaQ115ImportData(){
     ttd:'',items,status:'draft',requiresReview:true,subtotal,ppn:true,ppnRate:11,ppnAmt,total:subtotal+ppnAmt,link_invoice_id:null,
     created_at:createdAt,updated_at:createdAt,restored_from:'Q-115-DPA-DB-VII-2026 - FSS Telkom.pdf',
     importWarning:'Source PDF subtotal is Rp985,277,201; exact line-item sum is Rp985,277,200. SiAkun uses the auditable line-item sum.'
+  };
+}
+
+// Normalized import template for the verified three-page DPA UPS proposal.
+// Its price columns are blank, so every item is imported at zero for manual review.
+function buildDpaUpsImportData(){
+  const rows=[
+    ['AC UPS 25 kVA','AC UPS E2001 25 kVA in parallel configuration - load sharing & control. Complete system with rectifier, inverter, static switch, bypass transformer, voltage stabilizer, maintenance bypass switch, VLA battery, BMS PLUTO, battery rack and listed accessories.',1,'lot'],
+    ['Distribution Board AC UPS Power Plant','UPS-A-DB & UPS-B-DB; tinned copper busbar 200A, 10kA, 1 sec, IP41.',2,'set'],
+    ['DC UPS 110V 250A','DC UPS RTB 250A in parallel configuration with load sharing & control, batteries, BMS PLUTO, battery rack and listed accessories.',1,'lot'],
+    ['Distribution Board DC Charger','BC-MDB, BC-DB-U and BC-DB-S; tinned copper busbar 630A, 10kA, 1 sec, IP41.',3,'lot'],
+    ['AC UPS 2.5 kVA','AC UPS E2001 2.5 kVA single configuration (industrial type), complete with batteries, BMS PLUTO, battery rack and listed accessories.',4,'set'],
+    ['Distribution Board AC UPS SAGS','Distribution Board AC UPS SAGS; tinned copper busbar 50A, 10kA, 1 sec, IP41.',4,'set'],
+    ['FAT','FAT at BORRI Italy, excluding ticket and accommodation.',1,'lot'],
+    ['Spare Part Commissioning','Spare parts for commissioning.',1,'lot'],
+    ['Interconnection Cable','Kabel Metal Indonesia interconnection cable N2XY: 2C + E - 300 mm2 for AC UPS and 1C - 630 mm2 for DC Charger.',1,'lot'],
+    ['Two-Year Spare Parts (Optional)','Two-year spare parts - optional item.',1,'lot'],
+    ['Special Tools','Battery lifter.',1,'pcs'],
+    ['SAT','Site Acceptance for 21 working days (3 trips) and training for 3 working days (1 trip), including accommodation, transportation, supervision, test/commissioning, load bank, MCU report, PPE and testing tools.',1,'lot'],
+    ['Packing','Seaworthy packing with two impact recorders with axis sensing for each package.',1,'lot']
+  ];
+  const items=rows.map(([category,desc,qty,satuan])=>({category,desc,qty,satuan,fabrikasi:'',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:0,refId:null}));
+  return {
+    tanggal:'2026-07-16',tujuan:'customer',pihak:'JO Timas Suplindo - Rekayasa Engineering',
+    perihal:'UPS SYSTEM, Technical & Economical Proposal',attnEn:'Ibu Rinawaty',salesCode:'RS',
+    customerRef:'RFQ DNG2-EL-BRA-REQ-TRE-50001 for UPS, Battery & Charger PT. Daya Perkasa Abadi (Borri)',
+    sourceDocumentNo:'Q/I/012/MA/DPA/2026 _COO Italy - rev 9',project:'EPC GEOTHERMAL POWER PLANT DIENG UNIT-2',
+    customerPhone:'+62 811-8495-617',customerEmail:'rinawaty@rekayasa.co.id',
+    customerAddress:'Jl. Kalibata Timur I No.36, Kalibata, Kec. Pancoran, Kota Jakarta Selatan, DKI Jakarta 12740',
+    technical:{
+      scope:'Design, manufacturing, testing, packing, delivery to the delivery point and contractual technical documentation. Installation, start-up and civil works are excluded unless clearly stated.',
+      specifications:'Equipment shall comply with the applicable technical requirements and the attached technical clarification.',
+      standards:'IEC EN 60076; IEC EN 60146; IEC EN 60439; IEC EN 60529; IEC EN 60896; IEC EN 61439; IEC EN 60947; EN 62040-1; EN 62040-2; EN 62040-3.',
+      afterSales:'24/7 hotline; next-day site visit when unresolved during warranty; certified and standby engineer teams; spare-part availability for 10 years.',attachments:''
+    },
+    berlaku:'2026-08-05',penandatangan:'',penandatanganTelp:'',
+    tncEn:{price:'Source proposal uses USD, FOB COO. Price columns in the supplied PDF are blank and must be completed in SiAkun.',fabrication:'Delivery time: 33-34 weeks after PO received; 27-29 weeks after agreed order/approved drawing.',delivery:'FOB COO. Seaworthy packing is included.',payment:'10% DP after PO; 20% after major engineering documents reach minimum IFA code AC; 30% after successful FAT; 20% after FOB port against copy B/L; 20% after delivery to site; 10% MDR.',installation:'Equipment installation, start-up and civil works are excluded unless clearly mentioned.',validity:'20 days from the quotation date.',vat:'Optional items and 11% VAT are excluded in the source proposal.',note:'Warranty: 12 months from start-up or 18 months after material arrives at DPA warehouse, whichever occurs first.'},
+    ttd:'',items,status:'draft',requiresReview:true,subtotal:0,ppn:false,ppnRate:11,ppnAmt:0,total:0,link_invoice_id:null,
+    sourceCurrency:'USD',created_at:Date.now(),updated_at:Date.now(),restored_from:'SPH QUOTITION DPA.pdf',
+    importWarning:'The source PDF contains 13 items but its unit-price and total-price columns are blank. All imported prices are zero and require manual completion.'
   };
 }
 
@@ -13041,19 +13081,88 @@ async function extractSphPdfText(file){
   for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
     const page=await pdf.getPage(pageNo);
     const content=await page.getTextContent();
-    pages.push(content.items.map(x=>x.str||'').join(' '));
+    const rows=[];
+    content.items.filter(x=>String(x.str||'').trim()).forEach(item=>{
+      const y=Math.round((item.transform?.[5]||0)*2)/2;
+      let row=rows.find(r=>Math.abs(r.y-y)<=2);
+      if(!row){row={y,items:[]};rows.push(row);}
+      row.items.push({x:item.transform?.[4]||0,text:String(item.str||'').trim()});
+    });
+    rows.sort((a,b)=>b.y-a.y);
+    pages.push(rows.map(r=>r.items.sort((a,b)=>a.x-b.x).map(x=>x.text).join('  ')).join('\n'));
     const status=document.getElementById('sph-pdf-status');
     if(status)status.textContent=`Reading page ${pageNo} of ${pdf.numPages}...`;
   }
   return pages.join('\n');
 }
 
+function sphImportNumber(value){
+  let s=String(value||'').replace(/[^\d.,-]/g,'').trim();
+  if(!s)return 0;
+  if(/^\d{1,3}([.,]\d{3})+$/.test(s))return Number(s.replace(/[.,]/g,''))||0;
+  if(s.includes(',')&&s.includes('.')){
+    const decimal=s.lastIndexOf(',')>s.lastIndexOf('.')?',':'.';
+    const thousands=decimal===','?'.':',';
+    s=s.split(thousands).join('').replace(decimal,'.');
+  }else if(s.includes(','))s=s.replace(',','.');
+  return Number(s)||0;
+}
+
+function parseGenericBoqPdf(text,fileName){
+  const lines=String(text||'').split(/\n+/).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
+  const units='unit|units|pcs|pc|piece|pieces|set|sets|lot|lots|ea|roll|rolls|m|meter|metre|kg|ltr|liter|box|pack|service|services|cylinder|btg|ls';
+  const items=[];
+  for(const line of lines){
+    if(/^(no\.?|pos|item\/?tag|description|deskripsi|qty|quantity|subtotal|total|ppn|vat)\b/i.test(line))continue;
+    let m=line.match(new RegExp('^(\\d{1,3})\\s+(.+?)\\s+([\\d.,]+)\\s+('+units+')\\s+([\\d.,]+)(?:\\s+([\\d.,]+))?$','i'));
+    if(m){
+      const qty=sphImportNumber(m[3])||1,unitPrice=sphImportNumber(m[5]);
+      items.push({desc:m[2],qty,satuan:m[4],fabrikasi:'',hargaBeliMaterial:unitPrice,hargaBeliJasa:0,markup:'',harga:unitPrice,refId:null});
+      continue;
+    }
+    m=line.match(/^(\d{1,3})\s+(.+?)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)$/);
+    if(m){
+      const qty=sphImportNumber(m[3])||1,unitPrice=sphImportNumber(m[4]);
+      items.push({desc:m[2],qty,satuan:'unit',fabrikasi:'',hargaBeliMaterial:unitPrice,hargaBeliJasa:0,markup:'',harga:unitPrice,refId:null});
+    }
+  }
+  if(!items.length)throw new Error('SiAkun could not find a recognizable BOQ item table in this PDF. No data was saved. Try a text-based PDF with Description, Qty, Unit, and Price columns.');
+  const findValue=labels=>{
+    const re=new RegExp('^(?:'+labels+')\\s*[:.-]\\s*(.+)$','i');
+    return lines.map(x=>x.match(re)).find(Boolean)?.[1]||'';
+  };
+  const noteStart=lines.findIndex(x=>/^(notes?|catatan|keterangan|terms(?:\s*&\s*conditions?)?|syarat|kondisi penawaran)\b/i.test(x));
+  let notes='';
+  if(noteStart>=0){
+    notes=lines.slice(noteStart,Math.min(lines.length,noteStart+70)).filter(x=>!/(hormat kami|best regards|prepared by|approved by)/i.test(x)).join('\n');
+  }
+  const payment=lines.filter(x=>/(payment|pembayaran|down payment|\bDP\b)/i.test(x)).slice(0,8).join('\n');
+  const delivery=lines.filter(x=>/(delivery|pengiriman|franco)/i.test(x)).slice(0,6).join('\n');
+  const validity=lines.filter(x=>/(validity|masa berlaku)/i.test(x)).slice(0,4).join('\n');
+  const warranty=lines.filter(x=>/(warranty|garansi)/i.test(x)).slice(0,5).join('\n');
+  const subtotal=items.reduce((sum,it)=>sum+(Number(it.qty)||0)*(Number(it.harga)||0),0);
+  const today=new Date().toISOString().slice(0,10);
+  return {
+    tanggal:today,tujuan:'customer',pihak:findValue('M\\/s\\.|Customer|Client|Kepada(?: Yth)?')||'REVIEW CUSTOMER NAME',
+    perihal:findValue('Subject|Perihal')||'Imported BOQ - review title',attnEn:findValue('Att\\.?n\\.?|Up'),salesCode:'RS',
+    customerRef:findValue('Your Ref|Reference|Referensi'),sourceDocumentNo:findValue('Our Ref|Nomor|No\\.?')||fileName,
+    project:findValue('Project|Proyek'),customerPhone:findValue('Phone|Telp|Telephone'),customerEmail:findValue('E-?Mail|Email'),customerAddress:'',
+    technical:{scope:'',specifications:'',standards:'',afterSales:warranty,attachments:''},berlaku:'',penandatangan:'',penandatanganTelp:'',
+    tncEn:{price:'Imported source prices are recorded as Cost Price. Selling Price initially equals Cost Price; markup is optional.',fabrication:'',delivery,payment,installation:'',validity,vat:'',note:notes||warranty||'Review the source PDF and complete any notes that could not be classified automatically.'},
+    ttd:'',items,status:'draft',requiresReview:true,subtotal,ppn:false,ppnRate:11,ppnAmt:0,total:subtotal,link_invoice_id:null,
+    created_at:Date.now(),updated_at:Date.now(),restored_from:fileName,importMode:'generic-boq',
+    importWarning:`SiAkun detected ${items.length} BOQ rows. Review descriptions, quantities, units, prices, customer details, and imported notes before saving.`
+  };
+}
+
 function parseSphPdfImport(text,fileName){
   const clean=String(text||'').replace(/\s+/g,' ').trim();
   const isVerifiedDpaQ115=/Q\s*-?\s*115\s*\/\s*DPA\s*\/\s*DB\s*\/\s*VII\s*\/\s*2026/i.test(clean)||
     (/Integra Teknika Solusindo/i.test(clean)&&/Solusi Service FSS Telkom/i.test(clean));
-  if(!isVerifiedDpaQ115)throw new Error('This PDF layout is not supported yet. No data was saved. The first verified layout is DPA Q-115 (FSS Telkom).');
-  return {...buildDpaQ115ImportData(),importFileName:fileName||'Quotation.pdf',imported_at:Date.now()};
+  const isVerifiedDpaUps=/Q\s*\/\s*I\s*\/\s*012\s*\/\s*MA\s*\/\s*DPA\s*\/\s*2026/i.test(clean)||
+    (/JO Timas Suplindo/i.test(clean)&&/UPS SYSTEM,? Technical & Economical Proposal/i.test(clean));
+  const data=isVerifiedDpaQ115?buildDpaQ115ImportData():(isVerifiedDpaUps?buildDpaUpsImportData():parseGenericBoqPdf(text,fileName));
+  return {...data,importFileName:fileName||'Quotation.pdf',imported_at:Date.now()};
 }
 
 async function readSphPdfForReview(){
@@ -13066,8 +13175,6 @@ async function readSphPdfForReview(){
     if(status)status.textContent='Reading PDF...';
     const data=parseSphPdfImport(await extractSphPdfText(file),file.name);
     window._sphPdfImport=data;
-    const sourceSubtotal=985277201;
-    const difference=sourceSubtotal-data.subtotal;
     openModal('Review Before Import',`
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px">
         <div style="background:#f8fafc;border-radius:9px;padding:11px"><div style="font-size:10px;color:#64748b;font-weight:700">SOURCE NUMBER</div><div style="font-weight:700;margin-top:4px">${invoiceEscapeHtml(data.sourceDocumentNo)}</div></div>
@@ -13079,7 +13186,8 @@ async function readSphPdfForReview(){
         <div style="display:flex;justify-content:space-between"><span>VAT ${data.ppnRate}%</span><b>${rp(data.ppnAmt)}</b></div>
         <div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;margin-top:5px;padding-top:5px"><b>Calculated total</b><b>${rp(data.total)}</b></div>
       </div>
-      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:11px 13px;margin-top:12px;color:#9a3412;font-size:12px;line-height:1.5"><b>Check required:</b> the PDF prints a subtotal of ${rp(sourceSubtotal)}, while its 18 line items add up to ${rp(data.subtotal)} (difference ${rp(Math.abs(difference))}). SiAkun keeps the auditable line-item sum and records this warning.</div>
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:11px 13px;margin-top:12px;color:#9a3412;font-size:12px;line-height:1.5"><b>Review required:</b> ${invoiceEscapeHtml(data.importWarning||'Check all imported data before saving.')}</div>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:11px 13px;margin-top:10px;color:#475569;font-size:12px;line-height:1.5"><b>Imported notes:</b> ${invoiceEscapeHtml(data.tncEn?.note||'No notes detected.').replace(/\n/g,'<br>')}</div>
       <div style="color:#64748b;font-size:12px;margin-top:12px">The source number remains a reference only. An official AMS number will be assigned later through <b>Issue</b>, after you review and save this Draft.</div>
       <div class="modal-ft"><button class="btn btn-out" onclick="openSphPdfImport()">Choose Another PDF</button><button class="btn btn-pri" onclick="commitSphPdfImport()">Import as Draft</button></div>`);
   }catch(e){
