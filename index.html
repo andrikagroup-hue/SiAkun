@@ -12864,7 +12864,19 @@ function genSphId(){
   return'DRAFT-SPH-'+yr+'-'+String(count).padStart(4,'0');
 }
 function sphDisplayNumber(s){
-  return sphIsOfficialNumber(s?.noSph)?s.noSph:(s?.proposedNoSph||'DRAFT - number assigned when issued');
+  return sphIsOfficialNumber(s?.noSph)?s.noSph:(s?.proposedNoSph||sphNextProposedNumber(s?.tanggal||today(),s?.salesCode||sphDefaultSalesCode()));
+}
+
+function sphNextProposedNumber(dateStr,salesCode){
+  const year=String(dateStr||today()).slice(0,4);
+  let maxSequence=100;
+  (DB.sphs||[]).forEach(s=>{
+    [s.noSph,s.proposedNoSph].forEach(value=>{
+      const m=String(value||'').match(/^Q-(\d{3})\/AMS\/[A-Z0-9]{1,6}\/(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)\/(\d{4})$/);
+      if(m&&m[2]===year)maxSequence=Math.max(maxSequence,Number(m[1])||0);
+    });
+  });
+  return`Q-${String(maxSequence+1).padStart(3,'0')}/AMS/${sphCleanSalesCode(salesCode||sphDefaultSalesCode())}/${sphRomanMonth(dateStr)}/${year}`;
 }
 
 function sphImportedAmsNumber(sourceNo,salesCode){
@@ -12998,8 +13010,28 @@ function repairImportedDpaQ115Display(){
       if(s.salesCode!=='RA'){s.salesCode='RA';changed=true;}
       if(s.proposedNoSph!=='Q-115/AMS/RA/VII/2026'){s.proposedNoSph='Q-115/AMS/RA/VII/2026';changed=true;}
       if(s.customerRef){s.customerRef='';changed=true;}
+      const warranty='Garansi spare part 6 bulan setelah pemasangan apabila pemasangan dilakukan oleh penyedia.';
+      const technical=s.technical||{};
+      if(technical.scope||technical.specifications||technical.standards||technical.afterSales||technical.attachments){
+        s.technical={scope:'',specifications:'',standards:'',afterSales:'',attachments:''};changed=true;
+      }
+      s.tncEn=s.tncEn||{};
+      if(!String(s.tncEn.note||'').includes('Garansi spare part 6 bulan')){
+        s.tncEn.note=[s.tncEn.note,warranty].filter(Boolean).join(' ');changed=true;
+      }
     }
   });
+  return changed;
+}
+
+function repairDraftQuotationNumbers(){
+  let changed=false;
+  (DB.sphs||[]).filter(s=>s.status==='draft'&&!sphIsOfficialNumber(s.noSph)&&!s.proposedNoSph)
+    .sort((a,b)=>new Date(a.tanggal||0)-new Date(b.tanggal||0))
+    .forEach(s=>{
+      s.proposedNoSph=sphNextProposedNumber(s.tanggal||today(),s.salesCode||sphDefaultSalesCode());
+      changed=true;
+    });
   return changed;
 }
 
@@ -13034,9 +13066,9 @@ function buildDpaQ115ImportData(){
     pihak:'PT. Integra Teknika Solusindo',perihal:'Penawaran Harga Solusi Service FSS Telkom',attnEn:'Pak Eka',salesCode:'RA',
     customerRef:'',sourceDocumentNo:'Q-115/DPA/DB/VII/2026',project:'Telkom Neucentrix Indonesia',
     customerPhone:'',customerEmail:'',customerAddress:'Jl. Onta Baru, No 48, Makassar',
-    technical:{scope:'Pergantian spare part dan Refill Tabung FSS untuk lokasi Telkom Neucentrix Indonesia.',specifications:'',standards:'',afterSales:'Garansi spare part 6 bulan setelah pemasangan apabila pemasangan dilakukan oleh penyedia.',attachments:''},
+    technical:{scope:'',specifications:'',standards:'',afterSales:'',attachments:''},
     berlaku:'2026-07-27',penandatangan:'',penandatanganTelp:'',
-    tncEn:{price:'Harga termasuk PPN 11%.',fabrication:'',delivery:'Franco: Sesuai Lokasi Penawaran.',payment:'50% DP, 50% setelah pekerjaan selesai.',installation:'',validity:'2 (dua) minggu setelah tanggal penawaran.',vat:'Harga termasuk PPN 11%.',note:'Status material ready stock. Harga termasuk jasa pengiriman, jasa teknisi, akomodasi dan demobilisasi teknisi. Harga dapat berubah sewaktu-waktu.'},
+    tncEn:{price:'Harga termasuk PPN 11%.',fabrication:'',delivery:'Franco: Sesuai Lokasi Penawaran.',payment:'50% DP, 50% setelah pekerjaan selesai.',installation:'',validity:'2 (dua) minggu setelah tanggal penawaran.',vat:'Harga termasuk PPN 11%.',note:'Status material ready stock. Harga termasuk jasa pengiriman, jasa teknisi, akomodasi dan demobilisasi teknisi. Garansi spare part 6 bulan setelah pemasangan apabila pemasangan dilakukan oleh penyedia. Harga dapat berubah sewaktu-waktu.'},
     ttd:'',items,status:'draft',requiresReview:true,subtotal,ppn:true,ppnRate:11,ppnAmt,total:subtotal+ppnAmt,link_invoice_id:null,
     created_at:createdAt,updated_at:createdAt,restored_from:'Q-115-DPA-DB-VII-2026 - FSS Telkom.pdf',
     importWarning:'Source PDF subtotal is Rp985,277,201; exact line-item sum is Rp985,277,200. SiAkun uses the auditable line-item sum.'
@@ -13857,6 +13889,7 @@ function openAddSph(id){
   if(s&&s.status!=='draft')return alert('Issued SPH documents are read-only. Use Cancel to preserve the official number and audit trail.');
   const isEdit=!!s;
   const noSph=s?s.noSph:genSphId();
+  const proposedNoSph=s?.proposedNoSph||sphNextProposedNumber(s?.tanggal||today(),s?.salesCode||sphDefaultSalesCode());
   const items=s?s.items:[{desc:'',qty:1,satuan:'unit',fabrikasi:'',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:0,refId:null}];
 
   window._sphItems=items.map(x=>{
@@ -13892,8 +13925,8 @@ function openAddSph(id){
     <div class="sph-form-grid" style="padding:18px 28px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div>
         <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">QUOTATION NO.</label>
-        <input id="sph-no" value="${sphDisplayNumber(s||{noSph})}" readonly style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;background:#f8fafc;color:#64748b">
-        <div style="font-size:10px;color:#64748b;margin-top:4px">The official number is assigned safely when Issue succeeds.</div>
+        <input id="sph-no" value="${sphDisplayNumber(s||{noSph,proposedNoSph,tanggal:today(),salesCode:sphDefaultSalesCode()})}" readonly style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;background:#f8fafc;color:#64748b">
+        <div style="font-size:10px;color:#64748b;margin-top:4px">This number is reserved for the Draft and remains unchanged when issued.</div>
       </div>
       <div>
         <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">DATE</label>
@@ -14268,11 +14301,12 @@ async function saveSph(asDraft){
   const total=subtotal+ppnAmt;
   DB.sphs=DB.sphs||[];
   const now=Date.now();
+  const proposedNoSph=existingDraft?.proposedNoSph||sphNextProposedNumber(tgl,salesCode);
   if(window._sphEditId){
     const idx=DB.sphs.findIndex(x=>x.id===window._sphEditId);
-    if(idx>-1){DB.sphs[idx]={...DB.sphs[idx],noSph,tanggal:tgl,tujuan,pihak,perihal,attnEn,salesCode,customerRef,project,customerPhone,customerEmail,customerAddress,technical,berlaku,penandatangan,penandatanganTelp,tncEn,ttd,items,status,requiresReview:false,subtotal,ppn,ppnRate,ppnAmt,total,updated_at:now};}
+    if(idx>-1){DB.sphs[idx]={...DB.sphs[idx],noSph,proposedNoSph,tanggal:tgl,tujuan,pihak,perihal,attnEn,salesCode,customerRef,project,customerPhone,customerEmail,customerAddress,technical,berlaku,penandatangan,penandatanganTelp,tncEn,ttd,items,status,requiresReview:false,subtotal,ppn,ppnRate,ppnAmt,total,updated_at:now};}
   } else {
-    DB.sphs.push({id:uid(),noSph,tanggal:tgl,tujuan,pihak,perihal,attnEn,salesCode,customerRef,project,customerPhone,customerEmail,customerAddress,technical,berlaku,penandatangan,penandatanganTelp,tncEn,ttd,items,status,subtotal,ppn,ppnRate,ppnAmt,total,link_invoice_id:null,created_at:now,updated_at:now});
+    DB.sphs.push({id:uid(),noSph,proposedNoSph,tanggal:tgl,tujuan,pihak,perihal,attnEn,salesCode,customerRef,project,customerPhone,customerEmail,customerAddress,technical,berlaku,penandatangan,penandatanganTelp,tncEn,ttd,items,status,subtotal,ppn,ppnRate,ppnAmt,total,link_invoice_id:null,created_at:now,updated_at:now});
   }
   if(!saveDB()){if(ttd&&ttd!==oldSignature)await hapusFotoKartuNameDariStorage(ttd);return;}
   let synced=false;if(_isOnline)synced=await syncPendingToCloud(true);
@@ -14439,7 +14473,6 @@ async function printSph(id){
   const logoSrc=co.logo||'https://raw.githubusercontent.com/andrikagroup-hue/SiAkun/main/Gambar/IC.png';
   const logo=`<div style="display:flex;align-items:center;flex-shrink:0"><img src="${logoSrc}" style="width:100px;height:100%;min-height:90px;object-fit:contain;border-radius:10px;background:#fff;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.1);"></div>`;
   const addr=(co.address||'').replace(/,\s*(Kota\s)/g,',<br>$1');
-  const bankLine=companyBankLineHtml(co,' &nbsp;|&nbsp; ');
   const itemRows=(s.items||[]).map((it,i)=>`
     <tr style="border-bottom:1px solid #e2e8f0">
       <td style="padding:9px 12px">${i+1}</td>
@@ -14513,7 +14546,6 @@ async function printSph(id){
               ${addr}<br>
               ${co.phone||''} | ${co.email||''}<br>
               NPWP: ${co.npwp||''}
-              ${bankLine?`<br>${bankLine}`:''}
             </div>
           </div>
         </div>
@@ -14594,7 +14626,6 @@ async function printSphEnglish(id){
   const logoSrc=co.logo||'https://raw.githubusercontent.com/andrikagroup-hue/SiAkun/main/Gambar/IC.png';
   const logo=`<div style="display:flex;align-items:center;flex-shrink:0"><img src="${logoSrc}" style="width:100px;height:100%;min-height:90px;object-fit:contain;border-radius:10px;background:#fff;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.1);"></div>`;
   const addr=(co.address||'').replace(/,\s*(Kota\s)/g,',<br>$1');
-  const bankLine=companyBankLineHtml(co,' &nbsp;|&nbsp; ');
   // Name Party sekarang already field bersih (tanpa embel-embel "— Attn"), tinggal used langsung.
   const pihakOnly=(s.pihak||'').trim();
   const attn=s.attnEn||'';
@@ -14702,7 +14733,6 @@ async function printSphEnglish(id){
               ${addr}<br>
               ${co.phone||''} | ${co.email||''}<br>
               NPWP: ${co.npwp||''}
-              ${bankLine?`<br>${bankLine}`:''}
             </div>
           </div>
         </div>
@@ -17479,7 +17509,7 @@ async function init(){
   // This fixes older browsers that already carried the incomplete V2 migration flag.
   const _englishSystemLabelsChanged=persistEnglishSystemLabels(DB);
   // Guarded data migrations run once during initialization, never during page rendering.
-  const _migrationChanged=[migrateInvoiceDraftNumbers(),restoreVerifiedLegacySphs(),repairImportedDpaQ115Display(),repairSphVeaSplit(),repairSphRefIdMismatch(),repairPriceRefGsdSync()].some(Boolean);
+  const _migrationChanged=[migrateInvoiceDraftNumbers(),restoreVerifiedLegacySphs(),repairImportedDpaQ115Display(),repairDraftQuotationNumbers(),repairSphVeaSplit(),repairSphRefIdMismatch(),repairPriceRefGsdSync()].some(Boolean);
   if((_englishSystemLabelsChanged||_migrationChanged)&&!saveDB({silentFailure:true}))
     console.warn('[SiAkun] A guarded data migration could not be persisted.');
 
