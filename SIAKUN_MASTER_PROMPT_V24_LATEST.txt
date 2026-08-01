@@ -166,19 +166,25 @@ SPH / QUOTATION STANDARD
 - An issued SPH number never changes, is never reused, and remains visible when the SPH is Cancelled/Void.
 - Prevent duplicate official SPH numbers, including simultaneous confirmation from separate devices or sessions.
 - Historical SPH numbers must not be renumbered automatically.
-- The SPH form must include these simple sections:
-  1. Document: SPH Date, Subject, Salesperson, Customer Reference, Project;
-  2. Customer: Company, Address, Attention, Phone, Email;
-  3. Offer Items: optional group/location, description, quantity, unit, unit price, discount, tax, and line total;
-  4. Commercial Terms: delivery point, delivery time, payment terms, validity, warranty, inclusions, exclusions, and notes;
-  5. Optional Technical Proposal: scope, specifications, standards, after-sales service, attachments, and appendices;
-  6. Authorization: prepared by, checked by, approved by, position, and digital signature.
+- No SiAkun update may delete, hide, overwrite, reseed over, or silently replace an existing SPH record.
+- The verified PT Vision Ease Asia and PT Citra Palu Minerals working quotations must remain available. A recovery may add a missing verified record only when the SPH module is completely empty; it must never overwrite a populated SPH module.
+- Create Quotation must use a three-step focus flow:
+  1. Information: date, customer/company, attention, subject, salesperson, reference, project, contact details, validity, authorization, and signature;
+  2. Items & Prices: description, quantity, unit, internal material/service cost, markup, selling price, tax, and totals;
+  3. Notes & Extras: one visible customer-facing Notes field, with optional Commercial Terms and Optional Technical Proposal collapsed by default.
+- Fabrication is never mandatory and must not occupy a standard item-entry column. Fabrication fields and printed columns appear only when fabrication information is actually used.
+- The default Create Quotation view must be short, calm, sequential, mobile-friendly, and usable by a nontechnical user without seeing every advanced field at once.
+- Empty optional fields must not appear in Preview, Print, PDF, Word, or Excel.
 - Calculations must be automatic and auditable: subtotal, discount, DPP/tax base when applicable, PPN, withholding tax when applicable, and grand total.
 - Add Item, Add Section/Location, Duplicate Item, Move Item, and Delete Item controls must be obvious and safe for nontechnical users.
 - Preview, Print, PDF, Word, and Excel must preserve long multiline descriptions and technical specifications without clipped or overlapping text.
 
 SPH IMPLEMENTATION STATUS - CODE PREPARED, NOT YET DEPLOYED
 - The latest index.html code now contains the redesigned SPH workflow.
+- The Create Quotation workflow is divided into Information, Items & Prices, and Notes & Extras.
+- Only Notes is visible by default in the final step; Commercial Terms and Technical Proposal are collapsed optional sections.
+- Fabrication is optional and hidden when unused.
+- The verified VEA and CPM working quotations are restored only when the SPH module is completely empty; existing SPH data is never overwritten.
 - New Drafts display "DRAFT - number assigned when issued" and cannot manually consume an official number.
 - Only Draft SPHs can be edited or deleted.
 - Issue uses a protected Supabase RPC and assigns the official number in one server transaction.

@@ -501,6 +501,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
   #sph-modal{padding:0!important;align-items:stretch!important;}
   #sph-modal>div{max-width:none!important;border-radius:0!important;min-height:100vh;}
   #sph-modal .sph-form-grid,#sph-modal .sph-terms-grid{grid-template-columns:1fr!important;}
+  #sph-modal .sph-step-nav{padding:10px 12px 0!important;gap:5px!important;}
+  #sph-modal .sph-step-nav button{font-size:10px!important;padding:9px 4px!important;line-height:1.25;}
   #sph-modal .sph-full{grid-column:1!important;}
   #sph-modal .sph-footer{position:sticky;bottom:0;z-index:5;padding:10px 12px!important;flex-wrap:wrap;}
   #sph-modal .sph-footer button{flex:1;min-width:120px;}
@@ -12865,6 +12867,23 @@ function sphDisplayNumber(s){
   return sphIsOfficialNumber(s?.noSph)?s.noSph:'DRAFT - number assigned when issued';
 }
 
+function sphGoStep(step){
+  const target=Math.max(1,Math.min(3,Number(step)||1));
+  [1,2,3].forEach(n=>{
+    const panel=document.getElementById('sph-step-'+n);
+    const button=document.getElementById('sph-step-btn-'+n);
+    if(panel)panel.style.display=n===target?'block':'none';
+    if(button){
+      button.style.background=n===target?'#0e7490':'#fff';
+      button.style.color=n===target?'#fff':'#475569';
+      button.style.borderColor=n===target?'#0e7490':'#cbd5e1';
+    }
+  });
+  window._sphActiveStep=target;
+  const modal=document.getElementById('sph-modal');
+  if(modal)modal.scrollTo({top:0,behavior:'smooth'});
+}
+
 // Buat draft SPH awal for PT. Vision Ease Asia dari SKK_VEA_BOQ_SEED (sekali saja, if not yet pernah dibuat)
 // Perbaikan sekali-jalan buat draft SPH VEA yang sempat kebentuk sebelum perbaikan ini:
 // 1) pisah field "hargaBeli" lama jadi Material & Services (ambil dari data asli SKK_VEA_BOQ_SEED)
@@ -12937,14 +12956,39 @@ function repairSphVeaSplit(){
   return changed;
 }
 
-// Removed: automatic SPH demo creation.
+// Restore the two verified pre-v24 working quotations only when the SPH module is completely empty.
+// Existing SPH rows are never overwritten, renumbered, or removed by this repair.
+function restoreVerifiedLegacySphs(){
+  DB.sphs=DB.sphs||[];
+  if(DB.sphs.length)return false;
+  const createdAt=new Date('2026-07-20T09:00:00+07:00').toISOString();
+  const veaItems=SKK_VEA_BOQ_SEED.map((x,i)=>{
+    const cost=(parseFloat(x.material)||0)+(parseFloat(x.labour)||0);
+    return {desc:x.desc,category:x.category||'',brand:x.brand||'',qty:parseFloat(x.qty)||0,satuan:x.satuan||'unit',fabrikasi:'',hargaBeliMaterial:parseFloat(x.material)||0,hargaBeliJasa:parseFloat(x.labour)||0,markup:20,harga:Math.round(cost*1.2),refId:x.refId||null};
+  });
+  const veaSubtotal=veaItems.reduce((sum,it)=>sum+(it.qty||0)*(it.harga||0),0);
+  const cpmItems=[
+    {desc:'Double swing BRC fence gate, size: Frame pipe 2.5 inch; fence wire diameter 8mm; height 190cm; total width 600cm; fence wheel',qty:1,satuan:'set',fabrikasi:'30 Days',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:16890000,refId:null},
+    {desc:'Single swing BRC fence gate, size: Frame pipe 2.5 inch; fence wire diameter 8mm; height 190cm; total width 300cm; fence wheel',qty:1,satuan:'set',fabrikasi:'30 Days',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:7660228.65,refId:null},
+    {desc:'Fence Panel BRC, HDG 240x190 cm; thickness 8mm',qty:250,satuan:'ea',fabrikasi:'30 Days',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:1056077.23832,refId:null},
+    {desc:'Post Fence BRC, HDG 2 inch x 300 cm',qty:265,satuan:'ea',fabrikasi:'30 Days',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:365122.0588301887,refId:null},
+    {desc:'Barbed Wire HDG, 100 meter/roll',qty:45,satuan:'roll',fabrikasi:'30 Days',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:235963.23533333332,refId:null},
+    {desc:'Clamp Bolt HDG, M8x22mm',qty:1100,satuan:'ea',fabrikasi:'30 Days',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:894.1764727272727,refId:null},
+    {desc:'Bolt HDG M8x100mm with Nut and Washer',qty:2000,satuan:'set',fabrikasi:'30 Days',hargaBeliMaterial:0,hargaBeliJasa:0,markup:'',harga:2980.588235,refId:null}
+  ];
+  DB.sphs.push(
+    {id:'legacy-sph-vea-2026',noSph:'DRAFT-SPH-2026-VEA',tanggal:'2026-07-17',tujuan:'customer',pihak:'PT. Vision Ease Asia',perihal:'Procurement and Installation of Fire Fighting System',attnEn:'',salesCode:'RS',customerRef:'',project:'Fire Fighting System',customerPhone:'',customerEmail:'',customerAddress:'',technical:{scope:'',specifications:'',standards:'',afterSales:'',attachments:''},berlaku:'',penandatangan:'',penandatanganTelp:'',tncEn:{price:'',fabrication:'',delivery:'',payment:'',installation:'',validity:'',vat:'',note:''},ttd:'',items:veaItems,status:'draft',subtotal:veaSubtotal,ppn:false,ppnRate:11,ppnAmt:0,total:veaSubtotal,link_invoice_id:null,created_at:createdAt,updated_at:createdAt,restored_from:'verified_pre_v24_source'},
+    {id:'legacy-sph-cpm-2026',noSph:'SPH-2026-0003',tanggal:'2026-07-20',tujuan:'customer',pihak:'PT. Citra Palu Minerals (CPM)',perihal:'Procurement of BRC Fence 8mm and Accessories',attnEn:'Mr. Pilar',salesCode:'RS',customerRef:'',project:'',customerPhone:'',customerEmail:'',customerAddress:'',technical:{scope:'',specifications:'',standards:'',afterSales:'',attachments:''},berlaku:'2026-07-27',penandatangan:"Siti Sa'diah Azzahra - Business Development",penandatanganTelp:'+6281299997697',tncEn:{price:'Loco Franco: PT Citra Palu Minerals, Palu, Central Sulawesi, in Indonesian Rupiah (IDR).',fabrication:'30 days after Down Payment is received and Drawing is approved.',delivery:'By Customer.',payment:'50% Down Payment; 50% Cash within 14 days after Material on Site.',installation:'Installation & Supervision are not included in this offer.',validity:'7 days from the date of this quotation.',vat:'Prices above are inclusive of 11% VAT (PPN), as stated in the total price.',note:'Prices are subject to change without prior notice.'},ttd:'',items:cpmItems,status:'draft',subtotal:402890000,ppn:true,ppnRate:11,ppnAmt:44317900,total:447207900,link_invoice_id:null,created_at:createdAt,updated_at:createdAt,restored_from:'SPH - AMS - 003.pdf'}
+  );
+  return true;
+}
 
 // Inject SPH Pengadaan Pagar BRC 8mm + Accessories for PT. Citra Palu Minerals (CPM),
 // data dipindah dari penawaran CRT ke format/kop surat AMS.
 // _seedVer used supaya if angkanya diperbaiki lagi di kode, SPH yang SUDAH ada otomatis
 // ke-update angkanya (bukan cuma sekali jalan) — tapi field yang already diisi manual (TTD,
 // penandatangan, status, syarat) TIDAK disentuh/ditimpa.
-// Removed: automatic project-specific SPH injection.
+// Existing project-specific SPH records are preserved by restoreVerifiedLegacySphs().
 
 function renderSphs(c){
   DB.sphs=DB.sphs||[];
@@ -13589,7 +13633,14 @@ function openAddSph(id){
       <div style="color:#fff"><div style="font-size:17px;font-weight:700">${isEdit?'Edit Quotation':'Create New Quotation'}</div><div style="font-size:12px;opacity:.8;margin-top:2px">${noSph}</div></div>
       <button onclick="document.getElementById('sph-modal').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:20px;cursor:pointer;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center">✕</button>
     </div>
-    <div class="sph-form-grid" style="padding:24px 28px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="sph-step-nav" style="padding:14px 28px 0;background:#f8fafc;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <button id="sph-step-btn-1" type="button" onclick="sphGoStep(1)" style="padding:10px 8px;border:1px solid #0e7490;border-radius:9px;background:#0e7490;color:#fff;font-size:12px;font-weight:700;cursor:pointer">1 · Information</button>
+      <button id="sph-step-btn-2" type="button" onclick="sphGoStep(2)" style="padding:10px 8px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#475569;font-size:12px;font-weight:700;cursor:pointer">2 · Items &amp; Prices</button>
+      <button id="sph-step-btn-3" type="button" onclick="sphGoStep(3)" style="padding:10px 8px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#475569;font-size:12px;font-weight:700;cursor:pointer">3 · Notes &amp; Extras</button>
+    </div>
+    <div id="sph-step-1">
+    <div style="padding:14px 28px 0"><div style="background:#ecfeff;border:1px solid #a5f3fc;border-radius:10px;padding:10px 13px;font-size:12px;color:#155e75"><b>Focus:</b> complete the customer and quotation information first. Optional details can be left blank.</div></div>
+    <div class="sph-form-grid" style="padding:18px 28px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div>
         <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">QUOTATION NO.</label>
         <input id="sph-no" value="${sphDisplayNumber(s||{noSph})}" readonly style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;background:#f8fafc;color:#64748b">
@@ -13652,7 +13703,7 @@ function openAddSph(id){
       </div>
       <div>
         <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">SIGNATORY MOBILE NUMBER (optional, for customer print)</label>
-        <input id="sph-penandatangan-telp" value="${s&&s.penandatanganTelp?s.penandatanganPhone:''}" placeholder="Example: +6281299997697" style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
+        <input id="sph-penandatangan-telp" value="${s&&s.penandatanganTelp?s.penandatanganTelp:''}" placeholder="Example: +6281299997697" style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
       </div>
       <div style="grid-column:1/-1">
         <label style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">DIGITAL SIGNATURE (optional)</label>
@@ -13670,7 +13721,11 @@ function openAddSph(id){
         <input id="sph-status" value="${s?.status==='draft'?'Draft':'Issued documents are read-only'}" readonly style="width:100%;margin-top:5px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;background:#f8fafc;color:#64748b">
       </div>
     </div>
-    <div style="padding:0 28px 24px">
+    <div style="padding:0 28px 22px;display:flex;justify-content:flex-end"><button type="button" onclick="sphGoStep(2)" style="padding:10px 18px;border:none;border-radius:8px;background:#0e7490;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Next: Items &amp; Prices →</button></div>
+    </div>
+    <div id="sph-step-2" style="display:none">
+    <div style="padding:18px 28px 0"><div style="background:#ecfeff;border:1px solid #a5f3fc;border-radius:10px;padding:10px 13px;font-size:12px;color:#155e75"><b>Focus:</b> add only the items being offered. Fabrication is optional and is managed in the final step.</div></div>
+    <div style="padding:16px 28px 24px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
         <div style="font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px">ITEMS / PRICE DETAILS</div>
         <div style="display:flex;align-items:center;gap:6px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:5px 8px">
@@ -13681,12 +13736,11 @@ function openAddSph(id){
       </div>
       <p style="font-size:10.5px;color:#94a3b8;margin:0 0 10px">Enter <b>Material</b> and <b>Services</b> prices from the partner/vendor, then enter <b>Markup %</b> for each row. The Selling Price is calculated automatically from (Material + Services) × markup. Click 🔍 to check the reference price before setting the markup. Material, Services, and Markup columns are excluded from the customer quotation.</p>
       <div style="border:1px solid #e2e8f0;border-radius:10px;overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:1090px">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:980px">
           <thead><tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
             <th style="padding:9px 8px;text-align:left;font-size:11px;font-weight:700;color:#64748b">DESCRIPTION</th>
             <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">QTY</th>
             <th style="padding:9px 4px;text-align:left;font-size:11px;font-weight:700;color:#64748b">UNIT</th>
-            <th style="padding:9px 4px;text-align:left;font-size:11px;font-weight:700;color:#64748b">FABRICATION<br><span style="font-weight:400;font-size:9px">(e.g. 30 Days)</span></th>
             <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">MATERIAL</th>
             <th style="padding:9px 4px;text-align:right;font-size:11px;font-weight:700;color:#64748b">SERVICES</th>
             <th style="padding:9px 4px;text-align:center;font-size:11px;font-weight:700;color:#64748b">🔍</th>
@@ -13713,10 +13767,20 @@ function openAddSph(id){
         </div>
       </div>
     </div>
-    <div style="padding:0 28px 24px">
-      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px 16px">
-        <div style="font-size:12px;font-weight:700;color:#0369a1;margin-bottom:2px">TERMS &amp; CONDITIONS</div>
-        <p style="font-size:10.5px;color:#64748b;margin:0 0 10px">Complete the eight fields below for each category. Leave fields blank when they should not appear in the printed document.</p>
+    <div style="padding:0 28px 22px;display:flex;justify-content:space-between;gap:8px"><button type="button" onclick="sphGoStep(1)" style="padding:10px 18px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#475569;font-size:12px;font-weight:700;cursor:pointer">← Information</button><button type="button" onclick="sphGoStep(3)" style="padding:10px 18px;border:none;border-radius:8px;background:#0e7490;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Next: Notes →</button></div>
+    </div>
+    <div id="sph-step-3" style="display:none">
+    <div style="padding:18px 28px 16px">
+      <div style="background:#ecfeff;border:1px solid #a5f3fc;border-radius:10px;padding:10px 13px;font-size:12px;color:#155e75;margin-bottom:14px"><b>Focus:</b> write the customer-facing note. Open extra terms only when they apply to this quotation.</div>
+      <div style="background:#fff;border:1px solid #bae6fd;border-radius:10px;padding:14px 16px">
+        <label style="font-size:11px;font-weight:800;color:#0369a1;letter-spacing:.4px">NOTES</label>
+        <textarea id="sph-tnc-note" rows="4" placeholder="Add only information the customer needs to know." style="width:100%;margin-top:6px;padding:10px 12px;border:1px solid #bae6fd;border-radius:7px;font-size:12px;line-height:1.55;box-sizing:border-box;resize:vertical">${s&&s.tncEn?s.tncEn.note||'':''}</textarea>
+      </div>
+    </div>
+    <div style="padding:0 28px 14px">
+      <details style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px">
+        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:#334155">Optional Commercial Terms</summary>
+        <p style="font-size:10.5px;color:#64748b;margin:8px 0 10px">Use only the fields needed for this quotation. Empty fields will not appear in the document.</p>
         <div class="sph-terms-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div>
             <label style="font-size:10.5px;font-weight:700;color:#0369a1">Price</label>
@@ -13746,12 +13810,8 @@ function openAddSph(id){
             <label style="font-size:10.5px;font-weight:700;color:#0369a1">VAT</label>
             <input id="sph-tnc-vat" value="${s&&s.tncEn?s.tncEn.vat||'':''}" placeholder="Prices above are inclusive of 11% VAT (VAT), as stated in the total price." style="width:100%;margin-top:3px;padding:7px 10px;border:1px solid #bae6fd;border-radius:6px;font-size:12px;box-sizing:border-box">
           </div>
-          <div>
-            <label style="font-size:10.5px;font-weight:700;color:#0369a1">Note</label>
-            <input id="sph-tnc-note" value="${s&&s.tncEn?s.tncEn.note||'':''}" placeholder="Prices are subject to change without prior notice." style="width:100%;margin-top:3px;padding:7px 10px;border:1px solid #bae6fd;border-radius:6px;font-size:12px;box-sizing:border-box">
-          </div>
         </div>
-      </div>
+      </details>
     </div>
     <div style="padding:0 28px 24px">
       <details style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px">
@@ -13765,6 +13825,8 @@ function openAddSph(id){
           <textarea id="sph-tech-attachments" rows="2" placeholder="Attachments / Appendices" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:7px;box-sizing:border-box;resize:vertical">${s?.technical?.attachments||''}</textarea>
         </div>
       </details>
+    </div>
+    <div style="padding:0 28px 18px"><button type="button" onclick="sphGoStep(2)" style="padding:10px 18px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#475569;font-size:12px;font-weight:700;cursor:pointer">← Items &amp; Prices</button></div>
     </div>
     <div class="sph-footer" style="padding:16px 28px;background:#f8fafc;border-top:1px solid #f1f5f9;display:flex;justify-content:flex-end;gap:10px">
       <button onclick="document.getElementById('sph-modal').remove()" style="padding:9px 20px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;color:#475569">Cancel</button>
@@ -13824,7 +13886,6 @@ function sphRenderRows(){
     <td style="padding:6px 8px"><input value="${it.desc||''}" oninput="window._sphItems[${i}].desc=this.value" style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
     <td style="padding:6px 4px"><input type="number" value="${it.qty||1}" min="0" oninput="window._sphItems[${i}].qty=parseFloat(this.value)||0;sphRecalc()" style="width:56px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
     <td style="padding:6px 4px"><input value="${it.satuan||'unit'}" oninput="window._sphItems[${i}].satuan=this.value" style="width:56px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
-    <td style="padding:6px 4px"><input value="${it.fabrikasi||''}" placeholder="30 Days" oninput="window._sphItems[${i}].fabrikasi=this.value" style="width:70px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px"></td>
     <td style="padding:6px 4px"><input id="sph-mat-${i}" type="number" value="${it.hargaBeliMaterial||0}" min="0" oninput="sphOnHargaBeliInput(${i},'Material',this.value)" style="width:100px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
     <td style="padding:6px 4px"><input id="sph-jasa-${i}" type="number" value="${it.hargaBeliJasa||0}" min="0" oninput="sphOnHargaBeliInput(${i},'Services',this.value)" style="width:100px;padding:5px 6px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right"></td>
     <td style="padding:6px 4px;text-align:center"><button onclick="openPriceRefPicker(${i})" title="Check reference price" style="background:none;border:1px solid #e2e8f0;border-radius:5px;padding:4px 7px;font-size:12px;cursor:pointer">🔍</button></td>
@@ -13832,7 +13893,7 @@ function sphRenderRows(){
     <td style="padding:6px 4px"><input id="sph-harga-${i}" type="number" value="${it.harga||0}" min="0" oninput="window._sphItems[${i}].harga=parseFloat(this.value)||0;sphRecalc()" style="width:110px;padding:5px 6px;border:1px solid #0891b2;border-radius:5px;font-size:12px;text-align:right;font-weight:600;color:#0e7490"></td>
     <td style="padding:6px 4px;text-align:right;font-weight:600;font-size:12px;color:#0f172a" id="sph-sub-${i}">${rp((it.qty||0)*(it.harga||0))}</td>
     <td style="padding:6px 4px;text-align:center"><button onclick="sphDelRow(${i})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:14px">✕</button></td>
-  </tr><tr><td></td><td colspan="10" style="padding:0 4px 8px">${sphRefBadgeHtml(it,i)}</td></tr>`).join('');
+  </tr><tr><td></td><td colspan="9" style="padding:0 4px 8px">${sphRefBadgeHtml(it,i)}</td></tr>`).join('');
 }
 
 // Material / Services berubah → hitung ulang Selling Price if markup already diisi
@@ -14271,7 +14332,7 @@ async function printSph(id){
 }
 
 // Versi cetak SPH khusus for Customer, format surat resmi berbahasa Inggris ("PRICE QUOTATION TO CUSTOMER").
-// Beda dari printSph() (versi Indonesia): ada salam pembuka & penutup, kolom FABRICATION per item,
+// Beda dari printSph() (versi Indonesia): ada salam pembuka & penutup; kolom FABRICATION hanya muncul bila digunakan,
 // dan Terms & Conditions ditampilkan sebagai tabel Label:Description (dari field s.tncEn), bukan bullet bebas.
 // Baris tabel Terms & Conditions yang isinya kosong otomatis disembunyikan.
 async function printSphEnglish(id){
@@ -14292,13 +14353,14 @@ async function printSphEnglish(id){
   const pihakOnly=(s.pihak||'').trim();
   const attn=s.attnEn||'';
   const subject=s.perihal||'';
+  const hasFabrication=(s.items||[]).some(it=>String(it.fabrikasi||'').trim());
   const itemRows=(s.items||[]).map((it,i)=>`
     <tr style="border-bottom:1px solid #e2e8f0">
       <td style="padding:9px 12px;vertical-align:top">${i+1}</td>
       <td style="padding:9px 12px;vertical-align:top">${it.desc||'-'}</td>
       <td style="padding:9px 8px;text-align:center;vertical-align:top">${it.qty||0}</td>
       <td style="padding:9px 8px;text-align:center;vertical-align:top">${it.satuan||'unit'}</td>
-      <td style="padding:9px 8px;text-align:center;vertical-align:top;white-space:nowrap">${it.fabrikasi||'-'}</td>
+      ${hasFabrication?`<td style="padding:9px 8px;text-align:center;vertical-align:top;white-space:nowrap">${it.fabrikasi||'-'}</td>`:''}
       <td style="padding:9px 8px;text-align:right;vertical-align:top;white-space:nowrap">${rpEN(it.harga||0)}</td>
       <td style="padding:9px 8px;text-align:right;font-weight:700;vertical-align:top;white-space:nowrap">${rpEN((parseFloat(it.qty)||0)*(parseFloat(it.harga)||0))}</td>
     </tr>`).join('');
@@ -14433,22 +14495,22 @@ async function printSphEnglish(id){
           <th>DESCRIPTION</th>
           <th class="c" style="width:44px">QTY</th>
           <th class="c" style="width:50px">UNIT</th>
-          <th class="c" style="width:66px">FABRICATION</th>
+          ${hasFabrication?`<th class="c" style="width:66px">FABRICATION</th>`:''}
           <th class="r" style="width:110px">UNIT PRICE</th>
           <th class="r" style="width:120px">TOTAL PRICE</th>
         </tr></thead>
         <tbody>${itemRows}</tbody>
         <tfoot>
           ${s.ppn?`<tr style="background:#fff">
-            <td colspan="6" style="text-align:right;padding:6px 8px;font-size:12px;color:#64748b">Subtotal</td>
+            <td colspan="${hasFabrication?6:5}" style="text-align:right;padding:6px 8px;font-size:12px;color:#64748b">Subtotal</td>
             <td style="text-align:right;padding:6px 8px;font-size:12px;color:#64748b;white-space:nowrap">${rpEN(subtotal)}</td>
           </tr>
           <tr style="background:#fff">
-            <td colspan="6" style="text-align:right;padding:6px 8px;font-size:12px;color:#d97706">VAT ${s.ppnRate||0}%</td>
+            <td colspan="${hasFabrication?6:5}" style="text-align:right;padding:6px 8px;font-size:12px;color:#d97706">VAT ${s.ppnRate||0}%</td>
             <td style="text-align:right;padding:6px 8px;font-size:12px;color:#d97706;white-space:nowrap">${rpEN(ppnAmt)}</td>
           </tr>`:''}
           <tr>
-            <td colspan="6" style="text-align:right;padding:12px 8px;font-size:13px;font-weight:800;color:#0f172a">TOTAL</td>
+            <td colspan="${hasFabrication?6:5}" style="text-align:right;padding:12px 8px;font-size:13px;font-weight:800;color:#0f172a">TOTAL</td>
             <td style="text-align:right;padding:12px 8px;font-size:15px;font-weight:900;color:#0e7490;white-space:nowrap">${rpEN(total)}</td>
           </tr>
         </tfoot>
@@ -17174,7 +17236,7 @@ async function init(){
   // This fixes older browsers that already carried the incomplete V2 migration flag.
   const _englishSystemLabelsChanged=persistEnglishSystemLabels(DB);
   // Guarded data migrations run once during initialization, never during page rendering.
-  const _migrationChanged=[migrateInvoiceDraftNumbers(),repairSphVeaSplit(),repairSphRefIdMismatch(),repairPriceRefGsdSync()].some(Boolean);
+  const _migrationChanged=[migrateInvoiceDraftNumbers(),restoreVerifiedLegacySphs(),repairSphVeaSplit(),repairSphRefIdMismatch(),repairPriceRefGsdSync()].some(Boolean);
   if((_englishSystemLabelsChanged||_migrationChanged)&&!saveDB({silentFailure:true}))
     console.warn('[SiAkun] A guarded data migration could not be persisted.');
 
