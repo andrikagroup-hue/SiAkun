@@ -1,6 +1,6 @@
 SIAKUN MASTER PROMPT v24 — LATEST HANDOFF
 PT ANDRIKA MITRA SOLUSI
-Updated: 31 July 2026
+Updated: 13 August 2026
 
 ROLE
 You are continuing the SiAkun project for PT Andrika Mitra Solusi.
@@ -10,19 +10,18 @@ Do not overload her with several technical steps at once.
 FILES PROVIDED
 1. index.html — the latest implementation source of truth.
 2. SIAKUN_MASTER_PROMPT_V24_LATEST.txt — this handoff, business rules, verified status, risks, and next work.
-3. SPH QUOTITION 1 DPA.pdf — visual reference for a concise commercial quotation.
-4. SPH QUOTITION DPA.pdf — visual reference for a longer technical and commercial proposal.
-5. 03_SPH_NUMBERING_SAFE_MIGRATION.sql — safe annual SPH numbering, Issue, outcome, and Cancel server functions. This is separate from Stage 2.
+3. Earlier DPA quotation PDFs — visual references only for concise and longer proposal structures.
+4. 03_SPH_NUMBERING_SAFE_MIGRATION.sql — already executed successfully; safe annual Quotation numbering, Issue, outcome, and Cancel server functions. This is separate from Stage 2.
 
 REFERENCE USE
 - Use the supplied DPA documents only to study information hierarchy, quotation tables, technical sections, commercial terms, signatures, and multipage behavior.
 - Do not copy DPA's logo, company identity, contact details, wording, or green brand design into AMS documents.
-- Build one original, approved AMS document system that can produce both concise and technical SPH formats.
+- Build one original, approved AMS document system that can produce both concise and technical Quotation formats.
 
 SOURCE-OF-TRUTH ORDER
-1. Latest index.html provided in the current chat.
-2. This Master Prompt v24.
-3. Direct instruction from Ratu or Pak Boss.
+1. Ratu's latest direct instruction in the current chat.
+2. Latest index.html provided in the current chat.
+3. This Master Prompt v24.
 4. Older prompts/chat history only as supporting context.
 
 MANDATORY FIRST STEPS
@@ -36,18 +35,22 @@ MANDATORY FIRST STEPS
 LATEST INDEX IDENTIFICATION
 - File: index.html
 - Title: SiAkun v24.0 — Financial System
-- Size: 1,247,900 bytes
-- Line count: 19,583
-- SHA-256: f3294511fceda35f8b6d313ee6353dc0a6add5c61c80d2816f5a393809548997
+- Size: 1,297,654 bytes
+- Line count: 20,195
+- SHA-256: 7d41559d624cc42409205e2037fe8c4f9ad12803fa1df955e7a6b36892981863
 - JavaScript syntax check: PASS
 - Latest included changes:
   - Invoice Digital Signature stored through Supabase Storage and rendered in Invoice preview/print/PDF.
   - The long Invoice numbering banner on the Invoice list was removed.
-  - SPH Draft-to-Issue workflow and protected official numbering.
-  - Original AMS SPH letterhead inspired by the information hierarchy of the DPA references.
-  - ADHD-friendly SPH form with simple required fields and optional technical sections.
-  - SPH Preview/PDF, editable Word export, and editable Excel export.
-  - Mobile SPH form and action layout.
+  - Quotation Draft-to-Issue workflow and protected official numbering.
+  - Original AMS Quotation letterhead inspired by the information hierarchy of the DPA references.
+  - Three-step, ADHD-friendly Quotation form with simple required fields and collapsed optional sections.
+  - Quotation Preview/PDF, editable Word export, and editable Excel export.
+  - Generic BOQ PDF import v2: every priced row is preserved in source order, including rows with a blank No. cell.
+  - Mandatory pre-save import review showing all items, part number/brand, source prices, source subtotal check, VAT, and total.
+  - Optional markup per row or Apply to All; source cost and markup remain internal.
+  - Draft number preview refreshes immediately when Date or Sales Code changes.
+  - Desktop Quotation list/editor cleanup and mobile card layouts for list, item editor, and import review.
 
 PRODUCTION
 - GitHub repository: andrikagroup-hue/SiAkun
@@ -82,6 +85,8 @@ VERIFIED BACKUP AND MIGRATION STATUS
 - Active ratu account verified: 1.
 - Sealed migration backup verified: 1.
 - Storage bucket verified ready: true.
+- 03_SPH_NUMBERING_SAFE_MIGRATION.sql: SUCCESS.
+- Quotation sequence table, issued registry table, Issue function, Cancel function, and outcome function: verified ready (all true).
 - Old live table temporarily available: true.
 - Manual backup available: true.
 - Sealed migration backup available: true.
@@ -114,7 +119,8 @@ DATA-SAFETY RULES
 LANGUAGE RULE
 - All system-generated SiAkun interface and document text must be English.
 - Do not translate user-entered content.
-- Keep official identifiers such as SiAkun, AMS, BAST, SPH, NPWP, PPN, and PPh unchanged.
+- Keep official identifiers such as SiAkun, AMS, BAST, NPWP, PPN, and PPh unchanged.
+- Use “Quotation” in the visible interface and customer documents. Legacy internal function, storage-scope, and RPC names may still contain “sph” for backward compatibility; do not rename them casually.
 
 DESKTOP AND MOBILE RULE
 - Every SiAkun change must be implemented and verified on both desktop/laptop and mobile phone.
@@ -146,30 +152,33 @@ AMS STANDARD DOCUMENT RULE
 - Issued documents must not be silently deleted or renumbered; use Cancel/Void with a reason while preserving the audit trail.
 - Every document template and export must be checked on desktop/laptop and mobile where applicable.
 
-SPH / QUOTATION STANDARD
-- Official SPH number format:
+QUOTATION STANDARD
+- Official Quotation number format:
   Q-[ANNUAL SEQUENCE]/[COMPANY CODE]/[SALES CODE]/[ROMAN MONTH]/[YEAR]
 - Approved example:
-  Q-102/AMS/RS/VII/2026
+  Q-102/AMS/RA/VII/2026
 - Q means Quotation.
 - AMS is the fixed company code for PT Andrika Mitra Solusi.
-- RS is the assigned sales code for Ratu Siti Sa'diah Azzahra. Other salespeople must use their own unique Admin-managed sales code.
+- RA is the approved sales code currently used by Ratu. Other salespeople must use their own unique Admin-managed sales code.
 - The annual sequence is a unique three-digit official number that continues within one calendar year.
-- The sequence resets for a new calendar year. The starting sequence must be configurable by Admin based on the last verified official SPH; never guess or overwrite an existing sequence.
-- The Roman month and year follow the SPH Date, not the issue-click date.
+- The sequence resets for a new calendar year. The starting sequence must be based on the last verified official Quotation; never guess or overwrite an existing sequence.
+- The Roman month and year follow the Quotation Date, not the issue-click date.
 - Month mapping is fixed:
   I=January, II=February, III=March, IV=April, V=May, VI=June,
   VII=July, VIII=August, IX=September, X=October, XI=November, XII=December.
-- A Draft SPH must not consume an official annual sequence.
+- A Draft displays a reserved number preview in the official Q-XXX/AMS/SALES/MONTH/YEAR format so the user never sees DRAFT-SPH in the interface or document.
+- The Draft preview updates immediately when Date or Sales Code is changed.
+- A Draft must not consume an official annual sequence.
 - The official unique number is assigned only when Issue/Confirm succeeds in the cloud.
+- The Supabase Issue RPC remains the authority for the final unique number. A Draft preview may change only when another Quotation is issued first or its own Date/Sales Code changes.
 - If Issue/Confirm fails, the number, sequence, status, stock, journal, and related records must roll back together.
-- An issued SPH number never changes, is never reused, and remains visible when the SPH is Cancelled/Void.
-- Prevent duplicate official SPH numbers, including simultaneous confirmation from separate devices or sessions.
-- Historical SPH numbers must not be renumbered automatically.
-- No SiAkun update may delete, hide, overwrite, reseed over, or silently replace an existing SPH record.
-- The verified PT Vision Ease Asia and PT Citra Palu Minerals working quotations must remain available. A recovery may add a missing verified record only when the SPH module is completely empty; it must never overwrite a populated SPH module.
+- An issued Quotation number never changes, is never reused, and remains visible when the Quotation is Cancelled/Void.
+- Prevent duplicate official Quotation numbers, including simultaneous Issue actions from separate devices or sessions.
+- Historical Quotation numbers must not be renumbered automatically.
+- No SiAkun update may delete, hide, overwrite, reseed over, or silently replace an existing Quotation record.
+- The verified PT Vision Ease Asia, PT Citra Palu Minerals, and other existing Quotation rows must remain available. Recovery must never overwrite a populated Quotation module.
 - Create Quotation must use a three-step focus flow:
-  1. Information: date, customer/company, attention, subject, salesperson, reference, project, contact details, validity, authorization, and signature;
+  1. Information: date, customer/company, attention, subject, salesperson, project, contact details, validity, authorization, and signature;
   2. Items & Prices: description, quantity, unit, internal material/service cost, markup, selling price, tax, and totals;
   3. Notes & Extras: one visible customer-facing Notes field, with optional Commercial Terms and Optional Technical Proposal collapsed by default.
 - Fabrication is never mandatory and must not occupy a standard item-entry column. Fabrication fields and printed columns appear only when fabrication information is actually used.
@@ -179,27 +188,46 @@ SPH / QUOTATION STANDARD
 - Add Item, Add Section/Location, Duplicate Item, Move Item, and Delete Item controls must be obvious and safe for nontechnical users.
 - Preview, Print, PDF, Word, and Excel must preserve long multiline descriptions and technical specifications without clipped or overlapping text.
 
-SPH IMPLEMENTATION STATUS - CODE PREPARED, NOT YET DEPLOYED
-- The latest index.html code now contains the redesigned SPH workflow.
+BOQ PDF IMPORT RULES
+- Import PDF must accept BOQs/quotations supplied by another company and turn them into an editable AMS Draft.
+- Choosing or reading a PDF must never save data.
+- Before creating a Draft, show a complete Review screen with every detected priced row in source order.
+- A priced row must not be discarded merely because its No. cell is blank.
+- Preserve description, PN/part number, brand, quantity, unit, source unit price, source line total, terms, and notes whenever the PDF text layer makes them readable.
+- Source cost is internal. The customer output shows AMS selling prices only.
+- Markup is optional. It may be blank, entered per item, applied to all items, or bypassed by typing a Selling Price directly.
+- Compare the detected item subtotal with the source subtotal when readable and show a clear match/mismatch warning before saving.
+- Imported quotations always start as editable Drafts and require Save Draft before Issue.
+- The source document number is stored internally and must not print as “Customer Reference”.
+- Do not hard-code one supplier layout as the only supported import. Keep verified layouts, but use the generic safe parser for other text-based BOQs.
+
+QUOTATION IMPLEMENTATION STATUS — PREPARED LOCALLY, NOT YET DEPLOYED
+- The latest index.html code contains the redesigned Quotation workflow.
 - The Create Quotation workflow is divided into Information, Items & Prices, and Notes & Extras.
 - Only Notes is visible by default in the final step; Commercial Terms and Technical Proposal are collapsed optional sections.
 - Fabrication is optional and hidden when unused.
-- The verified VEA and CPM working quotations are restored only when the SPH module is completely empty; existing SPH data is never overwritten.
-- New Drafts display "DRAFT - number assigned when issued" and cannot manually consume an official number.
-- Only Draft SPHs can be edited or deleted.
+- Existing Quotation data is never overwritten by the import/parser repair.
+- New Drafts display a reserved Q-XXX/AMS/... preview number; internal DRAFT-SPH identifiers are hidden from the visible interface and exports.
+- Changing Sales Code RS to RA now refreshes the visible Draft number immediately while preserving the Draft sequence preview.
+- Only Draft Quotations can be edited or deleted.
 - Issue uses a protected Supabase RPC and assigns the official number in one server transaction.
-- Issued SPHs are read-only.
-- Issued SPHs can be marked Accepted or Rejected without changing their official number.
+- Issued Quotations are read-only.
+- Issued Quotations can be marked Accepted or Rejected without changing their official number.
 - Cancel preserves the official number, cancellation reason, and audit trail.
-- Word and Excel export buttons are available from the SPH list and detail view.
+- Word and Excel export buttons are available from the Quotation list and detail view.
 - Excel formulas calculate each line total and subtotal; the export includes the AMS letterhead and optional technical sections.
-- The SPH form includes customer address, phone, email, reference, project, sales code, commercial terms, and optional technical proposal sections.
+- The Quotation form includes customer address, phone, email, project, sales code, commercial terms, and optional technical proposal sections.
+- The latest generic import parser was verified against “1-036-QT-SKK-AMS-FC-26 Supply Foam Chamber Solberg”. It reads all 6 rows in exact source order, including 4 blank-No. rows.
+- Import Review shows the detected rows, PN/brand, source prices, subtotal comparison, VAT, total, and imported notes before the user can create a Draft.
+- The Quotation editor supports Move Up, Move Down, Duplicate, Price Reference, and safe Delete controls.
+- On mobile, the Quotation list, item editor, and import review use stacked cards rather than unusable wide tables.
 - JavaScript syntax check: PASS.
-- Static SPH function check: PASS.
-- Expected number-format sample: Q-102/AMS/RS/VII/2026.
-- 03_SPH_NUMBERING_SAFE_MIGRATION.sql has been prepared but has NOT been run.
-- Do not use the new Issue, Accept, Reject, or Cancel buttons until that migration succeeds.
-- Stage 2 remains NOT RUN and is unrelated to the SPH numbering migration.
+- Real-PDF parser/order/source-total check: PASS.
+- Optional 15% markup and 11% VAT calculation check: PASS.
+- Draft Sales Code/month number-refresh check: PASS.
+- Expected number-format sample: Q-102/AMS/RA/VII/2026.
+- 03_SPH_NUMBERING_SAFE_MIGRATION.sql: already run successfully and readiness check returned true for both tables and all three functions.
+- Stage 2 remains NOT RUN and is unrelated to the Quotation numbering migration.
 
 APPROVED INVOICE NUMBERING — FINAL RULE
 - Every Draft Invoice uses the shared temporary number AMSYYMM-INV100.
@@ -254,6 +282,14 @@ PASS:
 - Digital Signature appeared in Invoice preview.
 - Digital Signature remained visible after Ctrl+F5, confirming cloud persistence.
 - Invoice JavaScript syntax check passed.
+- Latest complete index.html JavaScript syntax check passed.
+- Real SKK Foam Chamber PDF parser detected exactly 6 priced rows in the correct source order.
+- Four priced rows with blank No. cells were retained.
+- Source subtotal matched: Rp256,300,000.
+- Source VAT 11% matched: Rp28,193,000.
+- Source total matched: Rp284,493,000.
+- Apply Markup to All 15% test passed: selling subtotal Rp294,745,000; VAT Rp32,421,950; grand total Rp327,166,950.
+- Draft number preview test passed for Sales Code RS -> RA, Roman-month refresh, and new-year preview reset.
 
 NOT YET FULLY TESTED
 - Full Draft -> Confirm -> Payment -> Void lifecycle.
@@ -267,10 +303,11 @@ NOT YET FULLY TESTED
 - Full desktop/laptop and mobile consistency check after the latest deployment.
 - Responsive mobile layout and all affected mobile functions.
 - Approved AMS letterhead consistency across SiAkun, Word, and Excel.
-- SPH annual sequence, Roman month, sales code, Draft-to-Issue, duplicate prevention, Cancel/Void, and rollback behavior in the live Supabase environment.
-- Short commercial SPH and long technical proposal rendering.
-- SPH Preview, Print, PDF, Word, and Excel consistency.
-- Standard AMS letterhead migration for non-SPH documents.
+- Quotation annual sequence, Draft-to-Issue, duplicate prevention, Cancel/Void, and rollback behavior in the live Supabase environment.
+- Live browser import of the Foam Chamber PDF after the latest index.html is deployed.
+- Short commercial Quotation and long technical proposal rendering.
+- Quotation Preview, Print, PDF, Word, and Excel consistency.
+- Standard AMS letterhead migration for non-Quotation documents.
 - Stage 2 cleanup.
 
 TEST DATA
@@ -284,10 +321,11 @@ TEST DATA
 
 CURRENT TASK IN THE NEXT CHAT
 Continue SiAkun v24 one safe action at a time.
-Before uploading the redesigned index.html, run and verify 03_SPH_NUMBERING_SAFE_MIGRATION.sql.
-Then upload the matching latest index.html and test one SPH Draft safely.
-Verify Preview/PDF, Word, Excel, desktop, and mobile before issuing the test SPH.
-After SPH testing, continue the remaining Invoice lifecycle tests.
+Upload the matching latest index.html to GitHub. The Quotation numbering migration is already ready; do not run it again merely because the frontend changed.
+After GitHub Pages finishes deploying, test Import PDF with the Foam Chamber source on desktop and confirm that Review shows 6 rows and Rp284,493,000 before creating a Draft.
+Then test the same Quotation list/editor on mobile and verify that list rows, imported items, and item editor appear as readable cards.
+Do not Issue the imported test Quotation until its customer, selling prices, terms, Preview/PDF, Word, and Excel have been reviewed.
+After Quotation testing, continue the remaining Invoice lifecycle tests.
 Do not run Stage 2.
 Do not touch real business data.
 Wait for Ratu’s screenshot after every single action.
@@ -315,7 +353,7 @@ EDITING RULES
 
 PROTECTED AREAS
 Do not change unrelated modules while repairing one feature:
-- SPH
+- Quotation (internal scope name: sphs)
 - BAST
 - Delivery Order
 - Sales Order
