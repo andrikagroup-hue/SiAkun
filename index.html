@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.3.2 — Financial System</title>
+<title>SiAkun v24.3.4 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -10737,7 +10737,7 @@ function updateAsset(){
 }
 function delAsset(id){
   const a=DB.assets.find(x=>x.id===id);
-  if(a&&a.sourceInventoryId)return alert('This asset is generated automatically from Inventory. To delete or modify it, open Inventory and change Asset Type to "Non Fixed Asset" or delete the item there.');
+  if(a&&a.sourceInventoryId)return alert('This asset is generated automatically from Inventory. To delete or modify it, open Inventory and change Asset Classification to "Non Fixed Asset — Manual Override" or delete the item there.');
   if(!confirm('Delete this asset?'))return;DB.assets=DB.assets.filter(a=>a.id!==id);if(!saveDB())return;nav('assets');
 }
 function exportAssets(){exportXLSX([{name:'Assets',data:DB.assets.map(a=>{const p=calcDepreciation(a);return{Name:a.name,Category:a.cat,'Acquisition Date':a.date,'Acquisition Value':a.value,Method:a.method,'Useful Life (Years)':a.life,'Accumulated Depreciation':p.akum,'Book Value':p.bookVal};})}],'fixed_assets');}
@@ -10775,8 +10775,45 @@ function syncAllInventoryAssets(){
 }
 
 CATALOG_PREFIX={'Furniture':'FUR','IT Equipment':'IT','Electronics':'ELC','Security Equipment':'SEC','Office Supplies':'OFF','Consumables':'CON','Pantry Supplies':'PAN','Cleaning Supplies':'CLN','Vehicles':'VEH'};
-// Umur ekonomis default per kategori according to Kelompok Harta PPh (fiskal Indonesia) — used if barang not yet ada di katalog
+// Default useful-life estimates for data-entry assistance only.
+// PSAK 216 does not prescribe fixed useful-life numbers; the estimate must reflect the asset's expected use and may be edited by the user.
 const CATEGORY_DEFAULT_LIFE={'Furniture':4,'IT Equipment':4,'Electronics':4,'Security Equipment':4,'Vehicles':4,'Office Supplies':0,'Consumables':0,'Pantry Supplies':0,'Cleaning Supplies':0};
+
+// ===== PSAK 216 inventory classification =====
+// Office Inventory is already limited to tangible items used by the company. For automatic classification,
+// SiAkun therefore uses expected useful life as the key available indicator: more than one period => Fixed Asset.
+// PSAK 216 does not set a fixed rupiah capitalization threshold; materiality and exceptional cases remain a manual override.
+const INV_PSAK_AUTO_MODE='Auto';
+function psak216AutoAssetType(life){return (Number(life)||0)>1?'Fixed Asset':'Non Fixed Asset';}
+function resolveInventoryAssetType(mode,life){
+  return mode==='Fixed Asset'||mode==='Non Fixed Asset'?mode:psak216AutoAssetType(life);
+}
+function invAssetTypeOptions(selected='Auto'){
+  const options=[
+    {v:'Auto',l:'Auto — PSAK 216'},
+    {v:'Fixed Asset',l:'Fixed Asset — Manual Override'},
+    {v:'Non Fixed Asset',l:'Non Fixed Asset — Manual Override'}
+  ];
+  return options.map(o=>`<option value="${o.v}"${o.v===selected?' selected':''}>${o.l}</option>`).join('');
+}
+function inventoryAssetModeLabel(item){
+  return item&&item.assetTypeMode==='Auto'?'PSAK 216 Auto':'Manual Override';
+}
+function refreshInventoryPsakRecommendation(){
+  const box=document.getElementById('inv-psak-rec');if(!box)return;
+  const life=Math.max(0,Number(v('inv-life'))||0);
+  const mode=v('inv-type')||'Auto';
+  const resolved=resolveInventoryAssetType(mode,life);
+  const isAuto=mode==='Auto';
+  box.style.background=resolved==='Fixed Asset'?'#ecfdf5':'#eff6ff';
+  box.style.borderColor=resolved==='Fixed Asset'?'#a7f3d0':'#bfdbfe';
+  box.style.color=resolved==='Fixed Asset'?'#065f46':'#1e3a8a';
+  box.innerHTML=`<b>${isAuto?'PSAK 216 recommendation':'Manual override'}: ${resolved}</b><br>`+
+    (isAuto
+      ?(life>1?`Expected useful life is ${life} year${life===1?'':'s'}, so this operational tangible item is treated as a Fixed Asset.`:`Useful life is ${life||0} year${life===1?'':'s'}, so it is not automatically capitalized as a Fixed Asset.`)
+      :'This selection overrides the automatic PSAK 216 recommendation for this item.')+
+    `<div style="margin-top:4px;font-size:10.5px;opacity:.82">No fixed rupiah minimum is built into this rule. Use manual override when AMS applies materiality or another documented accounting judgment.</div>`;
+}
 CATALOG_ITEMS=[{n:'Work Desk',c:'Furniture',l:8},{n:'Staff Work Desk',c:'Furniture',l:8},{n:'Executive Director Desk with Credenza',c:'Furniture',l:8},{n:'Meeting Table',c:'Furniture',l:8},{n:'Reception Desk',c:'Furniture',l:8},{n:'Office Chair',c:'Furniture',l:8},{n:'Executive Director Chair',c:'Furniture',l:8},{n:'Visitor Chair',c:'Furniture',l:8},{n:'Executive Director Side Chair',c:'Furniture',l:8},{n:'Side Chair',c:'Furniture',l:8},{n:'Meeting Chair',c:'Furniture',l:8},{n:'Waiting Sofa',c:'Furniture',l:8},{n:'Office Partition',c:'Furniture',l:8},{n:'Filing Cabinet',c:'Furniture',l:8},{n:'Document Rack',c:'Furniture',l:8},{n:'Pantry Rack',c:'Furniture',l:8},{n:'Whiteboard',c:'Furniture',l:8},{n:'Podium',c:'Furniture',l:8},{n:'Bookshelf',c:'Furniture',l:8},{n:'Storage Cabinet',c:'Furniture',l:8},{n:'Credenza',c:'Furniture',l:8},{n:'Corner Table',c:'Furniture',l:8},{n:'Built-in Pantry Cabinet',c:'Furniture',l:8},{n:'Acrylic Company Logo',c:'Furniture',l:4},{n:'Desktop PC',c:'IT Equipment',l:4},{n:'Laptop',c:'IT Equipment',l:4},{n:'Lenovo ThinkPad Laptop',c:'IT Equipment',l:4},{n:'Monitor',c:'IT Equipment',l:4},{n:'Keyboard',c:'IT Equipment',l:4},{n:'Mouse',c:'IT Equipment',l:4},{n:'Printer',c:'IT Equipment',l:4},{n:'Epson L3210 Printer',c:'IT Equipment',l:4},{n:'Scanner',c:'IT Equipment',l:4},{n:'IP Phone',c:'IT Equipment',l:4},{n:'Fingerprint Device',c:'IT Equipment',l:4},{n:'Router',c:'IT Equipment',l:4},{n:'Network Switch',c:'IT Equipment',l:4},{n:'UPS',c:'IT Equipment',l:4},{n:'Webcam',c:'IT Equipment',l:4},{n:'Server',c:'IT Equipment',l:4},{n:'NAS Storage',c:'IT Equipment',l:4},{n:'External Hard Drive',c:'IT Equipment',l:4},{n:'USB Flash Drive',c:'IT Equipment',l:4},{n:'Access Point',c:'IT Equipment',l:4},{n:'Server Rack',c:'IT Equipment',l:4},{n:'Firewall Device',c:'IT Equipment',l:4},{n:'LAN Cable Tester',c:'IT Equipment',l:4},{n:'Patch Panel',c:'IT Equipment',l:4},{n:'LAN Cable',c:'IT Equipment',l:4},{n:'Battery Backup UPS',c:'IT Equipment',l:4},{n:'Mobile Phone',c:'IT Equipment',l:4},{n:'Smartphone',c:'IT Equipment',l:4},{n:'Operational Mobile Phone',c:'IT Equipment',l:4},{n:'Office Mobile Phone',c:'IT Equipment',l:4},{n:'Executive Mobile Phone',c:'IT Equipment',l:4},{n:'Admin Mobile Phone',c:'IT Equipment',l:4},{n:'Marketing Mobile Phone',c:'IT Equipment',l:4},{n:'Samsung Galaxy Mobile Phone',c:'IT Equipment',l:4},{n:'iPhone Mobile Phone',c:'IT Equipment',l:4},{n:'Xiaomi Mobile Phone',c:'IT Equipment',l:4},{n:'Photocopier',c:'Electronics',l:4},{n:'Projector',c:'Electronics',l:4},{n:'Presentation Pointer',c:'Electronics',l:4},{n:'LED TV',c:'Electronics',l:4},{n:'Conference Display',c:'Electronics',l:4},{n:'Speaker',c:'Electronics',l:4},{n:'Conference Microphone',c:'Electronics',l:4},{n:'Split Air Conditioner 1.5 HP',c:'Electronics',l:4},{n:'Standing Fan',c:'Electronics',l:4},{n:'Extension Cable',c:'Electronics',l:4},{n:'Power Strip',c:'Electronics',l:4},{n:'AC Deflector',c:'Electronics',l:4},{n:'CCTV Camera',c:'Security Equipment',l:4},{n:'Fire Extinguisher',c:'Security Equipment',l:4},{n:'First Aid Box',c:'Security Equipment',l:4},{n:'Fire Alarm',c:'Security Equipment',l:4},{n:'Smoke Detector',c:'Security Equipment',l:4},{n:'Emergency Light',c:'Security Equipment',l:4},{n:'Evacuation Sign',c:'Security Equipment',l:4},{n:'Door Access Device',c:'Security Equipment',l:4},{n:'Safety Helmet',c:'Security Equipment',l:4},{n:'Paper Shredder',c:'Office Supplies',l:0},{n:'Stapler',c:'Office Supplies',l:0},{n:'Hole Punch',c:'Office Supplies',l:0},{n:'Scissors',c:'Office Supplies',l:0},{n:'Cutter Knife',c:'Office Supplies',l:0},{n:'Ruler',c:'Office Supplies',l:0},{n:'Calculator',c:'Office Supplies',l:0},{n:'Label Maker',c:'Office Supplies',l:0},{n:'Binding Machine',c:'Office Supplies',l:0},{n:'Laminating Machine',c:'Office Supplies',l:0},{n:'Clipboard',c:'Office Supplies',l:0},{n:'Folder',c:'Office Supplies',l:0},{n:'Lever Arch File',c:'Office Supplies',l:0},{n:'Tissue Holder',c:'Office Supplies',l:0},{n:'Desk Organizer',c:'Office Supplies',l:0},{n:'Correction Fluid',c:'Office Supplies',l:0},{n:'Correction Tape',c:'Office Supplies',l:0},{n:'Staples',c:'Office Supplies',l:0},{n:'Pen Holder',c:'Office Supplies',l:0},{n:'Copy Paper',c:'Consumables',l:0},{n:'Ballpoint Pen',c:'Consumables',l:0},{n:'Pencil',c:'Consumables',l:0},{n:'Marker',c:'Consumables',l:0},{n:'Highlighter',c:'Consumables',l:0},{n:'Sticky Notes',c:'Consumables',l:0},{n:'Envelope',c:'Consumables',l:0},{n:'Printer Ink',c:'Consumables',l:0},{n:'Toner Cartridge',c:'Consumables',l:0},{n:'Paper Clip',c:'Consumables',l:0},{n:'Binder Clip',c:'Consumables',l:0},{n:'Adhesive Tape',c:'Consumables',l:0},{n:'Glue',c:'Consumables',l:0},{n:'Whiteboard Eraser',c:'Consumables',l:0},{n:'Whiteboard Marker',c:'Consumables',l:0},{n:'Water Gallon',c:'Consumables',l:0},{n:'Cleaning Liquid',c:'Consumables',l:0},{n:'Hand Soap',c:'Consumables',l:0},{n:'Water Freshener',c:'Consumables',l:0},{n:'Tissue',c:'Consumables',l:0},{n:'Double-Sided Tape',c:'Consumables',l:0},{n:'Water Dispenser',c:'Pantry Supplies',l:0},{n:'Refrigerator',c:'Pantry Supplies',l:0},{n:'Microwave Oven',c:'Pantry Supplies',l:0},{n:'Electric Kettle',c:'Pantry Supplies',l:0},{n:'Coffee Machine',c:'Pantry Supplies',l:0},{n:'Glass',c:'Pantry Supplies',l:0},{n:'Cup',c:'Pantry Supplies',l:0},{n:'Plate',c:'Pantry Supplies',l:0},{n:'Spoon and Fork Set',c:'Pantry Supplies',l:0},{n:'Tray',c:'Pantry Supplies',l:0},{n:'Rice Cooker',c:'Pantry Supplies',l:0},{n:'Bowl',c:'Pantry Supplies',l:0},{n:'Cup Lid',c:'Pantry Supplies',l:0},{n:'Vacuum Cleaner',c:'Cleaning Supplies',l:0},{n:'Broom',c:'Cleaning Supplies',l:0},{n:'Mop',c:'Cleaning Supplies',l:0},{n:'Bucket',c:'Cleaning Supplies',l:0},{n:'Trash Bin',c:'Cleaning Supplies',l:0},{n:'Tissue Dispenser',c:'Cleaning Supplies',l:0},{n:'Dustpan',c:'Cleaning Supplies',l:0},{n:'Floor Wiper',c:'Cleaning Supplies',l:0},{n:'Paper Towel Dispenser',c:'Cleaning Supplies',l:0},{n:'Toilet Tissue Dispenser',c:'Cleaning Supplies',l:0},{n:'Duster',c:'Cleaning Supplies',l:0},{n:'Operational Vehicle',c:'Vehicles',l:4},{n:'Operational Motorcycle',c:'Vehicles',l:4},{n:'Vehicle Helmet',c:'Vehicles',l:4},{n:'GPS Tracker',c:'Vehicles',l:4},{n:'Dash Camera',c:'Vehicles',l:4}];
 DEFAULT_LOCATIONS=['Admin Room','Reception Area','Finance Room','Vacant Room','Meeting Room','Director Room','Pantry','Mushola','Storage Room','Server Room','BD Room','GA Room','With Staff','Front Office Outside','3rd Floor Entrance','Parking Area','Building Entrance','Lobby'];
 DEFAULT_STATUS=['Active','Inactive','Assigned','Unassigned','Standby','In Stock','Low Stock','Out of Stock','Reserved','On Loan','In Transit','With Staff','Under Maintenance','Under Inspection','Pending Approval','Awaiting Delivery','Pending Disposal','Disposed','Returned','Archived'];
@@ -10851,13 +10888,16 @@ function onInvNameChange(){
       DB.invMaster.customItems.push({n:val,c:v('inv-cat'),l:0});
       if(!saveDB())return;
       sel.innerHTML=invNameOpts(v('inv-cat'),val);
-    }else{sel.selectedIndex=0;}
+      const lifeEl=document.getElementById('inv-life');if(lifeEl)lifeEl.value=0;
+      refreshInventoryPsakRecommendation();
+    }else{sel.selectedIndex=0;refreshInventoryPsakRecommendation();}
     return;
   }
   const cat=v('inv-cat');
   const item=invCatalogForCategory(cat).find(x=>x.n===sel.value);
   const lifeEl=document.getElementById('inv-life');
   if(lifeEl)lifeEl.value=item?(item.l||0):(CATEGORY_DEFAULT_LIFE[cat]||0);
+  refreshInventoryPsakRecommendation();
 }
 function onInvSelectChange(selId,masterKey,promptLabel){
   const sel=document.getElementById(selId);
@@ -11482,7 +11522,7 @@ function openInventoryDetails(id){
       <span class="badge ${stock>0?'b-ok':'b-bad'}" style="font-size:12px;padding:7px 11px">${stock>0?'IN STOCK':'STOCK OUT'}</span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin-bottom:14px">
-      ${[['Location',item.location],['Person in Charge',item.pic],['Condition',item.condition],['Status',item.status],['Asset Type',item.assetType],['Acquisition Cost',rp(item.cost||0)]].map(row=>`<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px"><div style="font-size:10px;color:#64748b;margin-bottom:4px">${row[0]}</div><div style="font-size:12px;font-weight:700">${invEsc(row[1]||'-')}</div></div>`).join('')}
+      ${[['Location',item.location],['Person in Charge',item.pic],['Condition',item.condition],['Status',item.status],['Asset Classification',item.assetType],['Classification Mode',inventoryAssetModeLabel(item)],['Acquisition Cost',rp(item.cost||0)]].map(row=>`<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px"><div style="font-size:10px;color:#64748b;margin-bottom:4px">${row[0]}</div><div style="font-size:12px;font-weight:700">${invEsc(row[1]||'-')}</div></div>`).join('')}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
       ${stock>1?`<button class="btn btn-pri" onclick="splitInventoryRecord('${itemId}')">Create ${stock} Unique Asset IDs</button>`:''}
@@ -11560,7 +11600,7 @@ function splitInventoryRecord(id){
 }
 function renderInventory(c){
   ensureInvMaster();syncAllInventoryAssets();
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openInventoryScanner()">▣ Scan Asset</button><button class="btn btn-out" onclick="openInventoryItem()">+ Add Asset</button><button class="btn btn-out" onclick="nav('invlabels')">🏷️ Labels</button><button class="btn btn-out" onclick="exportInventory()">⬇ Excel</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openInventoryScanner()">▣ Scan Asset</button><button class="btn btn-out" onclick="openInventoryItem()">+ Add Asset</button><button class="btn btn-out" onclick="nav('invlabels')">🏷️ Labels</button><button class="btn btn-out" onclick="printAllInventoryLabels()">🖨️ Print All — A4</button><button class="btn btn-out" onclick="exportInventory()">⬇ Excel</button>`;
   const allItems=DB.inventory||[];
   const totalItems=allItems.reduce((s,i)=>s+invPhysicalUnits(i),0);
   const totalValue=allItems.reduce((s,i)=>s+(Number(i.cost)||0)*invPhysicalUnits(i),0);
@@ -11609,11 +11649,11 @@ function renderInventory(c){
     <div id="inv-summary-body" style="${window._invSummaryOpen?'':'display:none;'}margin-top:12px"><div class="tbl-wrap"><table><thead><tr><th>Item Name</th><th>Category</th><th>Quantity</th><th>Total Value</th></tr></thead><tbody>
       ${summaryRows.length?summaryRows.map(s=>`<tr><td class="fw7">${invEsc(s.name)}</td><td><span class="badge b-info">${invEsc(s.category)}</span></td><td>${s.qty}</td><td>${rp(s.value)}</td></tr>`).join(''):`<tr><td colspan="4" class="tbl-empty">No items yet</td></tr>`}
     </tbody></table></div></div></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Asset ID</th><th>Item Name</th><th>Category</th><th>Stock</th><th>Location</th><th>PIC</th><th>Condition</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead><tbody>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Asset ID</th><th>Item Name</th><th>Category</th><th>Stock</th><th>Location</th><th>PIC</th><th>Condition</th><th>Status</th><th>Classification</th><th>Actions</th></tr></thead><tbody>
     ${items.length?items.map(i=>{const stock=invStockValue(i),itemId=invAttr(i.id);return`<tr>
       <td class="fw7">${invEsc(i.assetId||'-')}</td><td>${invEsc(i.name||'-')}</td><td><span class="badge b-info">${invEsc(i.category||'-')}</span></td>
       <td><span class="badge ${stock>0?'b-ok':'b-bad'}">${stock>1?stock+' Units':stock===1?'In':'Out'}</span></td><td>${invEsc(i.location||'-')}</td><td>${invEsc(i.pic||'-')}</td><td>${invEsc(i.condition||'-')}</td><td>${invEsc(i.status||'-')}</td>
-      <td>${i.assetType==='Fixed Asset'?'<span class="badge b-ok">Fixed Asset</span>':'<span class="badge b-info">Non-Fixed Asset</span>'}</td>
+      <td>${i.assetType==='Fixed Asset'?'<span class="badge b-ok">Fixed Asset</span>':'<span class="badge b-info">Non-Fixed Asset</span>'}<div style="font-size:9.5px;color:#94a3b8;margin-top:3px">${inventoryAssetModeLabel(i)}</div></td>
       <td class="gap8"><button class="btn btn-pri btn-xs" onclick="openInventoryDetails('${itemId}')" title="View and update">View</button><button class="btn btn-out btn-xs" onclick="printInventoryLabels(['${itemId}'])" title="Print QR and barcode label">🏷️</button>${stock>1?`<button class="btn btn-out btn-xs" onclick="splitInventoryRecord('${itemId}')" title="Create one unique Asset ID per unit">Split IDs</button>`:''}<button class="btn btn-out btn-xs" onclick="openEditInventoryItem('${itemId}')">✏️</button><button class="btn btn-bad btn-xs" onclick="delInventoryItem('${itemId}')">✕</button></td>
     </tr>`;}).join(''):`<tr><td colspan="10" class="tbl-empty">No items match the active filters</td></tr>`}
   </tbody></table></div></div>`;
@@ -11633,11 +11673,12 @@ function renderInvLabels(c){
   c.innerHTML=`
   <div class="card" style="margin-bottom:16px">
     <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">🏷️ Print QR + Barcode Labels</div>
-    <div style="font-size:12px;color:#64748b;margin-bottom:14px;line-height:1.55">Each physical asset should have one unique Asset ID. The QR code works with a phone camera, while the Code 128 barcode works with common handheld scanners. Both codes point to the same asset record.</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:14px;line-height:1.55">Each physical asset should have one unique Asset ID. The QR code works with a phone camera, while the Code 128 barcode works with common handheld scanners. Both codes point to the same asset record. A4 printing arranges up to 14 labels per sheet (2 columns × 7 rows), ready to cut.</div>
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
       <button class="btn btn-out btn-xs" onclick="toggleAllInvLabelCheck(true)">☑ Select All</button>
       <button class="btn btn-out btn-xs" onclick="toggleAllInvLabelCheck(false)">☐ Clear All</button>
-      <button class="btn btn-pri" style="margin-left:auto" onclick="printSelectedInvLabels()">🖨️ Print Selected Labels</button>
+      <button class="btn btn-out" style="margin-left:auto" onclick="printSelectedInvLabels()">🖨️ Print Selected</button>
+      <button class="btn btn-pri" onclick="printAllInventoryLabels()">🖨️ Print All — A4</button>
     </div>
     <div class="tbl-wrap"><table>
       <thead><tr><th style="width:36px"></th><th>Asset ID</th><th>Item Name</th><th>Category</th><th>Location</th></tr></thead>
@@ -11661,6 +11702,11 @@ function printSelectedInvLabels(){
   if(!ids.length)return alert('Select at least one item first!');
   printInventoryLabels(ids);
 }
+function printAllInventoryLabels(){
+  const ids=(DB.inventory||[]).map(item=>item.id);
+  if(!ids.length)return alert('No inventory items to print yet.');
+  printInventoryLabels(ids);
+}
 function printInventoryLabels(ids){
   const items=(DB.inventory||[]).filter(i=>ids.includes(i.id));
   if(!items.length)return alert('Items not found!');
@@ -11680,22 +11726,29 @@ function printInventoryLabels(ids){
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:Arial,sans-serif;background:#fff}
-    .sheet{display:grid;grid-template-columns:repeat(2,70mm);gap:3mm;padding:4mm}
+    body{font-family:Arial,sans-serif;background:#e5e7eb;padding:8mm 0}
+    .sheet{width:143mm;height:263mm;margin:0 auto 8mm;background:#fff;display:grid;grid-template-columns:repeat(2,70mm);grid-template-rows:repeat(7,35mm);gap:3mm;align-content:start;break-after:page;page-break-after:always}
+    .sheet:last-child{break-after:auto;page-break-after:auto}
     .label{width:70mm;height:35mm;border:1px dashed #94a3b8;border-radius:2mm;padding:2.5mm;display:grid;grid-template-columns:23mm 1fr;gap:2mm;align-items:center;break-inside:avoid;page-break-inside:avoid;overflow:hidden}
     .qr{width:22mm;height:22mm;display:flex;align-items:center;justify-content:center}.qr img,.qr canvas{width:22mm!important;height:22mm!important}
     .info{font-size:8pt;line-height:1.25;overflow:hidden}.info .co{font-size:8pt;font-weight:700;color:#0f766e;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:.35mm solid #14b8a6;padding-bottom:.55mm;margin-bottom:.55mm}
     .info .aid{font-weight:700;font-size:9pt;margin-top:1mm}.info .name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.info .loc{color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .barcode{display:block;width:39mm;height:8mm;margin-top:1mm}
-    @media print{@page{size:A4;margin:7mm}.sheet{padding:0}.label{border:1px solid #cbd5e1}}
+    @media print{@page{size:A4 portrait;margin:7mm}body{background:#fff;padding:0}.sheet{margin:0 auto}.label{border:1px solid #cbd5e1}}
   </style>
   </head><body>
-  <div class="sheet" id="sheet"></div>
+  <div id="pages"></div>
   <script>
     var LABELS=${labelJson};
     var companyName=${companyJson};
-    var sheet=document.getElementById('sheet');
-    LABELS.forEach(function(d){
+    var pages=document.getElementById('pages');
+    var sheet=null;
+    LABELS.forEach(function(d,index){
+      if(index%14===0){
+        sheet=document.createElement('div');
+        sheet.className='sheet';
+        pages.appendChild(sheet);
+      }
       var card=document.createElement('div');card.className='label';
       var qrBox=document.createElement('div');qrBox.className='qr';
       var info=document.createElement('div');info.className='info';
@@ -11761,7 +11814,7 @@ function openInventoryItem(){
   const catOpts=Object.keys(CATALOG_PREFIX).map(c=>`<option>${c}</option>`).join('');
   const firstCat=Object.keys(CATALOG_PREFIX)[0];
   openModal('Add Office Asset',`
-  <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#065f46;margin-bottom:14px"><b>One physical asset = one unique label.</b> If Quantity is more than 1, SiAkun will create a different Asset ID for every unit automatically.</div>
+  <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#065f46;margin-bottom:14px"><b>One physical asset = one unique label.</b> If Quantity is more than 1, SiAkun will create a different Asset ID for every unit automatically.<div style="font-size:10.5px;margin-top:5px;opacity:.82">Accounting classification defaults to PSAK 216 logic; manual override is available.</div></div>
   <div class="fr3">
     <div class="fg"><label>Category</label><select id="inv-cat" onchange="onInvCatChange()">${catOpts}</select></div>
     <div class="fg" id="inv-name-wrap"><label>Item Name</label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(firstCat,'')}</select></div>
@@ -11770,7 +11823,7 @@ function openInventoryItem(){
   <div class="fr3">
     <div class="fg"><label>Purchase Date</label><input type="date" id="inv-date" value="${today()}"></div>
     <div class="fg"><label>Acquisition Cost per Unit</label><input type="text" inputmode="numeric" id="inv-cost" placeholder="Example: 5.000.000" oninput="invFormatMoneyInput(this)"></div>
-    <div class="fg"><label>Useful Life (Years) <span style="font-weight:400;color:#94a3b8">— automatic</span></label><input type="number" id="inv-life" placeholder="0" min="0" readonly style="background:#f1f5f9;color:#64748b"></div>
+    <div class="fg"><label>Useful Life (Years) <span style="font-weight:400;color:#94a3b8">— suggested, editable</span></label><input type="number" id="inv-life" placeholder="0" min="0" step="1" oninput="refreshInventoryPsakRecommendation()"></div>
   </div>
   <div class="fr3">
     <div class="fg"><label>Quantity / Unique Labels</label><input type="number" id="inv-qty" value="1" min="1" max="500" oninput="renderInvUnitLocations()"></div>
@@ -11781,19 +11834,22 @@ function openInventoryItem(){
   <div class="fr3">
     <div class="fg"><label>Condition</label><select id="inv-condition" onchange="onInvSelectChange('inv-condition','conditionList','New condition:')">${invSelectOpts(DB.invMaster.conditionList,'','Add New Condition')}</select></div>
     <div class="fg"><label>Status</label><select id="inv-status" onchange="onInvSelectChange('inv-status','statusList','New status:')">${invSelectOpts(DB.invMaster.statusList,'','Add New Status')}</select></div>
-    <div class="fg"><label>Asset Type</label><select id="inv-type"><option>Non Fixed Asset</option><option>Fixed Asset</option></select></div>
+    <div class="fg"><label>Asset Classification</label><select id="inv-type" onchange="refreshInventoryPsakRecommendation()">${invAssetTypeOptions('Auto')}</select></div>
   </div>
+  <div id="inv-psak-rec" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.5;margin:2px 0 12px"></div>
   <div class="fg"><label>Notes</label><input id="inv-notes"></div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveInventoryItem()">Save</button></div>`);
-  onInvNameChange();renderInvUnitLocations();
+  onInvNameChange();renderInvUnitLocations();refreshInventoryPsakRecommendation();
 }
 function saveInventoryItem(){
   const name=v('inv-name'),category=v('inv-cat');
   if(!name||name==='__add__')return alert('Item name is required!');
   const quantity=Math.max(1,Math.min(500,parseInt(v('inv-qty'))||1));
   const locations=quantity>1?Array.from({length:quantity},(_,index)=>v('inv-unit-location-'+index)||v('inv-location')):[v('inv-location')];
+  const life=parseInt(v('inv-life'))||0;
+  const assetTypeMode=v('inv-type')||'Auto';
   const common={name,category,brand:v('inv-brand'),purchaseDate:v('inv-date'),cost:invParseMoney(v('inv-cost')),
-    life:parseInt(v('inv-life'))||0,stock:1,pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),assetType:v('inv-type'),notes:v('inv-notes')};
+    life,stock:1,pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),assetTypeMode,assetType:resolveInventoryAssetType(assetTypeMode,life),notes:v('inv-notes')};
   for(let number=0;number<quantity;number++){
     const item={id:uid(),assetId:genInventoryId(category),...common,location:locations[number],movements:[]};
     addInventoryMovement(item,'Asset Created',{qtyBefore:0,qtyAfter:1,note:quantity>1?`Unit ${number+1} of ${quantity}.`:''});
@@ -11847,7 +11903,8 @@ function openEditInventoryItem(id){
   ensureInvMaster();
   const i=(DB.inventory||[]).find(x=>x.id===id);if(!i)return;
   const catOpts=Object.keys(CATALOG_PREFIX).map(c=>`<option${c===i.category?' selected':''}>${c}</option>`).join('');
-  const typeOpts=['Non Fixed Asset','Fixed Asset'].map(t=>`<option${t===i.assetType?' selected':''}>${t}</option>`).join('');
+  const selectedMode=i.assetTypeMode||i.assetType||'Auto';
+  const typeOpts=invAssetTypeOptions(selectedMode);
   openModal('Edit Inventory Item ('+i.assetId+')',`
   <input type="hidden" id="inv-id" value="${i.id}">
   <div class="fr3">
@@ -11858,7 +11915,7 @@ function openEditInventoryItem(id){
   <div class="fr3">
     <div class="fg"><label>Purchase Date</label><input type="date" id="inv-date" value="${i.purchaseDate||today()}"></div>
     <div class="fg"><label>Acquisition Cost per Unit</label><input type="text" inputmode="numeric" id="inv-cost" value="${invMoneyDisplay(i.cost)}" placeholder="Example: 5.000.000" oninput="invFormatMoneyInput(this)"></div>
-    <div class="fg"><label>Useful Life (Years) <span style="font-weight:400;color:#94a3b8">— automatic</span></label><input type="number" id="inv-life" value="${i.life||0}" min="0" readonly style="background:#f1f5f9;color:#64748b"></div>
+    <div class="fg"><label>Useful Life (Years) <span style="font-weight:400;color:#94a3b8">— suggested, editable</span></label><input type="number" id="inv-life" value="${i.life||0}" min="0" step="1" oninput="refreshInventoryPsakRecommendation()"></div>
   </div>
   <div class="fr3">
     <div class="fg"><label>Availability</label><select id="inv-stock"><option value="1"${invStockValue(i)>0?' selected':''}>In Stock</option><option value="0"${invStockValue(i)===0?' selected':''}>Stock Out</option></select></div>
@@ -11868,8 +11925,9 @@ function openEditInventoryItem(id){
   <div class="fr3">
     <div class="fg"><label>Condition</label><select id="inv-condition" onchange="onInvSelectChange('inv-condition','conditionList','New condition:')">${invSelectOpts(DB.invMaster.conditionList,i.condition,'Add New Condition')}</select></div>
     <div class="fg"><label>Status</label><select id="inv-status" onchange="onInvSelectChange('inv-status','statusList','New status:')">${invSelectOpts(DB.invMaster.statusList,i.status,'Add New Status')}</select></div>
-    <div class="fg"><label>Asset Type</label><select id="inv-type">${typeOpts}</select></div>
+    <div class="fg"><label>Asset Classification</label><select id="inv-type" onchange="refreshInventoryPsakRecommendation()">${typeOpts}</select></div>
   </div>
+  <div id="inv-psak-rec" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.5;margin:2px 0 12px"></div>
   <div class="fg"><label>Notes</label><input id="inv-notes" value="${invAttr(i.notes||'')}"></div>
   <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:12px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;align-items:end">
@@ -11879,7 +11937,7 @@ function openEditInventoryItem(id){
     <div id="inv-edit-extra-locations-wrap" style="display:none"></div>
   </div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" id="inv-update-btn" onclick="updateInventoryItem()">Update</button></div>`);
-  renderInvEditExtraLocations();
+  renderInvEditExtraLocations();refreshInventoryPsakRecommendation();
 }
 function updateInventoryItem(){
   const id=v('inv-id');
@@ -11890,10 +11948,12 @@ function updateInventoryItem(){
   const extraQuantity=Math.max(0,Math.min(499,parseInt(v('inv-extra-qty'))||0));
   const extraLocations=extraQuantity>0?Array.from({length:extraQuantity},(_,index)=>v('inv-edit-extra-location-'+index)||v('inv-location')):[];
   const previous={...DB.inventory[idx]},previousStock=invStockValue(DB.inventory[idx]);
+  const life=parseInt(v('inv-life'))||0;
+  const assetTypeMode=v('inv-type')||'Auto';
   DB.inventory[idx]={...DB.inventory[idx],name,category:v('inv-cat'),brand:v('inv-brand'),
-    purchaseDate:v('inv-date'),cost:invParseMoney(v('inv-cost')),life:parseInt(v('inv-life'))||0,
+    purchaseDate:v('inv-date'),cost:invParseMoney(v('inv-cost')),life,
     stock:Number(v('inv-stock'))===0?0:1,location:v('inv-location'),pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),
-    assetType:v('inv-type'),notes:v('inv-notes')};
+    assetTypeMode,assetType:resolveInventoryAssetType(assetTypeMode,life),notes:v('inv-notes')};
   if(previousStock!==invStockValue(DB.inventory[idx])||previous.location!==DB.inventory[idx].location||previous.pic!==DB.inventory[idx].pic||previous.status!==DB.inventory[idx].status){
     addInventoryMovement(DB.inventory[idx],'Manual Edit',{qtyBefore:previousStock,qtyAfter:invStockValue(DB.inventory[idx]),fromLocation:previous.location,toLocation:DB.inventory[idx].location,fromPic:previous.pic,toPic:DB.inventory[idx].pic,status:DB.inventory[idx].status,note:'Updated from Edit Data.'});
   }
@@ -11903,7 +11963,7 @@ function updateInventoryItem(){
     for(let number=0;number<extraQuantity;number++){
       const item={id:uid(),assetId:genInventoryId(source.category),name:source.name,category:source.category,brand:source.brand,
         purchaseDate:source.purchaseDate,cost:source.cost,life:source.life,stock:1,location:extraLocations[number],pic:source.pic,
-        condition:source.condition,status:source.status,assetType:source.assetType,notes:source.notes,movements:[]};
+        condition:source.condition,status:source.status,assetTypeMode:source.assetTypeMode||'Auto',assetType:source.assetType,notes:source.notes,movements:[]};
       addInventoryMovement(item,'Asset Created',{qtyBefore:0,qtyAfter:1,note:`Added as a similar unit from ${source.assetId}. Unit ${number+1} of ${extraQuantity}.`});
       DB.inventory.push(item);syncInventoryAssetLink(item);
     }
@@ -11921,7 +11981,7 @@ function exportInventory(){
   const movements=[];
   assets.forEach(i=>(i.movements||[]).forEach(m=>movements.push({'Asset ID':i.assetId,'Item Name':i.name,Date:inventoryMovementDate(m.at),Activity:m.type,'Stock Before':m.qtyBefore,'Stock After':m.qtyAfter,'From Location':m.fromLocation,'To Location':m.toLocation,'From PIC':m.fromPic,'To PIC':m.toPic,Status:m.status,'Updated By':m.by,Note:m.note})));
   exportXLSX([
-    {name:'Office Inventory',data:assets.map(i=>({'Asset ID':i.assetId,'Item Name':i.name,Category:i.category,'Brand/Type':i.brand,'Purchase Date':i.purchaseDate,'Acquisition Cost per Unit':i.cost,'Useful Life':i.life,Availability:invStockValue(i)>0?'In Stock':'Stock Out',Location:i.location,PIC:i.pic,Condition:i.condition,Status:i.status,'Asset Type':i.assetType,Notes:i.notes}))},
+    {name:'Office Inventory',data:assets.map(i=>({'Asset ID':i.assetId,'Item Name':i.name,Category:i.category,'Brand/Type':i.brand,'Purchase Date':i.purchaseDate,'Acquisition Cost per Unit':i.cost,'Useful Life':i.life,Availability:invStockValue(i)>0?'In Stock':'Stock Out',Location:i.location,PIC:i.pic,Condition:i.condition,Status:i.status,'Asset Type':i.assetType,'Classification Mode':inventoryAssetModeLabel(i),Notes:i.notes}))},
     {name:'Movement History',data:movements}
   ],'office_inventory');
 }
@@ -16042,7 +16102,8 @@ function renderFAQ(c){
       ['Why should one business card be scanned at a time?','A single, clear card improves OCR accuracy. Crop the image before scanning when one photo contains multiple cards.']
     ]],
     ['Inventory and Fixed Assets',[
-      ['How are Inventory and Fixed Assets connected?','An Inventory item marked as a Fixed Asset automatically creates or updates its linked Fixed Asset record. Core fields must be edited from Inventory.'],
+      ['How are Inventory and Fixed Assets connected?','Inventory uses Auto — PSAK 216 by default. An operational tangible item with an expected useful life of more than one period is recommended as a Fixed Asset and automatically creates or updates its linked Fixed Asset record. Manual override remains available for materiality or documented exceptions.'],
+      ['Does PSAK 216 require a minimum rupiah value for Fixed Assets?','No fixed rupiah threshold is built into SiAkun. PSAK 216 recognition is based on the nature and expected use of the asset, while materiality remains an accounting judgment.'],
       ['Why are some Fixed Asset fields locked?','Fields linked from Inventory are locked to prevent the two records from becoming inconsistent. Depreciation method and residual value may still be edited in Fixed Assets.'],
       ['What information is stored in an inventory label?','Each label contains a QR code for phone cameras, a Code 128 barcode for handheld scanners, the unique Asset ID, item name, location, and company name.'],
       ['What can I do after scanning an office asset?','Open the asset record, record Stock In or Stock Out, move it to another location, change the person in charge, update its details, reprint the label, and review its movement history.']
