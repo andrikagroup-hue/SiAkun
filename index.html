@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.3.6 — Financial System</title>
+<title>SiAkun v24.3.7 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -10775,9 +10775,11 @@ function syncAllInventoryAssets(){
 }
 
 CATALOG_PREFIX={'Furniture':'FUR','IT Equipment':'IT','Electronics':'ELC','Security Equipment':'SEC','Office Supplies':'OFF','Consumables':'CON','Pantry Supplies':'PAN','Cleaning Supplies':'CLN','Vehicles':'VEH'};
+// Master Inventory source synchronized from AMS Inventory Tracker — Master List (21 Aug 2026).
+// Unknown/custom item names fall back to the category default, while useful life remains manually editable.
 // Default useful-life estimates for data-entry assistance only.
 // PSAK 216 does not prescribe fixed useful-life numbers; the estimate must reflect the asset's expected use and may be edited by the user.
-const CATEGORY_DEFAULT_LIFE={'Furniture':4,'IT Equipment':4,'Electronics':4,'Security Equipment':4,'Vehicles':4,'Office Supplies':0,'Consumables':0,'Pantry Supplies':0,'Cleaning Supplies':0};
+const CATEGORY_DEFAULT_LIFE={'Furniture':8,'IT Equipment':4,'Electronics':4,'Security Equipment':4,'Vehicles':4,'Office Supplies':0,'Consumables':0,'Pantry Supplies':0,'Cleaning Supplies':0};
 
 // ===== PSAK 216 inventory classification — current 2026 workflow =====
 // The user sees the RESULT directly: "Fixed Asset" or "Non Fixed Asset".
@@ -10843,7 +10845,7 @@ function refreshInventoryPsakRecommendation(){
     ?`<b>✓ ${selected}</b> · automatically classified under PSAK 216 (current 2026) from the expected useful life (${life||0} year${life===1?'':'s'}).<div style="margin-top:3px;font-size:10.5px;opacity:.82">Useful life: ${lifeMode==='Auto'?'auto-filled from SiAkun’s 2026 asset master':'manually adjusted'}. The value remains editable when actual expected use, company policy, or applicable regulation differs.</div>`
     :`<b>⚠ Manual Override: ${selected}</b> · automatic PSAK result would be <b>${autoType}</b> from a useful life of ${life||0} year${life===1?'':'s'}. <button type="button" onclick="resetInventoryAutoClassification()" style="border:0;background:none;color:#9a3412;text-decoration:underline;cursor:pointer;font:inherit;font-weight:700;padding:0 0 0 4px">Use Auto</button><div style="margin-top:3px;font-size:10.5px;opacity:.82">Use an override only for a documented materiality, policy, or other accounting exception.</div>`;
 }
-CATALOG_ITEMS=[{n:'Work Desk',c:'Furniture',l:8},{n:'Staff Work Desk',c:'Furniture',l:8},{n:'Executive Director Desk with Credenza',c:'Furniture',l:8},{n:'Meeting Table',c:'Furniture',l:8},{n:'Reception Desk',c:'Furniture',l:8},{n:'Office Chair',c:'Furniture',l:8},{n:'Executive Director Chair',c:'Furniture',l:8},{n:'Visitor Chair',c:'Furniture',l:8},{n:'Executive Director Side Chair',c:'Furniture',l:8},{n:'Side Chair',c:'Furniture',l:8},{n:'Meeting Chair',c:'Furniture',l:8},{n:'Waiting Sofa',c:'Furniture',l:8},{n:'Office Partition',c:'Furniture',l:8},{n:'Filing Cabinet',c:'Furniture',l:8},{n:'Document Rack',c:'Furniture',l:8},{n:'Pantry Rack',c:'Furniture',l:8},{n:'Whiteboard',c:'Furniture',l:8},{n:'Podium',c:'Furniture',l:8},{n:'Bookshelf',c:'Furniture',l:8},{n:'Storage Cabinet',c:'Furniture',l:8},{n:'Credenza',c:'Furniture',l:8},{n:'Corner Table',c:'Furniture',l:8},{n:'Built-in Pantry Cabinet',c:'Furniture',l:8},{n:'Acrylic Company Logo',c:'Furniture',l:4},{n:'Desktop PC',c:'IT Equipment',l:4},{n:'Laptop',c:'IT Equipment',l:4},{n:'Lenovo ThinkPad Laptop',c:'IT Equipment',l:4},{n:'Monitor',c:'IT Equipment',l:4},{n:'Keyboard',c:'IT Equipment',l:4},{n:'Mouse',c:'IT Equipment',l:4},{n:'Printer',c:'IT Equipment',l:4},{n:'Epson L3210 Printer',c:'IT Equipment',l:4},{n:'Scanner',c:'IT Equipment',l:4},{n:'IP Phone',c:'IT Equipment',l:4},{n:'Fingerprint Device',c:'IT Equipment',l:4},{n:'Router',c:'IT Equipment',l:4},{n:'Network Switch',c:'IT Equipment',l:4},{n:'UPS',c:'IT Equipment',l:4},{n:'Webcam',c:'IT Equipment',l:4},{n:'Server',c:'IT Equipment',l:4},{n:'NAS Storage',c:'IT Equipment',l:4},{n:'External Hard Drive',c:'IT Equipment',l:4},{n:'USB Flash Drive',c:'IT Equipment',l:4},{n:'Access Point',c:'IT Equipment',l:4},{n:'Server Rack',c:'IT Equipment',l:4},{n:'Firewall Device',c:'IT Equipment',l:4},{n:'LAN Cable Tester',c:'IT Equipment',l:4},{n:'Patch Panel',c:'IT Equipment',l:4},{n:'LAN Cable',c:'IT Equipment',l:4},{n:'Battery Backup UPS',c:'IT Equipment',l:4},{n:'Mobile Phone',c:'IT Equipment',l:4},{n:'Smartphone',c:'IT Equipment',l:4},{n:'Operational Mobile Phone',c:'IT Equipment',l:4},{n:'Office Mobile Phone',c:'IT Equipment',l:4},{n:'Executive Mobile Phone',c:'IT Equipment',l:4},{n:'Admin Mobile Phone',c:'IT Equipment',l:4},{n:'Marketing Mobile Phone',c:'IT Equipment',l:4},{n:'Samsung Galaxy Mobile Phone',c:'IT Equipment',l:4},{n:'iPhone Mobile Phone',c:'IT Equipment',l:4},{n:'Xiaomi Mobile Phone',c:'IT Equipment',l:4},{n:'Photocopier',c:'Electronics',l:4},{n:'Projector',c:'Electronics',l:4},{n:'Presentation Pointer',c:'Electronics',l:4},{n:'LED TV',c:'Electronics',l:4},{n:'Conference Display',c:'Electronics',l:4},{n:'Speaker',c:'Electronics',l:4},{n:'Conference Microphone',c:'Electronics',l:4},{n:'Split Air Conditioner 1.5 HP',c:'Electronics',l:4},{n:'Standing Fan',c:'Electronics',l:4},{n:'Extension Cable',c:'Electronics',l:4},{n:'Power Strip',c:'Electronics',l:4},{n:'AC Deflector',c:'Electronics',l:4},{n:'CCTV Camera',c:'Security Equipment',l:4},{n:'Fire Extinguisher',c:'Security Equipment',l:4},{n:'First Aid Box',c:'Security Equipment',l:4},{n:'Fire Alarm',c:'Security Equipment',l:4},{n:'Smoke Detector',c:'Security Equipment',l:4},{n:'Emergency Light',c:'Security Equipment',l:4},{n:'Evacuation Sign',c:'Security Equipment',l:4},{n:'Door Access Device',c:'Security Equipment',l:4},{n:'Safety Helmet',c:'Security Equipment',l:4},{n:'Paper Shredder',c:'Office Supplies',l:0},{n:'Stapler',c:'Office Supplies',l:0},{n:'Hole Punch',c:'Office Supplies',l:0},{n:'Scissors',c:'Office Supplies',l:0},{n:'Cutter Knife',c:'Office Supplies',l:0},{n:'Ruler',c:'Office Supplies',l:0},{n:'Calculator',c:'Office Supplies',l:0},{n:'Label Maker',c:'Office Supplies',l:0},{n:'Binding Machine',c:'Office Supplies',l:0},{n:'Laminating Machine',c:'Office Supplies',l:0},{n:'Clipboard',c:'Office Supplies',l:0},{n:'Folder',c:'Office Supplies',l:0},{n:'Lever Arch File',c:'Office Supplies',l:0},{n:'Tissue Holder',c:'Office Supplies',l:0},{n:'Desk Organizer',c:'Office Supplies',l:0},{n:'Correction Fluid',c:'Office Supplies',l:0},{n:'Correction Tape',c:'Office Supplies',l:0},{n:'Staples',c:'Office Supplies',l:0},{n:'Pen Holder',c:'Office Supplies',l:0},{n:'Copy Paper',c:'Consumables',l:0},{n:'Ballpoint Pen',c:'Consumables',l:0},{n:'Pencil',c:'Consumables',l:0},{n:'Marker',c:'Consumables',l:0},{n:'Highlighter',c:'Consumables',l:0},{n:'Sticky Notes',c:'Consumables',l:0},{n:'Envelope',c:'Consumables',l:0},{n:'Printer Ink',c:'Consumables',l:0},{n:'Toner Cartridge',c:'Consumables',l:0},{n:'Paper Clip',c:'Consumables',l:0},{n:'Binder Clip',c:'Consumables',l:0},{n:'Adhesive Tape',c:'Consumables',l:0},{n:'Glue',c:'Consumables',l:0},{n:'Whiteboard Eraser',c:'Consumables',l:0},{n:'Whiteboard Marker',c:'Consumables',l:0},{n:'Water Gallon',c:'Consumables',l:0},{n:'Cleaning Liquid',c:'Consumables',l:0},{n:'Hand Soap',c:'Consumables',l:0},{n:'Water Freshener',c:'Consumables',l:0},{n:'Tissue',c:'Consumables',l:0},{n:'Double-Sided Tape',c:'Consumables',l:0},{n:'Water Dispenser',c:'Pantry Supplies',l:0},{n:'Refrigerator',c:'Pantry Supplies',l:0},{n:'Microwave Oven',c:'Pantry Supplies',l:0},{n:'Electric Kettle',c:'Pantry Supplies',l:0},{n:'Coffee Machine',c:'Pantry Supplies',l:0},{n:'Glass',c:'Pantry Supplies',l:0},{n:'Cup',c:'Pantry Supplies',l:0},{n:'Plate',c:'Pantry Supplies',l:0},{n:'Spoon and Fork Set',c:'Pantry Supplies',l:0},{n:'Tray',c:'Pantry Supplies',l:0},{n:'Rice Cooker',c:'Pantry Supplies',l:0},{n:'Bowl',c:'Pantry Supplies',l:0},{n:'Cup Lid',c:'Pantry Supplies',l:0},{n:'Vacuum Cleaner',c:'Cleaning Supplies',l:0},{n:'Broom',c:'Cleaning Supplies',l:0},{n:'Mop',c:'Cleaning Supplies',l:0},{n:'Bucket',c:'Cleaning Supplies',l:0},{n:'Trash Bin',c:'Cleaning Supplies',l:0},{n:'Tissue Dispenser',c:'Cleaning Supplies',l:0},{n:'Dustpan',c:'Cleaning Supplies',l:0},{n:'Floor Wiper',c:'Cleaning Supplies',l:0},{n:'Paper Towel Dispenser',c:'Cleaning Supplies',l:0},{n:'Toilet Tissue Dispenser',c:'Cleaning Supplies',l:0},{n:'Duster',c:'Cleaning Supplies',l:0},{n:'Operational Vehicle',c:'Vehicles',l:4},{n:'Operational Motorcycle',c:'Vehicles',l:4},{n:'Vehicle Helmet',c:'Vehicles',l:4},{n:'GPS Tracker',c:'Vehicles',l:4},{n:'Dash Camera',c:'Vehicles',l:4}];
+CATALOG_ITEMS=[{n:'Work Desk',c:'Furniture',l:8},{n:'Staff Work Desk',c:'Furniture',l:8},{n:'Executive Director Desk with Credenza',c:'Furniture',l:8},{n:'Meeting Table',c:'Furniture',l:8},{n:'Reception Desk',c:'Furniture',l:8},{n:'Office Chair',c:'Furniture',l:8},{n:'Executive Director Chair',c:'Furniture',l:8},{n:'Visitor Chair',c:'Furniture',l:8},{n:'Executive Director Side Chair',c:'Furniture',l:8},{n:'Side Chair',c:'Furniture',l:8},{n:'Meeting Chair',c:'Furniture',l:8},{n:'Waiting Sofa',c:'Furniture',l:8},{n:'Office Partition',c:'Furniture',l:8},{n:'Filing Cabinet',c:'Furniture',l:8},{n:'Document Rack',c:'Furniture',l:8},{n:'Pantry Rack',c:'Furniture',l:8},{n:'Whiteboard',c:'Furniture',l:8},{n:'Podium',c:'Furniture',l:8},{n:'Bookshelf',c:'Furniture',l:8},{n:'Storage Cabinet',c:'Furniture',l:8},{n:'Credenza',c:'Furniture',l:8},{n:'Desktop PC',c:'IT Equipment',l:4},{n:'Laptop',c:'IT Equipment',l:4},{n:'Lenovo ThinkPad Laptop',c:'IT Equipment',l:4},{n:'Monitor',c:'IT Equipment',l:4},{n:'Keyboard',c:'IT Equipment',l:4},{n:'Mouse',c:'IT Equipment',l:4},{n:'Printer',c:'IT Equipment',l:4},{n:'Epson L3210 Printer',c:'IT Equipment',l:4},{n:'Scanner',c:'IT Equipment',l:4},{n:'Photocopier',c:'Electronics',l:4},{n:'Projector',c:'Electronics',l:4},{n:'Presentation Pointer',c:'Electronics',l:4},{n:'LED TV',c:'Electronics',l:4},{n:'Conference Display',c:'Electronics',l:4},{n:'IP Phone',c:'IT Equipment',l:4},{n:'Fingerprint Device',c:'IT Equipment',l:4},{n:'Router',c:'IT Equipment',l:4},{n:'Network Switch',c:'IT Equipment',l:4},{n:'UPS',c:'IT Equipment',l:4},{n:'CCTV Camera',c:'Security Equipment',l:4},{n:'Speaker',c:'Electronics',l:4},{n:'Conference Microphone',c:'Electronics',l:4},{n:'Webcam',c:'IT Equipment',l:4},{n:'Paper Shredder',c:'Office Supplies',l:0},{n:'Stapler',c:'Office Supplies',l:0},{n:'Hole Punch',c:'Office Supplies',l:0},{n:'Scissors',c:'Office Supplies',l:0},{n:'Cutter Knife',c:'Office Supplies',l:0},{n:'Ruler',c:'Office Supplies',l:0},{n:'Calculator',c:'Office Supplies',l:0},{n:'Label Maker',c:'Office Supplies',l:0},{n:'Binding Machine',c:'Office Supplies',l:0},{n:'Laminating Machine',c:'Office Supplies',l:0},{n:'Clipboard',c:'Office Supplies',l:0},{n:'Copy Paper',c:'Consumables',l:0},{n:'Ballpoint Pen',c:'Consumables',l:0},{n:'Pencil',c:'Consumables',l:0},{n:'Marker',c:'Consumables',l:0},{n:'Highlighter',c:'Consumables',l:0},{n:'Sticky Notes',c:'Consumables',l:0},{n:'Folder',c:'Office Supplies',l:0},{n:'Lever Arch File',c:'Office Supplies',l:0},{n:'Envelope',c:'Consumables',l:0},{n:'Printer Ink',c:'Consumables',l:0},{n:'Toner Cartridge',c:'Consumables',l:0},{n:'Paper Clip',c:'Consumables',l:0},{n:'Binder Clip',c:'Consumables',l:0},{n:'Adhesive Tape',c:'Consumables',l:0},{n:'Glue',c:'Consumables',l:0},{n:'Whiteboard Eraser',c:'Consumables',l:0},{n:'Whiteboard Marker',c:'Consumables',l:0},{n:'Water Dispenser',c:'Pantry Supplies',l:0},{n:'Water Gallon',c:'Consumables',l:0},{n:'Refrigerator',c:'Pantry Supplies',l:0},{n:'Microwave Oven',c:'Pantry Supplies',l:0},{n:'Electric Kettle',c:'Pantry Supplies',l:0},{n:'Coffee Machine',c:'Pantry Supplies',l:0},{n:'Glass',c:'Pantry Supplies',l:0},{n:'Cup',c:'Pantry Supplies',l:0},{n:'Plate',c:'Pantry Supplies',l:0},{n:'Spoon and Fork Set',c:'Pantry Supplies',l:0},{n:'Tray',c:'Pantry Supplies',l:0},{n:'Vacuum Cleaner',c:'Cleaning Supplies',l:0},{n:'Broom',c:'Cleaning Supplies',l:0},{n:'Mop',c:'Cleaning Supplies',l:0},{n:'Bucket',c:'Cleaning Supplies',l:0},{n:'Trash Bin',c:'Cleaning Supplies',l:0},{n:'Cleaning Liquid',c:'Consumables',l:0},{n:'Tissue Dispenser',c:'Cleaning Supplies',l:0},{n:'Hand Soap',c:'Consumables',l:0},{n:'Air Freshener',c:'Consumables',l:0},{n:'Dustpan',c:'Cleaning Supplies',l:0},{n:'Floor Wiper',c:'Cleaning Supplies',l:0},{n:'Fire Extinguisher',c:'Security Equipment',l:4},{n:'First Aid Box',c:'Security Equipment',l:4},{n:'Fire Alarm',c:'Security Equipment',l:4},{n:'Smoke Detector',c:'Security Equipment',l:4},{n:'Emergency Light',c:'Security Equipment',l:4},{n:'Evacuation Sign',c:'Security Equipment',l:4},{n:'Door Access Device',c:'Security Equipment',l:4},{n:'Safety Helmet',c:'Security Equipment',l:4},{n:'Server',c:'IT Equipment',l:4},{n:'NAS Storage',c:'IT Equipment',l:4},{n:'External Hard Drive',c:'IT Equipment',l:4},{n:'USB Flash Drive',c:'IT Equipment',l:4},{n:'Access Point',c:'IT Equipment',l:4},{n:'Server Rack',c:'IT Equipment',l:4},{n:'Firewall Device',c:'IT Equipment',l:4},{n:'LAN Cable Tester',c:'IT Equipment',l:4},{n:'Patch Panel',c:'IT Equipment',l:4},{n:'LAN Cable',c:'IT Equipment',l:4},{n:'Operational Vehicle',c:'Vehicles',l:4},{n:'Operational Motorcycle',c:'Vehicles',l:4},{n:'Vehicle Helmet',c:'Vehicles',l:4},{n:'GPS Tracker',c:'Vehicles',l:4},{n:'Dash Camera',c:'Vehicles',l:4},{n:'Split Air Conditioner 1,5 HP',c:'Electronics',l:4},{n:'Standing Fan',c:'Electronics',l:4},{n:'Extension Cable',c:'Electronics',l:4},{n:'Power Strip',c:'Electronics',l:4},{n:'Battery Backup UPS',c:'IT Equipment',l:4},{n:'Mobile Phone',c:'IT Equipment',l:4},{n:'Smartphone',c:'IT Equipment',l:4},{n:'Operational Mobile Phone',c:'IT Equipment',l:4},{n:'Office Mobile Phone',c:'IT Equipment',l:4},{n:'Executive Mobile Phone',c:'IT Equipment',l:4},{n:'Admin Mobile Phone',c:'IT Equipment',l:4},{n:'Marketing Mobile Phone',c:'IT Equipment',l:4},{n:'Samsung Galaxy Mobile Phone',c:'IT Equipment',l:4},{n:'iPhone Mobile Phone',c:'IT Equipment',l:4},{n:'Xiaomi Mobile Phone',c:'IT Equipment',l:4},{n:'Tissue',c:'Consumables',l:0},{n:'Tissue Holder',c:'Office Supplies',l:0},{n:'Paper Towel Dispenser',c:'Cleaning Supplies',l:0},{n:'Toilet Tissue Dispenser',c:'Cleaning Supplies',l:0},{n:'Desk Organizer',c:'Office Supplies',l:0},{n:'Double-Sided Tape',c:'Consumables',l:0},{n:'Correction Fluid',c:'Office Supplies',l:0},{n:'Correction Tape',c:'Office Supplies',l:0},{n:'Staples',c:'Office Supplies',l:0},{n:'Duster',c:'Cleaning Supplies',l:0},{n:'Rice Cooker',c:'Pantry Supplies',l:0},{n:'Bowl',c:'Pantry Supplies',l:0},{n:'Cup Lid',c:'Pantry Supplies',l:0},{n:'AC Deflector',c:'Electronics',l:4},{n:'Pen Holder',c:'Office Supplies',l:0},{n:'Corner Table',c:'Furniture',l:8},{n:'Built-in Pantry Cabinet',c:'Furniture',l:8},{n:'Acrylic Company Logo',c:'Furniture',l:4}];
 DEFAULT_LOCATIONS=['Admin Room','Reception Area','Finance Room','Vacant Room','Meeting Room','Director Room','Pantry','Mushola','Storage Room','Server Room','BD Room','GA Room','With Staff','Front Office Outside','3rd Floor Entrance','Parking Area','Building Entrance','Lobby'];
 DEFAULT_STATUS=['Active','Inactive','Assigned','Unassigned','Standby','In Stock','Low Stock','Out of Stock','Reserved','On Loan','In Transit','With Staff','Under Maintenance','Under Inspection','Pending Approval','Awaiting Delivery','Pending Disposal','Disposed','Returned','Archived'];
 DEFAULT_CONDITION=['New','Like New','Excellent','Very Good','Good','Fair','Worn','Minor Damage','Moderate Damage','Major Damage','Broken','Unusable','Needs Cleaning','Dirty','Refurbished','Missing Parts','Obsolete','Scrap','Expired'];
@@ -10856,11 +10858,38 @@ function ensureInvMaster(){
   if(!DB.invMaster.customItems)DB.invMaster.customItems=[];
   if(!DB.invMaster.customPIC)DB.invMaster.customPIC=[];
 }
+function normalizeInventoryItemName(name){
+  return String(name||'').trim().toLowerCase()
+    .replace(/(\d),(\d)/g,'$1.$2')
+    .replace(/[^a-z0-9.]+/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
 function invCatalogForCategory(cat){
   ensureInvMaster();
   const base=CATALOG_ITEMS.filter(x=>x.c===cat);
-  const custom=DB.invMaster.customItems.filter(x=>x.c===cat);
+  const baseKeys=new Set(base.map(x=>normalizeInventoryItemName(x.n)));
+  const custom=DB.invMaster.customItems
+    .filter(x=>x.c===cat&&!baseKeys.has(normalizeInventoryItemName(x.n)))
+    .map(x=>({...x,_custom:true}));
   return [...base,...custom];
+}
+function findInventoryCatalogItem(cat,name){
+  const list=invCatalogForCategory(cat);
+  const exact=list.find(x=>x.n===name);
+  if(exact)return exact;
+  const key=normalizeInventoryItemName(name);
+  return key?list.find(x=>normalizeInventoryItemName(x.n)===key):null;
+}
+function inventorySuggestedLife(cat,name){
+  const item=findInventoryCatalogItem(cat,name);
+  const categoryDefault=Number(CATEGORY_DEFAULT_LIFE[cat]||0);
+  if(!item)return categoryDefault;
+  const itemLife=Number(item.l||0);
+  // Legacy/custom names used to be saved with life=0. For asset-type categories,
+  // use the Master List category default unless the user manually changes this record.
+  if(item._custom&&itemLife<=0&&categoryDefault>0)return categoryDefault;
+  return itemLife;
 }
 function genInventoryId(category){
   const prefix=CATALOG_PREFIX[category]||'LAIN';
@@ -10914,18 +10943,19 @@ function onInvNameChange(){
     const val=prompt('New item name:');
     if(val){
       ensureInvMaster();
-      DB.invMaster.customItems.push({n:val,c:v('inv-cat'),l:0});
+      const cat=v('inv-cat');
+      const suggestedLife=Number(CATEGORY_DEFAULT_LIFE[cat]||0);
+      DB.invMaster.customItems.push({n:val,c:cat,l:suggestedLife});
       if(!saveDB())return;
-      sel.innerHTML=invNameOpts(v('inv-cat'),val);
-      const lifeEl=document.getElementById('inv-life');if(lifeEl)lifeEl.value=0;
+      sel.innerHTML=invNameOpts(cat,val);
+      const lifeEl=document.getElementById('inv-life');if(lifeEl)lifeEl.value=suggestedLife;
       setInventoryLifeMode('Auto');applyInventoryAutoClassification(true);
     }else{sel.selectedIndex=0;applyInventoryAutoClassification(true);}
     return;
   }
   const cat=v('inv-cat');
-  const item=invCatalogForCategory(cat).find(x=>x.n===sel.value);
   const lifeEl=document.getElementById('inv-life');
-  if(lifeEl)lifeEl.value=item?(item.l||0):(CATEGORY_DEFAULT_LIFE[cat]||0);
+  if(lifeEl)lifeEl.value=inventorySuggestedLife(cat,sel.value);
   setInventoryLifeMode('Auto');applyInventoryAutoClassification(true);
 }
 function onInvSelectChange(selId,masterKey,promptLabel){
@@ -11964,7 +11994,7 @@ function openEditInventoryItem(id){
   const catOpts=Object.keys(CATALOG_PREFIX).map(c=>`<option${c===i.category?' selected':''}>${c}</option>`).join('');
   const selectedMode=i.assetTypeMode==='Auto'?'Auto':'Manual';
   const selectedType=i.assetType||psak216AutoAssetType(i.life||0);
-  const catalogLife=(invCatalogForCategory(i.category).find(x=>x.n===i.name)?.l??CATEGORY_DEFAULT_LIFE[i.category]??0);
+  const catalogLife=inventorySuggestedLife(i.category,i.name);
   const selectedLifeMode=i.lifeMode==='Auto'||(!i.lifeMode&&i.assetTypeMode==='Auto'&&Number(i.life||0)===Number(catalogLife||0))?'Auto':'Manual';
   const typeOpts=invAssetTypeOptions(selectedType);
   openModal('Edit Inventory Item ('+i.assetId+')',`
