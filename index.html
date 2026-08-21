@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.4.0 — Financial System</title>
+<title>SiAkun v24.4.1 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -10886,8 +10886,9 @@ function applyInventoryAutoClassification(force=false){
   if(force)setInventoryTypeMode('Auto');
   if(inventoryTypeMode()==='Manual'&&!force){refreshInventoryPsakRecommendation();return;}
   const life=Math.max(0,Number(v('inv-life'))||0);
-  typeEl.value=psak216AutoAssetType(life);
+  const autoType=psak216AutoAssetType(life);
   setInventoryTypeMode('Auto');
+  typeEl.value=autoType;
   refreshInventoryPsakRecommendation();
 }
 function onInventoryClassificationChange(){
@@ -10905,9 +10906,16 @@ function refreshInventoryPsakRecommendation(){
   const box=document.getElementById('inv-psak-rec');if(!box)return;
   const life=Math.max(0,Number(v('inv-life'))||0);
   const typeEl=document.getElementById('inv-type');
-  const selected=typeEl?typeEl.value:psak216AutoAssetType(life);
   const autoType=psak216AutoAssetType(life);
   const isAuto=inventoryTypeMode()==='Auto';
+
+  // UI invariant: while classification is in Auto mode, the visible dropdown MUST
+  // always show the same result as the PSAK auto-classification engine.
+  // This prevents a stale "Fixed Asset" dropdown from appearing together with
+  // a "Non Fixed Asset" automatic recommendation (or vice versa).
+  if(isAuto&&typeEl&&typeEl.value!==autoType)typeEl.value=autoType;
+
+  const selected=typeEl?typeEl.value:autoType;
   const lifeMode=(document.getElementById('inv-life-mode')?.value==='Manual')?'Manual':'Auto';
   box.style.background=isAuto?(selected==='Fixed Asset'?'#ecfdf5':'#eff6ff'):'#fff7ed';
   box.style.borderColor=isAuto?(selected==='Fixed Asset'?'#a7f3d0':'#bfdbfe'):'#fed7aa';
