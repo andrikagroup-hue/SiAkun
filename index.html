@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.3.1 — Financial System</title>
+<title>SiAkun v24.3.2 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -10816,6 +10816,19 @@ function invPicSelectOpts(selected){
   opts+=`<option value="__add__">➕ Add New PIC</option>`;
   return opts;
 }
+function invParseMoney(raw){
+  const digits=String(raw==null?'':raw).replace(/[^0-9]/g,'');
+  return digits?Number(digits):0;
+}
+function invFormatMoneyInput(el){
+  if(!el)return;
+  const amount=invParseMoney(el.value);
+  el.value=amount?amount.toLocaleString('id-ID'):'';
+}
+function invMoneyDisplay(value){
+  const amount=Number(value)||0;
+  return amount?amount.toLocaleString('id-ID'):'';
+}
 function invNameOpts(category,selected){
   const list=invCatalogForCategory(category);
   let opts=list.map(x=>`<option value="${invAttr(x.n)}"${x.n===selected?' selected':''}>${invEsc(x.n)}</option>`).join('');
@@ -11756,7 +11769,7 @@ function openInventoryItem(){
   </div>
   <div class="fr3">
     <div class="fg"><label>Purchase Date</label><input type="date" id="inv-date" value="${today()}"></div>
-    <div class="fg"><label>Acquisition Cost per Unit</label><input type="number" id="inv-cost" placeholder="0"></div>
+    <div class="fg"><label>Acquisition Cost per Unit</label><input type="text" inputmode="numeric" id="inv-cost" placeholder="Example: 5.000.000" oninput="invFormatMoneyInput(this)"></div>
     <div class="fg"><label>Useful Life (Years) <span style="font-weight:400;color:#94a3b8">— automatic</span></label><input type="number" id="inv-life" placeholder="0" min="0" readonly style="background:#f1f5f9;color:#64748b"></div>
   </div>
   <div class="fr3">
@@ -11779,7 +11792,7 @@ function saveInventoryItem(){
   if(!name||name==='__add__')return alert('Item name is required!');
   const quantity=Math.max(1,Math.min(500,parseInt(v('inv-qty'))||1));
   const locations=quantity>1?Array.from({length:quantity},(_,index)=>v('inv-unit-location-'+index)||v('inv-location')):[v('inv-location')];
-  const common={name,category,brand:v('inv-brand'),purchaseDate:v('inv-date'),cost:parseFloat(v('inv-cost'))||0,
+  const common={name,category,brand:v('inv-brand'),purchaseDate:v('inv-date'),cost:invParseMoney(v('inv-cost')),
     life:parseInt(v('inv-life'))||0,stock:1,pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),assetType:v('inv-type'),notes:v('inv-notes')};
   for(let number=0;number<quantity;number++){
     const item={id:uid(),assetId:genInventoryId(category),...common,location:locations[number],movements:[]};
@@ -11787,6 +11800,48 @@ function saveInventoryItem(){
     DB.inventory.push(item);syncInventoryAssetLink(item);
   }
   if(!saveDB())return;closeModal();nav('inventory');
+}
+function invEditExtraLocationValues(){
+  return [...document.querySelectorAll('.inv-edit-extra-location')].map(sel=>sel.value);
+}
+function renderInvEditExtraLocations(forceDefault=false,providedValues=null){
+  const wrap=document.getElementById('inv-edit-extra-locations-wrap');
+  const qtyEl=document.getElementById('inv-extra-qty');
+  if(!wrap||!qtyEl)return;
+  const quantity=Math.max(0,Math.min(499,parseInt(qtyEl.value)||0));
+  const updateBtn=document.getElementById('inv-update-btn');
+  if(updateBtn)updateBtn.textContent=quantity>0?`Update & Add ${quantity} Unit${quantity===1?'':'s'}`:'Update';
+  if(quantity<=0){wrap.innerHTML='';wrap.style.display='none';return;}
+  const defaultLocation=v('inv-location');
+  const currentValues=Array.isArray(providedValues)?providedValues:invEditExtraLocationValues();
+  wrap.style.display='block';
+  wrap.innerHTML=`
+    <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:10px 12px;margin:10px 0">
+      <div style="font-size:12px;font-weight:800;color:#0f766e">Choose a location for each additional unit</div>
+      <div style="font-size:11px;color:#475569;margin-top:3px;line-height:1.45">The existing Asset ID stays unchanged. SiAkun will create ${quantity} new Asset IDs and labels using the same item information.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+      ${Array.from({length:quantity},(_,index)=>{
+        const selected=forceDefault?defaultLocation:(currentValues[index]||defaultLocation);
+        return`<div class="fg" style="margin:0"><label>New Unit ${index+1} Location</label><select id="inv-edit-extra-location-${index}" class="inv-edit-extra-location" onchange="onInvEditExtraLocationChange('inv-edit-extra-location-${index}',${index})">${invSelectOpts(DB.invMaster.locations,selected,'Add New Location')}</select></div>`;
+      }).join('')}
+    </div>`;
+}
+function onInvEditLocationChange(){
+  onInvSelectChange('inv-location','locations','New location:');
+  renderInvEditExtraLocations(true);
+}
+function onInvEditExtraLocationChange(selId,index){
+  const sel=document.getElementById(selId);
+  if(!sel||sel.value!=='__add__')return;
+  const values=invEditExtraLocationValues();
+  const val=prompt('New location:');
+  if(!val){sel.selectedIndex=0;return;}
+  ensureInvMaster();
+  if(!DB.invMaster.locations.includes(val))DB.invMaster.locations.push(val);
+  if(!saveDB())return;
+  values[index]=val;
+  renderInvEditExtraLocations(false,values);
 }
 function openEditInventoryItem(id){
   ensureInvMaster();
@@ -11802,12 +11857,12 @@ function openEditInventoryItem(id){
   </div>
   <div class="fr3">
     <div class="fg"><label>Purchase Date</label><input type="date" id="inv-date" value="${i.purchaseDate||today()}"></div>
-    <div class="fg"><label>Acquisition Cost per Unit</label><input type="number" id="inv-cost" value="${Number(i.cost)||0}"></div>
+    <div class="fg"><label>Acquisition Cost per Unit</label><input type="text" inputmode="numeric" id="inv-cost" value="${invMoneyDisplay(i.cost)}" placeholder="Example: 5.000.000" oninput="invFormatMoneyInput(this)"></div>
     <div class="fg"><label>Useful Life (Years) <span style="font-weight:400;color:#94a3b8">— automatic</span></label><input type="number" id="inv-life" value="${i.life||0}" min="0" readonly style="background:#f1f5f9;color:#64748b"></div>
   </div>
   <div class="fr3">
     <div class="fg"><label>Availability</label><select id="inv-stock"><option value="1"${invStockValue(i)>0?' selected':''}>In Stock</option><option value="0"${invStockValue(i)===0?' selected':''}>Stock Out</option></select></div>
-    <div class="fg"><label>Location</label><select id="inv-location" onchange="onInvSelectChange('inv-location','locations','New location:')">${invSelectOpts(DB.invMaster.locations,i.location,'Add New Location')}</select></div>
+    <div class="fg"><label>Location</label><select id="inv-location" onchange="onInvEditLocationChange()">${invSelectOpts(DB.invMaster.locations,i.location,'Add New Location')}</select></div>
     <div class="fg"><label>Person in Charge</label><select id="inv-pic" onchange="onInvPicChange()">${invPicSelectOpts(i.pic)}</select></div>
   </div>
   <div class="fr3">
@@ -11816,7 +11871,15 @@ function openEditInventoryItem(id){
     <div class="fg"><label>Asset Type</label><select id="inv-type">${typeOpts}</select></div>
   </div>
   <div class="fg"><label>Notes</label><input id="inv-notes" value="${invAttr(i.notes||'')}"></div>
-  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="updateInventoryItem()">Update</button></div>`);
+  <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:12px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;align-items:end">
+      <div class="fg" style="margin:0"><label>Add More Identical Units <span style="font-weight:500;text-transform:none">(Optional)</span></label><input type="number" id="inv-extra-qty" value="0" min="0" max="499" oninput="renderInvEditExtraLocations()"></div>
+      <div style="font-size:11px;color:#64748b;line-height:1.45;padding-bottom:8px">This asset already counts as 1 unit. Enter <b>5</b> to create 5 additional units, making 6 units in total.</div>
+    </div>
+    <div id="inv-edit-extra-locations-wrap" style="display:none"></div>
+  </div>
+  <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" id="inv-update-btn" onclick="updateInventoryItem()">Update</button></div>`);
+  renderInvEditExtraLocations();
 }
 function updateInventoryItem(){
   const id=v('inv-id');
@@ -11824,15 +11887,27 @@ function updateInventoryItem(){
   if(idx<0)return alert('Items not found!');
   const name=v('inv-name');
   if(!name||name==='__add__')return alert('Item name is required!');
+  const extraQuantity=Math.max(0,Math.min(499,parseInt(v('inv-extra-qty'))||0));
+  const extraLocations=extraQuantity>0?Array.from({length:extraQuantity},(_,index)=>v('inv-edit-extra-location-'+index)||v('inv-location')):[];
   const previous={...DB.inventory[idx]},previousStock=invStockValue(DB.inventory[idx]);
   DB.inventory[idx]={...DB.inventory[idx],name,category:v('inv-cat'),brand:v('inv-brand'),
-    purchaseDate:v('inv-date'),cost:parseFloat(v('inv-cost'))||0,life:parseInt(v('inv-life'))||0,
+    purchaseDate:v('inv-date'),cost:invParseMoney(v('inv-cost')),life:parseInt(v('inv-life'))||0,
     stock:Number(v('inv-stock'))===0?0:1,location:v('inv-location'),pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),
     assetType:v('inv-type'),notes:v('inv-notes')};
   if(previousStock!==invStockValue(DB.inventory[idx])||previous.location!==DB.inventory[idx].location||previous.pic!==DB.inventory[idx].pic||previous.status!==DB.inventory[idx].status){
     addInventoryMovement(DB.inventory[idx],'Manual Edit',{qtyBefore:previousStock,qtyAfter:invStockValue(DB.inventory[idx]),fromLocation:previous.location,toLocation:DB.inventory[idx].location,fromPic:previous.pic,toPic:DB.inventory[idx].pic,status:DB.inventory[idx].status,note:'Updated from Edit Data.'});
   }
   syncInventoryAssetLink(DB.inventory[idx]);
+  if(extraQuantity>0){
+    const source=DB.inventory[idx];
+    for(let number=0;number<extraQuantity;number++){
+      const item={id:uid(),assetId:genInventoryId(source.category),name:source.name,category:source.category,brand:source.brand,
+        purchaseDate:source.purchaseDate,cost:source.cost,life:source.life,stock:1,location:extraLocations[number],pic:source.pic,
+        condition:source.condition,status:source.status,assetType:source.assetType,notes:source.notes,movements:[]};
+      addInventoryMovement(item,'Asset Created',{qtyBefore:0,qtyAfter:1,note:`Added as a similar unit from ${source.assetId}. Unit ${number+1} of ${extraQuantity}.`});
+      DB.inventory.push(item);syncInventoryAssetLink(item);
+    }
+  }
   if(!saveDB())return;closeModal();nav('inventory');
 }
 function delInventoryItem(id){
