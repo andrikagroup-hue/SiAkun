@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.3.5 — Financial System</title>
+<title>SiAkun v24.3.6 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -11442,15 +11442,42 @@ function getInvDistinct(field){
 function invFilterOpts(list,selected){
   return '<option value="">All</option>'+list.map(val=>`<option value="${invAttr(val)}"${val===selected?' selected':''}>${invEsc(val)}</option>`).join('');
 }
-function onInvFilterChange(){
-  window._invFilters={
-    lokasi:v('inv-filter-lokasi'),kondisi:v('inv-filter-kondisi'),status:v('inv-filter-status'),
-    brand:v('inv-filter-brand'),jenis:v('inv-filter-jenis'),pic:v('inv-filter-pic')
-  };
+const INV_FILTER_LABELS={kategori:'Category',lokasi:'Location',kondisi:'Condition',status:'Status',brand:'Brand',jenis:'Asset Type',pic:'Person in Charge'};
+function invCompactFilterOptions(){
+  const groups=[
+    ['Category','kategori',getInvDistinct('category')],
+    ['Location','lokasi',getInvDistinct('location')],
+    ['Condition','kondisi',getInvDistinct('condition')],
+    ['Status','status',getInvDistinct('status')],
+    ['Brand','brand',getInvDistinct('brand')],
+    ['Asset Type','jenis',['Fixed Asset','Non Fixed Asset']],
+    ['Person in Charge','pic',getInvDistinct('pic')]
+  ];
+  let html='<option value="">— Choose a filter —</option>';
+  groups.forEach(([label,key,list])=>{
+    if(!list.length)return;
+    html+=`<optgroup label="${invAttr(label)}">`;
+    list.forEach(val=>{html+=`<option value="${invAttr(key+'::'+val)}">${invEsc(val)}</option>`;});
+    html+='</optgroup>';
+  });
+  return html;
+}
+function onInvCompactFilterChange(){
+  const raw=v('inv-filter-compact');
+  if(!raw)return;
+  const sep=raw.indexOf('::');
+  if(sep<1)return;
+  const key=raw.slice(0,sep),value=raw.slice(sep+2);
+  if(!window._invFilters)window._invFilters={kategori:'',lokasi:'',kondisi:'',status:'',brand:'',jenis:'',pic:''};
+  if(Object.prototype.hasOwnProperty.call(window._invFilters,key))window._invFilters[key]=value;
+  renderInventory(document.getElementById('content'));
+}
+function removeInvFilter(key){
+  if(window._invFilters&&Object.prototype.hasOwnProperty.call(window._invFilters,key))window._invFilters[key]='';
   renderInventory(document.getElementById('content'));
 }
 function resetInvFilters(){
-  window._invFilters={lokasi:'',kondisi:'',status:'',brand:'',jenis:'',pic:''};
+  window._invFilters={kategori:'',lokasi:'',kondisi:'',status:'',brand:'',jenis:'',pic:''};
   renderInventory(document.getElementById('content'));
 }
 function findInventoryFromCode(raw){
@@ -11636,14 +11663,17 @@ function renderInventory(c){
   const inStock=allItems.reduce((s,i)=>s+invStockValue(i),0);
   const outStock=allItems.filter(i=>invStockValue(i)===0).length;
   const bulkRows=allItems.filter(i=>invStockValue(i)>1);
-  if(!window._invFilters)window._invFilters={lokasi:'',kondisi:'',status:'',brand:'',jenis:'',pic:''};
+  if(!window._invFilters)window._invFilters={kategori:'',lokasi:'',kondisi:'',status:'',brand:'',jenis:'',pic:''};
+  if(!Object.prototype.hasOwnProperty.call(window._invFilters,'kategori'))window._invFilters.kategori='';
   const filters=window._invFilters;
   const items=allItems.filter(i=>{
+    if(filters.kategori&&i.category!==filters.kategori)return false;
     if(filters.lokasi&&i.location!==filters.lokasi)return false;if(filters.kondisi&&i.condition!==filters.kondisi)return false;
     if(filters.status&&i.status!==filters.status)return false;if(filters.brand&&(i.brand||'')!==filters.brand)return false;
     if(filters.jenis&&i.assetType!==filters.jenis)return false;if(filters.pic&&(i.pic||'')!==filters.pic)return false;return true;
   });
-  const hasActiveFilter=Object.values(filters).some(f=>f);
+  const activeFilters=Object.entries(filters).filter(([,value])=>value);
+  const hasActiveFilter=activeFilters.length>0;
   const summaryMap={};
   items.forEach(i=>{const key=i.name+'||'+i.category;if(!summaryMap[key])summaryMap[key]={name:i.name,category:i.category,qty:0,value:0};summaryMap[key].qty+=invPhysicalUnits(i);summaryMap[key].value+=(Number(i.cost)||0)*invPhysicalUnits(i);});
   const summaryRows=Object.values(summaryMap).sort((a,b)=>b.qty-a.qty||a.name.localeCompare(b.name));
@@ -11660,19 +11690,17 @@ function renderInventory(c){
     <div class="stat y"><div class="stat-lbl">Total Value</div><div class="stat-val">${rp(totalValue)}</div></div>
   </div>
   ${bulkRows.length?`<div class="alert a-warn" style="margin-bottom:16px"><b>Unique labels needed:</b> ${bulkRows.length} existing record(s) still contain more than one unit. Open the row and use <b>Split IDs</b> so every physical asset receives a different label.</div>`:''}
-  <div class="card" style="margin-bottom:16px">
-    <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:10px">🔍 Filter</div>
-    <div class="fr3">
-      <div class="fg"><label>Location</label><select id="inv-filter-lokasi" onchange="onInvFilterChange()">${invFilterOpts(getInvDistinct('location'),filters.lokasi)}</select></div>
-      <div class="fg"><label>Condition</label><select id="inv-filter-kondisi" onchange="onInvFilterChange()">${invFilterOpts(getInvDistinct('condition'),filters.kondisi)}</select></div>
-      <div class="fg"><label>Status</label><select id="inv-filter-status" onchange="onInvFilterChange()">${invFilterOpts(getInvDistinct('status'),filters.status)}</select></div>
+  <div class="card" style="margin-bottom:16px;padding:14px 16px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="font-size:14px;font-weight:700;color:#0f172a;white-space:nowrap">🔍 Filter</div>
+      <div style="flex:1;min-width:260px;max-width:560px">
+        <select id="inv-filter-compact" onchange="onInvCompactFilterChange()" style="height:38px">
+          ${invCompactFilterOptions()}
+        </select>
+      </div>
+      ${hasActiveFilter?`<button class="btn btn-out btn-xs" onclick="resetInvFilters()">✕ Reset All</button><span style="font-size:12px;color:#64748b">Showing ${items.length} record(s)</span>`:`<span style="font-size:11.5px;color:#94a3b8">Category, location, condition, status, brand, asset type, or PIC</span>`}
     </div>
-    <div class="fr3" style="margin-top:12px">
-      <div class="fg"><label>Brand</label><select id="inv-filter-brand" onchange="onInvFilterChange()">${invFilterOpts(getInvDistinct('brand'),filters.brand)}</select></div>
-      <div class="fg"><label>Asset Type</label><select id="inv-filter-jenis" onchange="onInvFilterChange()">${invFilterOpts(['Fixed Asset','Non Fixed Asset'],filters.jenis)}</select></div>
-      <div class="fg"><label>Person in Charge</label><select id="inv-filter-pic" onchange="onInvFilterChange()">${invFilterOpts(getInvDistinct('pic'),filters.pic)}</select></div>
-    </div>
-    ${hasActiveFilter?`<div style="margin-top:12px;display:flex;align-items:center;gap:10px"><button class="btn btn-out btn-xs" onclick="resetInvFilters()">✕ Reset Filters</button><span style="font-size:12px;color:#64748b">Showing ${items.length} record(s)</span></div>`:''}
+    ${hasActiveFilter?`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">${activeFilters.map(([key,value])=>`<button type="button" onclick="removeInvFilter('${invAttr(key)}')" title="Remove filter" style="display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;border-radius:999px;padding:5px 9px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer"><span style="color:#64748b">${invEsc(INV_FILTER_LABELS[key]||key)}:</span> ${invEsc(value)} <span style="color:#94a3b8">×</span></button>`).join('')}</div>`:''}
   </div>
   <div class="card" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleInvSummary()"><div style="font-size:14px;font-weight:700;color:#0f172a">📊 Summary by Item (${summaryRows.length} types)</div><span id="inv-summary-toggle-icon">${window._invSummaryOpen?'▲':'▼'}</span></div>
     <div id="inv-summary-body" style="${window._invSummaryOpen?'':'display:none;'}margin-top:12px"><div class="tbl-wrap"><table><thead><tr><th>Item Name</th><th>Category</th><th>Quantity</th><th>Total Value</th></tr></thead><tbody>
