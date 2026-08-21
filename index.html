@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.0 — Financial System</title>
+<title>SiAkun v24.1 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -17,6 +17,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -987,6 +989,7 @@ inventory:{
 title:'INVENTORY',
 items:[
 ['📦','Stock & Products',"nav('products')"],
+['🏷️','Office Inventory & Scan',"nav('inventory')"],
 ['👤','Contacts',"nav('contacts')"]
 ]},
 
@@ -1117,7 +1120,7 @@ const TR={
     page_payroll:'Payroll',page_tax:'Tax (VAT & Income Tax)',
     page_receipts:'Receipt',page_settings:'Settings & Export',
     page_users:'User Management',page_audit:'Audit Trail',page_basts:'Handover Documents (BAST)',page_faq:'FAQ & Guide',
-    page_sphs:'Quotation',page_pricerefs:'Price References',
+    page_sphs:'Quotation',page_pricerefs:'Price References',page_inventory:'Office Inventory',page_invlabels:'Inventory Labels',
     // Common buttons
     btn_save:'Save',btn_cancel:'Cancel',btn_edit:'✏️ Edit',btn_delete:'✕ Delete',
     btn_add:'+ Add',btn_close:'Close',btn_print:'🖨 Print',
@@ -4274,7 +4277,8 @@ const pageMap={
   budget:'page_budget',assets:'page_assets',payroll:'page_payroll',
   tax:'page_tax',receipts:'page_receipts',settings:'page_settings',
   users:'page_users',audit:'page_audit',operator:'page_operator',
-  basts:'page_basts',faq:'page_faq',sphs:'page_sphs',pricerefs:'page_pricerefs'
+  basts:'page_basts',faq:'page_faq',sphs:'page_sphs',pricerefs:'page_pricerefs',
+  inventory:'page_inventory',invlabels:'page_invlabels'
 };
 function nav(page){
   if(_currentUser?.must_change_password){openChangeMyPassword();return;}
@@ -10489,18 +10493,18 @@ function invPicOptionsList(){
   return [...new Set([...users,...DB.invMaster.customPIC])];
 }
 function invSelectOpts(list,selected,addNewLabel){
-  return list.map(x=>`<option${x===selected?' selected':''}>${x}</option>`).join('')+`<option value="__add__">➕ ${addNewLabel}</option>`;
+  return list.map(x=>`<option value="${invAttr(x)}"${x===selected?' selected':''}>${invEsc(x)}</option>`).join('')+`<option value="__add__">➕ ${invEsc(addNewLabel)}</option>`;
 }
 function invPicSelectOpts(selected){
   const list=invPicOptionsList();
-  let opts=list.map(x=>`<option${x===selected?' selected':''}>${x}</option>`).join('');
+  let opts=list.map(x=>`<option value="${invAttr(x)}"${x===selected?' selected':''}>${invEsc(x)}</option>`).join('');
   opts+=`<option value="__add__">➕ Add New PIC</option>`;
   return opts;
 }
 function invNameOpts(category,selected){
   const list=invCatalogForCategory(category);
-  let opts=list.map(x=>`<option value="${x.n.replace(/"/g,'&quot;')}"${x.n===selected?' selected':''}>${x.n}</option>`).join('');
-  if(selected&&!list.some(x=>x.n===selected))opts+=`<option value="${selected.replace(/"/g,'&quot;')}" selected>${selected}</option>`;
+  let opts=list.map(x=>`<option value="${invAttr(x.n)}"${x.n===selected?' selected':''}>${invEsc(x.n)}</option>`).join('');
+  if(selected&&!list.some(x=>x.n===selected))opts+=`<option value="${invAttr(selected)}" selected>${invEsc(selected)}</option>`;
   opts+=`<option value="__add__">➕ Add New Name</option>`;
   return opts;
 }
@@ -10542,7 +10546,7 @@ function onInvSelectChange(selId,masterKey,promptLabel){
 function onInvPicChange(){
   const sel=document.getElementById('inv-pic');
   if(sel.value==='__add__'){
-    const val=prompt('Name PIC baru:');
+    const val=prompt('New PIC name:');
     if(val){
       ensureInvMaster();
       if(!DB.invMaster.customPIC.includes(val))DB.invMaster.customPIC.push(val);
@@ -11000,12 +11004,46 @@ const SKK_VEA_BOQ_SEED=[
 {desc:'PFE ABC Dry Powder Cap. 25kg',category:'PORTABLE FIRE EXTINGUISHER',brand:'Tonata',qty:2,satuan:'Ea',material:8580000,labour:90000,refId:null},
 ];
 
+function invEsc(value){
+  return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function invAttr(value){return invEsc(value);}
+function invStockValue(item){
+  const qty=Number(item&&item.stock);
+  return Number.isFinite(qty)?Math.max(0,Math.round(qty)):1;
+}
+function invPhysicalUnits(item){return Math.max(1,invStockValue(item));}
+function invCurrentUserName(){return String(_currentUser?.name||_currentUser?.username||'SiAkun User');}
+function addInventoryMovement(item,type,details){
+  details=details||{};
+  if(!Array.isArray(item.movements))item.movements=[];
+  item.movements.unshift({
+    id:uid(),at:new Date().toISOString(),type:String(type||'Update'),by:invCurrentUserName(),
+    qtyBefore:Number(details.qtyBefore??invStockValue(item)),qtyAfter:Number(details.qtyAfter??invStockValue(item)),
+    fromLocation:String(details.fromLocation??item.location??''),toLocation:String(details.toLocation??item.location??''),
+    fromPic:String(details.fromPic??item.pic??''),toPic:String(details.toPic??item.pic??''),
+    status:String(details.status??item.status??''),note:String(details.note||'')
+  });
+  if(item.movements.length>100)item.movements=item.movements.slice(0,100);
+}
+function inventoryMovementDate(value){
+  if(!value)return'-';
+  const d=new Date(value);return Number.isNaN(d.getTime())?'-':d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function inventoryHistoryHtml(item){
+  const rows=Array.isArray(item.movements)?item.movements:[];
+  if(!rows.length)return'<div style="padding:16px;text-align:center;color:#94a3b8;font-size:12px">No movement history yet.</div>';
+  return`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Activity</th><th>Stock</th><th>Location / PIC</th><th>By</th><th>Note</th></tr></thead><tbody>${rows.slice(0,25).map(m=>`<tr>
+    <td>${invEsc(inventoryMovementDate(m.at))}</td><td class="fw7">${invEsc(m.type)}</td><td>${Number(m.qtyBefore)||0} → ${Number(m.qtyAfter)||0}</td>
+    <td>${invEsc(m.fromLocation||'-')} → ${invEsc(m.toLocation||'-')}<br><span style="font-size:10px;color:#64748b">${invEsc(m.fromPic||'-')} → ${invEsc(m.toPic||'-')}</span></td>
+    <td>${invEsc(m.by||'-')}</td><td>${invEsc(m.note||'-')}</td></tr>`).join('')}</tbody></table></div>`;
+}
 function getInvDistinct(field){
   const vals=(DB.inventory||[]).map(i=>(i[field]||'').toString().trim()).filter(v=>v);
   return [...new Set(vals)].sort((a,b)=>a.localeCompare(b));
 }
 function invFilterOpts(list,selected){
-  return '<option value="">All</option>'+list.map(val=>`<option value="${val}"${val===selected?' selected':''}>${val}</option>`).join('');
+  return '<option value="">All</option>'+list.map(val=>`<option value="${invAttr(val)}"${val===selected?' selected':''}>${invEsc(val)}</option>`).join('');
 }
 function onInvFilterChange(){
   window._invFilters={
@@ -11018,45 +11056,213 @@ function resetInvFilters(){
   window._invFilters={lokasi:'',kondisi:'',status:'',brand:'',jenis:'',pic:''};
   renderInventory(document.getElementById('content'));
 }
+function findInventoryFromCode(raw){
+  let code=String(raw||'').trim();
+  if(!code)return null;
+  try{
+    const url=new URL(code,location.href);
+    code=url.searchParams.get('asset')||url.searchParams.get('assetId')||code;
+  }catch(e){}
+  const match=code.match(/INV-[A-Z0-9]+-\d+/i);
+  if(match)code=match[0];
+  code=code.trim().toUpperCase();
+  return(DB.inventory||[]).find(item=>String(item.assetId||'').trim().toUpperCase()===code)||null;
+}
+let _invScanStream=null,_invScanFrame=0,_invScanBusy=false,_invBarcodeDetector=null,_invScanLastFrame=0;
+function stopInventoryCamera(){
+  if(_invScanFrame)cancelAnimationFrame(_invScanFrame);_invScanFrame=0;_invScanBusy=false;
+  if(_invScanStream){_invScanStream.getTracks().forEach(track=>track.stop());_invScanStream=null;}
+}
+function setInventoryScanStatus(message,isError){
+  const el=document.getElementById('inv-scan-status');if(!el)return;
+  el.textContent=message;el.style.color=isError?'#b91c1c':'#475569';
+}
+function openInventoryScanner(){
+  stopInventoryCamera();
+  openModal('Scan Asset Label',`
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.55;color:#1e3a8a">
+      Scan the QR code or barcode on the asset. A handheld scanner can type directly into the field below. On a phone, tap <b>Start Camera</b>.
+    </div>
+    <div class="fg"><label>Asset ID / Scanned Code</label><input id="inv-scan-input" autocomplete="off" placeholder="Example: INV-IT-001" onkeydown="if(event.key==='Enter'){event.preventDefault();handleInventoryScan(this.value)}"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn btn-pri" onclick="handleInventoryScan(v('inv-scan-input'))">🔎 Find Asset</button>
+      <button class="btn btn-out" onclick="startInventoryCamera()">📷 Start Camera</button>
+      <button class="btn btn-out" onclick="stopInventoryCamera();setInventoryScanStatus('Camera stopped.',false)">Stop Camera</button>
+    </div>
+    <div id="inv-scan-camera" style="display:none;background:#0f172a;border-radius:12px;overflow:hidden;position:relative;margin-bottom:12px">
+      <video id="inv-scan-video" playsinline muted style="display:block;width:100%;max-height:52vh;object-fit:cover"></video>
+      <div style="position:absolute;inset:22% 10%;border:2px solid #5eead4;border-radius:12px;box-shadow:0 0 0 999px rgba(15,23,42,.28);pointer-events:none"></div>
+      <canvas id="inv-scan-canvas" style="display:none"></canvas>
+    </div>
+    <div id="inv-scan-status" style="font-size:12px;color:#64748b;min-height:18px">Camera is off. You can still type or use a handheld scanner.</div>
+    <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Close</button></div>`, 'modal-wide');
+  setTimeout(()=>document.getElementById('inv-scan-input')?.focus(),50);
+}
+async function startInventoryCamera(){
+  stopInventoryCamera();
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    return setInventoryScanStatus('Camera access is not available here. Use a handheld scanner or type the Asset ID.',true);
+  }
+  try{
+    setInventoryScanStatus('Opening camera...',false);
+    _invScanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+    const video=document.getElementById('inv-scan-video');const wrap=document.getElementById('inv-scan-camera');
+    if(!video||!wrap){stopInventoryCamera();return;}
+    video.srcObject=_invScanStream;wrap.style.display='block';await video.play();
+    if('BarcodeDetector'in window){
+      try{_invBarcodeDetector=new BarcodeDetector({formats:['qr_code','code_128','code_39','ean_13','ean_8']});}catch(e){_invBarcodeDetector=new BarcodeDetector();}
+    }else _invBarcodeDetector=null;
+    setInventoryScanStatus('Point the camera at the complete label and hold still.',false);
+    _invScanFrame=requestAnimationFrame(scanInventoryCameraFrame);
+  }catch(e){
+    stopInventoryCamera();setInventoryScanStatus('Camera permission was not granted. Allow camera access, or type the Asset ID.',true);
+  }
+}
+async function scanInventoryCameraFrame(timestamp){
+  const video=document.getElementById('inv-scan-video');
+  if(!_invScanStream||!video)return;
+  if(!_invScanBusy&&video.readyState>=2&&timestamp-_invScanLastFrame>220){
+    _invScanBusy=true;_invScanLastFrame=timestamp;
+    try{
+      let raw='';
+      if(_invBarcodeDetector){
+        const codes=await _invBarcodeDetector.detect(video);raw=codes&&codes[0]?codes[0].rawValue:'';
+      }else if(typeof jsQR==='function'){
+        const canvas=document.getElementById('inv-scan-canvas');const ctx=canvas?.getContext('2d',{willReadFrequently:true});
+        if(canvas&&ctx){
+          const scale=Math.min(1,900/Math.max(video.videoWidth||1,video.videoHeight||1));
+          canvas.width=Math.max(1,Math.round((video.videoWidth||1)*scale));canvas.height=Math.max(1,Math.round((video.videoHeight||1)*scale));
+          ctx.drawImage(video,0,0,canvas.width,canvas.height);const img=ctx.getImageData(0,0,canvas.width,canvas.height);const result=jsQR(img.data,img.width,img.height,{inversionAttempts:'attemptBoth'});raw=result?result.data:'';
+        }
+      }
+      if(raw){handleInventoryScan(raw);return;}
+    }catch(e){}finally{_invScanBusy=false;}
+  }
+  _invScanFrame=requestAnimationFrame(scanInventoryCameraFrame);
+}
+function handleInventoryScan(raw){
+  const item=findInventoryFromCode(raw);
+  if(!item){setInventoryScanStatus('Asset not found. Check the label or Asset ID and try again.',true);return;}
+  stopInventoryCamera();openInventoryDetails(item.id);
+}
+function openInventoryDetails(id){
+  const item=(DB.inventory||[]).find(row=>String(row.id)===String(id));if(!item)return alert('Asset not found.');
+  const stock=invStockValue(item);const itemId=invAttr(item.id);
+  openModal('Asset Details — '+String(item.assetId||''),`
+    <div style="display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px">
+      <div><div style="font-size:20px;font-weight:800;color:#0f172a">${invEsc(item.name||'-')}</div><div style="font-size:12px;color:#64748b;margin-top:4px">${invEsc(item.assetId||'-')} · ${invEsc(item.category||'-')} · ${invEsc(item.brand||'-')}</div></div>
+      <span class="badge ${stock>0?'b-ok':'b-bad'}" style="font-size:12px;padding:7px 11px">${stock>0?'IN STOCK':'STOCK OUT'}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin-bottom:14px">
+      ${[['Location',item.location],['Person in Charge',item.pic],['Condition',item.condition],['Status',item.status],['Asset Type',item.assetType],['Acquisition Cost',rp(item.cost||0)]].map(row=>`<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px"><div style="font-size:10px;color:#64748b;margin-bottom:4px">${row[0]}</div><div style="font-size:12px;font-weight:700">${invEsc(row[1]||'-')}</div></div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      ${stock>1?`<button class="btn btn-pri" onclick="splitInventoryRecord('${itemId}')">Create ${stock} Unique Asset IDs</button>`:''}
+      <button class="btn btn-pri" onclick="openInventoryStockAction('${itemId}','in')">📥 Stock In</button>
+      <button class="btn btn-out" onclick="openInventoryStockAction('${itemId}','out')">📤 Stock Out</button>
+      <button class="btn btn-out" onclick="openInventoryTransfer('${itemId}')">📍 Move / Assign</button>
+      <button class="btn btn-out" onclick="openEditInventoryItem('${itemId}')">✏️ Edit Data</button>
+      <button class="btn btn-out" onclick="printInventoryLabels(['${itemId}'])">🏷️ Print Label</button>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">Movement History</div>${inventoryHistoryHtml(item)}
+    <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Close</button></div>`, 'modal-xl');
+}
+function openInventoryStockAction(id,direction){
+  const item=(DB.inventory||[]).find(row=>String(row.id)===String(id));if(!item)return;
+  if(invStockValue(item)>1)return alert('Split this bulk record into unique Asset IDs before recording Stock In or Stock Out.');
+  const isIn=direction==='in';
+  if((isIn&&invStockValue(item)>0)||(!isIn&&invStockValue(item)===0))return alert(isIn?'This asset is already in stock.':'This asset is already marked as stock out.');
+  const statuses=isIn?['Active','In Stock','Returned','Standby']:['On Loan','Assigned','With Staff','Under Maintenance','Disposed','In Transit'];
+  openModal(isIn?'Stock In Asset':'Stock Out Asset',`
+    <input type="hidden" id="inv-move-id" value="${invAttr(item.id)}"><input type="hidden" id="inv-move-direction" value="${isIn?'in':'out'}">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:14px"><b>${invEsc(item.assetId)} — ${invEsc(item.name)}</b><br><span style="font-size:11px;color:#64748b">Current status: ${invEsc(item.status||'-')}</span></div>
+    <div class="fg"><label>New Status</label><select id="inv-move-status">${statuses.map((s,index)=>`<option${index===0?' selected':''}>${s}</option>`).join('')}</select></div>
+    <div class="fg"><label>${isIn?'Note':'Reason / Recipient'}${isIn?'':' *'}</label><textarea id="inv-move-note" rows="3" placeholder="${isIn?'Example: Returned after maintenance':'Example: Assigned to staff / sent for repair'}"></textarea></div>
+    <div class="modal-ft"><button class="btn btn-out" onclick="openInventoryDetails('${invAttr(item.id)}')">Cancel</button><button class="btn btn-pri" onclick="saveInventoryStockAction()">Save Movement</button></div>`);
+}
+function saveInventoryStockAction(){
+  const item=(DB.inventory||[]).find(row=>String(row.id)===String(v('inv-move-id')));if(!item)return alert('Asset not found.');
+  const direction=v('inv-move-direction'),note=v('inv-move-note').trim();
+  if(direction==='out'&&!note)return alert('Reason or recipient is required for Stock Out.');
+  const before=invStockValue(item),after=direction==='in'?1:0,status=v('inv-move-status');
+  item.stock=after;item.status=status;
+  addInventoryMovement(item,direction==='in'?'Stock In':'Stock Out',{qtyBefore:before,qtyAfter:after,status,note});
+  if(!saveDB()){item.stock=before;return;}
+  openInventoryDetails(item.id);if(_currentPage==='inventory')renderInventory(document.getElementById('content'));
+}
+function openInventoryTransfer(id){
+  ensureInvMaster();const item=(DB.inventory||[]).find(row=>String(row.id)===String(id));if(!item)return;
+  openModal('Move / Assign Asset',`
+    <input type="hidden" id="inv-transfer-id" value="${invAttr(item.id)}">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:14px"><b>${invEsc(item.assetId)} — ${invEsc(item.name)}</b></div>
+    <div class="fr3">
+      <div class="fg"><label>New Location</label><select id="inv-transfer-location" onchange="onInvSelectChange('inv-transfer-location','locations','New location:')">${invSelectOpts(DB.invMaster.locations,item.location,'Add New Location')}</select></div>
+      <div class="fg"><label>New Person in Charge</label><select id="inv-transfer-pic" onchange="onInvTransferPicChange()">${invPicSelectOpts(item.pic)}</select></div>
+      <div class="fg"><label>Status</label><select id="inv-transfer-status" onchange="onInvSelectChange('inv-transfer-status','statusList','New status:')">${invSelectOpts(DB.invMaster.statusList,item.status,'Add New Status')}</select></div>
+    </div>
+    <div class="fg"><label>Transfer Note</label><input id="inv-transfer-note" placeholder="Example: Moved to Finance Room"></div>
+    <div class="modal-ft"><button class="btn btn-out" onclick="openInventoryDetails('${invAttr(item.id)}')">Cancel</button><button class="btn btn-pri" onclick="saveInventoryTransfer()">Save Transfer</button></div>`);
+}
+function onInvTransferPicChange(){
+  const sel=document.getElementById('inv-transfer-pic');if(!sel||sel.value!=='__add__')return;
+  const val=prompt('New PIC name:');
+  if(val){ensureInvMaster();if(!DB.invMaster.customPIC.includes(val))DB.invMaster.customPIC.push(val);if(!saveDB())return;sel.innerHTML=invPicSelectOpts(val);}else sel.selectedIndex=0;
+}
+function saveInventoryTransfer(){
+  const item=(DB.inventory||[]).find(row=>String(row.id)===String(v('inv-transfer-id')));if(!item)return alert('Asset not found.');
+  const before={location:item.location||'',pic:item.pic||'',status:item.status||''};
+  const next={location:v('inv-transfer-location'),pic:v('inv-transfer-pic'),status:v('inv-transfer-status')};
+  if(before.location===next.location&&before.pic===next.pic&&before.status===next.status)return alert('Nothing changed.');
+  item.location=next.location;item.pic=next.pic;item.status=next.status;
+  addInventoryMovement(item,'Move / Assign',{fromLocation:before.location,toLocation:next.location,fromPic:before.pic,toPic:next.pic,status:next.status,note:v('inv-transfer-note')});
+  if(!saveDB()){Object.assign(item,before);return;}
+  openInventoryDetails(item.id);if(_currentPage==='inventory')renderInventory(document.getElementById('content'));
+}
+function splitInventoryRecord(id){
+  const item=(DB.inventory||[]).find(row=>String(row.id)===String(id));if(!item)return;
+  const qty=invStockValue(item);if(qty<=1)return alert('This asset already has one unique Asset ID.');
+  if(!confirm(`Create ${qty} unique Asset IDs for ${item.name}?\n\nThe acquisition cost will be treated as the cost per unit. This action keeps the original record and creates ${qty-1} additional records.`))return;
+  item.stock=1;addInventoryMovement(item,'Split into unique assets',{qtyBefore:qty,qtyAfter:1,note:`Created ${qty} individually labelled assets.`});
+  for(let n=1;n<qty;n++){
+    const clone={...item,id:uid(),assetId:genInventoryId(item.category),stock:1,linkedAssetId:null,movements:[]};
+    addInventoryMovement(clone,'Created from bulk record',{qtyBefore:0,qtyAfter:1,note:`Split from ${item.assetId}.`});
+    DB.inventory.push(clone);syncInventoryAssetLink(clone);
+  }
+  syncInventoryAssetLink(item);if(!saveDB())return;nav('inventory');
+}
 function renderInventory(c){
-  ensureInvMaster();
-  syncAllInventoryAssets();
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openInventoryItem()">+ Add Items</button><button class="btn btn-out" onclick="nav('invlabels')">🏷️ Print Labels</button><button class="btn btn-out" onclick="exportInventory()">⬇ Excel</button>`;
+  ensureInvMaster();syncAllInventoryAssets();
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openInventoryScanner()">▣ Scan Asset</button><button class="btn btn-out" onclick="openInventoryItem()">+ Add Asset</button><button class="btn btn-out" onclick="nav('invlabels')">🏷️ Labels</button><button class="btn btn-out" onclick="exportInventory()">⬇ Excel</button>`;
   const allItems=DB.inventory||[];
-  const totalItems=allItems.length;
-  const totalValue=allItems.reduce((s,i)=>s+(i.cost||0),0);
-  const fixedCount=allItems.filter(i=>i.assetType==='Fixed Asset').length;
-
+  const totalItems=allItems.reduce((s,i)=>s+invPhysicalUnits(i),0);
+  const totalValue=allItems.reduce((s,i)=>s+(Number(i.cost)||0)*invPhysicalUnits(i),0);
+  const inStock=allItems.reduce((s,i)=>s+invStockValue(i),0);
+  const outStock=allItems.filter(i=>invStockValue(i)===0).length;
+  const bulkRows=allItems.filter(i=>invStockValue(i)>1);
   if(!window._invFilters)window._invFilters={lokasi:'',kondisi:'',status:'',brand:'',jenis:'',pic:''};
   const filters=window._invFilters;
   const items=allItems.filter(i=>{
-    if(filters.lokasi&&i.location!==filters.lokasi)return false;
-    if(filters.kondisi&&i.condition!==filters.kondisi)return false;
-    if(filters.status&&i.status!==filters.status)return false;
-    if(filters.brand&&(i.brand||'')!==filters.brand)return false;
-    if(filters.jenis&&i.assetType!==filters.jenis)return false;
-    if(filters.pic&&(i.pic||'')!==filters.pic)return false;
-    return true;
+    if(filters.lokasi&&i.location!==filters.lokasi)return false;if(filters.kondisi&&i.condition!==filters.kondisi)return false;
+    if(filters.status&&i.status!==filters.status)return false;if(filters.brand&&(i.brand||'')!==filters.brand)return false;
+    if(filters.jenis&&i.assetType!==filters.jenis)return false;if(filters.pic&&(i.pic||'')!==filters.pic)return false;return true;
   });
   const hasActiveFilter=Object.values(filters).some(f=>f);
-
-  // Summary: jumlah unit & total nilai per nama barang (digabung per Name+Category)
   const summaryMap={};
-  items.forEach(i=>{
-    const key=i.name+'||'+i.category;
-    if(!summaryMap[key])summaryMap[key]={name:i.name,category:i.category,qty:0,value:0};
-    summaryMap[key].qty+=(i.stock||1);
-    summaryMap[key].value+=(i.cost||0);
-  });
+  items.forEach(i=>{const key=i.name+'||'+i.category;if(!summaryMap[key])summaryMap[key]={name:i.name,category:i.category,qty:0,value:0};summaryMap[key].qty+=invPhysicalUnits(i);summaryMap[key].value+=(Number(i.cost)||0)*invPhysicalUnits(i);});
   const summaryRows=Object.values(summaryMap).sort((a,b)=>b.qty-a.qty||a.name.localeCompare(b.name));
   if(typeof window._invSummaryOpen==='undefined')window._invSummaryOpen=true;
-
   c.innerHTML=`
-  <div class="stats">
-    <div class="stat b"><div class="stat-lbl">Total Items</div><div class="stat-val">${totalItems}</div></div>
-    <div class="stat g"><div class="stat-lbl">Total Value</div><div class="stat-val">${rp(totalValue)}</div></div>
-    <div class="stat r"><div class="stat-lbl">Fixed Asset</div><div class="stat-val">${fixedCount}</div></div>
+  <div class="card" style="background:linear-gradient(135deg,#0f766e,#0f172a);color:#fff;border:0;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <div><div style="font-size:18px;font-weight:800">Scan an asset label</div><div style="font-size:12px;color:#ccfbf1;margin-top:4px;max-width:560px">Find an office asset instantly, then record Stock In, Stock Out, location, PIC, condition, or status.</div></div>
+    <button class="btn" style="background:#fff;color:#0f766e;font-weight:800;min-height:42px" onclick="openInventoryScanner()">▣ Scan Asset</button>
   </div>
+  <div class="stats">
+    <div class="stat b"><div class="stat-lbl">Registered Assets</div><div class="stat-val">${totalItems}</div></div>
+    <div class="stat g"><div class="stat-lbl">In Stock</div><div class="stat-val">${inStock}</div></div>
+    <div class="stat r"><div class="stat-lbl">Stock Out</div><div class="stat-val">${outStock}</div></div>
+    <div class="stat y"><div class="stat-lbl">Total Value</div><div class="stat-val">${rp(totalValue)}</div></div>
+  </div>
+  ${bulkRows.length?`<div class="alert a-warn" style="margin-bottom:16px"><b>Unique labels needed:</b> ${bulkRows.length} existing record(s) still contain more than one unit. Open the row and use <b>Split IDs</b> so every physical asset receives a different label.</div>`:''}
   <div class="card" style="margin-bottom:16px">
     <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:10px">🔍 Filter</div>
     <div class="fr3">
@@ -11069,38 +11275,20 @@ function renderInventory(c){
       <div class="fg"><label>Asset Type</label><select id="inv-filter-jenis" onchange="onInvFilterChange()">${invFilterOpts(['Fixed Asset','Non Fixed Asset'],filters.jenis)}</select></div>
       <div class="fg"><label>Person in Charge</label><select id="inv-filter-pic" onchange="onInvFilterChange()">${invFilterOpts(getInvDistinct('pic'),filters.pic)}</select></div>
     </div>
-    ${hasActiveFilter?`<div style="margin-top:12px;display:flex;align-items:center;gap:10px"><button class="btn btn-out btn-xs" onclick="resetInvFilters()">✕ Reset Filters</button><span style="font-size:12px;color:#64748b">Showing ${items.length} of ${totalItems} items</span></div>`:''}
+    ${hasActiveFilter?`<div style="margin-top:12px;display:flex;align-items:center;gap:10px"><button class="btn btn-out btn-xs" onclick="resetInvFilters()">✕ Reset Filters</button><span style="font-size:12px;color:#64748b">Showing ${items.length} record(s)</span></div>`:''}
   </div>
-  <div class="card" style="margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleInvSummary()">
-      <div style="font-size:14px;font-weight:700;color:#0f172a">📊 Summary by Item (${summaryRows.length} types)</div>
-      <span id="inv-summary-toggle-icon">${window._invSummaryOpen?'▲':'▼'}</span>
-    </div>
-    <div id="inv-summary-body" style="${window._invSummaryOpen?'':'display:none;'}margin-top:12px">
-      <div class="tbl-wrap"><table>
-        <thead><tr><th>Item Name</th><th>Category</th><th>Quantity</th><th>Total Value</th></tr></thead>
-        <tbody>
-          ${summaryRows.length?summaryRows.map(s=>`<tr><td class="fw7">${s.name}</td><td><span class="badge b-info">${s.category}</span></td><td>${s.qty}</td><td>${rp(s.value)}</td></tr>`).join(''):`<tr><td colspan="4" class="tbl-empty">No items yet</td></tr>`}
-        </tbody>
-      </table></div>
-    </div>
-  </div>
-  <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr><th>Asset ID</th><th>Item Name</th><th>Category</th><th>Location</th><th>PIC</th><th>Condition</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead>
-    <tbody>
-      ${items.length?items.map(i=>`<tr>
-        <td class="fw7">${i.assetId||'-'}</td>
-        <td>${i.name}</td>
-        <td><span class="badge b-info">${i.category}</span></td>
-        <td>${i.location||'-'}</td>
-        <td>${i.pic||'-'}</td>
-        <td>${i.condition||'-'}</td>
-        <td>${i.status||'-'}</td>
-        <td>${i.assetType==='Fixed Asset'?'<span class="badge b-ok">Fixed Asset</span>':'<span class="badge b-info">Non-Fixed Asset</span>'}</td>
-        <td class="gap8"><button class="btn btn-out btn-xs" onclick="printInventoryLabels(['${i.id}'])" title="Print QR Label">🏷️</button><button class="btn btn-out btn-xs" onclick="openEditInventoryItem('${i.id}')">✏️</button><button class="btn btn-bad btn-xs" onclick="delInventoryItem('${i.id}')">✕</button></td>
-      </tr>`).join(''):`<tr><td colspan="9" class="tbl-empty">No items match the active filters</td></tr>`}
-    </tbody>
-  </table></div></div>`;
+  <div class="card" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleInvSummary()"><div style="font-size:14px;font-weight:700;color:#0f172a">📊 Summary by Item (${summaryRows.length} types)</div><span id="inv-summary-toggle-icon">${window._invSummaryOpen?'▲':'▼'}</span></div>
+    <div id="inv-summary-body" style="${window._invSummaryOpen?'':'display:none;'}margin-top:12px"><div class="tbl-wrap"><table><thead><tr><th>Item Name</th><th>Category</th><th>Quantity</th><th>Total Value</th></tr></thead><tbody>
+      ${summaryRows.length?summaryRows.map(s=>`<tr><td class="fw7">${invEsc(s.name)}</td><td><span class="badge b-info">${invEsc(s.category)}</span></td><td>${s.qty}</td><td>${rp(s.value)}</td></tr>`).join(''):`<tr><td colspan="4" class="tbl-empty">No items yet</td></tr>`}
+    </tbody></table></div></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Asset ID</th><th>Item Name</th><th>Category</th><th>Stock</th><th>Location</th><th>PIC</th><th>Condition</th><th>Status</th><th>Type</th><th>Actions</th></tr></thead><tbody>
+    ${items.length?items.map(i=>{const stock=invStockValue(i),itemId=invAttr(i.id);return`<tr>
+      <td class="fw7">${invEsc(i.assetId||'-')}</td><td>${invEsc(i.name||'-')}</td><td><span class="badge b-info">${invEsc(i.category||'-')}</span></td>
+      <td><span class="badge ${stock>0?'b-ok':'b-bad'}">${stock>1?stock+' Units':stock===1?'In':'Out'}</span></td><td>${invEsc(i.location||'-')}</td><td>${invEsc(i.pic||'-')}</td><td>${invEsc(i.condition||'-')}</td><td>${invEsc(i.status||'-')}</td>
+      <td>${i.assetType==='Fixed Asset'?'<span class="badge b-ok">Fixed Asset</span>':'<span class="badge b-info">Non-Fixed Asset</span>'}</td>
+      <td class="gap8"><button class="btn btn-pri btn-xs" onclick="openInventoryDetails('${itemId}')" title="View and update">View</button><button class="btn btn-out btn-xs" onclick="printInventoryLabels(['${itemId}'])" title="Print QR and barcode label">🏷️</button>${stock>1?`<button class="btn btn-out btn-xs" onclick="splitInventoryRecord('${itemId}')" title="Create one unique Asset ID per unit">Split IDs</button>`:''}<button class="btn btn-out btn-xs" onclick="openEditInventoryItem('${itemId}')">✏️</button><button class="btn btn-bad btn-xs" onclick="delInventoryItem('${itemId}')">✕</button></td>
+    </tr>`;}).join(''):`<tr><td colspan="10" class="tbl-empty">No items match the active filters</td></tr>`}
+  </tbody></table></div></div>`;
 }
 function toggleInvSummary(){
   window._invSummaryOpen=!window._invSummaryOpen;
@@ -11110,14 +11298,14 @@ function toggleInvSummary(){
   if(icon)icon.textContent=window._invSummaryOpen?'▲':'▼';
 }
 
-// ===== Tahap 3: QR Code Label for Inventory =====
+// ===== Inventory labels: QR for phone camera + Code 128 for handheld scanners =====
 function renderInvLabels(c){
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-out" onclick="nav('inventory')">← Back to Inventory</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-pri" onclick="openInventoryScanner()">▣ Scan Asset</button><button class="btn btn-out" onclick="nav('inventory')">← Back to Inventory</button>`;
   const items=DB.inventory||[];
   c.innerHTML=`
   <div class="card" style="margin-bottom:16px">
-    <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">🏷️ Print QR Code Labels</div>
-    <div style="font-size:12px;color:#64748b;margin-bottom:14px">Select the items to label, then click "Print Selected Labels". Each label contains a QR code and item information (Asset ID, Name, Category, Location, PIC, Condition, Status) — if QR-nya di-scan pakai HP, info ini langsung muncul tanpa perlu internet.</div>
+    <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">🏷️ Print QR + Barcode Labels</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:14px;line-height:1.55">Each physical asset should have one unique Asset ID. The QR code works with a phone camera, while the Code 128 barcode works with common handheld scanners. Both codes point to the same asset record.</div>
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
       <button class="btn btn-out btn-xs" onclick="toggleAllInvLabelCheck(true)">☑ Select All</button>
       <button class="btn btn-out btn-xs" onclick="toggleAllInvLabelCheck(false)">☐ Clear All</button>
@@ -11128,11 +11316,11 @@ function renderInvLabels(c){
       <tbody>
         ${items.length?items.map(i=>`<tr>
           <td><input type="checkbox" class="inv-label-chk" value="${i.id}"></td>
-          <td class="fw7">${i.assetId||'-'}</td>
-          <td>${i.name}</td>
-          <td><span class="badge b-info">${i.category}</span></td>
-          <td>${i.location||'-'}</td>
-        </tr>`).join(''):`<tr><td colspan="5" class="tbl-empty">No items yet inventory</td></tr>`}
+          <td class="fw7">${invEsc(i.assetId||'-')}</td>
+          <td>${invEsc(i.name||'-')}</td>
+          <td><span class="badge b-info">${invEsc(i.category||'-')}</span></td>
+          <td>${invEsc(i.location||'-')}</td>
+        </tr>`).join(''):`<tr><td colspan="5" class="tbl-empty">No inventory items yet.</td></tr>`}
       </tbody>
     </table></div>
   </div>`;
@@ -11149,46 +11337,49 @@ function printInventoryLabels(ids){
   const items=(DB.inventory||[]).filter(i=>ids.includes(i.id));
   if(!items.length)return alert('Items not found!');
   const companyName=(DB.company&&DB.company.name)||'PT. Andrika Mitra Solusi';
+  const appBase=/^https?:$/.test(location.protocol)?location.origin+location.pathname:'';
   const labelData=items.map(i=>({
     assetId:i.assetId||'-',
     name:i.name,
     location:i.location||'-',
-    qrText:['AMS INVENTORY','Asset ID: '+(i.assetId||'-'),'Name: '+i.name,'Category: '+(i.category||'-'),'Location: '+(i.location||'-'),'PIC: '+(i.pic||'-'),'Condition: '+(i.condition||'-'),'Status: '+(i.status||'-'),'Type: '+(i.assetType||'-')].join('\n')
+    qrText:appBase?appBase+'?asset='+encodeURIComponent(i.assetId||''):['AMS INVENTORY','Asset ID: '+(i.assetId||'-'),'Name: '+i.name,'Category: '+(i.category||'-'),'Location: '+(i.location||'-'),'PIC: '+(i.pic||'-'),'Condition: '+(i.condition||'-'),'Status: '+(i.status||'-'),'Type: '+(i.assetType||'-')].join('\n')
   }));
+  const labelJson=JSON.stringify(labelData).replace(/</g,'\\u003c');
+  const companyJson=JSON.stringify(companyName).replace(/</g,'\\u003c');
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>Print Labels Inventory</title>
+  <title>Print Inventory Labels</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;background:#fff}
-    .sheet{display:flex;flex-wrap:wrap;gap:8px;padding:8px}
-    .label{width:190px;border:1px dashed #94a3b8;border-radius:6px;padding:8px;display:flex;gap:8px;align-items:center;break-inside:avoid;page-break-inside:avoid}
-    .qr{width:64px;height:64px;flex-shrink:0}
-    .info{font-size:9px;line-height:1.4;overflow:hidden}
-    .info .aid{font-weight:700;font-size:10px}
-    .info .name{font-weight:600}
-    .info .loc{color:#475569}
-    .info .co{color:#94a3b8;font-size:8px;margin-top:2px}
-    @media print{@page{size:A4;margin:8mm}.label{border:1px solid #cbd5e1}}
+    .sheet{display:grid;grid-template-columns:repeat(2,70mm);gap:3mm;padding:4mm}
+    .label{width:70mm;height:35mm;border:1px dashed #94a3b8;border-radius:2mm;padding:2.5mm;display:grid;grid-template-columns:23mm 1fr;gap:2mm;align-items:center;break-inside:avoid;page-break-inside:avoid;overflow:hidden}
+    .qr{width:22mm;height:22mm;display:flex;align-items:center;justify-content:center}.qr img,.qr canvas{width:22mm!important;height:22mm!important}
+    .info{font-size:8pt;line-height:1.25;overflow:hidden}.info .co{font-size:6.5pt;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .info .aid{font-weight:700;font-size:9pt;margin-top:1mm}.info .name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.info .loc{color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .barcode{display:block;width:39mm;height:8mm;margin-top:1mm}
+    @media print{@page{size:A4;margin:7mm}.sheet{padding:0}.label{border:1px solid #cbd5e1}}
   </style>
   </head><body>
   <div class="sheet" id="sheet"></div>
   <script>
-    var LABELS=${JSON.stringify(labelData)};
-    var companyName=${JSON.stringify(companyName)};
+    var LABELS=${labelJson};
+    var companyName=${companyJson};
     var sheet=document.getElementById('sheet');
     LABELS.forEach(function(d){
       var card=document.createElement('div');card.className='label';
       var qrBox=document.createElement('div');qrBox.className='qr';
       var info=document.createElement('div');info.className='info';
-      info.innerHTML='<div class="aid"></div><div class="name"></div><div class="loc"></div><div class="co"></div>';
+      info.innerHTML='<div class="co"></div><div class="aid"></div><div class="name"></div><div class="loc"></div><svg class="barcode"></svg>';
       card.appendChild(qrBox);card.appendChild(info);
       sheet.appendChild(card);
       info.querySelector('.aid').textContent=d.assetId;
       info.querySelector('.name').textContent=d.name;
       info.querySelector('.loc').textContent=d.location;
       info.querySelector('.co').textContent=companyName;
-      new QRCode(qrBox,{text:d.qrText,width:64,height:64,correctLevel:QRCode.CorrectLevel.M});
+      new QRCode(qrBox,{text:d.qrText,width:84,height:84,correctLevel:QRCode.CorrectLevel.M});
+      if(window.JsBarcode)JsBarcode(info.querySelector('.barcode'),d.assetId,{format:'CODE128',displayValue:false,margin:0,height:28,width:1.35});
     });
     window.onload=function(){setTimeout(function(){window.print()},700)};
   <\/script>
@@ -11201,7 +11392,8 @@ function openInventoryItem(){
   ensureInvMaster();
   const catOpts=Object.keys(CATALOG_PREFIX).map(c=>`<option>${c}</option>`).join('');
   const firstCat=Object.keys(CATALOG_PREFIX)[0];
-  openModal('Add Inventory Item',`
+  openModal('Add Office Asset',`
+  <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#065f46;margin-bottom:14px"><b>One physical asset = one unique label.</b> If Quantity is more than 1, SiAkun will create a different Asset ID for every unit automatically.</div>
   <div class="fr3">
     <div class="fg"><label>Category</label><select id="inv-cat" onchange="onInvCatChange()">${catOpts}</select></div>
     <div class="fg" id="inv-name-wrap"><label>Item Name</label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(firstCat,'')}</select></div>
@@ -11209,11 +11401,11 @@ function openInventoryItem(){
   </div>
   <div class="fr3">
     <div class="fg"><label>Purchase Date</label><input type="date" id="inv-date" value="${today()}"></div>
-    <div class="fg"><label>Acquisition Cost</label><input type="number" id="inv-cost" placeholder="0"></div>
+    <div class="fg"><label>Acquisition Cost per Unit</label><input type="number" id="inv-cost" placeholder="0"></div>
     <div class="fg"><label>Useful Life (Years) <span style="font-weight:400;color:#94a3b8">— automatic</span></label><input type="number" id="inv-life" placeholder="0" min="0" readonly style="background:#f1f5f9;color:#64748b"></div>
   </div>
   <div class="fr3">
-    <div class="fg"><label>Stock</label><input type="number" id="inv-stock" value="1" min="1"></div>
+    <div class="fg"><label>Quantity / Unique Labels</label><input type="number" id="inv-qty" value="1" min="1" max="500"></div>
     <div class="fg"><label>Location</label><select id="inv-location" onchange="onInvSelectChange('inv-location','locations','New location:')">${invSelectOpts(DB.invMaster.locations,'','Add New Location')}</select></div>
     <div class="fg"><label>Person in Charge</label><select id="inv-pic" onchange="onInvPicChange()">${invPicSelectOpts('')}</select></div>
   </div>
@@ -11228,15 +11420,16 @@ function openInventoryItem(){
 }
 function saveInventoryItem(){
   const name=v('inv-name'),category=v('inv-cat');
-  if(!name||name==='__add__')return alert('Items name is required!');
-  const item={
-    id:uid(),assetId:genInventoryId(category),name,category,
-    brand:v('inv-brand'),purchaseDate:v('inv-date'),cost:parseFloat(v('inv-cost'))||0,
-    life:parseInt(v('inv-life'))||0,
-    stock:parseInt(v('inv-stock'))||1,location:v('inv-location'),pic:v('inv-pic'),
-    condition:v('inv-condition'),status:v('inv-status'),assetType:v('inv-type'),notes:v('inv-notes')
-  };
-  DB.inventory.push(item);syncInventoryAssetLink(item);if(!saveDB())return;closeModal();nav('inventory');
+  if(!name||name==='__add__')return alert('Item name is required!');
+  const quantity=Math.max(1,Math.min(500,parseInt(v('inv-qty'))||1));
+  const common={name,category,brand:v('inv-brand'),purchaseDate:v('inv-date'),cost:parseFloat(v('inv-cost'))||0,
+    life:parseInt(v('inv-life'))||0,stock:1,location:v('inv-location'),pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),assetType:v('inv-type'),notes:v('inv-notes')};
+  for(let number=0;number<quantity;number++){
+    const item={id:uid(),assetId:genInventoryId(category),...common,movements:[]};
+    addInventoryMovement(item,'Asset Created',{qtyBefore:0,qtyAfter:1,note:quantity>1?`Unit ${number+1} of ${quantity}.`:''});
+    DB.inventory.push(item);syncInventoryAssetLink(item);
+  }
+  if(!saveDB())return;closeModal();nav('inventory');
 }
 function openEditInventoryItem(id){
   ensureInvMaster();
@@ -11248,15 +11441,15 @@ function openEditInventoryItem(id){
   <div class="fr3">
     <div class="fg"><label>Category</label><select id="inv-cat" onchange="onInvCatChange()">${catOpts}</select></div>
     <div class="fg" id="inv-name-wrap"><label>Item Name</label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(i.category,i.name)}</select></div>
-    <div class="fg"><label>Brand/Type</label><input id="inv-brand" value="${i.brand||''}"></div>
+    <div class="fg"><label>Brand/Type</label><input id="inv-brand" value="${invAttr(i.brand||'')}"></div>
   </div>
   <div class="fr3">
     <div class="fg"><label>Purchase Date</label><input type="date" id="inv-date" value="${i.purchaseDate||today()}"></div>
-    <div class="fg"><label>Acquisition Cost</label><input type="number" id="inv-cost" value="${i.cost||0}"></div>
+    <div class="fg"><label>Acquisition Cost per Unit</label><input type="number" id="inv-cost" value="${Number(i.cost)||0}"></div>
     <div class="fg"><label>Useful Life (Years) <span style="font-weight:400;color:#94a3b8">— automatic</span></label><input type="number" id="inv-life" value="${i.life||0}" min="0" readonly style="background:#f1f5f9;color:#64748b"></div>
   </div>
   <div class="fr3">
-    <div class="fg"><label>Stock</label><input type="number" id="inv-stock" value="${i.stock||1}" min="1"></div>
+    <div class="fg"><label>Availability</label><select id="inv-stock"><option value="1"${invStockValue(i)>0?' selected':''}>In Stock</option><option value="0"${invStockValue(i)===0?' selected':''}>Stock Out</option></select></div>
     <div class="fg"><label>Location</label><select id="inv-location" onchange="onInvSelectChange('inv-location','locations','New location:')">${invSelectOpts(DB.invMaster.locations,i.location,'Add New Location')}</select></div>
     <div class="fg"><label>Person in Charge</label><select id="inv-pic" onchange="onInvPicChange()">${invPicSelectOpts(i.pic)}</select></div>
   </div>
@@ -11265,7 +11458,7 @@ function openEditInventoryItem(id){
     <div class="fg"><label>Status</label><select id="inv-status" onchange="onInvSelectChange('inv-status','statusList','New status:')">${invSelectOpts(DB.invMaster.statusList,i.status,'Add New Status')}</select></div>
     <div class="fg"><label>Asset Type</label><select id="inv-type">${typeOpts}</select></div>
   </div>
-  <div class="fg"><label>Notes</label><input id="inv-notes" value="${i.notes||''}"></div>
+  <div class="fg"><label>Notes</label><input id="inv-notes" value="${invAttr(i.notes||'')}"></div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="updateInventoryItem()">Update</button></div>`);
 }
 function updateInventoryItem(){
@@ -11273,11 +11466,15 @@ function updateInventoryItem(){
   const idx=(DB.inventory||[]).findIndex(x=>x.id===id);
   if(idx<0)return alert('Items not found!');
   const name=v('inv-name');
-  if(!name||name==='__add__')return alert('Items name is required!');
+  if(!name||name==='__add__')return alert('Item name is required!');
+  const previous={...DB.inventory[idx]},previousStock=invStockValue(DB.inventory[idx]);
   DB.inventory[idx]={...DB.inventory[idx],name,category:v('inv-cat'),brand:v('inv-brand'),
     purchaseDate:v('inv-date'),cost:parseFloat(v('inv-cost'))||0,life:parseInt(v('inv-life'))||0,
-    stock:parseInt(v('inv-stock'))||1,location:v('inv-location'),pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),
+    stock:Number(v('inv-stock'))===0?0:1,location:v('inv-location'),pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),
     assetType:v('inv-type'),notes:v('inv-notes')};
+  if(previousStock!==invStockValue(DB.inventory[idx])||previous.location!==DB.inventory[idx].location||previous.pic!==DB.inventory[idx].pic||previous.status!==DB.inventory[idx].status){
+    addInventoryMovement(DB.inventory[idx],'Manual Edit',{qtyBefore:previousStock,qtyAfter:invStockValue(DB.inventory[idx]),fromLocation:previous.location,toLocation:DB.inventory[idx].location,fromPic:previous.pic,toPic:DB.inventory[idx].pic,status:DB.inventory[idx].status,note:'Updated from Edit Data.'});
+  }
   syncInventoryAssetLink(DB.inventory[idx]);
   if(!saveDB())return;closeModal();nav('inventory');
 }
@@ -11287,7 +11484,15 @@ function delInventoryItem(id){
   if(item&&item.linkedAssetId)DB.assets=(DB.assets||[]).filter(a=>a.id!==item.linkedAssetId);
   DB.inventory=(DB.inventory||[]).filter(i=>i.id!==id);if(!saveDB())return;nav('inventory');
 }
-function exportInventory(){exportXLSX([{name:'Inventory',data:(DB.inventory||[]).map(i=>({'Asset ID':i.assetId,'Item Name':i.name,Category:i.category,'Brand/Type':i.brand,'Purchase Date':i.purchaseDate,'Acquisition Cost':i.cost,'Useful Life':i.life,Stock:i.stock,Location:i.location,PIC:i.pic,Condition:i.condition,Status:i.status,'Asset Type':i.assetType,Notes:i.notes}))}],'office_inventory');}
+function exportInventory(){
+  const assets=(DB.inventory||[]);
+  const movements=[];
+  assets.forEach(i=>(i.movements||[]).forEach(m=>movements.push({'Asset ID':i.assetId,'Item Name':i.name,Date:inventoryMovementDate(m.at),Activity:m.type,'Stock Before':m.qtyBefore,'Stock After':m.qtyAfter,'From Location':m.fromLocation,'To Location':m.toLocation,'From PIC':m.fromPic,'To PIC':m.toPic,Status:m.status,'Updated By':m.by,Note:m.note})));
+  exportXLSX([
+    {name:'Office Inventory',data:assets.map(i=>({'Asset ID':i.assetId,'Item Name':i.name,Category:i.category,'Brand/Type':i.brand,'Purchase Date':i.purchaseDate,'Acquisition Cost per Unit':i.cost,'Useful Life':i.life,Availability:invStockValue(i)>0?'In Stock':'Stock Out',Location:i.location,PIC:i.pic,Condition:i.condition,Status:i.status,'Asset Type':i.assetType,Notes:i.notes}))},
+    {name:'Movement History',data:movements}
+  ],'office_inventory');
+}
 
 // ── AMS PRODUCT / SERVICE SEED (v2 — Full Catalog) ──────────────────────────
 function seedAMSProducts(){
@@ -15407,7 +15612,8 @@ function renderFAQ(c){
     ['Inventory and Fixed Assets',[
       ['How are Inventory and Fixed Assets connected?','An Inventory item marked as a Fixed Asset automatically creates or updates its linked Fixed Asset record. Core fields must be edited from Inventory.'],
       ['Why are some Fixed Asset fields locked?','Fields linked from Inventory are locked to prevent the two records from becoming inconsistent. Depreciation method and residual value may still be edited in Fixed Assets.'],
-      ['What information is stored in an inventory QR label?','The label can include Asset ID, item name, category, location, person in charge, condition, status, and asset type.']
+      ['What information is stored in an inventory label?','Each label contains a QR code for phone cameras, a Code 128 barcode for handheld scanners, the unique Asset ID, item name, location, and company name.'],
+      ['What can I do after scanning an office asset?','Open the asset record, record Stock In or Stock Out, move it to another location, change the person in charge, update its details, reprint the label, and review its movement history.']
     ]],
     ['Payroll and Tax',[
       ['How is payroll calculated?','Payroll uses employee master data, working days, allowances, deductions, BPJS, and applicable income tax settings. Review every payslip before finalizing payroll.'],
@@ -17688,7 +17894,7 @@ function exportXLSX(sheets,filename){
 //  MODAL
 // ================================================================
 function openModal(title,body,cls){document.getElementById('modal-title').textContent=title;document.getElementById('modal-body').innerHTML=body;document.getElementById('modal-box').className='modal'+(cls?' '+cls:'');document.getElementById('modal-ov').classList.add('show');hydrateSecureImages(document.getElementById('modal-ov'));}
-function closeModal(e){if(e&&e.target!==document.getElementById('modal-ov'))return;document.getElementById('modal-ov').classList.remove('show');editId=null;}
+function closeModal(e){if(e&&e.target!==document.getElementById('modal-ov'))return;if(typeof stopInventoryCamera==='function')stopInventoryCamera();document.getElementById('modal-ov').classList.remove('show');editId=null;}
 
 // Helper
 function v(id){const el=document.getElementById(id);return el?el.value:'';}
@@ -17841,6 +18047,15 @@ async function init(){
   // Run the daily backup reminder
   autoBackup();
   nav('dashboard');
+  const requestedAsset=new URLSearchParams(location.search).get('asset');
+  if(requestedAsset){
+    nav('inventory');
+    setTimeout(()=>{
+      const item=findInventoryFromCode(requestedAsset);
+      if(item)openInventoryDetails(item.id);
+      else alert('The scanned Asset ID was not found in Office Inventory.');
+    },120);
+  }
 
   // ── Offline-first: background connectivity monitor ──
   // Ping setiap 15 detik. Kalau kembali online → auto-sync pending changes
@@ -20164,6 +20379,7 @@ z-index:9999;
       <div class="bnav-drawer-item" onclick="bnavGo('payroll')"><span class="ic">👥</span><span>HR & Tax</span></div>
       <div class="bnav-drawer-item" onclick="bnavGo('basts')"><span class="ic">🗂️</span><span>Documents</span></div>
       <div class="bnav-drawer-item" onclick="bnavGo('contacts')"><span class="ic">👤</span><span>Contacts</span></div>
+      <div class="bnav-drawer-item" onclick="bnavGo('inventory')"><span class="ic">🏷️</span><span>Office Inventory</span></div>
       <div class="bnav-drawer-item" onclick="bnavGo('ar')"><span class="ic">📋</span><span>Receivables</span></div>
       <div class="bnav-drawer-item" onclick="bnavGo('ap')"><span class="ic">🏦</span><span>Payables</span></div>
       <div class="bnav-drawer-item" onclick="bnavGo('assets')"><span class="ic">🏗️</span><span>Assets</span></div>
