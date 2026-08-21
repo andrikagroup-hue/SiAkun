@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.2 — Financial System</title>
+<title>SiAkun v24.3 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -719,6 +719,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 .coa-chart-card h4{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:16px;}
 @media(max-width:640px){.coa-charts{grid-template-columns:1fr;}}
 
+/* Self-registration stays readable on phones. */
+@media(max-width:560px){
+  #register-screen{padding:10px!important;align-items:flex-start!important;}
+  #register-screen>div{padding:20px!important;margin:10px auto!important;}
+  #register-screen .reg-grid{grid-template-columns:1fr!important;}
+  #register-screen .reg-grid>div{grid-column:1/-1!important;}
+}
+
 /* Operator panel */
 .op-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px;}
 .op-user-badge{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:12px 20px;border-radius:12px;margin-bottom:20px;}
@@ -870,8 +878,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
     <!-- Form -->
     <div style="margin-bottom:14px;">
-      <label id="lg-lbl-user" style="display:block;font-size:10.5px;font-weight:700;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Username</label>
-      <input id="lg-user" type="text" placeholder="Enter username" autocomplete="username"
+      <label id="lg-lbl-user" style="display:block;font-size:10.5px;font-weight:700;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Username or Email</label>
+      <input id="lg-user" type="text" placeholder="Enter username or email" autocomplete="username"
         style="width:100%;padding:10px 13px;border:1.5px solid #dde3f0;border-radius:9px;font-size:13.5px;font-family:inherit;outline:none;transition:border .15s;"
         onfocus="this.style.borderColor='#14b8a6'" onblur="this.style.borderColor='#dde3f0'"
         onkeydown="if(event.key==='Enter')document.getElementById('lg-pass').focus()">
@@ -887,7 +895,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
       </div>
     </div>
     <div id="lg-err" style="display:none;background:#fee2e2;color:#991b1b;padding:9px 13px;border-radius:7px;font-size:12px;margin-bottom:14px;border-left:3px solid #ef4444;">
-      ❌ <span id="lg-err-txt">Username or password is incorrect!</span>
+      ❌ <span id="lg-err-txt">Username/email or password is incorrect!</span>
     </div>
     <button id="lg-btn" onclick="doLogin()" style="width:100%;padding:12px;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .15s;"
       onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
@@ -901,13 +909,70 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.205c0-.638-.057-1.252-.164-1.841H9v3.482h4.844a4.14 4.14 0 0 1-1.797 2.715v2.258h2.909c1.702-1.567 2.684-3.875 2.684-6.614Z"/><path fill="#34A853" d="M9 18c2.43 0 4.468-.806 5.956-2.181l-2.909-2.258c-.806.54-1.835.859-3.047.859-2.344 0-4.328-1.584-5.037-3.713H.956v2.332A9 9 0 0 0 9 18Z"/><path fill="#FBBC05" d="M3.963 10.707A5.41 5.41 0 0 1 3.682 9c0-.592.102-1.168.281-1.707V4.961H.956A9 9 0 0 0 0 9c0 1.452.347 2.827.956 4.039l3.007-2.332Z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.507.454 3.441 1.346l2.581-2.581C13.464.892 11.426 0 9 0A9 9 0 0 0 .956 4.961l3.007 2.332C4.672 5.164 6.656 3.58 9 3.58Z"/></svg>
       <span id="lg-google-label">Continue with Google</span>
     </button>
-    <div id="lg-google-note" style="text-align:center;margin-top:9px;font-size:10.5px;line-height:1.45;color:#94a3b8;">Use the Google email approved by your SiAkun Admin.</div>
+    <div id="lg-google-note" style="text-align:center;margin-top:9px;font-size:10.5px;line-height:1.45;color:#94a3b8;">Sign in with a Google account already registered in SiAkun.</div>
+    <button type="button" onclick="openSelfRegister()" style="width:100%;margin-top:14px;padding:10px;background:#ecfeff;color:#0f766e;border:1.5px solid #99f6e4;border-radius:9px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;">
+      Create your own account
+    </button>
+    <div style="text-align:center;margin-top:7px;font-size:10.5px;line-height:1.45;color:#94a3b8;">Register as Director, Manager, or Staff. Owner access is protected.</div>
     <div id="lg-footer" style="text-align:center;margin-top:16px;font-size:11px;color:#94a3b8;">
       🔒 Restricted access for internal team
       </div>
 
     </div>
   </div>
+
+<!-- SELF-REGISTRATION SCREEN -->
+<div id="register-screen" style="position:fixed;inset:0;z-index:10001;background:rgba(15,23,42,.72);display:none;align-items:center;justify-content:center;padding:18px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:18px;padding:28px;width:100%;max-width:470px;box-shadow:0 24px 64px rgba(0,0,0,.32);margin:auto;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:20px;font-weight:850;color:#0f172a;">Create SiAkun Account</div>
+        <div style="font-size:11.5px;color:#64748b;margin-top:4px;line-height:1.45;">Create your own account. Owner/Admin cannot be selected.</div>
+      </div>
+      <button type="button" onclick="closeSelfRegister()" aria-label="Close registration" style="border:none;background:#f1f5f9;color:#475569;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;">×</button>
+    </div>
+
+    <div class="reg-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="grid-column:1/-1;">
+        <label style="display:block;font-size:10.5px;font-weight:750;color:#64748b;margin-bottom:4px;text-transform:uppercase;">Full Name</label>
+        <input id="reg-name" type="text" maxlength="100" autocomplete="name" placeholder="Your full name" style="width:100%;padding:10px 12px;border:1.5px solid #dde3f0;border-radius:9px;font:13px inherit;outline:none;">
+      </div>
+      <div>
+        <label style="display:block;font-size:10.5px;font-weight:750;color:#64748b;margin-bottom:4px;text-transform:uppercase;">Username</label>
+        <input id="reg-username" type="text" maxlength="50" autocomplete="username" placeholder="e.g. budi" style="width:100%;padding:10px 12px;border:1.5px solid #dde3f0;border-radius:9px;font:13px inherit;outline:none;">
+      </div>
+      <div>
+        <label style="display:block;font-size:10.5px;font-weight:750;color:#64748b;margin-bottom:4px;text-transform:uppercase;">Position / Role</label>
+        <select id="reg-role" style="width:100%;padding:10px 12px;border:1.5px solid #dde3f0;border-radius:9px;font:13px inherit;background:#fff;outline:none;">
+          <option value="">Choose role</option>
+          <option value="Director">Director</option>
+          <option value="Manager">Manager</option>
+          <option value="Staff">Staff</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="display:block;font-size:10.5px;font-weight:750;color:#64748b;margin-bottom:4px;text-transform:uppercase;">Email <span style="font-weight:500;text-transform:none;">(optional)</span></label>
+        <input id="reg-email" type="email" maxlength="320" autocomplete="email" placeholder="Leave blank if you do not use email" style="width:100%;padding:10px 12px;border:1.5px solid #dde3f0;border-radius:9px;font:13px inherit;outline:none;">
+        <div style="font-size:10px;color:#94a3b8;margin-top:4px;">For Google registration, Google supplies the verified email automatically.</div>
+      </div>
+      <div>
+        <label style="display:block;font-size:10.5px;font-weight:750;color:#64748b;margin-bottom:4px;text-transform:uppercase;">Password</label>
+        <input id="reg-password" type="password" autocomplete="new-password" placeholder="Strong password" style="width:100%;padding:10px 12px;border:1.5px solid #dde3f0;border-radius:9px;font:13px inherit;outline:none;">
+      </div>
+      <div>
+        <label style="display:block;font-size:10.5px;font-weight:750;color:#64748b;margin-bottom:4px;text-transform:uppercase;">Confirm Password</label>
+        <input id="reg-password2" type="password" autocomplete="new-password" placeholder="Repeat password" style="width:100%;padding:10px 12px;border:1.5px solid #dde3f0;border-radius:9px;font:13px inherit;outline:none;">
+      </div>
+    </div>
+
+    <div id="reg-err" style="display:none;background:#fee2e2;color:#991b1b;padding:9px 12px;border-radius:7px;font-size:11.5px;margin-top:12px;border-left:3px solid #ef4444;"></div>
+    <div style="font-size:10px;color:#64748b;line-height:1.45;margin-top:8px;">Password accounts require at least 12 characters with uppercase, lowercase, number, and symbol.</div>
+
+    <button id="reg-password-btn" type="button" onclick="doPasswordRegister()" style="width:100%;margin-top:14px;padding:11px;background:linear-gradient(135deg,#14b8a6,#0d9488);color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:800;font-family:inherit;cursor:pointer;">Create Account</button>
+    <div style="display:flex;align-items:center;gap:9px;margin:13px 0;color:#94a3b8;font-size:10px;font-weight:700;text-transform:uppercase;"><span style="height:1px;background:#e2e8f0;flex:1;"></span><span>or</span><span style="height:1px;background:#e2e8f0;flex:1;"></span></div>
+    <button id="reg-google-btn" type="button" onclick="doGoogleRegister()" style="width:100%;padding:10px;background:#fff;color:#1f2937;border:1.5px solid #dbe2ea;border-radius:9px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;">ⓖ Register with Google</button>
+  </div>
+</div>
 
 <!-- MAIN -->
 <div class="main">
@@ -1229,11 +1294,11 @@ function applyLoginLang(){
   const sub=document.getElementById('lg-subtitle');
   if(sub)sub.textContent=isID?'FINANCIAL SYSTEM':'FINANCIAL SYSTEM';
   const lblU=document.getElementById('lg-lbl-user');
-  if(lblU)lblU.textContent='Username';
+  if(lblU)lblU.textContent='Username or Email';
   const lblP=document.getElementById('lg-lbl-pass');
   if(lblP)lblP.textContent='Password';
   const inp=document.getElementById('lg-user');
-  if(inp)inp.placeholder=isID?'Enter username':'Enter username';
+  if(inp)inp.placeholder='Enter username or email';
   const inpP=document.getElementById('lg-pass');
   if(inpP)inpP.placeholder=isID?'Enter password':'Enter password';
   const loginBtn=document.getElementById('lg-btn');
@@ -1241,7 +1306,7 @@ function applyLoginLang(){
   const footer=document.getElementById('lg-footer');
   if(footer)footer.textContent=isID?'🔒 Restricted access for internal team':'🔒 Restricted access for internal team';
   const err=document.getElementById('lg-err-txt');
-  if(err)err.textContent=isID?'Username or password is incorrect!':'Username or password is incorrect!';
+  if(err)err.textContent='Username/email or password is incorrect!';
 }
 
 function toggleLangLogin(){ return; /* English-only */
@@ -1281,7 +1346,8 @@ const SUPA_URL='https://bmrgfnbzlifhehjmqhlk.supabase.co';
 const SUPA_KEY='sb_publishable_CAO0hk86JEqqUEvn-M7Ghw_EnTQHftc';
 if(!SUPA_KEY.startsWith('sb_publishable_'))throw new Error('SiAkun requires a Supabase publishable key. Never place a service-role key in index.html.');
 const SIAKUN_APP_URL='https://andrikagroup-hue.github.io/SiAkun/';
-const GOOGLE_AUTH_STORAGE_KEY='siakun_google_oauth_v24';
+const GOOGLE_AUTH_STORAGE_KEY='siakun_google_oauth_v24_3';
+const GOOGLE_REG_STORAGE_KEY='siakun_google_registration_v24_3';
 const SESSION_KEY='siakun_session_v23';
 const AUTH_TOKEN_KEY='siakun_auth_token_v23';
 const TRUSTED_SESSION_KEY='siakun_trusted_session_ratu_v24';
@@ -1350,6 +1416,90 @@ function showLoginError(message){
   if(errTxt)errTxt.textContent=String(message||'Unable to sign in.');
   if(errEl)errEl.style.display='block';
 }
+function showRegisterError(message){
+  const el=document.getElementById('reg-err');
+  if(!el)return;
+  el.textContent=String(message||'Unable to create the account.');
+  el.style.display='block';
+}
+function openSelfRegister(){
+  const screen=document.getElementById('register-screen');
+  const err=document.getElementById('reg-err');
+  if(err)err.style.display='none';
+  if(screen)screen.style.display='flex';
+}
+function closeSelfRegister(){
+  const screen=document.getElementById('register-screen');
+  if(screen)screen.style.display='none';
+}
+function selfRegistrationInput(includePassword){
+  const data={
+    name:String(document.getElementById('reg-name')?.value||'').trim(),
+    username:String(document.getElementById('reg-username')?.value||'').trim().toLowerCase(),
+    role:String(document.getElementById('reg-role')?.value||''),
+    email:String(document.getElementById('reg-email')?.value||'').trim().toLowerCase()
+  };
+  if(data.name.length<2)throw new Error('Enter your full name.');
+  if(!/^[a-z0-9._-]{3,50}$/.test(data.username))throw new Error('Username must be 3-50 characters using letters, numbers, dots, underscores, or hyphens.');
+  if(['ratu','admin','administrator','owner','root'].includes(data.username))throw new Error('This username is reserved.');
+  if(!['Director','Manager','Staff'].includes(data.role))throw new Error('Choose Director, Manager, or Staff.');
+  if(data.email&&!isValidGoogleEmail(data.email))throw new Error('Enter a valid email address or leave it blank.');
+  if(includePassword){
+    data.password=String(document.getElementById('reg-password')?.value||'');
+    const confirmation=String(document.getElementById('reg-password2')?.value||'');
+    if(!isStrongPassword(data.password))throw new Error(STRONG_PASSWORD_MESSAGE);
+    if(data.password!==confirmation)throw new Error('Password confirmation does not match.');
+  }
+  return data;
+}
+async function doPasswordRegister(){
+  const btn=document.getElementById('reg-password-btn');
+  const err=document.getElementById('reg-err');
+  if(err)err.style.display='none';
+  try{
+    const data=selfRegistrationInput(true);
+    if(btn){btn.disabled=true;btn.textContent='Creating account...';}
+    const result=await sbAuthSelfRegister(data);
+    if(!result||result.ok===false)throw new Error(result?.error||'Unable to create the account.');
+    if(!result.token||!result.user)throw new Error('Invalid registration response.');
+    const cacheCheck=prepareBrowserCacheForUser(result.user.username);
+    if(!cacheCheck.ok){
+      try{await sbAuthLogoutToken(result.token);}catch(ignore){}
+      throw new Error(`This browser contains unsynchronized SiAkun data owned by ${cacheCheck.owner}. That user must synchronize or back up the data first.`);
+    }
+    storeSiAkunSession(result.token,result.user);
+    location.reload();
+  }catch(e){showRegisterError(e?.message||'Unable to create the account.');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create Account';}}
+}
+function pendingGoogleRegistration(){
+  try{
+    const parsed=JSON.parse(sessionStorage.getItem(GOOGLE_REG_STORAGE_KEY)||'null');
+    if(!parsed||Date.now()-Number(parsed.startedAt||0)>30*60*1000)return null;
+    if(!parsed.username||!parsed.name||!['Director','Manager','Staff'].includes(parsed.role))return null;
+    return parsed;
+  }catch(e){return null;}
+}
+async function doGoogleRegister(){
+  const btn=document.getElementById('reg-google-btn');
+  const err=document.getElementById('reg-err');
+  if(err)err.style.display='none';
+  try{
+    const data=selfRegistrationInput(false);
+    sessionStorage.setItem(GOOGLE_REG_STORAGE_KEY,JSON.stringify({username:data.username,name:data.name,role:data.role,startedAt:Date.now()}));
+    if(btn){btn.disabled=true;btn.textContent='Opening Google...';}
+    const client=googleAuthClient();
+    const {error}=await client.auth.signInWithOAuth({
+      provider:'google',
+      options:{redirectTo:SIAKUN_APP_URL,queryParams:{prompt:'select_account'}}
+    });
+    if(error)throw error;
+  }catch(e){
+    sessionStorage.removeItem(GOOGLE_REG_STORAGE_KEY);
+    showRegisterError(e?.message||'Unable to open Google registration.');
+    if(btn){btn.disabled=false;btn.textContent='ⓖ Register with Google';}
+  }
+}
 function googleAuthClient(){
   if(_googleAuthClient)return _googleAuthClient;
   if(!window.supabase||typeof window.supabase.createClient!=='function')throw new Error('Google sign-in could not be loaded. Check the internet connection and try again.');
@@ -1386,6 +1536,7 @@ async function doGoogleLogin(){
   if(btn)btn.disabled=true;
   if(label)label.textContent='Opening Google...';
   try{
+    sessionStorage.removeItem(GOOGLE_REG_STORAGE_KEY);
     const client=googleAuthClient();
     const {error}=await client.auth.signInWithOAuth({
       provider:'google',
@@ -1401,6 +1552,7 @@ async function doGoogleLogin(){
 async function completeGoogleLogin(){
   const oauth=googleOAuthParams();
   if(!oauth.requested)return false;
+  const registration=pendingGoogleRegistration();
   const btn=document.getElementById('lg-google-btn');
   const label=document.getElementById('lg-google-label');
   if(btn)btn.disabled=true;
@@ -1414,8 +1566,10 @@ async function completeGoogleLogin(){
     if(error)throw error;
     const accessToken=data?.session?.access_token||'';
     if(!accessToken)throw new Error('Google sign-in could not be verified. Please try again.');
-    const result=await sbAuthGoogleLogin(accessToken);
-    if(!result||result.ok===false)throw new Error(result?.error||'This Google account is not linked to SiAkun.');
+    const result=registration
+      ?await sbAuthGoogleRegister(accessToken,registration)
+      :await sbAuthGoogleLogin(accessToken);
+    if(!result||result.ok===false)throw new Error(result?.error||(registration?'Unable to create the Google account.':'This Google account is not registered in SiAkun. Choose Create your own account first.'));
     if(!result.token||!result.user)throw new Error('Invalid Google login response.');
     bridgeToken=result.token;
     const cacheCheck=prepareBrowserCacheForUser(result.user.username);
@@ -1425,10 +1579,12 @@ async function completeGoogleLogin(){
       throw new Error(`This browser contains unsynchronized SiAkun data owned by ${cacheCheck.owner}. That user must sign in and synchronize or back up the data before another account can use this browser.`);
     }
     storeSiAkunSession(result.token,result.user);
+    sessionStorage.removeItem(GOOGLE_REG_STORAGE_KEY);
     bridgeToken='';
     return true;
   }catch(e){
     if(bridgeToken){try{await sbAuthLogoutToken(bridgeToken);}catch(ignore){}}
+    sessionStorage.removeItem(GOOGLE_REG_STORAGE_KEY);
     showLoginError(e?.message||'Unable to sign in with Google.');
     return false;
   }finally{
@@ -3013,11 +3169,11 @@ async function doLogin(){
   const username=document.getElementById('lg-user').value.trim().toLowerCase();
   const password=document.getElementById('lg-pass').value;
   const btn=document.getElementById('lg-btn');const errEl=document.getElementById('lg-err');const errTxt=document.getElementById('lg-err-txt');
-  if(!username||!password){if(errTxt)errTxt.textContent='Username and password are required.';if(errEl)errEl.style.display='block';return;}
+  if(!username||!password){if(errTxt)errTxt.textContent='Username/email and password are required.';if(errEl)errEl.style.display='block';return;}
   if(btn){btn.disabled=true;btn.textContent='Signing in...';}
   try{
     const result=await sbAuthLogin(username,password);
-    if(!result||result.ok===false)throw new Error(result?.error||'Username or password is incorrect.');
+    if(!result||result.ok===false)throw new Error(result?.error||'Username/email or password is incorrect.');
     if(!result.token||!result.user)throw new Error('Invalid login response.');
     const cacheCheck=prepareBrowserCacheForUser(result.user.username);
     if(!cacheCheck.ok){
@@ -3027,7 +3183,7 @@ async function doLogin(){
     storeSiAkunSession(result.token,result.user);
     location.reload();
   }catch(e){
-    if(errTxt)errTxt.textContent=(e&&e.message&&/migration|function|not found/i.test(e.message))?'The secure database migration has not been installed yet.':(e?.message||'Username or password is incorrect.');
+    if(errTxt)errTxt.textContent=(e&&e.message&&/migration|function|not found/i.test(e.message))?'The secure database migration has not been installed yet.':(e?.message||'Username/email or password is incorrect.');
     if(errEl)errEl.style.display='block';
     document.getElementById('lg-pass').value='';
   }finally{if(btn){btn.disabled=false;btn.textContent='Login →';}}
@@ -3045,8 +3201,9 @@ function _updateUserBadge(user){
   b.innerHTML = `<span class="user-avatar" style="background:${color}">${initial}</span><span class="user-chevron">▼</span>`;
   const dn = document.querySelector('#user-menu .user-name');
   const dr = document.querySelector('#user-menu .user-role');
+  const displayedRole = String(user.username||'').toLowerCase()==='ratu' && user.role==='Admin' ? 'Owner' : (user.role||'');
   if(dn) dn.textContent = user.name || user.username || '';
-  if(dr) dr.textContent = (user.role || '') + (user.id ? ' · ID: ' + user.id : '');
+  if(dr) dr.textContent = displayedRole + (user.id ? ' · ID: ' + user.id : '');
 }
 function toggleUserMenu(e){
   if(e)e.stopPropagation();
@@ -3357,10 +3514,38 @@ async function sbSetSphOutcomeAtomic(sphId,status,expectedRevision){
 async function sbAuthLogin(username,password){
   return await supaRequest('/rest/v1/rpc/siakun_login',{method:'POST',body:JSON.stringify({p_username:String(username||'').trim(),p_password:String(password||'')}),timeout:12000});
 }
+async function sbAuthSelfRegister(data){
+  return await supaRequest('/rest/v1/rpc/siakun_register_password',{
+    method:'POST',
+    body:JSON.stringify({
+      p_username:String(data?.username||'').trim().toLowerCase(),
+      p_password:String(data?.password||''),
+      p_role:String(data?.role||''),
+      p_name:String(data?.name||'').trim(),
+      p_email:String(data?.email||'').trim().toLowerCase()
+    }),
+    timeout:12000,
+    skipSessionHandling:true
+  });
+}
 async function sbAuthGoogleLogin(accessToken){
   if(!accessToken)throw new Error('Missing Google access token.');
   return await supaRequest('/rest/v1/rpc/siakun_google_login',{
     method:'POST',body:'{}',headers:{Authorization:'Bearer '+String(accessToken)},timeout:12000,skipSessionHandling:true
+  });
+}
+async function sbAuthGoogleRegister(accessToken,data){
+  if(!accessToken)throw new Error('Missing Google access token.');
+  return await supaRequest('/rest/v1/rpc/siakun_google_register',{
+    method:'POST',
+    body:JSON.stringify({
+      p_username:String(data?.username||'').trim().toLowerCase(),
+      p_role:String(data?.role||''),
+      p_name:String(data?.name||'').trim()
+    }),
+    headers:{Authorization:'Bearer '+String(accessToken)},
+    timeout:12000,
+    skipSessionHandling:true
   });
 }
 async function sbAuthValidate(){
@@ -19530,7 +19715,7 @@ window.onload=init;
 //  USER MANAGEMENT (Admin only)
 // ================================================================
 function getRoles(){return DB.roles&&DB.roles.length?DB.roles:['Admin','Staff','Operator','Director','Manager','Finance','HRD'];}
-function roleOptions(selected){return getRoles().map(r=>`<option value="${r}" ${r===selected?'selected':''}>${r}</option>`).join('');}
+function roleOptions(selected){return getRoles().filter(r=>r!=='Admin'||selected==='Admin').map(r=>`<option value="${r}" ${r===selected?'selected':''}>${r==='Admin'?'Owner':r}</option>`).join('');}
 function isStrongPassword(value){return typeof value==='string'&&value.length>=12&&/[A-Z]/.test(value)&&/[a-z]/.test(value)&&/[0-9]/.test(value)&&/[^A-Za-z0-9]/.test(value);}
 const STRONG_PASSWORD_MESSAGE='Use at least 12 characters with uppercase, lowercase, number, and symbol.';
 
@@ -19542,7 +19727,7 @@ async function renderUsers(c){
   const roles=getRoles();
   c.innerHTML=`<div class="tabs"><div class="tab active" onclick="showUTab('users',this)">Users</div><div class="tab" onclick="showUTab('roles',this)">Roles</div></div>
   <div id="utab-users" class="tabcnt active"><div class="card"><div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Google Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-  ${_serverUsers.map(u=>`<tr><td class="fw7">${invoiceEscapeHtml(u.name||'-')}</td><td>${invoiceEscapeHtml(u.username)}</td><td>${u.google_email?`${invoiceEscapeHtml(u.google_email)}<br><span class="badge ${u.google_is_linked?'b-ok':'b-info'}" style="margin-top:4px">${u.google_is_linked?'Linked':'Approved'}</span>`:'<span class="muted">Not linked</span>'}</td><td><span class="badge b-info">${invoiceEscapeHtml(u.role)}</span></td><td>${u.is_active===false?'<span class="badge b-bad">Disabled</span>':u.must_change_password?'<span class="badge b-warn">Password reset required</span>':'<span class="badge b-ok">Active</span>'}</td><td class="gap8"><button class="btn btn-out btn-xs" onclick="openEditUser('${invoiceEscapeAttr(u.username)}')">Edit</button><button class="btn btn-out btn-xs" onclick="openResetPass('${invoiceEscapeAttr(u.username)}')">Reset Password</button>${u.username!==_currentUser.username?`<button class="btn btn-bad btn-xs" onclick="delUser('${invoiceEscapeAttr(u.username)}')">Delete</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="tbl-empty">No users found.</td></tr>'}
+  ${_serverUsers.map(u=>`<tr><td class="fw7">${invoiceEscapeHtml(u.name||'-')}</td><td>${invoiceEscapeHtml(u.username)}</td><td>${u.google_email?`${invoiceEscapeHtml(u.google_email)}<br><span class="badge ${u.google_is_linked?'b-ok':'b-info'}" style="margin-top:4px">${u.google_is_linked?'Linked':'Registered'}</span>`:'<span class="muted">Not linked</span>'}</td><td><span class="badge b-info">${invoiceEscapeHtml(String(u.username||'').toLowerCase()==='ratu'&&u.role==='Admin'?'Owner':u.role)}</span></td><td>${u.is_active===false?'<span class="badge b-bad">Disabled</span>':u.must_change_password?'<span class="badge b-warn">Password reset required</span>':'<span class="badge b-ok">Active</span>'}</td><td class="gap8"><button class="btn btn-out btn-xs" onclick="openEditUser('${invoiceEscapeAttr(u.username)}')">Edit</button><button class="btn btn-out btn-xs" onclick="openResetPass('${invoiceEscapeAttr(u.username)}')">Reset Password</button>${u.username!==_currentUser.username?`<button class="btn btn-bad btn-xs" onclick="delUser('${invoiceEscapeAttr(u.username)}')">Delete</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="tbl-empty">No users found.</td></tr>'}
   </tbody></table></div></div></div>
   <div id="utab-roles" class="tabcnt"><div class="card"><div class="card-hd">Manage Roles</div><div style="display:flex;gap:8px;margin-bottom:16px"><input id="new-role-input" placeholder="New role name"><button class="btn btn-pri" onclick="addRole()">+ Add Role</button></div><div class="tbl-wrap"><table><thead><tr><th>Role</th><th>Users</th><th>Actions</th></tr></thead><tbody>${roles.map(role=>{const count=_serverUsers.filter(u=>u.role===role).length;return`<tr><td>${invoiceEscapeHtml(role)}</td><td>${count}</td><td>${role==='Admin'?'<span class="badge b-gray">Protected</span>':`<button class="btn btn-bad btn-xs" onclick="delRole('${invoiceEscapeAttr(role)}')">Delete</button>`}</td></tr>`;}).join('')}</tbody></table></div></div></div>`;
 }
