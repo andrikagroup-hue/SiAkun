@@ -11703,6 +11703,46 @@ function printInventoryLabels(ids){
   if(w){w.document.write(html);w.document.close();}
   else alert('The browser blocked the pop-up. Allow pop-ups to print.');
 }
+function invBulkLocationValues(){
+  return [...document.querySelectorAll('.inv-unit-location')].map(sel=>sel.value);
+}
+function renderInvUnitLocations(forceDefault=false,providedValues=null){
+  const wrap=document.getElementById('inv-unit-locations-wrap');
+  const qtyEl=document.getElementById('inv-qty');
+  if(!wrap||!qtyEl)return;
+  const quantity=Math.max(1,Math.min(500,parseInt(qtyEl.value)||1));
+  if(quantity<=1){wrap.innerHTML='';wrap.style.display='none';return;}
+  const defaultLocation=v('inv-location');
+  const currentValues=Array.isArray(providedValues)?providedValues:invBulkLocationValues();
+  wrap.style.display='block';
+  wrap.innerHTML=`
+    <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:11px 12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:800;color:#0f766e">Set the location for each unit</div>
+      <div style="font-size:11px;color:#475569;margin-top:3px;line-height:1.45">The common information above is entered only once. SiAkun will create ${quantity} different Asset IDs and labels.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+      ${Array.from({length:quantity},(_,index)=>{
+        const selected=forceDefault?defaultLocation:(currentValues[index]||defaultLocation);
+        return`<div class="fg" style="margin:0"><label>Unit ${index+1} Location</label><select id="inv-unit-location-${index}" class="inv-unit-location" onchange="onInvUnitLocationChange('inv-unit-location-${index}',${index})">${invSelectOpts(DB.invMaster.locations,selected,'Add New Location')}</select></div>`;
+      }).join('')}
+    </div>`;
+}
+function onInvDefaultLocationChange(){
+  onInvSelectChange('inv-location','locations','New location:');
+  renderInvUnitLocations(true);
+}
+function onInvUnitLocationChange(selId,index){
+  const sel=document.getElementById(selId);
+  if(!sel||sel.value!=='__add__')return;
+  const values=invBulkLocationValues();
+  const val=prompt('New location:');
+  if(!val){sel.selectedIndex=0;return;}
+  ensureInvMaster();
+  if(!DB.invMaster.locations.includes(val))DB.invMaster.locations.push(val);
+  if(!saveDB())return;
+  values[index]=val;
+  renderInvUnitLocations(false,values);
+}
 function openInventoryItem(){
   ensureInvMaster();
   const catOpts=Object.keys(CATALOG_PREFIX).map(c=>`<option>${c}</option>`).join('');
@@ -11720,10 +11760,11 @@ function openInventoryItem(){
     <div class="fg"><label>Useful Life (Years) <span style="font-weight:400;color:#94a3b8">— automatic</span></label><input type="number" id="inv-life" placeholder="0" min="0" readonly style="background:#f1f5f9;color:#64748b"></div>
   </div>
   <div class="fr3">
-    <div class="fg"><label>Quantity / Unique Labels</label><input type="number" id="inv-qty" value="1" min="1" max="500"></div>
-    <div class="fg"><label>Location</label><select id="inv-location" onchange="onInvSelectChange('inv-location','locations','New location:')">${invSelectOpts(DB.invMaster.locations,'','Add New Location')}</select></div>
+    <div class="fg"><label>Quantity / Unique Labels</label><input type="number" id="inv-qty" value="1" min="1" max="500" oninput="renderInvUnitLocations()"></div>
+    <div class="fg"><label>Default Location</label><select id="inv-location" onchange="onInvDefaultLocationChange()">${invSelectOpts(DB.invMaster.locations,'','Add New Location')}</select></div>
     <div class="fg"><label>Person in Charge</label><select id="inv-pic" onchange="onInvPicChange()">${invPicSelectOpts('')}</select></div>
   </div>
+  <div id="inv-unit-locations-wrap" style="display:none;margin:2px 0 14px"></div>
   <div class="fr3">
     <div class="fg"><label>Condition</label><select id="inv-condition" onchange="onInvSelectChange('inv-condition','conditionList','New condition:')">${invSelectOpts(DB.invMaster.conditionList,'','Add New Condition')}</select></div>
     <div class="fg"><label>Status</label><select id="inv-status" onchange="onInvSelectChange('inv-status','statusList','New status:')">${invSelectOpts(DB.invMaster.statusList,'','Add New Status')}</select></div>
@@ -11731,16 +11772,17 @@ function openInventoryItem(){
   </div>
   <div class="fg"><label>Notes</label><input id="inv-notes"></div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveInventoryItem()">Save</button></div>`);
-  onInvNameChange();
+  onInvNameChange();renderInvUnitLocations();
 }
 function saveInventoryItem(){
   const name=v('inv-name'),category=v('inv-cat');
   if(!name||name==='__add__')return alert('Item name is required!');
   const quantity=Math.max(1,Math.min(500,parseInt(v('inv-qty'))||1));
+  const locations=quantity>1?Array.from({length:quantity},(_,index)=>v('inv-unit-location-'+index)||v('inv-location')):[v('inv-location')];
   const common={name,category,brand:v('inv-brand'),purchaseDate:v('inv-date'),cost:parseFloat(v('inv-cost'))||0,
-    life:parseInt(v('inv-life'))||0,stock:1,location:v('inv-location'),pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),assetType:v('inv-type'),notes:v('inv-notes')};
+    life:parseInt(v('inv-life'))||0,stock:1,pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),assetType:v('inv-type'),notes:v('inv-notes')};
   for(let number=0;number<quantity;number++){
-    const item={id:uid(),assetId:genInventoryId(category),...common,movements:[]};
+    const item={id:uid(),assetId:genInventoryId(category),...common,location:locations[number],movements:[]};
     addInventoryMovement(item,'Asset Created',{qtyBefore:0,qtyAfter:1,note:quantity>1?`Unit ${number+1} of ${quantity}.`:''});
     DB.inventory.push(item);syncInventoryAssetLink(item);
   }
