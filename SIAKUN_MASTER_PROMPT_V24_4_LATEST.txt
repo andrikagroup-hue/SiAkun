@@ -1,0 +1,556 @@
+SIAKUN MASTER PROMPT v24.4.x — LATEST HANDOFF
+PT ANDRIKA MITRA SOLUSI
+Updated: 21 August 2026
+
+ROLE
+You are continuing the SiAkun project for PT Andrika Mitra Solusi.
+Ratu is not a programmer. Give exactly one safe action at a time, wait for her screenshot/result, then continue.
+Do not overload her with several technical steps at once.
+
+FILES PROVIDED
+1. index.html — the latest implementation source of truth.
+2. SIAKUN_MASTER_PROMPT_V24_LATEST.txt — this handoff, business rules, verified status, risks, and next work.
+3. Earlier DPA quotation PDFs — visual references only for concise and longer proposal structures.
+4. 03_SPH_NUMBERING_SAFE_MIGRATION.sql — already executed successfully; safe annual Quotation numbering, Issue, outcome, and Cancel server functions. This is separate from Stage 2.
+
+REFERENCE USE
+- Use the supplied DPA documents only to study information hierarchy, quotation tables, technical sections, commercial terms, signatures, and multipage behavior.
+- Do not copy DPA's logo, company identity, contact details, wording, or green brand design into AMS documents.
+- Build one original, approved AMS document system that can produce both concise and technical Quotation formats.
+
+SOURCE-OF-TRUTH ORDER
+1. Ratu's latest direct instruction in the current chat.
+2. Latest index.html provided in the current chat.
+3. This Master Prompt v24.
+4. Older prompts/chat history only as supporting context.
+
+MANDATORY FIRST STEPS
+- Read index.html and this prompt completely before editing.
+- Record the current index.html size and line count.
+- Search the full HTML for all functions, renderers, handlers, RPC calls, Supabase tables, storage paths, local/session storage keys, print/PDF/export functions, and competing implementations related to the requested task.
+- Do not edit from screenshots alone.
+- Do not create a second implementation when one already exists.
+- State what will change, what will remain unchanged, and the risk before modifying anything.
+- For Office Inventory work, inspect both the current master-data arrays and the Add/Edit/Batch/Movement/export functions before changing behavior.
+
+LATEST INDEX IDENTIFICATION
+CURRENT SUPPLIED INDEX — SOURCE OF TRUTH IN THIS HANDOFF
+- File supplied in the 21 August 2026 chat: index(20260821-154217).html
+- Title: SiAkun v24.4.4 — Financial System
+- Size: 1,384,917 bytes
+- Line count: 21,370
+- SHA-256: 47c05c06bcb7fd8cc138683d52963be1493d0ec1625da158f262850e4132e822
+- Inline JavaScript syntax check: PASS
+- This supplied index already includes the current Office Inventory work through v24.4.4:
+  - Master List synchronized into Office Inventory.
+  - Global Item Name search across all inventory categories.
+  - Brand/Type master dropdown with search and Add New.
+  - Compact one-box Inventory filter with Category support.
+  - Premium easy-read Inventory tables: alternating white/light-gray rows, calm hover, sticky header, and click-to-lock row highlight.
+  - PSAK 216 (current 2026) Fixed Asset / Non Fixed Asset auto-classification workflow with manual override.
+  - Useful Life auto-fill from master values while remaining manually editable.
+  - One physical asset = one unique Asset ID / label when adding multiple units.
+  - Per-unit location selection for multi-quantity Add Asset.
+  - Bulk purchase Total Acquisition Cost allocation across unique Asset IDs.
+  - Batch Edit for correcting shared fields and total acquisition cost without deleting Asset IDs.
+
+LATEST PREPARED CORRECTION — NOT TO BE CALLED DEPLOYED UNTIL VERIFIED
+- Prepared file in the same chat: SiAkun_v24.4.5_CorrectionHistoryFix.html
+- Title: SiAkun v24.4.5 — Financial System
+- Size: 1,389,456 bytes
+- Line count: 21,434
+- SHA-256: 43dee2ed92da0c0a8063f698021752f61a91bacf5c4b8d492b6c13b69fa5457a
+- Inline JavaScript syntax check: PASS
+- v24.4.5 changes the meaning of Edit Data and Batch Edit:
+  - Corrections are stored as Data Correction History, not as physical Movement History.
+  - Legacy “Manual Edit” and “Batch Edit” rows are treated as corrections for display/export purposes; do not delete them merely to clean history.
+  - True movement remains Stock In, Stock Out, Move / Assign, creation/split lifecycle events.
+  - Inventory Excel export becomes three sheets: Office Inventory, Movement History, and Data Corrections.
+- IMPORTANT VERSION GATE:
+  - If the accompanying index.html still says v24.4.4, the correction-history fix is NOT inside that file.
+  - If the accompanying index.html says v24.4.5 and its code matches the correction logic, v24.4.5 supersedes v24.4.4.
+  - Never assume the production site has v24.4.5 merely because the file was prepared locally; verify deployment and behavior first.
+
+LATEST INCLUDED NON-INVENTORY CHANGES STILL PRESENT
+- Invoice Digital Signature stored through Supabase Storage and rendered in Invoice preview/print/PDF.
+- Quotation Draft-to-Issue workflow and protected official numbering.
+- Original AMS Quotation letterhead and three-step ADHD-friendly Quotation form.
+- Quotation Preview/PDF, editable Word export, and editable Excel export.
+- Generic BOQ PDF import v2 with complete priced-row review and source-total checking.
+- Optional markup per row / Apply to All; source cost and markup remain internal.
+- Draft Quotation number preview refreshes immediately when Date or Sales Code changes.
+- Desktop/mobile Quotation list/editor cleanup and mobile card layouts.
+
+PRODUCTION
+- GitHub repository: andrikagroup-hue/SiAkun
+- Production site: https://andrikagroup-hue.github.io/SiAkun/
+- Supabase project reference: bmrgfnbzlifhehjmqhlk
+- Keep SiAkun separate from WorkBoard and any other Supabase project.
+
+ARCHITECTURE — CURRENT v24
+- One complete vanilla HTML/CSS/JavaScript file.
+- GitHub Pages frontend.
+- Supabase backend.
+- Current business data is stored by module in public.siakun_modules.
+- Authentication, sessions, users, audit logs, invoice sequence, and issued-invoice registry use dedicated database tables/functions.
+- The old public.siakun_data table is still retained temporarily only for rollback.
+- A manual pre-v24 backup table and a sealed migration backup both exist.
+- Supabase Storage bucket SiAkun is available for private file storage.
+- Do not migrate to a framework.
+- Do not minify during active repair.
+- Reuse existing functions before adding new ones.
+
+VERIFIED BACKUP AND MIGRATION STATUS
+- JSON backup exported before migration.
+- Old GitHub index.html downloaded before migration.
+- public.siakun_data original rows: 1.
+- public.siakun_data_backup_before_v24 rows: 1.
+- Original size: 1,706,424 bytes.
+- Backup size: 1,706,424 bytes.
+- Data identical: true.
+- Stage 1 migration: SUCCESS.
+- Migrated modules: 25.
+- Core modules verified: 5.
+- Active ratu account verified: 1.
+- Sealed migration backup verified: 1.
+- Storage bucket verified ready: true.
+- 03_SPH_NUMBERING_SAFE_MIGRATION.sql: SUCCESS.
+- Quotation sequence table, issued registry table, Issue function, Cancel function, and outcome function: verified ready (all true).
+- Old live table temporarily available: true.
+- Manual backup available: true.
+- Sealed migration backup available: true.
+
+CRITICAL STAGE 2 RULE
+- Stage 2 has NOT been run.
+- Do not run 02_STAGE_2_REMOVE_OLD_LIVE_TABLE.sql during ordinary testing or repair.
+- Stage 2 may run only after full acceptance testing passes and Ratu gives explicit approval.
+- Never remove the old live table, backup table, or sealed backup merely to “clean up.”
+
+AUTHENTICATION
+- Username ratu is the active Admin account.
+- Ratu already changed the bootstrap password herself.
+- Never expose, guess, reset, overwrite, or place her current password in a file or response.
+- The trusted Ratu device may keep the session for up to 30 days.
+- Other users continue to use normal username/password accounts managed from SiAkun.
+- Do not weaken authentication or make the Admin account passwordless.
+
+DATA-SAFETY RULES
+- Never delete, overwrite, reset, or migrate user data without a verified backup and explicit approval.
+- Prefer read-only checks before any update.
+- Explain destructive SQL before it is run.
+- Keep rollback available.
+- Do not claim a save succeeded unless the actual cloud save/RPC succeeded.
+- On failed save: retain form entries, do not close the form, do not show success, do not change document status, and roll back dependent stock/journal changes.
+- Preserve user-entered names, addresses, descriptions, notes, customer data, product data, and custom CoA names.
+- Do not embed new logos, signatures, photos, or documents as base64 in index.html.
+- Store uploaded files in Supabase Storage and store only the storage reference/URL in business data.
+
+LANGUAGE RULE
+- All system-generated SiAkun interface and document text must be English.
+- Do not translate user-entered content.
+- Keep official identifiers such as SiAkun, AMS, BAST, NPWP, PPN, and PPh unchanged.
+- Use “Quotation” in the visible interface and customer documents. Legacy internal function, storage-scope, and RPC names may still contain “sph” for backward compatibility; do not rename them casually.
+
+DESKTOP AND MOBILE RULE
+- Every SiAkun change must be implemented and verified on both desktop/laptop and mobile phone.
+- A change is not PASS or complete when it works only on desktop/laptop.
+- Desktop/laptop and mobile must use the same current application version and the same Supabase cloud data.
+- Data created or changed on one device must appear correctly on the other device after synchronization and refresh.
+- After every index.html update, verify on desktop/laptop and mobile that the latest change appears and works.
+- Mobile layout must remain responsive: no clipped or overlapping text, broken forms, unusable tables, excessive horizontal overflow, hidden actions, or raw code displayed on screen.
+- Mobile sidebar, navigation, buttons, forms, modals, Invoice preview, print, PDF, and other affected functions must remain usable.
+- No desktop feature may silently disappear or become unusable on mobile.
+- If a change appears on desktop but not on mobile, check deployment version, browser cache, synchronization, and refresh before changing any business data.
+- Stage 2 may not run until both desktop/laptop and mobile acceptance checks pass.
+
+AMS STANDARD DOCUMENT RULE
+- Every official AMS document must use one approved, reusable AMS letterhead.
+- The same company identity, logo placement, address, phone, WhatsApp, email, website, typography, colors, margins, header, footer, signature block, and page numbering must be used consistently.
+- The visual structure may be inspired by the supplied DPA documents, but the finished design must be an original AMS version and must not copy DPA branding.
+- The standard must be available in:
+  1. SiAkun preview, print, and PDF;
+  2. an editable Microsoft Word template;
+  3. an editable Microsoft Excel template.
+- SiAkun, Word, and Excel outputs must show the same business data, calculations, document number, terms, and company identity.
+- System-generated document text must remain English under the LANGUAGE RULE. User-entered customer names, addresses, descriptions, project names, notes, and other content must remain exactly as entered.
+- The layout must support short commercial quotations and longer technical proposals without forcing users to complete irrelevant sections.
+- Use a simple guided form with clearly grouped sections, safe defaults, plain-language help, automatic calculations, and optional advanced sections.
+- Required fields must be visibly marked. Optional sections must be collapsible or switchable.
+- Users must be able to preview the final document before issuing it.
+- Draft documents may be edited and deleted safely.
+- Issued documents must not be silently deleted or renumbered; use Cancel/Void with a reason while preserving the audit trail.
+- Every document template and export must be checked on desktop/laptop and mobile where applicable.
+
+QUOTATION STANDARD
+- Official Quotation number format:
+  Q-[ANNUAL SEQUENCE]/[COMPANY CODE]/[SALES CODE]/[ROMAN MONTH]/[YEAR]
+- Approved example:
+  Q-102/AMS/RA/VII/2026
+- Q means Quotation.
+- AMS is the fixed company code for PT Andrika Mitra Solusi.
+- RA is the approved sales code currently used by Ratu. Other salespeople must use their own unique Admin-managed sales code.
+- The annual sequence is a unique three-digit official number that continues within one calendar year.
+- The sequence resets for a new calendar year. The starting sequence must be based on the last verified official Quotation; never guess or overwrite an existing sequence.
+- The Roman month and year follow the Quotation Date, not the issue-click date.
+- Month mapping is fixed:
+  I=January, II=February, III=March, IV=April, V=May, VI=June,
+  VII=July, VIII=August, IX=September, X=October, XI=November, XII=December.
+- A Draft displays a reserved number preview in the official Q-XXX/AMS/SALES/MONTH/YEAR format so the user never sees DRAFT-SPH in the interface or document.
+- The Draft preview updates immediately when Date or Sales Code is changed.
+- A Draft must not consume an official annual sequence.
+- The official unique number is assigned only when Issue/Confirm succeeds in the cloud.
+- The Supabase Issue RPC remains the authority for the final unique number. A Draft preview may change only when another Quotation is issued first or its own Date/Sales Code changes.
+- If Issue/Confirm fails, the number, sequence, status, stock, journal, and related records must roll back together.
+- An issued Quotation number never changes, is never reused, and remains visible when the Quotation is Cancelled/Void.
+- Prevent duplicate official Quotation numbers, including simultaneous Issue actions from separate devices or sessions.
+- Historical Quotation numbers must not be renumbered automatically.
+- No SiAkun update may delete, hide, overwrite, reseed over, or silently replace an existing Quotation record.
+- The verified PT Vision Ease Asia, PT Citra Palu Minerals, and other existing Quotation rows must remain available. Recovery must never overwrite a populated Quotation module.
+- Create Quotation must use a three-step focus flow:
+  1. Information: date, customer/company, attention, subject, salesperson, project, contact details, validity, authorization, and signature;
+  2. Items & Prices: description, quantity, unit, internal material/service cost, markup, selling price, tax, and totals;
+  3. Notes & Extras: one visible customer-facing Notes field, with optional Commercial Terms and Optional Technical Proposal collapsed by default.
+- Fabrication is never mandatory and must not occupy a standard item-entry column. Fabrication fields and printed columns appear only when fabrication information is actually used.
+- The default Create Quotation view must be short, calm, sequential, mobile-friendly, and usable by a nontechnical user without seeing every advanced field at once.
+- Empty optional fields must not appear in Preview, Print, PDF, Word, or Excel.
+- Calculations must be automatic and auditable: subtotal, discount, DPP/tax base when applicable, PPN, withholding tax when applicable, and grand total.
+- Add Item, Add Section/Location, Duplicate Item, Move Item, and Delete Item controls must be obvious and safe for nontechnical users.
+- Preview, Print, PDF, Word, and Excel must preserve long multiline descriptions and technical specifications without clipped or overlapping text.
+
+BOQ PDF IMPORT RULES
+- Import PDF must accept BOQs/quotations supplied by another company and turn them into an editable AMS Draft.
+- Choosing or reading a PDF must never save data.
+- Before creating a Draft, show a complete Review screen with every detected priced row in source order.
+- A priced row must not be discarded merely because its No. cell is blank.
+- Preserve description, PN/part number, brand, quantity, unit, source unit price, source line total, terms, and notes whenever the PDF text layer makes them readable.
+- Source cost is internal. The customer output shows AMS selling prices only.
+- Markup is optional. It may be blank, entered per item, applied to all items, or bypassed by typing a Selling Price directly.
+- Compare the detected item subtotal with the source subtotal when readable and show a clear match/mismatch warning before saving.
+- Imported quotations always start as editable Drafts and require Save Draft before Issue.
+- The source document number is stored internally and must not print as “Customer Reference”.
+- Do not hard-code one supplier layout as the only supported import. Keep verified layouts, but use the generic safe parser for other text-based BOQs.
+
+QUOTATION IMPLEMENTATION STATUS — INCLUDED IN CURRENT INDEX; LIVE ACCEPTANCE STILL INCOMPLETE
+- The latest index.html code contains the redesigned Quotation workflow.
+- The Create Quotation workflow is divided into Information, Items & Prices, and Notes & Extras.
+- Only Notes is visible by default in the final step; Commercial Terms and Technical Proposal are collapsed optional sections.
+- Fabrication is optional and hidden when unused.
+- Existing Quotation data is never overwritten by the import/parser repair.
+- New Drafts display a reserved Q-XXX/AMS/... preview number; internal DRAFT-SPH identifiers are hidden from the visible interface and exports.
+- Changing Sales Code RS to RA now refreshes the visible Draft number immediately while preserving the Draft sequence preview.
+- Only Draft Quotations can be edited or deleted.
+- Issue uses a protected Supabase RPC and assigns the official number in one server transaction.
+- Issued Quotations are read-only.
+- Issued Quotations can be marked Accepted or Rejected without changing their official number.
+- Cancel preserves the official number, cancellation reason, and audit trail.
+- Word and Excel export buttons are available from the Quotation list and detail view.
+- Excel formulas calculate each line total and subtotal; the export includes the AMS letterhead and optional technical sections.
+- The Quotation form includes customer address, phone, email, project, sales code, commercial terms, and optional technical proposal sections.
+- The latest generic import parser was verified against “1-036-QT-SKK-AMS-FC-26 Supply Foam Chamber Solberg”. It reads all 6 rows in exact source order, including 4 blank-No. rows.
+- Import Review shows the detected rows, PN/brand, source prices, subtotal comparison, VAT, total, and imported notes before the user can create a Draft.
+- The Quotation editor supports Move Up, Move Down, Duplicate, Price Reference, and safe Delete controls.
+- On mobile, the Quotation list, item editor, and import review use stacked cards rather than unusable wide tables.
+- JavaScript syntax check: PASS.
+- Real-PDF parser/order/source-total check: PASS.
+- Optional 15% markup and 11% VAT calculation check: PASS.
+- Draft Sales Code/month number-refresh check: PASS.
+- Expected number-format sample: Q-102/AMS/RA/VII/2026.
+- 03_SPH_NUMBERING_SAFE_MIGRATION.sql: already run successfully and readiness check returned true for both tables and all three functions.
+- Stage 2 remains NOT RUN and is unrelated to the Quotation numbering migration.
+
+APPROVED INVOICE NUMBERING — FINAL RULE
+- Every Draft Invoice uses the shared temporary number AMSYYMM-INV100.
+- Multiple Drafts may share that temporary number.
+- Save Draft does not consume an official number.
+- A unique official number is assigned only when Confirm succeeds.
+- Official numbering begins at 101, continues through the calendar year, and resets to 101 in January.
+- Example: after AMS2607-INV105 is confirmed, the next Draft confirmed becomes AMS2607-INV106.
+- YYMM follows the Invoice Date, not the confirmation date.
+- Confirmed official numbers never change, are never reused, and must remain unique.
+- Confirmation must roll back the number, sequence, status, stock, and journal when the save fails.
+- Historical confirmed/paid/legacy numbers are not automatically renumbered.
+
+CURRENT INVOICE FEATURES
+- DPA-inspired AMS Invoice preview/print/PDF layout.
+- AMS logo and company identity.
+- Optional Due Date.
+- Direct editable customer/company entry, with optional saved-contact selection.
+- Customer snapshot stored per Invoice.
+- Editable multiline description/scope of work.
+- Delete Line and Add Another Line.
+- Multiple company bank accounts selectable per Invoice.
+- Payment Method dropdown:
+  Bank Transfer
+  Cash
+  Cheque
+  Giro
+  Bank Transfer / Cheque / Giro
+  Other
+- Invoice-specific Authorized Signatory Name and Position/Title.
+- Optional Digital Signature upload.
+- Digital Signature accepted formats: JPEG, PNG, WebP; maximum 5 MB.
+- Digital Signature is stored through Supabase Storage and appears in preview/print/PDF.
+- Digital Signature can be replaced or deleted.
+- PDF import creates an editable Draft and keeps the source document number only as a reference.
+- Invoice Excel export includes relevant Invoice fields.
+- Taxes and totals remain editable/calculated by the existing Invoice implementation.
+
+OFFICE INVENTORY & FIXED ASSET STANDARD — CURRENT 2026
+
+PURPOSE
+- Office Inventory is for physical AMS office assets/equipment and their control history.
+- Product/Stock Inventory is a separate module; do not merge the two concepts casually.
+- One physical office asset should have one unique Asset ID and one unique label whenever practical.
+- Fixed Asset records linked from Office Inventory must stay synchronized; do not create an unrelated duplicate fixed-asset workflow.
+
+MASTER DATA
+- Current embedded inventory Master List contains 150 item names across 9 categories:
+  Cleaning Supplies, Consumables, Electronics, Furniture, IT Equipment, Office Supplies, Pantry Supplies, Security Equipment, Vehicles.
+- Current embedded Brand/Type master contains 227 default values before user-added/used brands are merged.
+- Item Name search is global across all Master List categories.
+- Selecting an item from another category must synchronize Category automatically.
+- Brand/Type is searchable and may be extended with Add New Brand / Type.
+- User-added item names, brands, PICs, locations, statuses, and conditions must be preserved.
+- Do not silently overwrite custom master data during upgrades.
+
+PSAK 216 CLASSIFICATION WORKFLOW
+- Visible Asset Classification must show only:
+  1. Fixed Asset
+  2. Non Fixed Asset
+- “Auto — PSAK 216” is an internal mode, NOT a third accounting category and must not appear as the saved accounting classification.
+- Current SiAkun auto heuristic:
+  - Expected Useful Life > 1 year -> Fixed Asset.
+  - Expected Useful Life <= 1 year -> Non Fixed Asset.
+- No fixed rupiah threshold is hard-coded into the PSAK 216 auto rule.
+- Materiality, company policy, actual expected use, or other documented exceptions may use Manual Override.
+- Useful Life is auto-filled from the SiAkun master where available but remains editable.
+- If Useful Life is manually changed while classification mode is still Auto, the Fixed/Non Fixed result must re-calculate and stay visually synchronized.
+- If classification is manually overridden, the system must preserve the override until the user explicitly returns to Auto.
+- Never allow the dropdown to show Fixed Asset while the recommendation box says Non Fixed Asset, or vice versa.
+
+IMPORTANT ACCOUNTING CAUTION
+- PSAK 216 does NOT prescribe SiAkun’s exact useful-life numbers.
+- The values in SiAkun are internal data-entry suggestions and may be changed when actual expected use, company policy, accountant advice, or applicable regulation changes.
+- Do not describe a 3/4/8-year SiAkun master value as a mandatory PSAK life.
+- Current category default suggestions in code are:
+  - Furniture: 8 years
+  - IT Equipment: 4 years
+  - Electronics: 4 years
+  - Security Equipment: 4 years
+  - Vehicles: 4 years
+  - Office Supplies: 0
+  - Consumables: 0
+  - Pantry Supplies: 0
+  - Cleaning Supplies: 0
+- Known master-data risk: several durable Pantry/Cleaning items still have Useful Life = 0 because the imported Master List used 0. Examples observed include Electric Kettle and other long-life pantry/cleaning equipment.
+- This is a MASTER-DATA issue, not proof that the item is necessarily Non Fixed Asset.
+- User may manually correct Useful Life/classification now.
+- Future work should audit durable items such as Water Dispenser, Refrigerator, Microwave Oven, Electric Kettle, Coffee Machine, Rice Cooker, Vacuum Cleaner, and permanent dispensers before treating their current 0-year master values as authoritative.
+
+MULTI-QUANTITY ADD ASSET
+- Quantity > 1 must create separate physical records / Asset IDs rather than one quantity record, unless handling a specific legacy bulk record.
+- The user enters common information once.
+- SiAkun must allow a different Location for each physical unit.
+- Each generated unit receives its own Asset ID and printable label.
+- Do not force the user to re-enter the same common data unit by unit.
+
+ACQUISITION COST RULE
+- For Quantity = 1, Acquisition Cost is the cost of that one Asset ID.
+- For Quantity > 1 in Add Asset, the entered amount is the TOTAL Acquisition Cost for all selected units.
+- SiAkun divides the total across the generated Asset IDs automatically.
+- Rupiah rounding must keep the summed unit costs EXACTLY equal to the entered purchase total; distribute the remainder safely instead of changing the total.
+- Example already identified:
+  - 8 CCTV purchased for a total of Rp12,250,000.
+  - The system must not store Rp12,250,000 on each CCTV and show Rp98,000,000.
+  - Correct total remains Rp12,250,000, allocated across the 8 unique Asset IDs.
+
+BATCH EDIT / MASS CORRECTION
+- Summary by Item provides Edit Batch when multiple records of the same item/category exist.
+- Batch Edit is for correcting shared master data without deleting/recreating Asset IDs.
+- User can select all or only specific Asset IDs.
+- Primary use case: correct a total acquisition cost across many already-created units.
+- Optional shared fields may include Purchase Date, Brand/Type, Useful Life, Asset Classification, Condition, Status, and PIC.
+- Location is intentionally excluded from shared batch correction because each unit may be in a different room.
+- Do not change unchecked optional fields.
+- Do not delete Asset IDs, labels, or unit locations merely to correct shared data.
+- If a legacy record still contains multiple physical units and exact cost allocation is impossible, require the record to be split into unique Asset IDs first or use an evenly divisible total.
+
+MOVEMENT HISTORY VS DATA CORRECTION HISTORY
+- This distinction is mandatory.
+- PHYSICAL / CUSTODY EVENTS belong in Movement History:
+  - Asset Created / creation lifecycle
+  - Stock In
+  - Stock Out
+  - Move / Assign
+  - Split into unique assets / created from a legacy bulk record
+- MASTER-DATA CORRECTIONS do NOT represent movement:
+  - Edit Data used to fix a wrong PIC, Location entry, cost, brand, useful life, classification, condition, status, etc.
+  - Batch Edit used to correct shared data.
+- In v24.4.5, Edit Data and Batch Edit must save under Data Correction History, not Movement History.
+- A real change of custody/location must use Move / Assign, not Edit Data.
+- Existing legacy “Manual Edit” and “Batch Edit” history rows must be preserved and treated as corrections; do not delete historical records just to make the Movement sheet look clean.
+
+INVENTORY EXCEL EXPORT
+- v24.4.4 export has Office Inventory + Movement History.
+- v24.4.5 correction-history design must export:
+  1. Office Inventory
+  2. Movement History
+  3. Data Corrections
+- The Data Corrections sheet should show Asset ID, Item Name, Date, corrected field, Before, After, Updated By, and Note.
+- Verify exported totals and history meaning against the on-screen data before calling the feature PASS.
+
+INVENTORY FILTER & READABILITY
+- Use one compact Filter dropdown rather than many large filter boxes.
+- Supported filter groups include Category, Location, Condition, Status, Brand, Asset Type, and Person in Charge.
+- Active filters may appear as small removable chips/tags.
+- Inventory tables use premium easy-read treatment:
+  - alternating white / very-light-gray rows,
+  - subtle blue hover,
+  - click-to-lock selected-row highlight,
+  - sticky header,
+  - slightly roomier row height,
+  - stronger Item Name / key identifiers,
+  - no excessive grid-line visual noise.
+- Preserve this readability treatment unless Ratu explicitly asks to change it.
+
+VERIFIED ACCEPTANCE TESTS SO FAR
+PASS:
+- Production v24 login page loaded.
+- ratu login succeeded.
+- Password-change flow completed.
+- Dashboard loaded cloud data.
+- Existing Invoice list loaded.
+- Existing sample Invoice preview opened.
+- Existing sample Invoice edit form opened.
+- New Draft form opened.
+- Draft test saved to cloud.
+- Draft test preview opened.
+- Invoice Digital Signature uploaded.
+- Digital Signature appeared in Invoice preview.
+- Digital Signature remained visible after Ctrl+F5, confirming cloud persistence.
+- Invoice JavaScript syntax check passed.
+- Latest complete index.html JavaScript syntax check passed.
+- Real SKK Foam Chamber PDF parser detected exactly 6 priced rows in the correct source order.
+- Four priced rows with blank No. cells were retained.
+- Source subtotal matched: Rp256,300,000.
+- Source VAT 11% matched: Rp28,193,000.
+- Source total matched: Rp284,493,000.
+- Apply Markup to All 15% test passed: selling subtotal Rp294,745,000; VAT Rp32,421,950; grand total Rp327,166,950.
+- Draft number preview test passed for Sales Code RS -> RA, Roman-month refresh, and new-year preview reset.
+- Office Inventory Master List code contains 150 item names and current global Item Name search.
+- Brand/Type master dropdown is present and searchable/addable in current inventory code.
+- Inventory premium alternating-row / hover / sticky-header styling is present in current index.
+- Multi-quantity Add Asset creates unique Asset IDs and supports per-unit locations.
+- Bulk Total Acquisition Cost allocation logic is present and preserves the exact entered total through remainder allocation.
+- Batch Edit is present in v24.4.4.
+- v24.4.4 inline JavaScript syntax check passed.
+- v24.4.5 correction-history candidate inline JavaScript syntax check passed.
+- Screenshot verification showed Fixed/Non Fixed classification display synchronization working after the display fix.
+
+NOT YET FULLY TESTED
+- Full Draft -> Confirm -> Payment -> Void lifecycle.
+- Rollback behavior during an intentional failed save.
+- Official sequence under repeated confirmations.
+- Simultaneous confirmations from separate sessions.
+- Every non-Invoice module after migration.
+- User/role management from the v24 interface.
+- Full audit-log review.
+- File replacement/deletion behavior for every storage-backed document type.
+- Full desktop/laptop and mobile consistency check after the latest deployment.
+- Responsive mobile layout and all affected mobile functions.
+- Approved AMS letterhead consistency across SiAkun, Word, and Excel.
+- Quotation annual sequence, Draft-to-Issue, duplicate prevention, Cancel/Void, and rollback behavior in the live Supabase environment.
+- Live browser import of the Foam Chamber PDF after the latest index.html is deployed.
+- Short commercial Quotation and long technical proposal rendering.
+- Quotation Preview, Print, PDF, Word, and Excel consistency.
+- Standard AMS letterhead migration for non-Quotation documents.
+- Stage 2 cleanup.
+- v24.4.5 Data Correction History behavior after live deployment.
+- Excel export after v24.4.5: confirm Movement History excludes corrections and Data Corrections contains them.
+- Batch Edit correction of the existing CCTV total in live data.
+- Full audit of durable Pantry/Cleaning Master List Useful Life values currently set to 0.
+- Inventory Add/Edit/Batch workflows on mobile after the latest v24.4.x changes.
+- Cross-device Inventory synchronization after batch correction.
+
+TEST DATA
+- A test Draft exists using temporary number AMS2607-INV100.
+- Customer: TEST V24 - JANGAN DIGUNAKAN.
+- Description includes TEST MIGRATION / Pengujian sistem SiAkun v24.
+- Amount: Rp1,000.
+- This is test data, not a real business Invoice.
+- Do not Confirm, post, or delete it without first telling Ratu exactly what the test will do.
+- Delete test data only after its testing purpose is complete and Ratu agrees.
+
+CURRENT TASK IN THE NEXT CHAT
+Continue SiAkun v24 one safe action at a time.
+
+FIRST — IDENTIFY THE ACTUAL FILE VERSION
+- Read the supplied index.html title, size, line count, and hash before editing.
+- If it is v24.4.4, do not assume Data Correction History exists.
+- If Ratu wants the correction-history behavior, use/deploy the verified v24.4.5 correction file first, then wait for her screenshot.
+- Do not rerun Quotation numbering SQL merely because the frontend changed.
+- Do not run Stage 2.
+
+SECOND — INVENTORY ACCEPTANCE CHECK
+- After v24.4.5 is deployed, perform one safe check at a time:
+  1. Open one asset and use Edit Data to correct a field.
+  2. Confirm the change appears under Data Correction History, not Movement History.
+  3. Export Excel.
+  4. Confirm the workbook contains Office Inventory, Movement History, and Data Corrections.
+  5. Confirm real movement events remain in Movement History.
+- Do not delete real inventory records to clean old history.
+- For the existing CCTV purchase-total issue, use Edit Batch rather than deleting/recreating the 8 Asset IDs.
+
+THIRD — MASTER USEFUL-LIFE AUDIT
+- Do not automatically trust all 0-year Pantry/Cleaning master values.
+- Audit durable items with Ratu before changing master lives.
+- Preserve manual override because actual expected use and future policy/regulation may differ.
+
+THEN RETURN TO REMAINING ACCEPTANCE TESTS
+- Continue Quotation live tests, mobile tests, Invoice lifecycle tests, and other not-yet-tested modules after the Inventory correction workflow is stable.
+- Do not Issue real/test business documents or alter real business data without Ratu’s explicit instruction.
+- Wait for Ratu’s screenshot/result after every single action.
+
+WORKING STYLE FOR RATU
+- Use Indonesian when explaining steps to Ratu.
+- Keep SiAkun’s actual system text English.
+- Give only one action at a time.
+- Use exact button names and exact SQL when needed.
+- Clearly label safe read-only checks versus changes.
+- Never assume she understands code.
+- Do not ask her to edit code when you can prepare the complete corrected file yourself.
+
+EDITING RULES
+- Work from the provided latest index.html, never from an older copy.
+- Preserve the single-file architecture.
+- Search all related code before changing anything.
+- Do not retain old competing code after a replacement is accepted.
+- Do not create duplicate renderers, save flows, handlers, storage paths, or RPCs.
+- Validate JavaScript syntax before delivery.
+- Report tests as PASS, FAIL, or NOT TESTED.
+- Report desktop/laptop and mobile results separately; both must pass before a change is complete.
+- Deliver a complete downloadable index.html, not a patch fragment.
+- Update this Master Prompt whenever architecture, business rules, migration status, or verified implementation status changes.
+
+PROTECTED AREAS
+Do not change unrelated modules while repairing one feature:
+- Quotation (internal scope name: sphs)
+- BAST
+- Delivery Order
+- Sales Order
+- Purchase Order
+- Payroll
+- Inventory
+- CoA
+- Financial Reports
+- Contacts
+- WorkBoard
+- Authentication
+- Supabase migration structure
+unless the requested issue directly requires it and the impact is explained first.
+
+FINAL REMINDER
+The latest index.html and this updated Master Prompt must be uploaded together in the new chat.
+If the prompt says a feature is only in v24.4.5 but the supplied index is still v24.4.4, the index wins for what is actually implemented; do not invent the missing feature.
+Ratu’s latest direct instruction always outranks this handoff.
+Do not use an older V9 prompt as the primary source because it contains superseded architecture, numbering, and Inventory status.
