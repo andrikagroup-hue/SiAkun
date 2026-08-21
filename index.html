@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.4.1 — Financial System</title>
+<title>SiAkun v24.4.2 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -10881,6 +10881,18 @@ function setInventoryLifeMode(mode){
   const el=document.getElementById('inv-life-mode');
   if(el)el.value=mode==='Manual'?'Manual':'Auto';
 }
+// Keep the visible searchable-select input synchronized when code changes a hidden <select> value.
+// Setting select.value programmatically does not fire a DOM mutation/change event, so without
+// this helper the underlying value can be Non Fixed Asset while the visible field still says Fixed Asset.
+function syncInventorySelectDisplay(sel){
+  if(!sel)return;
+  const wrap=sel.closest('.ss-wrap');
+  if(!wrap)return;
+  const display=wrap.querySelector('.ss-input');
+  if(!display)return;
+  const option=sel.options[sel.selectedIndex];
+  display.value=option&&option.value?option.text:'';
+}
 function applyInventoryAutoClassification(force=false){
   const typeEl=document.getElementById('inv-type');if(!typeEl)return;
   if(force)setInventoryTypeMode('Auto');
@@ -10889,6 +10901,7 @@ function applyInventoryAutoClassification(force=false){
   const autoType=psak216AutoAssetType(life);
   setInventoryTypeMode('Auto');
   typeEl.value=autoType;
+  syncInventorySelectDisplay(typeEl);
   refreshInventoryPsakRecommendation();
 }
 function onInventoryClassificationChange(){
@@ -10913,7 +10926,10 @@ function refreshInventoryPsakRecommendation(){
   // always show the same result as the PSAK auto-classification engine.
   // This prevents a stale "Fixed Asset" dropdown from appearing together with
   // a "Non Fixed Asset" automatic recommendation (or vice versa).
-  if(isAuto&&typeEl&&typeEl.value!==autoType)typeEl.value=autoType;
+  if(isAuto&&typeEl){
+    if(typeEl.value!==autoType)typeEl.value=autoType;
+    syncInventorySelectDisplay(typeEl);
+  }
 
   const selected=typeEl?typeEl.value:autoType;
   const lifeMode=(document.getElementById('inv-life-mode')?.value==='Manual')?'Manual':'Auto';
@@ -12074,7 +12090,7 @@ function openInventoryItem(){
   <div class="fr3">
     <div class="fg"><label>Condition</label><select id="inv-condition" onchange="onInvSelectChange('inv-condition','conditionList','New condition:')">${invSelectOpts(DB.invMaster.conditionList,'','Add New Condition')}</select></div>
     <div class="fg"><label>Status</label><select id="inv-status" onchange="onInvSelectChange('inv-status','statusList','New status:')">${invSelectOpts(DB.invMaster.statusList,'','Add New Status')}</select></div>
-    <div class="fg"><label>Asset Classification</label><select id="inv-type" onchange="onInventoryClassificationChange()">${invAssetTypeOptions(psak216AutoAssetType(0))}</select><input type="hidden" id="inv-type-mode" value="Auto"></div>
+    <div class="fg"><label>Asset Classification</label><select id="inv-type" data-no-search onchange="onInventoryClassificationChange()">${invAssetTypeOptions(psak216AutoAssetType(0))}</select><input type="hidden" id="inv-type-mode" value="Auto"></div>
   </div>
   <div id="inv-psak-rec" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:8px;padding:8px 10px;font-size:10.5px;line-height:1.45;margin:2px 0 12px"></div>
   <div class="fg"><label>Notes</label><input id="inv-notes"></div>
@@ -12170,7 +12186,7 @@ function openEditInventoryItem(id){
   <div class="fr3">
     <div class="fg"><label>Condition</label><select id="inv-condition" onchange="onInvSelectChange('inv-condition','conditionList','New condition:')">${invSelectOpts(DB.invMaster.conditionList,i.condition,'Add New Condition')}</select></div>
     <div class="fg"><label>Status</label><select id="inv-status" onchange="onInvSelectChange('inv-status','statusList','New status:')">${invSelectOpts(DB.invMaster.statusList,i.status,'Add New Status')}</select></div>
-    <div class="fg"><label>Asset Classification</label><select id="inv-type" onchange="onInventoryClassificationChange()">${typeOpts}</select><input type="hidden" id="inv-type-mode" value="${selectedMode}"></div>
+    <div class="fg"><label>Asset Classification</label><select id="inv-type" data-no-search onchange="onInventoryClassificationChange()">${typeOpts}</select><input type="hidden" id="inv-type-mode" value="${selectedMode}"></div>
   </div>
   <div id="inv-psak-rec" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:8px;padding:8px 10px;font-size:10.5px;line-height:1.45;margin:2px 0 12px"></div>
   <div class="fg"><label>Notes</label><input id="inv-notes" value="${invAttr(i.notes||'')}"></div>
