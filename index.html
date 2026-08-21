@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.3.9 — Financial System</title>
+<title>SiAkun v24.4.0 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -798,6 +798,77 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);}
 
 .nav-i[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:#0f172a;color:#fff;font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:6px;white-space:nowrap;z-index:1000;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.15);}
 .nav-i[data-tip]:hover::before{content:"";position:absolute;left:calc(100% + 4px);top:50%;transform:translateY(-50%);border:5px solid transparent;border-right-color:#0f172a;z-index:1000;pointer-events:none;}
+
+/* ── INVENTORY PREMIUM READABILITY — v24.4.0 ──
+   Eye-friendly table treatment: zebra rows, calm hover, sticky header,
+   and click-to-lock row highlighting for easier horizontal tracking. */
+.inv-premium-card{
+  border:1px solid #e2e8f0!important;
+  border-radius:16px!important;
+  box-shadow:0 8px 28px rgba(15,23,42,.055)!important;
+  overflow:hidden;
+}
+.inv-premium-wrap{
+  border:1px solid #e6ebf2;
+  border-radius:12px;
+  overflow:auto;
+  background:#fff;
+}
+.inv-detail-wrap{
+  max-height:62vh;
+  min-height:220px;
+}
+.inv-premium-table{
+  border-collapse:separate!important;
+  border-spacing:0!important;
+  font-size:13px;
+  color:#243043;
+}
+.inv-premium-table thead th{
+  position:sticky;
+  top:0;
+  z-index:4;
+  background:linear-gradient(180deg,#f8fbff 0%,#edf4ff 100%)!important;
+  color:#36527d!important;
+  font-size:10px!important;
+  font-weight:800!important;
+  letter-spacing:.72px!important;
+  padding:11px 13px!important;
+  border-bottom:1px solid #cbd8ec!important;
+  box-shadow:0 1px 0 rgba(148,163,184,.12);
+}
+.inv-premium-table tbody td{
+  padding:11px 13px!important;
+  line-height:1.42;
+  border-bottom:1px solid #edf1f6!important;
+  transition:background-color .12s ease,box-shadow .12s ease,color .12s ease;
+}
+.inv-premium-table tbody tr:nth-child(odd) td{background:#ffffff!important;}
+.inv-premium-table tbody tr:nth-child(even) td{background:#f6f8fb!important;}
+.inv-premium-table tbody tr:hover td{background:#eaf3ff!important;}
+.inv-premium-table tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 #60a5fa;}
+.inv-premium-table tbody tr.inv-row-selected td{
+  background:#dbeafe!important;
+  color:#172033;
+}
+.inv-premium-table tbody tr.inv-row-selected td:first-child{box-shadow:inset 4px 0 0 #2563eb;}
+.inv-premium-table tbody tr:last-child td{border-bottom:none!important;}
+.inv-premium-table tbody td:first-child{font-weight:750;color:#111827;}
+.inv-detail-table tbody td:nth-child(2){font-weight:650;color:#172033;}
+.inv-premium-table .badge{box-shadow:0 1px 2px rgba(15,23,42,.04);}
+.inv-premium-table .btn{box-shadow:none;}
+.inv-premium-table .btn-pri{box-shadow:0 2px 6px rgba(37,99,235,.18);}
+.inv-readability-note{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin:0 0 10px;padding:8px 11px;border:1px solid #e2e8f0;
+  border-radius:10px;background:#fbfdff;color:#64748b;font-size:10.5px;
+}
+.inv-readability-note b{color:#334155;font-size:11px;}
+.inv-readability-dot{width:7px;height:7px;border-radius:50%;background:#60a5fa;box-shadow:0 0 0 3px #dbeafe;}
+@media(max-width:768px){
+  .inv-detail-wrap{max-height:none;}
+  .inv-premium-table tbody td{padding:10px 11px!important;}
+}
 </style>
 </head>
 <body>
@@ -11800,12 +11871,12 @@ function renderInventory(c){
     </div>
     ${hasActiveFilter?`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">${activeFilters.map(([key,value])=>`<button type="button" onclick="removeInvFilter('${invAttr(key)}')" title="Remove filter" style="display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;border-radius:999px;padding:5px 9px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer"><span style="color:#64748b">${invEsc(INV_FILTER_LABELS[key]||key)}:</span> ${invEsc(value)} <span style="color:#94a3b8">×</span></button>`).join('')}</div>`:''}
   </div>
-  <div class="card" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleInvSummary()"><div style="font-size:14px;font-weight:700;color:#0f172a">📊 Summary by Item (${summaryRows.length} types)</div><span id="inv-summary-toggle-icon">${window._invSummaryOpen?'▲':'▼'}</span></div>
-    <div id="inv-summary-body" style="${window._invSummaryOpen?'':'display:none;'}margin-top:12px"><div class="tbl-wrap"><table><thead><tr><th>Item Name</th><th>Category</th><th>Quantity</th><th>Total Value</th></tr></thead><tbody>
+  <div class="card inv-premium-card" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleInvSummary()"><div style="font-size:14px;font-weight:700;color:#0f172a">📊 Summary by Item (${summaryRows.length} types)</div><span id="inv-summary-toggle-icon">${window._invSummaryOpen?'▲':'▼'}</span></div>
+    <div id="inv-summary-body" style="${window._invSummaryOpen?'':'display:none;'}margin-top:12px"><div class="tbl-wrap inv-premium-wrap"><table class="inv-premium-table inv-summary-table"><thead><tr><th>Item Name</th><th>Category</th><th>Quantity</th><th>Total Value</th></tr></thead><tbody>
       ${summaryRows.length?summaryRows.map(s=>`<tr><td class="fw7">${invEsc(s.name)}</td><td><span class="badge b-info">${invEsc(s.category)}</span></td><td>${s.qty}</td><td>${rp(s.value)}</td></tr>`).join(''):`<tr><td colspan="4" class="tbl-empty">No items yet</td></tr>`}
     </tbody></table></div></div></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Asset ID</th><th>Item Name</th><th>Category</th><th>Stock</th><th>Location</th><th>PIC</th><th>Condition</th><th>Status</th><th>Classification</th><th>Actions</th></tr></thead><tbody>
-    ${items.length?items.map(i=>{const stock=invStockValue(i),itemId=invAttr(i.id);return`<tr>
+  <div class="card inv-premium-card"><div class="inv-readability-note"><span class="inv-readability-dot"></span><b>Easy-read table</b><span>Alternating rows help track across columns. Click any row to keep it highlighted.</span></div><div class="tbl-wrap inv-premium-wrap inv-detail-wrap"><table class="inv-premium-table inv-detail-table"><thead><tr><th>Asset ID</th><th>Item Name</th><th>Category</th><th>Stock</th><th>Location</th><th>PIC</th><th>Condition</th><th>Status</th><th>Classification</th><th>Actions</th></tr></thead><tbody>
+    ${items.length?items.map(i=>{const stock=invStockValue(i),itemId=invAttr(i.id);return`<tr onclick="selectInventoryTableRow(this)">
       <td class="fw7">${invEsc(i.assetId||'-')}</td><td>${invEsc(i.name||'-')}</td><td><span class="badge b-info">${invEsc(i.category||'-')}</span></td>
       <td><span class="badge ${stock>0?'b-ok':'b-bad'}">${stock>1?stock+' Units':stock===1?'In':'Out'}</span></td><td>${invEsc(i.location||'-')}</td><td>${invEsc(i.pic||'-')}</td><td>${invEsc(i.condition||'-')}</td><td>${invEsc(i.status||'-')}</td>
       <td>${i.assetType==='Fixed Asset'?'<span class="badge b-ok">Fixed Asset</span>':'<span class="badge b-info">Non-Fixed Asset</span>'}<div style="font-size:9.5px;color:#94a3b8;margin-top:3px">${inventoryAssetModeLabel(i)}</div></td>
@@ -11813,6 +11884,12 @@ function renderInventory(c){
     </tr>`;}).join(''):`<tr><td colspan="10" class="tbl-empty">No items match the active filters</td></tr>`}
   </tbody></table></div></div>`;
 }
+function selectInventoryTableRow(row){
+  if(!row)return;
+  document.querySelectorAll('.inv-detail-table tbody tr.inv-row-selected').forEach(r=>r.classList.remove('inv-row-selected'));
+  row.classList.add('inv-row-selected');
+}
+
 function toggleInvSummary(){
   window._invSummaryOpen=!window._invSummaryOpen;
   const body=document.getElementById('inv-summary-body');
