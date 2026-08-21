@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.3.4 — Financial System</title>
+<title>SiAkun v24.3.5 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -10737,7 +10737,7 @@ function updateAsset(){
 }
 function delAsset(id){
   const a=DB.assets.find(x=>x.id===id);
-  if(a&&a.sourceInventoryId)return alert('This asset is generated automatically from Inventory. To delete or modify it, open Inventory and change Asset Classification to "Non Fixed Asset — Manual Override" or delete the item there.');
+  if(a&&a.sourceInventoryId)return alert('This asset is generated automatically from Inventory. To delete or modify it, open Inventory and change Asset Classification to "Non Fixed Asset" or delete the item there.');
   if(!confirm('Delete this asset?'))return;DB.assets=DB.assets.filter(a=>a.id!==id);if(!saveDB())return;nav('assets');
 }
 function exportAssets(){exportXLSX([{name:'Assets',data:DB.assets.map(a=>{const p=calcDepreciation(a);return{Name:a.name,Category:a.cat,'Acquisition Date':a.date,'Acquisition Value':a.value,Method:a.method,'Useful Life (Years)':a.life,'Accumulated Depreciation':p.akum,'Book Value':p.bookVal};})}],'fixed_assets');}
@@ -10779,40 +10779,69 @@ CATALOG_PREFIX={'Furniture':'FUR','IT Equipment':'IT','Electronics':'ELC','Secur
 // PSAK 216 does not prescribe fixed useful-life numbers; the estimate must reflect the asset's expected use and may be edited by the user.
 const CATEGORY_DEFAULT_LIFE={'Furniture':4,'IT Equipment':4,'Electronics':4,'Security Equipment':4,'Vehicles':4,'Office Supplies':0,'Consumables':0,'Pantry Supplies':0,'Cleaning Supplies':0};
 
-// ===== PSAK 216 inventory classification =====
-// Office Inventory is already limited to tangible items used by the company. For automatic classification,
-// SiAkun therefore uses expected useful life as the key available indicator: more than one period => Fixed Asset.
-// PSAK 216 does not set a fixed rupiah capitalization threshold; materiality and exceptional cases remain a manual override.
+// ===== PSAK 216 inventory classification — current 2026 workflow =====
+// The user sees the RESULT directly: "Fixed Asset" or "Non Fixed Asset".
+// Automatic/manual status is stored internally and never appears as a third accounting category.
+// PSAK 216: a tangible operational asset expected to be used for more than one period is an asset fixed in nature.
+// PSAK 216 itself does not prescribe a rupiah threshold or fixed useful-life table; materiality and exceptions remain management judgement.
 const INV_PSAK_AUTO_MODE='Auto';
 function psak216AutoAssetType(life){return (Number(life)||0)>1?'Fixed Asset':'Non Fixed Asset';}
-function resolveInventoryAssetType(mode,life){
-  return mode==='Fixed Asset'||mode==='Non Fixed Asset'?mode:psak216AutoAssetType(life);
+function resolveInventoryAssetType(mode,life,selectedType=''){
+  return mode==='Manual'&&(selectedType==='Fixed Asset'||selectedType==='Non Fixed Asset')?selectedType:psak216AutoAssetType(life);
 }
-function invAssetTypeOptions(selected='Auto'){
-  const options=[
-    {v:'Auto',l:'Auto — PSAK 216'},
-    {v:'Fixed Asset',l:'Fixed Asset — Manual Override'},
-    {v:'Non Fixed Asset',l:'Non Fixed Asset — Manual Override'}
-  ];
-  return options.map(o=>`<option value="${o.v}"${o.v===selected?' selected':''}>${o.l}</option>`).join('');
+function invAssetTypeOptions(selected='Fixed Asset'){
+  const options=['Fixed Asset','Non Fixed Asset'];
+  return options.map(value=>`<option value="${value}"${value===selected?' selected':''}>${value}</option>`).join('');
 }
 function inventoryAssetModeLabel(item){
-  return item&&item.assetTypeMode==='Auto'?'PSAK 216 Auto':'Manual Override';
+  return item&&item.assetTypeMode==='Auto'?'Auto · PSAK 216 (2026)':'Manual Override';
+}
+function inventoryTypeMode(){
+  const el=document.getElementById('inv-type-mode');
+  return el&&el.value==='Manual'?'Manual':'Auto';
+}
+function setInventoryTypeMode(mode){
+  const el=document.getElementById('inv-type-mode');
+  if(el)el.value=mode==='Manual'?'Manual':'Auto';
+}
+function setInventoryLifeMode(mode){
+  const el=document.getElementById('inv-life-mode');
+  if(el)el.value=mode==='Manual'?'Manual':'Auto';
+}
+function applyInventoryAutoClassification(force=false){
+  const typeEl=document.getElementById('inv-type');if(!typeEl)return;
+  if(force)setInventoryTypeMode('Auto');
+  if(inventoryTypeMode()==='Manual'&&!force){refreshInventoryPsakRecommendation();return;}
+  const life=Math.max(0,Number(v('inv-life'))||0);
+  typeEl.value=psak216AutoAssetType(life);
+  setInventoryTypeMode('Auto');
+  refreshInventoryPsakRecommendation();
+}
+function onInventoryClassificationChange(){
+  setInventoryTypeMode('Manual');
+  refreshInventoryPsakRecommendation();
+}
+function onInventoryUsefulLifeChange(){
+  setInventoryLifeMode('Manual');
+  applyInventoryAutoClassification(false);
+}
+function resetInventoryAutoClassification(){
+  applyInventoryAutoClassification(true);
 }
 function refreshInventoryPsakRecommendation(){
   const box=document.getElementById('inv-psak-rec');if(!box)return;
   const life=Math.max(0,Number(v('inv-life'))||0);
-  const mode=v('inv-type')||'Auto';
-  const resolved=resolveInventoryAssetType(mode,life);
-  const isAuto=mode==='Auto';
-  box.style.background=resolved==='Fixed Asset'?'#ecfdf5':'#eff6ff';
-  box.style.borderColor=resolved==='Fixed Asset'?'#a7f3d0':'#bfdbfe';
-  box.style.color=resolved==='Fixed Asset'?'#065f46':'#1e3a8a';
-  box.innerHTML=`<b>${isAuto?'PSAK 216 recommendation':'Manual override'}: ${resolved}</b><br>`+
-    (isAuto
-      ?(life>1?`Expected useful life is ${life} year${life===1?'':'s'}, so this operational tangible item is treated as a Fixed Asset.`:`Useful life is ${life||0} year${life===1?'':'s'}, so it is not automatically capitalized as a Fixed Asset.`)
-      :'This selection overrides the automatic PSAK 216 recommendation for this item.')+
-    `<div style="margin-top:4px;font-size:10.5px;opacity:.82">No fixed rupiah minimum is built into this rule. Use manual override when AMS applies materiality or another documented accounting judgment.</div>`;
+  const typeEl=document.getElementById('inv-type');
+  const selected=typeEl?typeEl.value:psak216AutoAssetType(life);
+  const autoType=psak216AutoAssetType(life);
+  const isAuto=inventoryTypeMode()==='Auto';
+  const lifeMode=(document.getElementById('inv-life-mode')?.value==='Manual')?'Manual':'Auto';
+  box.style.background=isAuto?(selected==='Fixed Asset'?'#ecfdf5':'#eff6ff'):'#fff7ed';
+  box.style.borderColor=isAuto?(selected==='Fixed Asset'?'#a7f3d0':'#bfdbfe'):'#fed7aa';
+  box.style.color=isAuto?(selected==='Fixed Asset'?'#065f46':'#1e3a8a'):'#9a3412';
+  box.innerHTML=isAuto
+    ?`<b>✓ ${selected}</b> · automatically classified under PSAK 216 (current 2026) from the expected useful life (${life||0} year${life===1?'':'s'}).<div style="margin-top:3px;font-size:10.5px;opacity:.82">Useful life: ${lifeMode==='Auto'?'auto-filled from SiAkun’s 2026 asset master':'manually adjusted'}. The value remains editable when actual expected use, company policy, or applicable regulation differs.</div>`
+    :`<b>⚠ Manual Override: ${selected}</b> · automatic PSAK result would be <b>${autoType}</b> from a useful life of ${life||0} year${life===1?'':'s'}. <button type="button" onclick="resetInventoryAutoClassification()" style="border:0;background:none;color:#9a3412;text-decoration:underline;cursor:pointer;font:inherit;font-weight:700;padding:0 0 0 4px">Use Auto</button><div style="margin-top:3px;font-size:10.5px;opacity:.82">Use an override only for a documented materiality, policy, or other accounting exception.</div>`;
 }
 CATALOG_ITEMS=[{n:'Work Desk',c:'Furniture',l:8},{n:'Staff Work Desk',c:'Furniture',l:8},{n:'Executive Director Desk with Credenza',c:'Furniture',l:8},{n:'Meeting Table',c:'Furniture',l:8},{n:'Reception Desk',c:'Furniture',l:8},{n:'Office Chair',c:'Furniture',l:8},{n:'Executive Director Chair',c:'Furniture',l:8},{n:'Visitor Chair',c:'Furniture',l:8},{n:'Executive Director Side Chair',c:'Furniture',l:8},{n:'Side Chair',c:'Furniture',l:8},{n:'Meeting Chair',c:'Furniture',l:8},{n:'Waiting Sofa',c:'Furniture',l:8},{n:'Office Partition',c:'Furniture',l:8},{n:'Filing Cabinet',c:'Furniture',l:8},{n:'Document Rack',c:'Furniture',l:8},{n:'Pantry Rack',c:'Furniture',l:8},{n:'Whiteboard',c:'Furniture',l:8},{n:'Podium',c:'Furniture',l:8},{n:'Bookshelf',c:'Furniture',l:8},{n:'Storage Cabinet',c:'Furniture',l:8},{n:'Credenza',c:'Furniture',l:8},{n:'Corner Table',c:'Furniture',l:8},{n:'Built-in Pantry Cabinet',c:'Furniture',l:8},{n:'Acrylic Company Logo',c:'Furniture',l:4},{n:'Desktop PC',c:'IT Equipment',l:4},{n:'Laptop',c:'IT Equipment',l:4},{n:'Lenovo ThinkPad Laptop',c:'IT Equipment',l:4},{n:'Monitor',c:'IT Equipment',l:4},{n:'Keyboard',c:'IT Equipment',l:4},{n:'Mouse',c:'IT Equipment',l:4},{n:'Printer',c:'IT Equipment',l:4},{n:'Epson L3210 Printer',c:'IT Equipment',l:4},{n:'Scanner',c:'IT Equipment',l:4},{n:'IP Phone',c:'IT Equipment',l:4},{n:'Fingerprint Device',c:'IT Equipment',l:4},{n:'Router',c:'IT Equipment',l:4},{n:'Network Switch',c:'IT Equipment',l:4},{n:'UPS',c:'IT Equipment',l:4},{n:'Webcam',c:'IT Equipment',l:4},{n:'Server',c:'IT Equipment',l:4},{n:'NAS Storage',c:'IT Equipment',l:4},{n:'External Hard Drive',c:'IT Equipment',l:4},{n:'USB Flash Drive',c:'IT Equipment',l:4},{n:'Access Point',c:'IT Equipment',l:4},{n:'Server Rack',c:'IT Equipment',l:4},{n:'Firewall Device',c:'IT Equipment',l:4},{n:'LAN Cable Tester',c:'IT Equipment',l:4},{n:'Patch Panel',c:'IT Equipment',l:4},{n:'LAN Cable',c:'IT Equipment',l:4},{n:'Battery Backup UPS',c:'IT Equipment',l:4},{n:'Mobile Phone',c:'IT Equipment',l:4},{n:'Smartphone',c:'IT Equipment',l:4},{n:'Operational Mobile Phone',c:'IT Equipment',l:4},{n:'Office Mobile Phone',c:'IT Equipment',l:4},{n:'Executive Mobile Phone',c:'IT Equipment',l:4},{n:'Admin Mobile Phone',c:'IT Equipment',l:4},{n:'Marketing Mobile Phone',c:'IT Equipment',l:4},{n:'Samsung Galaxy Mobile Phone',c:'IT Equipment',l:4},{n:'iPhone Mobile Phone',c:'IT Equipment',l:4},{n:'Xiaomi Mobile Phone',c:'IT Equipment',l:4},{n:'Photocopier',c:'Electronics',l:4},{n:'Projector',c:'Electronics',l:4},{n:'Presentation Pointer',c:'Electronics',l:4},{n:'LED TV',c:'Electronics',l:4},{n:'Conference Display',c:'Electronics',l:4},{n:'Speaker',c:'Electronics',l:4},{n:'Conference Microphone',c:'Electronics',l:4},{n:'Split Air Conditioner 1.5 HP',c:'Electronics',l:4},{n:'Standing Fan',c:'Electronics',l:4},{n:'Extension Cable',c:'Electronics',l:4},{n:'Power Strip',c:'Electronics',l:4},{n:'AC Deflector',c:'Electronics',l:4},{n:'CCTV Camera',c:'Security Equipment',l:4},{n:'Fire Extinguisher',c:'Security Equipment',l:4},{n:'First Aid Box',c:'Security Equipment',l:4},{n:'Fire Alarm',c:'Security Equipment',l:4},{n:'Smoke Detector',c:'Security Equipment',l:4},{n:'Emergency Light',c:'Security Equipment',l:4},{n:'Evacuation Sign',c:'Security Equipment',l:4},{n:'Door Access Device',c:'Security Equipment',l:4},{n:'Safety Helmet',c:'Security Equipment',l:4},{n:'Paper Shredder',c:'Office Supplies',l:0},{n:'Stapler',c:'Office Supplies',l:0},{n:'Hole Punch',c:'Office Supplies',l:0},{n:'Scissors',c:'Office Supplies',l:0},{n:'Cutter Knife',c:'Office Supplies',l:0},{n:'Ruler',c:'Office Supplies',l:0},{n:'Calculator',c:'Office Supplies',l:0},{n:'Label Maker',c:'Office Supplies',l:0},{n:'Binding Machine',c:'Office Supplies',l:0},{n:'Laminating Machine',c:'Office Supplies',l:0},{n:'Clipboard',c:'Office Supplies',l:0},{n:'Folder',c:'Office Supplies',l:0},{n:'Lever Arch File',c:'Office Supplies',l:0},{n:'Tissue Holder',c:'Office Supplies',l:0},{n:'Desk Organizer',c:'Office Supplies',l:0},{n:'Correction Fluid',c:'Office Supplies',l:0},{n:'Correction Tape',c:'Office Supplies',l:0},{n:'Staples',c:'Office Supplies',l:0},{n:'Pen Holder',c:'Office Supplies',l:0},{n:'Copy Paper',c:'Consumables',l:0},{n:'Ballpoint Pen',c:'Consumables',l:0},{n:'Pencil',c:'Consumables',l:0},{n:'Marker',c:'Consumables',l:0},{n:'Highlighter',c:'Consumables',l:0},{n:'Sticky Notes',c:'Consumables',l:0},{n:'Envelope',c:'Consumables',l:0},{n:'Printer Ink',c:'Consumables',l:0},{n:'Toner Cartridge',c:'Consumables',l:0},{n:'Paper Clip',c:'Consumables',l:0},{n:'Binder Clip',c:'Consumables',l:0},{n:'Adhesive Tape',c:'Consumables',l:0},{n:'Glue',c:'Consumables',l:0},{n:'Whiteboard Eraser',c:'Consumables',l:0},{n:'Whiteboard Marker',c:'Consumables',l:0},{n:'Water Gallon',c:'Consumables',l:0},{n:'Cleaning Liquid',c:'Consumables',l:0},{n:'Hand Soap',c:'Consumables',l:0},{n:'Water Freshener',c:'Consumables',l:0},{n:'Tissue',c:'Consumables',l:0},{n:'Double-Sided Tape',c:'Consumables',l:0},{n:'Water Dispenser',c:'Pantry Supplies',l:0},{n:'Refrigerator',c:'Pantry Supplies',l:0},{n:'Microwave Oven',c:'Pantry Supplies',l:0},{n:'Electric Kettle',c:'Pantry Supplies',l:0},{n:'Coffee Machine',c:'Pantry Supplies',l:0},{n:'Glass',c:'Pantry Supplies',l:0},{n:'Cup',c:'Pantry Supplies',l:0},{n:'Plate',c:'Pantry Supplies',l:0},{n:'Spoon and Fork Set',c:'Pantry Supplies',l:0},{n:'Tray',c:'Pantry Supplies',l:0},{n:'Rice Cooker',c:'Pantry Supplies',l:0},{n:'Bowl',c:'Pantry Supplies',l:0},{n:'Cup Lid',c:'Pantry Supplies',l:0},{n:'Vacuum Cleaner',c:'Cleaning Supplies',l:0},{n:'Broom',c:'Cleaning Supplies',l:0},{n:'Mop',c:'Cleaning Supplies',l:0},{n:'Bucket',c:'Cleaning Supplies',l:0},{n:'Trash Bin',c:'Cleaning Supplies',l:0},{n:'Tissue Dispenser',c:'Cleaning Supplies',l:0},{n:'Dustpan',c:'Cleaning Supplies',l:0},{n:'Floor Wiper',c:'Cleaning Supplies',l:0},{n:'Paper Towel Dispenser',c:'Cleaning Supplies',l:0},{n:'Toilet Tissue Dispenser',c:'Cleaning Supplies',l:0},{n:'Duster',c:'Cleaning Supplies',l:0},{n:'Operational Vehicle',c:'Vehicles',l:4},{n:'Operational Motorcycle',c:'Vehicles',l:4},{n:'Vehicle Helmet',c:'Vehicles',l:4},{n:'GPS Tracker',c:'Vehicles',l:4},{n:'Dash Camera',c:'Vehicles',l:4}];
 DEFAULT_LOCATIONS=['Admin Room','Reception Area','Finance Room','Vacant Room','Meeting Room','Director Room','Pantry','Mushola','Storage Room','Server Room','BD Room','GA Room','With Staff','Front Office Outside','3rd Floor Entrance','Parking Area','Building Entrance','Lobby'];
@@ -10889,15 +10918,15 @@ function onInvNameChange(){
       if(!saveDB())return;
       sel.innerHTML=invNameOpts(v('inv-cat'),val);
       const lifeEl=document.getElementById('inv-life');if(lifeEl)lifeEl.value=0;
-      refreshInventoryPsakRecommendation();
-    }else{sel.selectedIndex=0;refreshInventoryPsakRecommendation();}
+      setInventoryLifeMode('Auto');applyInventoryAutoClassification(true);
+    }else{sel.selectedIndex=0;applyInventoryAutoClassification(true);}
     return;
   }
   const cat=v('inv-cat');
   const item=invCatalogForCategory(cat).find(x=>x.n===sel.value);
   const lifeEl=document.getElementById('inv-life');
   if(lifeEl)lifeEl.value=item?(item.l||0):(CATEGORY_DEFAULT_LIFE[cat]||0);
-  refreshInventoryPsakRecommendation();
+  setInventoryLifeMode('Auto');applyInventoryAutoClassification(true);
 }
 function onInvSelectChange(selId,masterKey,promptLabel){
   const sel=document.getElementById(selId);
@@ -11814,7 +11843,7 @@ function openInventoryItem(){
   const catOpts=Object.keys(CATALOG_PREFIX).map(c=>`<option>${c}</option>`).join('');
   const firstCat=Object.keys(CATALOG_PREFIX)[0];
   openModal('Add Office Asset',`
-  <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#065f46;margin-bottom:14px"><b>One physical asset = one unique label.</b> If Quantity is more than 1, SiAkun will create a different Asset ID for every unit automatically.<div style="font-size:10.5px;margin-top:5px;opacity:.82">Accounting classification defaults to PSAK 216 logic; manual override is available.</div></div>
+  <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#065f46;margin-bottom:14px"><b>One physical asset = one unique label.</b> If Quantity is more than 1, SiAkun will create a different Asset ID for every unit automatically.<div style="font-size:10.5px;margin-top:5px;opacity:.82">SiAkun classifies the item directly as Fixed Asset or Non Fixed Asset using PSAK 216 (current 2026). You can override only when an exception applies.</div></div>
   <div class="fr3">
     <div class="fg"><label>Category</label><select id="inv-cat" onchange="onInvCatChange()">${catOpts}</select></div>
     <div class="fg" id="inv-name-wrap"><label>Item Name</label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(firstCat,'')}</select></div>
@@ -11823,7 +11852,7 @@ function openInventoryItem(){
   <div class="fr3">
     <div class="fg"><label>Purchase Date</label><input type="date" id="inv-date" value="${today()}"></div>
     <div class="fg"><label>Acquisition Cost per Unit</label><input type="text" inputmode="numeric" id="inv-cost" placeholder="Example: 5.000.000" oninput="invFormatMoneyInput(this)"></div>
-    <div class="fg"><label>Useful Life (Years) <span style="font-weight:400;color:#94a3b8">— suggested, editable</span></label><input type="number" id="inv-life" placeholder="0" min="0" step="1" oninput="refreshInventoryPsakRecommendation()"></div>
+    <div class="fg"><label>Useful Life (Years)</label><input type="number" id="inv-life" placeholder="0" min="0" step="1" oninput="onInventoryUsefulLifeChange()"><input type="hidden" id="inv-life-mode" value="Auto"></div>
   </div>
   <div class="fr3">
     <div class="fg"><label>Quantity / Unique Labels</label><input type="number" id="inv-qty" value="1" min="1" max="500" oninput="renderInvUnitLocations()"></div>
@@ -11834,9 +11863,9 @@ function openInventoryItem(){
   <div class="fr3">
     <div class="fg"><label>Condition</label><select id="inv-condition" onchange="onInvSelectChange('inv-condition','conditionList','New condition:')">${invSelectOpts(DB.invMaster.conditionList,'','Add New Condition')}</select></div>
     <div class="fg"><label>Status</label><select id="inv-status" onchange="onInvSelectChange('inv-status','statusList','New status:')">${invSelectOpts(DB.invMaster.statusList,'','Add New Status')}</select></div>
-    <div class="fg"><label>Asset Classification</label><select id="inv-type" onchange="refreshInventoryPsakRecommendation()">${invAssetTypeOptions('Auto')}</select></div>
+    <div class="fg"><label>Asset Classification</label><select id="inv-type" onchange="onInventoryClassificationChange()">${invAssetTypeOptions(psak216AutoAssetType(0))}</select><input type="hidden" id="inv-type-mode" value="Auto"></div>
   </div>
-  <div id="inv-psak-rec" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.5;margin:2px 0 12px"></div>
+  <div id="inv-psak-rec" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:8px;padding:8px 10px;font-size:10.5px;line-height:1.45;margin:2px 0 12px"></div>
   <div class="fg"><label>Notes</label><input id="inv-notes"></div>
   <div class="modal-ft"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveInventoryItem()">Save</button></div>`);
   onInvNameChange();renderInvUnitLocations();refreshInventoryPsakRecommendation();
@@ -11847,9 +11876,11 @@ function saveInventoryItem(){
   const quantity=Math.max(1,Math.min(500,parseInt(v('inv-qty'))||1));
   const locations=quantity>1?Array.from({length:quantity},(_,index)=>v('inv-unit-location-'+index)||v('inv-location')):[v('inv-location')];
   const life=parseInt(v('inv-life'))||0;
-  const assetTypeMode=v('inv-type')||'Auto';
+  const assetTypeMode=inventoryTypeMode();
+  const lifeMode=document.getElementById('inv-life-mode')?.value==='Manual'?'Manual':'Auto';
+  const selectedAssetType=v('inv-type')||psak216AutoAssetType(life);
   const common={name,category,brand:v('inv-brand'),purchaseDate:v('inv-date'),cost:invParseMoney(v('inv-cost')),
-    life,stock:1,pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),assetTypeMode,assetType:resolveInventoryAssetType(assetTypeMode,life),notes:v('inv-notes')};
+    life,lifeMode,stock:1,pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),assetTypeMode,assetType:resolveInventoryAssetType(assetTypeMode,life,selectedAssetType),notes:v('inv-notes')};
   for(let number=0;number<quantity;number++){
     const item={id:uid(),assetId:genInventoryId(category),...common,location:locations[number],movements:[]};
     addInventoryMovement(item,'Asset Created',{qtyBefore:0,qtyAfter:1,note:quantity>1?`Unit ${number+1} of ${quantity}.`:''});
@@ -11903,8 +11934,11 @@ function openEditInventoryItem(id){
   ensureInvMaster();
   const i=(DB.inventory||[]).find(x=>x.id===id);if(!i)return;
   const catOpts=Object.keys(CATALOG_PREFIX).map(c=>`<option${c===i.category?' selected':''}>${c}</option>`).join('');
-  const selectedMode=i.assetTypeMode||i.assetType||'Auto';
-  const typeOpts=invAssetTypeOptions(selectedMode);
+  const selectedMode=i.assetTypeMode==='Auto'?'Auto':'Manual';
+  const selectedType=i.assetType||psak216AutoAssetType(i.life||0);
+  const catalogLife=(invCatalogForCategory(i.category).find(x=>x.n===i.name)?.l??CATEGORY_DEFAULT_LIFE[i.category]??0);
+  const selectedLifeMode=i.lifeMode==='Auto'||(!i.lifeMode&&i.assetTypeMode==='Auto'&&Number(i.life||0)===Number(catalogLife||0))?'Auto':'Manual';
+  const typeOpts=invAssetTypeOptions(selectedType);
   openModal('Edit Inventory Item ('+i.assetId+')',`
   <input type="hidden" id="inv-id" value="${i.id}">
   <div class="fr3">
@@ -11915,7 +11949,7 @@ function openEditInventoryItem(id){
   <div class="fr3">
     <div class="fg"><label>Purchase Date</label><input type="date" id="inv-date" value="${i.purchaseDate||today()}"></div>
     <div class="fg"><label>Acquisition Cost per Unit</label><input type="text" inputmode="numeric" id="inv-cost" value="${invMoneyDisplay(i.cost)}" placeholder="Example: 5.000.000" oninput="invFormatMoneyInput(this)"></div>
-    <div class="fg"><label>Useful Life (Years) <span style="font-weight:400;color:#94a3b8">— suggested, editable</span></label><input type="number" id="inv-life" value="${i.life||0}" min="0" step="1" oninput="refreshInventoryPsakRecommendation()"></div>
+    <div class="fg"><label>Useful Life (Years)</label><input type="number" id="inv-life" value="${i.life||0}" min="0" step="1" oninput="onInventoryUsefulLifeChange()"><input type="hidden" id="inv-life-mode" value="${selectedLifeMode}"></div>
   </div>
   <div class="fr3">
     <div class="fg"><label>Availability</label><select id="inv-stock"><option value="1"${invStockValue(i)>0?' selected':''}>In Stock</option><option value="0"${invStockValue(i)===0?' selected':''}>Stock Out</option></select></div>
@@ -11925,9 +11959,9 @@ function openEditInventoryItem(id){
   <div class="fr3">
     <div class="fg"><label>Condition</label><select id="inv-condition" onchange="onInvSelectChange('inv-condition','conditionList','New condition:')">${invSelectOpts(DB.invMaster.conditionList,i.condition,'Add New Condition')}</select></div>
     <div class="fg"><label>Status</label><select id="inv-status" onchange="onInvSelectChange('inv-status','statusList','New status:')">${invSelectOpts(DB.invMaster.statusList,i.status,'Add New Status')}</select></div>
-    <div class="fg"><label>Asset Classification</label><select id="inv-type" onchange="refreshInventoryPsakRecommendation()">${typeOpts}</select></div>
+    <div class="fg"><label>Asset Classification</label><select id="inv-type" onchange="onInventoryClassificationChange()">${typeOpts}</select><input type="hidden" id="inv-type-mode" value="${selectedMode}"></div>
   </div>
-  <div id="inv-psak-rec" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.5;margin:2px 0 12px"></div>
+  <div id="inv-psak-rec" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:8px;padding:8px 10px;font-size:10.5px;line-height:1.45;margin:2px 0 12px"></div>
   <div class="fg"><label>Notes</label><input id="inv-notes" value="${invAttr(i.notes||'')}"></div>
   <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:12px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;align-items:end">
@@ -11949,11 +11983,13 @@ function updateInventoryItem(){
   const extraLocations=extraQuantity>0?Array.from({length:extraQuantity},(_,index)=>v('inv-edit-extra-location-'+index)||v('inv-location')):[];
   const previous={...DB.inventory[idx]},previousStock=invStockValue(DB.inventory[idx]);
   const life=parseInt(v('inv-life'))||0;
-  const assetTypeMode=v('inv-type')||'Auto';
+  const assetTypeMode=inventoryTypeMode();
+  const lifeMode=document.getElementById('inv-life-mode')?.value==='Manual'?'Manual':'Auto';
+  const selectedAssetType=v('inv-type')||psak216AutoAssetType(life);
   DB.inventory[idx]={...DB.inventory[idx],name,category:v('inv-cat'),brand:v('inv-brand'),
-    purchaseDate:v('inv-date'),cost:invParseMoney(v('inv-cost')),life,
+    purchaseDate:v('inv-date'),cost:invParseMoney(v('inv-cost')),life,lifeMode,
     stock:Number(v('inv-stock'))===0?0:1,location:v('inv-location'),pic:v('inv-pic'),condition:v('inv-condition'),status:v('inv-status'),
-    assetTypeMode,assetType:resolveInventoryAssetType(assetTypeMode,life),notes:v('inv-notes')};
+    assetTypeMode,assetType:resolveInventoryAssetType(assetTypeMode,life,selectedAssetType),notes:v('inv-notes')};
   if(previousStock!==invStockValue(DB.inventory[idx])||previous.location!==DB.inventory[idx].location||previous.pic!==DB.inventory[idx].pic||previous.status!==DB.inventory[idx].status){
     addInventoryMovement(DB.inventory[idx],'Manual Edit',{qtyBefore:previousStock,qtyAfter:invStockValue(DB.inventory[idx]),fromLocation:previous.location,toLocation:DB.inventory[idx].location,fromPic:previous.pic,toPic:DB.inventory[idx].pic,status:DB.inventory[idx].status,note:'Updated from Edit Data.'});
   }
@@ -11962,8 +11998,8 @@ function updateInventoryItem(){
     const source=DB.inventory[idx];
     for(let number=0;number<extraQuantity;number++){
       const item={id:uid(),assetId:genInventoryId(source.category),name:source.name,category:source.category,brand:source.brand,
-        purchaseDate:source.purchaseDate,cost:source.cost,life:source.life,stock:1,location:extraLocations[number],pic:source.pic,
-        condition:source.condition,status:source.status,assetTypeMode:source.assetTypeMode||'Auto',assetType:source.assetType,notes:source.notes,movements:[]};
+        purchaseDate:source.purchaseDate,cost:source.cost,life:source.life,lifeMode:source.lifeMode||'Manual',stock:1,location:extraLocations[number],pic:source.pic,
+        condition:source.condition,status:source.status,assetTypeMode:source.assetTypeMode==='Auto'?'Auto':'Manual',assetType:source.assetType,notes:source.notes,movements:[]};
       addInventoryMovement(item,'Asset Created',{qtyBefore:0,qtyAfter:1,note:`Added as a similar unit from ${source.assetId}. Unit ${number+1} of ${extraQuantity}.`});
       DB.inventory.push(item);syncInventoryAssetLink(item);
     }
@@ -16102,7 +16138,7 @@ function renderFAQ(c){
       ['Why should one business card be scanned at a time?','A single, clear card improves OCR accuracy. Crop the image before scanning when one photo contains multiple cards.']
     ]],
     ['Inventory and Fixed Assets',[
-      ['How are Inventory and Fixed Assets connected?','Inventory uses Auto — PSAK 216 by default. An operational tangible item with an expected useful life of more than one period is recommended as a Fixed Asset and automatically creates or updates its linked Fixed Asset record. Manual override remains available for materiality or documented exceptions.'],
+      ['How are Inventory and Fixed Assets connected?','Inventory shows the accounting result directly as Fixed Asset or Non Fixed Asset. SiAkun auto-classifies tangible operational items under PSAK 216 (current 2026) using expected useful life, while keeping a manual override for documented materiality or other exceptions. Fixed Assets automatically create or update their linked Fixed Asset record.'],
       ['Does PSAK 216 require a minimum rupiah value for Fixed Assets?','No fixed rupiah threshold is built into SiAkun. PSAK 216 recognition is based on the nature and expected use of the asset, while materiality remains an accounting judgment.'],
       ['Why are some Fixed Asset fields locked?','Fields linked from Inventory are locked to prevent the two records from becoming inconsistent. Depreciation method and residual value may still be edited in Fixed Assets.'],
       ['What information is stored in an inventory label?','Each label contains a QR code for phone cameras, a Code 128 barcode for handheld scanners, the unique Asset ID, item name, location, and company name.'],
