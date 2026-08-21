@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.3.7 — Financial System</title>
+<title>SiAkun v24.3.8 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -10924,16 +10924,49 @@ function invMoneyDisplay(value){
   const amount=Number(value)||0;
   return amount?amount.toLocaleString('id-ID'):'';
 }
+function invAllCatalogItems(){
+  ensureInvMaster();
+  const combined=[
+    ...CATALOG_ITEMS.map(x=>({...x,_custom:false})),
+    ...DB.invMaster.customItems.map(x=>({...x,_custom:true}))
+  ];
+  const seen=new Set();
+  return combined.filter(x=>{
+    const key=x.c+'||'+normalizeInventoryItemName(x.n);
+    if(seen.has(key))return false;
+    seen.add(key);return true;
+  });
+}
 function invNameOpts(category,selected){
-  const list=invCatalogForCategory(category);
-  let opts=list.map(x=>`<option value="${invAttr(x.n)}"${x.n===selected?' selected':''}>${invEsc(x.n)}</option>`).join('');
-  if(selected&&!list.some(x=>x.n===selected))opts+=`<option value="${invAttr(selected)}" selected>${invEsc(selected)}</option>`;
-  opts+=`<option value="__add__">➕ Add New Name</option>`;
+  const all=invAllCatalogItems();
+  const cats=Object.keys(CATALOG_PREFIX);
+  const orderedCats=[category,...cats.filter(c=>c!==category)];
+  let opts='';
+  orderedCats.forEach(cat=>{
+    const rows=all.filter(x=>x.c===cat).sort((a,b)=>a.n.localeCompare(b.n));
+    if(!rows.length)return;
+    opts+=`<optgroup label="${invAttr(cat)}">`+
+      rows.map(x=>`<option data-category="${invAttr(x.c)}" value="${invAttr(x.n)}"${x.n===selected?' selected':''}>${invEsc(x.n)}</option>`).join('')+
+      `</optgroup>`;
+  });
+  if(selected&&!all.some(x=>x.n===selected))opts+=`<option data-category="${invAttr(category)}" value="${invAttr(selected)}" selected>${invEsc(selected)}</option>`;
+  opts+=`<option data-category="${invAttr(category)}" value="__add__">➕ Add New Name</option>`;
   return opts;
+}
+function syncInventoryCategoryDisplay(cat){
+  const catSel=document.getElementById('inv-cat');
+  if(!catSel||!cat)return;
+  catSel.value=cat;
+  const wrap=catSel.closest('.ss-wrap');
+  const display=wrap?wrap.querySelector('.ss-input'):null;
+  if(display){
+    const opt=[...catSel.options].find(o=>o.value===cat);
+    display.value=opt?opt.text:cat;
+  }
 }
 function onInvCatChange(){
   const cat=v('inv-cat');
-  document.getElementById('inv-name-wrap').innerHTML=`<label>Item Name</label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(cat,'')}</select>`;
+  document.getElementById('inv-name-wrap').innerHTML=`<label>Item Name <span style="font-weight:400;color:#94a3b8;text-transform:none">— search all Master List</span></label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(cat,'')}</select>`;
   onInvNameChange();
 }
 function onInvNameChange(){
@@ -10953,7 +10986,13 @@ function onInvNameChange(){
     }else{sel.selectedIndex=0;applyInventoryAutoClassification(true);}
     return;
   }
-  const cat=v('inv-cat');
+  const selectedOption=sel.options[sel.selectedIndex];
+  const masterCat=selectedOption?.dataset?.category||'';
+  let cat=v('inv-cat');
+  if(masterCat&&masterCat!==cat){
+    cat=masterCat;
+    syncInventoryCategoryDisplay(cat);
+  }
   const lifeEl=document.getElementById('inv-life');
   if(lifeEl)lifeEl.value=inventorySuggestedLife(cat,sel.value);
   setInventoryLifeMode('Auto');applyInventoryAutoClassification(true);
@@ -11904,7 +11943,7 @@ function openInventoryItem(){
   <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#065f46;margin-bottom:14px"><b>One physical asset = one unique label.</b> If Quantity is more than 1, SiAkun will create a different Asset ID for every unit automatically.<div style="font-size:10.5px;margin-top:5px;opacity:.82">SiAkun classifies the item directly as Fixed Asset or Non Fixed Asset using PSAK 216 (current 2026). You can override only when an exception applies.</div></div>
   <div class="fr3">
     <div class="fg"><label>Category</label><select id="inv-cat" onchange="onInvCatChange()">${catOpts}</select></div>
-    <div class="fg" id="inv-name-wrap"><label>Item Name</label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(firstCat,'')}</select></div>
+    <div class="fg" id="inv-name-wrap"><label>Item Name <span style="font-weight:400;color:#94a3b8;text-transform:none">— search all Master List</span></label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(firstCat,'')}</select></div>
     <div class="fg"><label>Brand/Type</label><input id="inv-brand"></div>
   </div>
   <div class="fr3">
@@ -12001,7 +12040,7 @@ function openEditInventoryItem(id){
   <input type="hidden" id="inv-id" value="${i.id}">
   <div class="fr3">
     <div class="fg"><label>Category</label><select id="inv-cat" onchange="onInvCatChange()">${catOpts}</select></div>
-    <div class="fg" id="inv-name-wrap"><label>Item Name</label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(i.category,i.name)}</select></div>
+    <div class="fg" id="inv-name-wrap"><label>Item Name <span style="font-weight:400;color:#94a3b8;text-transform:none">— search all Master List</span></label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(i.category,i.name)}</select></div>
     <div class="fg"><label>Brand/Type</label><input id="inv-brand" value="${invAttr(i.brand||'')}"></div>
   </div>
   <div class="fr3">
