@@ -11671,7 +11671,7 @@ function printInventoryLabels(ids){
     .sheet{display:grid;grid-template-columns:repeat(2,70mm);gap:3mm;padding:4mm}
     .label{width:70mm;height:35mm;border:1px dashed #94a3b8;border-radius:2mm;padding:2.5mm;display:grid;grid-template-columns:23mm 1fr;gap:2mm;align-items:center;break-inside:avoid;page-break-inside:avoid;overflow:hidden}
     .qr{width:22mm;height:22mm;display:flex;align-items:center;justify-content:center}.qr img,.qr canvas{width:22mm!important;height:22mm!important}
-    .info{font-size:8pt;line-height:1.25;overflow:hidden}.info .co{font-size:6.5pt;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .info{font-size:8pt;line-height:1.25;overflow:hidden}.info .co{font-size:8pt;font-weight:700;color:#0f766e;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:.35mm solid #14b8a6;padding-bottom:.55mm;margin-bottom:.55mm}
     .info .aid{font-weight:700;font-size:9pt;margin-top:1mm}.info .name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.info .loc{color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .barcode{display:block;width:39mm;height:8mm;margin-top:1mm}
     @media print{@page{size:A4;margin:7mm}.sheet{padding:0}.label{border:1px solid #cbd5e1}}
