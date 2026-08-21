@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://bmrgfnbzlifhehjmqhlk.supabase.co https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://raw.githubusercontent.com https://bmrgfnbzlifhehjmqhlk.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=(), payment=(), usb=()">
-<title>SiAkun v24.3.8 — Financial System</title>
+<title>SiAkun v24.3.9 — Financial System</title>
 <script>if(window.top!==window.self){document.documentElement.textContent='';throw new Error('SiAkun cannot run inside an embedded frame.');}</script>
   <link rel="icon" id="app-favicon" type="image/png" href="favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -10849,6 +10849,7 @@ CATALOG_ITEMS=[{n:'Work Desk',c:'Furniture',l:8},{n:'Staff Work Desk',c:'Furnitu
 DEFAULT_LOCATIONS=['Admin Room','Reception Area','Finance Room','Vacant Room','Meeting Room','Director Room','Pantry','Mushola','Storage Room','Server Room','BD Room','GA Room','With Staff','Front Office Outside','3rd Floor Entrance','Parking Area','Building Entrance','Lobby'];
 DEFAULT_STATUS=['Active','Inactive','Assigned','Unassigned','Standby','In Stock','Low Stock','Out of Stock','Reserved','On Loan','In Transit','With Staff','Under Maintenance','Under Inspection','Pending Approval','Awaiting Delivery','Pending Disposal','Disposed','Returned','Archived'];
 DEFAULT_CONDITION=['New','Like New','Excellent','Very Good','Good','Fair','Worn','Minor Damage','Moderate Damage','Major Damage','Broken','Unusable','Needs Cleaning','Dirty','Refurbished','Missing Parts','Obsolete','Scrap','Expired'];
+const DEFAULT_BRANDS=["Generic","Custom","Unbranded","Lenovo","HP","Dell","ASUS","Acer","Apple","Samsung","MSI","Advan","Huawei","Microsoft","Toshiba","Fujitsu","Vaio","Razer","Gigabyte","Intel NUC","Zyrex","Axioo","Chuwi","Epson","Canon","Brother","HP Printer","Fuji Xerox","Pantum","Ricoh","Kyocera","Konica Minolta","Lexmark","OKI","Zebra Printer","TSC","Bixolon","Honeywell Printer","TP-Link","MikroTik","Cisco","Ubiquiti","D-Link","Tenda","Hikvision","Dahua","Unifi","Ruijie","Netgear","Linksys","Juniper","Fortinet","Sophos","Aruba","Cambium","DrayTek","Totolink","Mercusys","Panasonic","Daikin","Sharp","LG","Samsung AC","Polytron","Midea","Aqua","Gree","Changhong","Hisense","TCL","Carrier","York","Hitachi","Electrolux","Sanken","Haier","Akari","Aux","Informa","Krisbow","IKEA","Olympic","Chitose","HighPoint","Ergosit","Indachi","Savello","Chairman","Donati","Fantoni","Modera","Vivere","Pro Design","Futura","Uno","Brother Furniture","Steelcase","Herman Miller","Pilot","Faber-Castell","Standard AE7","Joyko","Snowman","Kenko","Zebra","Staedtler","Parker","Pentel","Paper Mate","BIC","Uni Ball","Artline","Deli","Maped","Kokuyo","M&G","Rotring","Sharpie","Sinar Dunia","PaperOne","Double A","SIDU","JK Paper","Navigator","Copy Laser","Golden Star","Kiky Paper","Bola Dunia","Bantex","Deli Office","Kiky","Maped Office","Kris Office","Kenko Office","Max","Kangaro","Rapid","Leitz","Avery","Bindermax","Joy Paper","Marbig","Esselte","Miyako","Philips","Sharp Home","Panasonic Home","Maspion","Modena","Oxone","Cosmos","Kirin","Electrolux Home","Turbo","Denpoo","Idealife","Niko","Mito Home","Le Minerale","Vit","Club","Pristine","Nestle Pure Life","Ades","Cleo","Crystalline","Amidis","LocknLock","Tupperware","Lion Star","Maspion Plastic","IKEA Kitchen","Rubbermaid","OXO","Sistema","Stanley","Thermos","3M","Scotch","UHU","Fox Glue","Alteco","Aica Aibon","Power Glue","Kenmaster","Glue Stick UHU","Glue Stick Joyko","Casio","Citizen","Seiko","Brother Label","King Jim","DYMO","Max Stapler","Kangaro Stapler","Rapid Stapler","Canon Calculator","Honda","Toyota","Suzuki","Yamaha","Daihatsu","Mitsubishi","Isuzu","Hino","Nissan","Mazda","Xiaomi","Oppo","Vivo","Realme","Infinix","Tecno","Nokia","Motorola","iPhone","Google Pixel","Nice","Paseo","Tessa","Livi","See-U","Jolly","Tisu Magic","Kleenex","Plenty","Cussons Tissue"];
 
 function ensureInvMaster(){
   if(!DB.invMaster)DB.invMaster={};
@@ -10857,6 +10858,9 @@ function ensureInvMaster(){
   if(!DB.invMaster.conditionList)DB.invMaster.conditionList=[...DEFAULT_CONDITION];
   if(!DB.invMaster.customItems)DB.invMaster.customItems=[];
   if(!DB.invMaster.customPIC)DB.invMaster.customPIC=[];
+  const existingBrands=Array.isArray(DB.invMaster.brands)?DB.invMaster.brands:[];
+  const usedBrands=(DB.inventory||[]).map(i=>String(i.brand||'').trim()).filter(Boolean);
+  DB.invMaster.brands=[...new Set([...DEFAULT_BRANDS,...existingBrands,...usedBrands])];
 }
 function normalizeInventoryItemName(name){
   return String(name||'').trim().toLowerCase()
@@ -10910,6 +10914,31 @@ function invPicSelectOpts(selected){
   let opts=list.map(x=>`<option value="${invAttr(x)}"${x===selected?' selected':''}>${invEsc(x)}</option>`).join('');
   opts+=`<option value="__add__">➕ Add New PIC</option>`;
   return opts;
+}
+function invBrandSelectOpts(selected=''){
+  ensureInvMaster();
+  const list=DB.invMaster.brands||[];
+  let opts=`<option value=""${!selected?' selected':''}>— Select Brand / Type —</option>`;
+  opts+=list.map(x=>`<option value="${invAttr(x)}"${x===selected?' selected':''}>${invEsc(x)}</option>`).join('');
+  if(selected&&!list.includes(selected))opts+=`<option value="${invAttr(selected)}" selected>${invEsc(selected)}</option>`;
+  opts+=`<option value="__add__">➕ Add New Brand / Type</option>`;
+  return opts;
+}
+function onInvBrandChange(){
+  const sel=document.getElementById('inv-brand');
+  if(!sel||sel.value!=='__add__')return;
+  const val=prompt('New brand / type:');
+  if(val&&val.trim()){
+    ensureInvMaster();
+    const clean=val.trim();
+    if(!DB.invMaster.brands.includes(clean))DB.invMaster.brands.push(clean);
+    if(!saveDB())return;
+    sel.innerHTML=invBrandSelectOpts(clean);
+    sel.value=clean;
+    sel.dispatchEvent(new Event('change',{bubbles:false}));
+  }else{
+    sel.value='';
+  }
 }
 function invParseMoney(raw){
   const digits=String(raw==null?'':raw).replace(/[^0-9]/g,'');
@@ -11944,7 +11973,7 @@ function openInventoryItem(){
   <div class="fr3">
     <div class="fg"><label>Category</label><select id="inv-cat" onchange="onInvCatChange()">${catOpts}</select></div>
     <div class="fg" id="inv-name-wrap"><label>Item Name <span style="font-weight:400;color:#94a3b8;text-transform:none">— search all Master List</span></label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(firstCat,'')}</select></div>
-    <div class="fg"><label>Brand/Type</label><input id="inv-brand"></div>
+    <div class="fg"><label>Brand/Type <span style="font-weight:400;color:#94a3b8;text-transform:none">— Master List</span></label><select id="inv-brand" onchange="onInvBrandChange()">${invBrandSelectOpts('')}</select></div>
   </div>
   <div class="fr3">
     <div class="fg"><label>Purchase Date</label><input type="date" id="inv-date" value="${today()}"></div>
@@ -12041,7 +12070,7 @@ function openEditInventoryItem(id){
   <div class="fr3">
     <div class="fg"><label>Category</label><select id="inv-cat" onchange="onInvCatChange()">${catOpts}</select></div>
     <div class="fg" id="inv-name-wrap"><label>Item Name <span style="font-weight:400;color:#94a3b8;text-transform:none">— search all Master List</span></label><select id="inv-name" onchange="onInvNameChange()">${invNameOpts(i.category,i.name)}</select></div>
-    <div class="fg"><label>Brand/Type</label><input id="inv-brand" value="${invAttr(i.brand||'')}"></div>
+    <div class="fg"><label>Brand/Type <span style="font-weight:400;color:#94a3b8;text-transform:none">— Master List</span></label><select id="inv-brand" onchange="onInvBrandChange()">${invBrandSelectOpts(i.brand||'')}</select></div>
   </div>
   <div class="fr3">
     <div class="fg"><label>Purchase Date</label><input type="date" id="inv-date" value="${i.purchaseDate||today()}"></div>
